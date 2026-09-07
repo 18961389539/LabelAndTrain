@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=JLLabelingAndTrain
+Comment=Advanced Auto Labeling Solution with Added Features
+Exec=JLLabelingAndTrain
+Icon=anylabeling/resources/images/logo.png
+Terminal=false
+Type=Application
+Categories=Graphics;RasterGraphics;MachineLearning

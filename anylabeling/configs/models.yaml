@@ -1,0 +1,4 @@
+- model_name: "sam2_hiera_base-r20240801"
+  config_file: ":/sam2_hiera_base.yaml"
+- model_name: "sam2_hiera_tiny-r20240801"
+  config_file: ":/sam2_hiera_tiny.yaml"
