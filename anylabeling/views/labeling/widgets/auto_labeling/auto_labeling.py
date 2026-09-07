@@ -10,6 +10,7 @@ from PyQt6 import uic
 from PyQt6.QtCore import Qt, pyqtSignal, pyqtSlot, QPoint, QTimer
 from PyQt6.QtWidgets import (
     QDialog,
+    QDoubleSpinBox,
     QFileDialog,
     QHBoxLayout,
     QLabel,
@@ -634,8 +635,8 @@ class AutoLabelingWidget(QWidget):
                 ("input_conf", "edit_conf"),
                 ("input_iou", "edit_iou"),
             ):
-                lbl = container.findChild(QtWidgets.QLabel, label_name)
-                spn = container.findChild(QtWidgets.QDoubleSpinBox, spinbox_name)
+                lbl = container.findChild(QLabel, label_name)
+                spn = container.findChild(QDoubleSpinBox, spinbox_name)
                 if lbl is None or spn is None:
                     continue
                 lbl_idx = layout.indexOf(lbl)
