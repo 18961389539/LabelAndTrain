@@ -3385,11 +3385,42 @@ class LabelingWidget(LabelDialog):
         copy_path_action = menu.addAction(
             utils.new_icon("copy", "svg"), self.tr("Copy File Path")
         )
+        menu.addSeparator()
+        del_label_action = menu.addAction(
+            utils.new_icon("trash", "svg"), self.tr("删除标注文件")
+        )
+        del_image_action = menu.addAction(
+            utils.new_icon("trash", "svg"), self.tr("删除图片文件")
+        )
         action = menu.exec(self.file_list_widget.mapToGlobal(point))
         if action == copy_name_action:
             self.copy_file_path(osp.basename(item.text()))
         elif action == copy_path_action:
             self.copy_file_path(item.text())
+        elif action == del_label_action:
+            self._delete_via_context(item, include_image=False)
+        elif action == del_image_action:
+            self._delete_via_context(item, include_image=True)
+
+    def _delete_via_context(self, item, include_image):
+        """Right-click delete from the file list.
+
+        Both destructive actions already exist in the File menu but operate
+        on the *current* file; from the list we first make the clicked row
+        the current file, then reuse that same logic so moving-to-_delete_
+        / label removal / list refresh behaviour stays identical.
+        """
+        if item is None:
+            return
+        try:
+            self.file_list_widget.setCurrentItem(item)
+            self.load_file(item.text())
+        except Exception:  # noqa: BLE001
+            return
+        if include_image:
+            self.delete_image_file()
+        else:
+            self.delete_file()
 
     def copy_file_path(self, file_path):
         popup = Popup(
