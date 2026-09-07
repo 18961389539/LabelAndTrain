@@ -621,6 +621,32 @@ class AutoLabelingWidget(QWidget):
         )
         self.edit_iou.valueChanged.connect(self.on_iou_value_changed)
 
+        # Runtime layout fix: guarantee the conf/iou *labels* (置信度阈值,
+        # 交并比阈值) sit *before* their spinboxes. The .ui already orders
+        # them that way, but a stray .ui re-ordering or theme quirk could
+        # otherwise show 标签在输入框后面, which the user reported even on
+        # the latest build. We re-parent the two labels to the immediate
+        # left of their spinbox in the toolbar's QHBoxLayout.
+        container = self.model_selection
+        layout = container.layout() if hasattr(container, "layout") else None
+        if layout is not None:
+            for label_name, spinbox_name in (
+                ("input_conf", "edit_conf"),
+                ("input_iou", "edit_iou"),
+            ):
+                lbl = container.findChild(QtWidgets.QLabel, label_name)
+                spn = container.findChild(QtWidgets.QDoubleSpinBox, spinbox_name)
+                if lbl is None or spn is None:
+                    continue
+                lbl_idx = layout.indexOf(lbl)
+                spn_idx = layout.indexOf(spn)
+                if lbl_idx < 0 or spn_idx < 0 or lbl_idx >= spn_idx:
+                    # Remove the label and re-insert it directly before
+                    # the spinbox so the visual order becomes
+                    # `置信度阈值  [0.25]`.
+                    layout.removeWidget(lbl)
+                    layout.insertWidget(spn_idx, lbl)
+
         # --- Configuration for: edit_text ---
         self.edit_text.setStyleSheet(get_lineedit_style())
         self.edit_text.setToolTip(
