@@ -623,13 +623,14 @@ class AutoLabelingWidget(QWidget):
         self.edit_iou.valueChanged.connect(self.on_iou_value_changed)
 
         # Runtime layout fix: guarantee the conf/iou *labels* (置信度阈值,
-        # 交并比阈值) sit *before* their spinboxes. The .ui already orders
-        # them that way, but a stray .ui re-ordering or theme quirk could
-        # otherwise show 标签在输入框后面, which the user reported even on
-        # the latest build. We re-parent the two labels to the immediate
-        # left of their spinbox in the toolbar's QHBoxLayout.
-        container = self.model_selection
-        layout = container.layout() if hasattr(container, "layout") else None
+        # 交并比阈值) sit *before* their spinboxes.
+        #
+        # Note: the toolbar items live inside a QScrollArea; its content
+        # widget is `model_selection_container`, whose layout is the
+        # QHBoxLayout `model_selection`. Use that container widget (never
+        # guess at a layout attribute) so the re-order reliably runs.
+        container = self.model_selection_scroll_area.widget()
+        layout = container.layout() if container is not None else None
         if layout is not None:
             for label_name, spinbox_name in (
                 ("input_conf", "edit_conf"),
@@ -644,9 +645,16 @@ class AutoLabelingWidget(QWidget):
                 if lbl_idx < 0 or spn_idx < 0 or lbl_idx >= spn_idx:
                     # Remove the label and re-insert it directly before
                     # the spinbox so the visual order becomes
-                    # `置信度阈值  [0.25]`.
+                    # `置信度阈值  [0.25]  ...`.
                     layout.removeWidget(lbl)
                     layout.insertWidget(spn_idx, lbl)
+            layout.invalidate()
+            layout.activate()
+        # Give the toolbar enough width so these parameter pairs (and the
+        # model actions around them) are never visually truncated/clipped
+        # inside the scroll area on narrow windows.
+        if container is not None:
+            container.setMinimumWidth(max(container.minimumWidth(), 880))
 
         # --- Configuration for: edit_text ---
         self.edit_text.setStyleSheet(get_lineedit_style())
