@@ -17,6 +17,7 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QProgressBar,
     QPushButton,
+    QSizePolicy,
     QWidget,
 )
 
@@ -55,6 +56,30 @@ from anylabeling.views.labeling.widgets.searchable_model_dropdown import (
     _get_models_config_path,
     SearchableModelDropdownPopup,
 )
+
+_TOOLBAR_COMPACT = True
+
+
+def _toolbar_btn():
+    return get_normal_button_style(compact=_TOOLBAR_COMPACT)
+
+
+def _toolbar_highlight_btn():
+    return get_highlight_button_style(compact=_TOOLBAR_COMPACT)
+
+
+def _toolbar_ready_btn():
+    return get_ready_button_style(compact=_TOOLBAR_COMPACT)
+
+
+def _toolbar_toggle_btn(button_color: str):
+    return get_toggle_button_style(
+        button_color=button_color, compact=_TOOLBAR_COMPACT
+    )
+
+
+def _toolbar_spinbox():
+    return get_double_spinbox_style(compact=_TOOLBAR_COMPACT)
 
 
 def update_model_selection_scroll_area_height(scroll_area):
@@ -413,8 +438,9 @@ class AutoLabelingWidget(QWidget):
         self.parent = parent
         current_dir = os.path.dirname(__file__)
         uic.loadUi(os.path.join(current_dir, "auto_labeling.ui"), self)
+        self._apply_compact_layout()
         self.model_selection_scroll_area.setStyleSheet(
-            get_model_selection_scroll_area_style()
+            get_model_selection_scroll_area_style(compact=_TOOLBAR_COMPACT)
         )
         scroll_bar = self.model_selection_scroll_area.horizontalScrollBar()
         scroll_bar.rangeChanged.connect(
@@ -523,7 +549,7 @@ class AutoLabelingWidget(QWidget):
         )
         self.model_selection_button.setAutoDefault(False)
         self.model_selection_button.setDefault(False)
-        self.model_selection_button.setStyleSheet(get_normal_button_style())
+        self.model_selection_button.setStyleSheet(_toolbar_btn())
         self.model_selection_button.setToolTip(
             "Select an AI model to use for auto labeling"
         )
@@ -538,12 +564,12 @@ class AutoLabelingWidget(QWidget):
         self.output_label.setText(self.tr("Output"))
 
         # --- Configuration for: button_run ---
-        self.button_run.setStyleSheet(get_highlight_button_style())
+        self.button_run.setStyleSheet(_toolbar_highlight_btn())
         self.button_run.setText(self.tr("Run (i)"))
         self.button_run.clicked.connect(self.run_prediction)
 
         # --- Configuration for: button_classes_filter ---
-        self.button_classes_filter.setStyleSheet(get_normal_button_style())
+        self.button_classes_filter.setStyleSheet(_toolbar_btn())
         self.button_classes_filter.setText(self.tr("Classes"))
         self.button_classes_filter.setToolTip(
             "Filter which classes are detected / segmented"
@@ -556,7 +582,7 @@ class AutoLabelingWidget(QWidget):
         self.input_box_thres.setText(self.tr("Box threshold"))
 
         # --- Configuration for: button_send ---
-        self.button_send.setStyleSheet(get_highlight_button_style())
+        self.button_send.setStyleSheet(_toolbar_highlight_btn())
         self.button_send.setText(self.tr("Send"))
         self.button_send.clicked.connect(self.run_vl_prediction)
 
@@ -578,7 +604,7 @@ class AutoLabelingWidget(QWidget):
         self.input_conf.setAccessibleName(self.tr("Confidence threshold"))
 
         # --- Configuration for: edit_conf ---
-        self.edit_conf.setStyleSheet(get_double_spinbox_style())
+        self.edit_conf.setStyleSheet(_toolbar_spinbox())
         self.edit_conf.setToolTip(
             "Confidence Threshold / 置信度阈值\n"
             "\n"
@@ -608,7 +634,7 @@ class AutoLabelingWidget(QWidget):
         self.input_iou.setAccessibleName(self.tr("IoU threshold"))
 
         # --- Configuration for: edit_iou ---
-        self.edit_iou.setStyleSheet(get_double_spinbox_style())
+        self.edit_iou.setStyleSheet(_toolbar_spinbox())
         self.edit_iou.setToolTip(
             "IoU Threshold / 交并比阈值（NMS 去重）\n"
             "\n"
@@ -680,7 +706,7 @@ class AutoLabelingWidget(QWidget):
         self.add_neg_rect.clicked.connect(self.on_add_neg_rect_clicked)
 
         # --- Configuration for: button_run_rect ---
-        self.button_run_rect.setStyleSheet(get_highlight_button_style())
+        self.button_run_rect.setStyleSheet(_toolbar_highlight_btn())
         self.button_run_rect.setText(self.tr("Run Rect"))
         self.button_run_rect.setToolTip(
             "Run inference with the current box prompts"
@@ -700,7 +726,7 @@ class AutoLabelingWidget(QWidget):
         self.button_finish_object.clicked.connect(self.on_finish_clicked)
 
         # --- Configuration for: button_auto_decode ---
-        self.button_auto_decode.setStyleSheet(get_normal_button_style())
+        self.button_auto_decode.setStyleSheet(_toolbar_btn())
         self.button_auto_decode.clicked.connect(self.on_auto_decode_toggled)
         self.button_auto_decode.setToolTip(
             self.tr(
@@ -709,7 +735,7 @@ class AutoLabelingWidget(QWidget):
         )
 
         # --- Configuration for: button_cropping ---
-        self.button_cropping.setStyleSheet(get_normal_button_style())
+        self.button_cropping.setStyleSheet(_toolbar_btn())
         self.button_cropping.clicked.connect(self.on_cropping_toggled)
         self.button_cropping.setToolTip(
             self.tr(
@@ -722,7 +748,7 @@ class AutoLabelingWidget(QWidget):
         self.toggle_preserve_existing_annotations.setChecked(False)
         self.toggle_preserve_existing_annotations.setCheckable(True)
         self.toggle_preserve_existing_annotations.setStyleSheet(
-            get_normal_button_style()
+            _toolbar_btn()
         )
         self.toggle_preserve_existing_annotations_tooltip_on = self.tr(
             "Existing shapes will be preserved during updates. Click to switch to overwriting."
@@ -741,7 +767,7 @@ class AutoLabelingWidget(QWidget):
         )
 
         # --- Configuration for: button_skip_detection ---
-        self.button_skip_detection.setStyleSheet(get_normal_button_style())
+        self.button_skip_detection.setStyleSheet(_toolbar_btn())
         self.button_skip_detection.setCheckable(True)
         self.button_skip_detection.setChecked(False)
         self.button_skip_detection.setToolTip(
@@ -780,7 +806,7 @@ class AutoLabelingWidget(QWidget):
 
         # --- Configuration for: button_segment_everything ---
         self.button_segment_everything.setText(self.tr("AMG"))
-        self.button_segment_everything.setStyleSheet(get_normal_button_style())
+        self.button_segment_everything.setStyleSheet(_toolbar_btn())
         self.button_segment_everything.clicked.connect(
             self.on_segment_everything_clicked
         )
@@ -1068,7 +1094,7 @@ class AutoLabelingWidget(QWidget):
                 self.model_selection_button.setText(self.tr("选择 AI 模型"))
                 self.model_selection_button.setEnabled(True)
                 self.model_selection_button.setStyleSheet(
-                    get_normal_button_style()
+                    _toolbar_btn()
                 )
         except Exception:  # noqa: BLE001
             pass
@@ -1236,35 +1262,35 @@ class AutoLabelingWidget(QWidget):
             self.button_clear,
             self.button_finish_object,
         ]:
-            button.setStyleSheet(get_normal_button_style())
+            button.setStyleSheet(_toolbar_btn())
         if self.auto_labeling_mode == AutoLabelingMode.NONE:
             return
         if self.auto_labeling_mode.edit_mode == AutoLabelingMode.ADD:
             if self.auto_labeling_mode.shape_type == AutoLabelingMode.POINT:
                 self.button_add_point.setStyleSheet(
-                    get_toggle_button_style(button_color="#90EE90")
+                    _toolbar_toggle_btn(button_color="#90EE90")
                 )
             elif (
                 self.auto_labeling_mode.shape_type
                 == AutoLabelingMode.RECTANGLE
             ):
                 self.button_add_rect.setStyleSheet(
-                    get_toggle_button_style(button_color="#90EE90")
+                    _toolbar_toggle_btn(button_color="#90EE90")
                 )
                 self.add_pos_rect.setStyleSheet(
-                    get_toggle_button_style(button_color="#90EE90")
+                    _toolbar_toggle_btn(button_color="#90EE90")
                 )
         elif self.auto_labeling_mode.edit_mode == AutoLabelingMode.REMOVE:
             if self.auto_labeling_mode.shape_type == AutoLabelingMode.POINT:
                 self.button_remove_point.setStyleSheet(
-                    get_toggle_button_style(button_color="#FFB6C1")
+                    _toolbar_toggle_btn(button_color="#FFB6C1")
                 )
             elif (
                 self.auto_labeling_mode.shape_type
                 == AutoLabelingMode.RECTANGLE
             ):
                 self.add_neg_rect.setStyleSheet(
-                    get_toggle_button_style(button_color="#FFB6C1")
+                    _toolbar_toggle_btn(button_color="#FFB6C1")
                 )
 
     def set_auto_labeling_mode(self, edit_mode, shape_type=None):
@@ -1364,8 +1390,9 @@ class AutoLabelingWidget(QWidget):
         layout.addWidget(self._cancel_download_button)
 
         main_layout = self.layout()
+        scroll_idx = main_layout.indexOf(self.model_selection_scroll_area)
         main_layout.insertWidget(
-            main_layout.indexOf(self.model_status_label), self._download_widget
+            scroll_idx + 1 if scroll_idx >= 0 else 1, self._download_widget
         )
         self._download_widget.hide()
         self._downloading = False
@@ -1394,8 +1421,9 @@ class AutoLabelingWidget(QWidget):
             self._on_cancel_prediction_clicked
         )
         main_layout = self.layout()
+        download_idx = main_layout.indexOf(self._download_widget)
         main_layout.insertWidget(
-            main_layout.indexOf(self.model_status_label) + 1,
+            download_idx + 1 if download_idx >= 0 else main_layout.count(),
             self._cancel_prediction_button,
         )
         self._cancel_prediction_button.hide()
@@ -1484,15 +1512,59 @@ class AutoLabelingWidget(QWidget):
         color = self._classify_status_color(status)
         text = f"● {status}" if status else status
         self.model_status_label.setText(text)
-        # Keep the original margins from auto_labeling.ui.
         self.model_status_label.setStyleSheet(
-            f"color: {color}; margin-top: 0; margin-bottom: 2px;"
+            f"color: {color}; margin: 0; padding: 0 4px; font-size: 12px;"
         )
 
     def _set_status_dot(self, text):
         # Retained for compatibility with callers; color handling is now
         # entirely inside _set_status_label.
         self._set_status_label(text)
+
+    def _apply_compact_layout(self):
+        """Tighten the auto-labeling strip vertically."""
+        outer = self.layout()
+        if outer is not None:
+            outer.setSpacing(1)
+            outer.setContentsMargins(0, 0, 2, 0)
+
+        row_layout = self.findChild(QHBoxLayout, "model_selection")
+        if row_layout is not None:
+            row_layout.setSpacing(4)
+            self._place_status_beside_run(row_layout)
+
+        for label in (
+            self.input_conf,
+            self.input_iou,
+            self.input_box_thres,
+            self.output_label,
+        ):
+            label.setContentsMargins(0, 0, 0, 0)
+
+        self.model_status_label.setContentsMargins(0, 0, 0, 0)
+        self.model_status_label.setWordWrap(False)
+        self.model_status_label.setAlignment(
+            Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft
+        )
+        self.model_status_label.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
+        )
+        self.model_status_label.setStyleSheet(
+            "margin: 0; padding: 0 4px; font-size: 12px;"
+        )
+
+    def _place_status_beside_run(self, row_layout):
+        """Put 「模型已加载…」 on the same row, immediately after 运行."""
+        status = self.model_status_label
+        outer = self.layout()
+        if outer is not None and outer.indexOf(status) >= 0:
+            outer.removeWidget(status)
+        current = row_layout.indexOf(status)
+        if current >= 0:
+            row_layout.removeWidget(status)
+        run_idx = row_layout.indexOf(self.button_run)
+        insert_at = run_idx + 1 if run_idx >= 0 else row_layout.count()
+        row_layout.insertWidget(insert_at, status, 1)
 
     def _setup_more_panel(self):
         """Fold secondary controls behind a collapsible "More" panel.
@@ -1540,7 +1612,7 @@ class AutoLabelingWidget(QWidget):
         self._more_panel.setObjectName("more_panel")
         panel_layout = QHBoxLayout(self._more_panel)
         panel_layout.setContentsMargins(0, 0, 0, 0)
-        panel_layout.setSpacing(6)
+        panel_layout.setSpacing(4)
 
         mask_names = {"mask_fineness_value_label", "mask_fineness_slider"}
         for name in self._MORE_PANEL_WIDGETS:
@@ -1563,7 +1635,7 @@ class AutoLabelingWidget(QWidget):
 
         self._more_button = QPushButton("更多 ▾")
         self._more_button.setCheckable(True)
-        self._more_button.setStyleSheet(get_normal_button_style())
+        self._more_button.setStyleSheet(_toolbar_btn())
         self._more_button.setToolTip("Show/hide more AI labeling options")
         self._more_button.clicked.connect(self._on_toggle_more_panel)
 
@@ -1778,12 +1850,12 @@ class AutoLabelingWidget(QWidget):
         if display_name:
             self.model_selection_button.setText(f"● {display_name}")
             self.model_selection_button.setStyleSheet(
-                get_ready_button_style()
+                _toolbar_ready_btn()
             )
         else:
             self.model_selection_button.setText(self.tr("选择 AI 模型"))
             self.model_selection_button.setStyleSheet(
-                get_normal_button_style()
+                _toolbar_btn()
             )
 
     def on_new_model_loaded(self, model_config):
@@ -2039,10 +2111,10 @@ class AutoLabelingWidget(QWidget):
 
         if is_checked:
             self.button_auto_decode.setStyleSheet(
-                get_toggle_button_style(button_color="#87CEEB")
+                _toolbar_toggle_btn(button_color="#87CEEB")
             )
         else:
-            self.button_auto_decode.setStyleSheet(get_normal_button_style())
+            self.button_auto_decode.setStyleSheet(_toolbar_btn())
 
         self.auto_decode_mode_changed.emit(is_checked)
 
@@ -2052,10 +2124,10 @@ class AutoLabelingWidget(QWidget):
 
         if is_checked:
             self.button_cropping.setStyleSheet(
-                get_toggle_button_style(button_color="#F8E003")
+                _toolbar_toggle_btn(button_color="#F8E003")
             )
         else:
-            self.button_cropping.setStyleSheet(get_normal_button_style())
+            self.button_cropping.setStyleSheet(_toolbar_btn())
 
         self.cropping_mode_changed.emit(is_checked)
 
@@ -2116,10 +2188,10 @@ class AutoLabelingWidget(QWidget):
 
         if is_checked:
             self.button_skip_detection.setStyleSheet(
-                get_toggle_button_style(button_color="#90EE90")
+                _toolbar_toggle_btn(button_color="#90EE90")
             )
         else:
-            self.button_skip_detection.setStyleSheet(get_normal_button_style())
+            self.button_skip_detection.setStyleSheet(_toolbar_btn())
 
         self.skip_detection = is_checked
 

@@ -488,10 +488,14 @@ class Canvas(
         # The application will eventually call Canvas.load_shapes which will
         # push this right back onto the stack.
         shapes_backup = self.shapes_backups.pop()
-        self.shapes = shapes_backup
+        self.shapes = [shape.copy() for shape in shapes_backup]
         self.selected_shapes = []
         self._selected_group_id = None
         self._hovered_group_id = None
+        self.h_shape = None
+        self.prev_h_shape = None
+        self.h_vertex = None
+        self.h_edge = None
         for shape in self.shapes:
             shape.selected = False
         self.update()
@@ -506,10 +510,14 @@ class Canvas(
         if not self.is_shape_redoable:
             return
         shapes_backup = self.shapes_redo_backups.pop()
-        self.shapes = shapes_backup
+        self.shapes = [shape.copy() for shape in shapes_backup]
         self.selected_shapes = []
         self._selected_group_id = None
         self._hovered_group_id = None
+        self.h_shape = None
+        self.prev_h_shape = None
+        self.h_vertex = None
+        self.h_edge = None
         for shape in self.shapes:
             shape.selected = False
         self.update()
@@ -5065,14 +5073,29 @@ class Canvas(
                 self.move_by_keyboard(QtCore.QPointF(-move_speed, 0.0))
             elif key == QtCore.Qt.Key.Key_Right:
                 self.move_by_keyboard(QtCore.QPointF(move_speed, 0.0))
-            elif key == QtCore.Qt.Key.Key_Z:
-                self.rotate_by_keyboard(self.large_rotation_increment)
-            elif key == QtCore.Qt.Key.Key_X:
-                self.rotate_by_keyboard(self.small_rotation_increment)
-            elif key == QtCore.Qt.Key.Key_C:
-                self.rotate_by_keyboard(-self.small_rotation_increment)
-            elif key == QtCore.Qt.Key.Key_V:
-                self.rotate_by_keyboard(-self.large_rotation_increment)
+            elif key in (
+                QtCore.Qt.Key.Key_Z,
+                QtCore.Qt.Key.Key_X,
+                QtCore.Qt.Key.Key_C,
+                QtCore.Qt.Key.Key_V,
+            ):
+                # Z/X/C/V rotate selected boxes. Ctrl+Z/X/C/V are undo /
+                # cut / copy / paste and must not also rotate (that combo
+                # used to crash on Ctrl+Z).
+                if modifiers & (
+                    QtCore.Qt.KeyboardModifier.ControlModifier
+                    | QtCore.Qt.KeyboardModifier.MetaModifier
+                    | QtCore.Qt.KeyboardModifier.AltModifier
+                ):
+                    return
+                if key == QtCore.Qt.Key.Key_Z:
+                    self.rotate_by_keyboard(self.large_rotation_increment)
+                elif key == QtCore.Qt.Key.Key_X:
+                    self.rotate_by_keyboard(self.small_rotation_increment)
+                elif key == QtCore.Qt.Key.Key_C:
+                    self.rotate_by_keyboard(-self.small_rotation_increment)
+                else:
+                    self.rotate_by_keyboard(-self.large_rotation_increment)
 
     # QT Overload
     def keyReleaseEvent(self, ev):

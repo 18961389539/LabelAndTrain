@@ -23,6 +23,7 @@ from PyQt6.QtWidgets import (
     QFrame,
     QGridLayout,
     QHBoxLayout,
+    QInputDialog,
     QLabel,
     QMessageBox,
     QPushButton,
@@ -129,7 +130,7 @@ def _measure_text_width(font_metrics, text):
 
 
 def _format_label_list_text(label, group_id):
-    text = html.escape(label)
+    text = html.escape("" if label is None else str(label))
     if group_id is None:
         return text
     return f"{text} ({group_id})"
@@ -335,9 +336,18 @@ class LabelingWidget(LabelDialog):
         self.unique_label_list = UniqueLabelQListWidget()
         self.unique_label_list.setToolTip(
             self.tr(
-                "Select label to start annotating for it. "
-                "Press 'Esc' to deselect."
+                "单击选择类别后开始画框。双击或右键可重命名。"
+                "Esc 取消选择。"
             )
+        )
+        self.unique_label_list.itemDoubleClicked.connect(
+            self.rename_unique_label
+        )
+        self.unique_label_list.setContextMenuPolicy(
+            Qt.ContextMenuPolicy.CustomContextMenu
+        )
+        self.unique_label_list.customContextMenuRequested.connect(
+            self._unique_label_context_menu
         )
         self.label_search = SearchBar(
             placeholder_text=self.tr("搜索标签...")
@@ -1822,8 +1832,12 @@ class LabelingWidget(LabelDialog):
         layout.addWidget(self.tools_scroll_area)
         central_layout = QVBoxLayout()
         central_layout.setContentsMargins(0, 0, 0, 0)
+        central_layout.setSpacing(2)
         self.label_instruction = QLabel(self.get_labeling_instruction())
         self.label_instruction.setContentsMargins(0, 0, 0, 0)
+        self.label_instruction.setStyleSheet(
+            "margin: 0; padding: 0 4px; font-size: 12px;"
+        )
         self.label_instruction.setWordWrap(True)
         self.label_instruction.setTextFormat(Qt.TextFormat.RichText)
         self.auto_labeling_widget = AutoLabelingWidget(self)
@@ -1894,7 +1908,6 @@ class LabelingWidget(LabelDialog):
         # )
         self.auto_labeling_widget.hide()  # Hide by default
         central_layout.addWidget(self.label_instruction)
-        central_layout.addSpacing(5)
         central_layout.addWidget(self.auto_labeling_widget)
         central_layout.addWidget(scroll_area)
         layout.addLayout(central_layout)
@@ -2789,9 +2802,10 @@ class LabelingWidget(LabelDialog):
             self.canvas.brush_undo()
             self.actions.undo.setEnabled(self.canvas.brush_can_undo())
             return
+        if not self.canvas.is_shape_restorable:
+            return
         self.canvas.restore_shape()
-        self.label_list.clear()
-        self.load_shapes(self.canvas.shapes, update_last_label=False)
+        self._reload_shapes_after_history_change()
         self.actions.undo.setEnabled(self.canvas.is_shape_restorable)
         self.actions.redo.setEnabled(self.canvas.is_shape_redoable)
         self.set_dirty()
@@ -2806,12 +2820,33 @@ class LabelingWidget(LabelDialog):
             # Brush strokes keep their own history; redo is not tracked
             # there yet.
             return
+        if not self.canvas.is_shape_redoable:
+            return
         self.canvas.redo_shape()
-        self.label_list.clear()
-        self.load_shapes(self.canvas.shapes, update_last_label=False)
+        self._reload_shapes_after_history_change()
         self.actions.undo.setEnabled(self.canvas.is_shape_restorable)
         self.actions.redo.setEnabled(self.canvas.is_shape_redoable)
         self.set_dirty()
+
+    def _reload_shapes_after_history_change(self):
+        """Rebuild the object list from canvas.shapes after undo/redo.
+
+        ``label_list.clear()`` emits selection/drop signals. Those slots
+        must not run mid-rebuild: they would call ``item.shape()`` on
+        items Qt is destroying, which crashes the process on Ctrl+Z.
+        """
+        self._no_selection_slot = True
+        selection_blocker = QtCore.QSignalBlocker(
+            self.label_list.selectionModel()
+        )
+        drop_blocker = QtCore.QSignalBlocker(self.label_list.model())
+        try:
+            self.label_list.clear()
+            self.load_shapes(self.canvas.shapes, update_last_label=False)
+        finally:
+            del selection_blocker
+            del drop_blocker
+            self._no_selection_slot = False
 
     def get_label_file_list(self):
         label_file_list = []
@@ -4976,7 +5011,11 @@ class LabelingWidget(LabelDialog):
         if self.canvas.editing():
             selected_shapes = []
             for item in self.label_list.selected_items():
-                selected_shapes.append(item.shape())
+                if item is None:
+                    continue
+                shape = item.shape()
+                if shape is not None:
+                    selected_shapes.append(shape)
             if selected_shapes:
                 self.canvas.select_shapes(selected_shapes)
             else:
@@ -4996,8 +5035,15 @@ class LabelingWidget(LabelDialog):
             self.update_navigator_shapes()
 
     def label_order_changed(self):
+        shapes = []
+        for item in self.label_list:
+            if item is None:
+                continue
+            shape = item.shape()
+            if shape is not None:
+                shapes.append(shape)
+        self.canvas.load_shapes(shapes)
         self.set_dirty()
-        self.canvas.load_shapes([item.shape() for item in self.label_list])
 
     # Callback functions:
     def new_shape(self):
@@ -6271,6 +6317,117 @@ class LabelingWidget(LabelDialog):
                 item.setHidden(not matched)
         except Exception as e:  # noqa
             logger.warning(f"Label panel refresh failed: {e}")
+
+    def _unique_label_context_menu(self, pos):
+        item = self.unique_label_list.itemAt(pos)
+        if item is None:
+            return
+        menu = QtWidgets.QMenu(self)
+        rename_action = menu.addAction(self.tr("重命名标签"))
+        chosen = menu.exec(self.unique_label_list.mapToGlobal(pos))
+        if chosen == rename_action:
+            self.rename_unique_label(item)
+
+    def rename_unique_label(self, item=None):
+        """Rename a class in the Labels dock (e.g. class_0 → 真实类别名)."""
+        if item is None or not isinstance(item, QtWidgets.QListWidgetItem):
+            items = self.unique_label_list.selectedItems()
+            if not items:
+                return
+            item = items[0]
+        old_label = item.data(Qt.ItemDataRole.UserRole)
+        if not old_label:
+            return
+        new_label, ok = QInputDialog.getText(
+            self,
+            self.tr("重命名标签"),
+            self.tr("将「%1」修改为：").replace("%1", str(old_label)),
+            QLineEdit.EchoMode.Normal,
+            str(old_label),
+        )
+        if not ok:
+            return
+        new_label = str(new_label).strip()
+        if not new_label or new_label == old_label:
+            return
+        if not self.validate_label(new_label):
+            self.error_message(
+                self.tr("Invalid label"),
+                self.tr("Invalid label '{}' with validation type '{}'").format(
+                    new_label, self._config["validate_label"]
+                ),
+            )
+            return
+        self._apply_unique_label_rename(old_label, new_label)
+
+    def _apply_unique_label_rename(self, old_label, new_label):
+        if self.canvas.shapes:
+            self.canvas.store_shapes()
+
+        old_items = self.unique_label_list.find_items_by_label(old_label)
+        new_items = self.unique_label_list.find_items_by_label(new_label)
+        if new_items:
+            for old_item in old_items:
+                row = self.unique_label_list.row(old_item)
+                if row >= 0:
+                    self.unique_label_list.takeItem(row)
+        else:
+            for old_item in old_items:
+                old_item.setData(Qt.ItemDataRole.UserRole, new_label)
+                rgb = self._get_rgb_by_label(new_label)
+                self.unique_label_list.set_item_label(
+                    old_item, new_label, rgb, LABEL_OPACITY
+                )
+
+        if old_label in self.label_info:
+            info = self.label_info.pop(old_label)
+            if new_label not in self.label_info:
+                info["value"] = None
+                self.label_info[new_label] = info
+
+        renamed = 0
+        for shape in self.canvas.shapes:
+            if shape.label != old_label:
+                continue
+            shape.label = new_label
+            self._update_shape_color(shape)
+            renamed += 1
+            list_item = self.label_list.find_item_by_shape(shape)
+            if list_item is not None:
+                list_item.setText(
+                    _format_label_list_text(shape.label, shape.group_id)
+                )
+                color = shape.fill_color.getRgb()[:3]
+                list_item.setBackground(QtGui.QColor(*color, LABEL_OPACITY))
+
+        self.label_dialog.remove_label_history(old_label)
+        self.label_dialog.add_label_history(new_label)
+
+        labels = list(self._config.get("labels") or [])
+        if old_label in labels:
+            labels = [new_label if name == old_label else name for name in labels]
+        elif new_label not in labels:
+            labels.append(new_label)
+        seen = set()
+        unique_labels = []
+        for name in labels:
+            if name in seen:
+                continue
+            seen.add(name)
+            unique_labels.append(name)
+        self._config["labels"] = unique_labels
+        save_config(self._config)
+
+        self.canvas.update()
+        self._refresh_shape_filters()
+        self._refresh_label_panel()
+        self.set_dirty()
+        self.status(
+            self.tr("已将 %1 改为 %2").replace("%1", old_label).replace(
+                "%2", new_label
+            )
+            + (f" ({renamed})" if renamed else "")
+        )
 
     def change_output_dir_dialog(self, _value=False):
         default_output_dir = self.output_dir

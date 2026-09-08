@@ -188,14 +188,18 @@ def get_export_option_style():
     """
 
 
-def get_normal_button_style():
+def get_normal_button_style(compact: bool = False):
     t = get_theme()
+    height = 20 if compact else 24
+    padding = "2px 6px" if compact else "5px 8px"
+    radius = 6 if compact else 8
+    min_width = 72 if compact else 80
     return f"""
         QPushButton {{
-            height: 24px;
-            min-width: 80px;
-            padding: 5px 8px;
-            border-radius: 8px;
+            height: {height}px;
+            min-width: {min_width}px;
+            padding: {padding};
+            border-radius: {radius}px;
             background-color: {t["button_bg"]};
             border: 1px solid {t["border_light"]};
         }}
@@ -336,70 +340,80 @@ def get_settings_combo_style() -> str:
     """
 
 
-def get_model_selection_scroll_area_style():
-    return """
-        QScrollArea#model_selection_scroll_area {
+def get_model_selection_scroll_area_style(compact: bool = False):
+    scrollbar_height = 10 if compact else 16
+    scrollbar_margin = "0px 8px 0px 8px" if compact else "2px 12px 2px 12px"
+    return f"""
+        QScrollArea#model_selection_scroll_area {{
             background: transparent;
             border: none;
-        }
-        QScrollArea#model_selection_scroll_area QScrollBar:horizontal {
+        }}
+        QScrollArea#model_selection_scroll_area QScrollBar:horizontal {{
             background: transparent;
-            height: 16px;
-            margin: 2px 12px 2px 12px;
+            height: {scrollbar_height}px;
+            margin: {scrollbar_margin};
             border: none;
-        }
-        QScrollArea#model_selection_scroll_area QScrollBar::handle:horizontal {
+        }}
+        QScrollArea#model_selection_scroll_area QScrollBar::handle:horizontal {{
             background: rgb(206, 213, 230);
             min-width: 34px;
             border-radius: 4px;
-        }
-        QScrollArea#model_selection_scroll_area QScrollBar::add-line:horizontal {
+        }}
+        QScrollArea#model_selection_scroll_area QScrollBar::add-line:horizontal {{
             background: transparent;
             border: none;
             subcontrol-origin: margin;
             subcontrol-position: right;
             width: 12px;
             image: url(:/images/images/caret-right.svg);
-        }
-        QScrollArea#model_selection_scroll_area QScrollBar::sub-line:horizontal {
+        }}
+        QScrollArea#model_selection_scroll_area QScrollBar::sub-line:horizontal {{
             background: transparent;
             border: none;
             subcontrol-origin: margin;
             subcontrol-position: left;
             width: 12px;
             image: url(:/images/images/caret-left.svg);
-        }
+        }}
         QScrollArea#model_selection_scroll_area QScrollBar::add-page:horizontal,
-        QScrollArea#model_selection_scroll_area QScrollBar::sub-page:horizontal {
+        QScrollArea#model_selection_scroll_area QScrollBar::sub-page:horizontal {{
             background: transparent;
-        }
+        }}
     """
 
 
-def get_toggle_button_style(button_color: str):
+def get_toggle_button_style(button_color: str, compact: bool = False):
     t = get_theme()
+    height = 20 if compact else 24
+    padding = "2px 6px" if compact else "5px 8px"
+    radius = 6 if compact else 8
+    min_width = 72 if compact else 80
     return f"""
         QPushButton {{
-            height: 24px;
-            min-width: 80px;
-            padding: 5px 8px;
-            border-radius: 8px;
+            height: {height}px;
+            min-width: {min_width}px;
+            padding: {padding};
+            border-radius: {radius}px;
             background-color: {button_color};
             border: 1px solid {t["border_light"]};
         }}
     """
 
 
-def get_highlight_button_style():
+def get_highlight_button_style(compact: bool = False):
     t = get_theme()
+    height = 20 if compact else 24
+    padding = "2px 6px" if compact else "5px 8px"
+    radius = 6 if compact else 8
+    min_width = 72 if compact else 80
     return f"""
         QPushButton {{
-            height: 24px;
+            height: {height}px;
             color: white;
             border: none;
-            min-width: 80px;
-            padding: 5px 8px;
-            border-radius: 8px;
+            min-width: {min_width}px;
+            padding: {padding};
+            border-radius: {radius}px;
             background-color: {t["primary"]};
         }}
         QPushButton:hover {{
@@ -411,19 +425,23 @@ def get_highlight_button_style():
     """
 
 
-def get_ready_button_style():
+def get_ready_button_style(compact: bool = False):
     """Style for the model-selection button once a model is fully loaded.
 
     A green-tinted outline + colored text signals "model ready" without
     competing with the highlight style used by primary action buttons.
     """
     t = get_theme()
+    height = 20 if compact else 24
+    padding = "2px 6px" if compact else "5px 8px"
+    radius = 6 if compact else 8
+    min_width = 108 if compact else 120
     return f"""
         QPushButton {{
-            height: 24px;
-            min-width: 120px;
-            padding: 5px 8px;
-            border-radius: 8px;
+            height: {height}px;
+            min-width: {min_width}px;
+            padding: {padding};
+            border-radius: {radius}px;
             background-color: {t["background_secondary"]};
             border: 1px solid {t["highlight"]};
             color: {t["highlight_text"]};
@@ -469,22 +487,26 @@ def get_spinbox_style():
     """
 
 
-def get_double_spinbox_style():
+def get_double_spinbox_style(compact: bool = False):
     """
     Returns the CSS stylesheet for a QDoubleSpinBox, suitable for decimals.
     """
     t = get_theme()
+    padding = "2px 4px" if compact else "5px 8px"
+    min_height = 20 if compact else 24
+    arrow_size = 10 if compact else 12
+    button_width = 16 if compact else 20
     return f"""
         QDoubleSpinBox {{
-            padding: 5px 8px;
+            padding: {padding};
             background: {t["background_secondary"]};
             border: 1px solid {t["border_light"]};
             border-radius: 6px;
-            min-height: 24px;
+            min-height: {min_height}px;
             selection-background-color: {t["primary"]};
         }}
         QDoubleSpinBox::up-button, QDoubleSpinBox::down-button {{
-            width: 20px;
+            width: {button_width}px;
             border: none;
             background: {t["spinbox_button"]};
         }}
@@ -493,13 +515,13 @@ def get_double_spinbox_style():
         }}
         QDoubleSpinBox::up-arrow {{
             image: url({new_icon_path("caret-up", "svg")});
-            width: 12px;
-            height: 12px;
+            width: {arrow_size}px;
+            height: {arrow_size}px;
         }}
         QDoubleSpinBox::down-arrow {{
             image: url({new_icon_path("caret-down", "svg")});
-            width: 12px;
-            height: 12px;
+            width: {arrow_size}px;
+            height: {arrow_size}px;
         }}
     """
 

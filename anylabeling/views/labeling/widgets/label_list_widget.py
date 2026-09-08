@@ -162,7 +162,8 @@ class StandardItemModel(QtGui.QStandardItemModel):
     # QT Overload
     def removeRows(self, *args, **kwargs):
         ret = super().removeRows(*args, **kwargs)
-        self.itemDropped.emit()
+        if ret and not getattr(self, "_suppress_drop_signal", False):
+            self.itemDropped.emit()
         return ret
 
 
@@ -235,9 +236,19 @@ class LabelListWidget(QtWidgets.QListView):
         return self.model().itemChanged
 
     def item_selection_changed_event(self, selected, deselected):
-        selected = [self.model().itemFromIndex(i) for i in selected.indexes()]
+        selected = [
+            item
+            for item in (
+                self.model().itemFromIndex(i) for i in selected.indexes()
+            )
+            if item is not None
+        ]
         deselected = [
-            self.model().itemFromIndex(i) for i in deselected.indexes()
+            item
+            for item in (
+                self.model().itemFromIndex(i) for i in deselected.indexes()
+            )
+            if item is not None
         ]
         self.item_selection_changed.emit(selected, deselected)
 
@@ -332,7 +343,12 @@ class LabelListWidget(QtWidgets.QListView):
         # raise ValueError(f"cannot find shape: {shape}")
 
     def clear(self):
-        self.model().clear()
+        model = self.model()
+        model._suppress_drop_signal = True
+        try:
+            model.clear()
+        finally:
+            model._suppress_drop_signal = False
 
     def item_at_index(self, index):
         return self.model().item(index, 0)

@@ -103,7 +103,7 @@ class TestAutoLabelingLayout(unittest.TestCase):
 
         self.assertGreater(scroll_area.horizontalScrollBar().maximum(), 0)
         self.assertEqual(
-            scroll_area.horizontalScrollBar().sizeHint().height(), 16
+            scroll_area.horizontalScrollBar().sizeHint().height(), 10
         )
         self.assertEqual(
             scroll_area.height(),
@@ -248,13 +248,22 @@ class TestAutoLabelingLayout(unittest.TestCase):
             widget, widget.model_selection_button.rect().topLeft()
         ).y()
         scroll_top = widget.model_selection_scroll_area.geometry().top()
-        button_bottom = (
-            button_top + widget.model_selection_button.geometry().height()
-        )
-        status_top = widget.model_status_label.geometry().top()
 
         self.assertEqual(button_top, scroll_top)
-        self.assertLessEqual(button_bottom, status_top)
+        run_right = widget.button_run.mapTo(
+            widget, widget.button_run.rect().topRight()
+        ).x()
+        status_left = widget.model_status_label.mapTo(
+            widget, widget.model_status_label.rect().topLeft()
+        ).x()
+        run_center_y = widget.button_run.mapTo(
+            widget, widget.button_run.rect().center()
+        ).y()
+        status_center_y = widget.model_status_label.mapTo(
+            widget, widget.model_status_label.rect().center()
+        ).y()
+        self.assertGreaterEqual(status_left, run_right)
+        self.assertLessEqual(abs(run_center_y - status_center_y), 8)
         self.assertTrue(widget.button_segment_everything.isEnabled())
         widget.model_manager.prediction_started.emit()
         self.assertFalse(widget.button_segment_everything.isEnabled())

@@ -34,9 +34,9 @@ class UniqueLabelQListWidget(EscapableQListWidget):
         qlabel = QtWidgets.QLabel()
         qlabel.setContentsMargins(8, 4, 8, 4)
         if color is None:
-            text = f"{label}"
+            text = "" if label is None else str(label)
         else:
-            text = "{}".format(html.escape(label))
+            text = "{}".format(html.escape("" if label is None else str(label)))
         if count is not None:
             text = f"{text}　<span style='color:rgba(120,132,145,0.95);'>{count}</span>"
         qlabel.setText(text)
