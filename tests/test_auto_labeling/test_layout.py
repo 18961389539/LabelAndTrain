@@ -261,6 +261,57 @@ class TestAutoLabelingLayout(unittest.TestCase):
         widget.model_manager.prediction_finished.emit()
         self.assertTrue(widget.button_segment_everything.isEnabled())
 
+    def test_more_panel_places_conf_iou_labels_before_spinboxes(self):
+        """Regression: labels must not appear after the 0.25/0.45 spinboxes.
+
+        Moving widgets into the More panel used to sort by object name
+        (``edit_conf`` before ``input_conf``) and a follow-up reorder
+        then appended the labels onto the outer toolbar.
+        """
+        config.current_config_file = (
+            "anylabeling/configs/xanylabeling_config.yaml"
+        )
+        parent = type(
+            "Parent",
+            (),
+            {
+                "_config": get_config(),
+                "new_shapes_from_auto_labeling": lambda _self, _result: None,
+            },
+        )()
+        widget = AutoLabelingWidget(parent)
+        self._widgets.append(widget)
+        self.app.processEvents()
+
+        more_panel = widget.findChild(QtWidgets.QWidget, "more_panel")
+        self.assertIsNotNone(more_panel)
+        layout = more_panel.layout()
+        self.assertIsNotNone(layout)
+
+        names = []
+        for index in range(layout.count()):
+            item = layout.itemAt(index)
+            child = item.widget() if item is not None else None
+            if child is not None:
+                names.append(child.objectName())
+
+        self.assertIn("input_conf", names)
+        self.assertIn("edit_conf", names)
+        self.assertIn("input_iou", names)
+        self.assertIn("edit_iou", names)
+        self.assertLess(names.index("input_conf"), names.index("edit_conf"))
+        self.assertLess(names.index("input_iou"), names.index("edit_iou"))
+        self.assertEqual(
+            names.index("edit_conf"), names.index("input_conf") + 1
+        )
+        self.assertEqual(
+            names.index("edit_iou"), names.index("input_iou") + 1
+        )
+
+        outer = widget.model_selection_scroll_area.widget().layout()
+        self.assertLess(outer.indexOf(widget.input_conf), 0)
+        self.assertLess(outer.indexOf(widget.input_iou), 0)
+
     def test_model_dropdown_search_matches_display_names(self):
         dropdown = SearchableModelDropdownPopup(
             {

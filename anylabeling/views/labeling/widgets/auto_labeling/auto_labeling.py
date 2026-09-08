@@ -622,34 +622,13 @@ class AutoLabelingWidget(QWidget):
         )
         self.edit_iou.valueChanged.connect(self.on_iou_value_changed)
 
-        # Runtime layout fix: guarantee the conf/iou *labels* (置信度阈值,
-        # 交并比阈值) sit *before* their spinboxes.
-        #
-        # Note: the toolbar items live inside a QScrollArea; its content
-        # widget is `model_selection_container`, whose layout is the
-        # QHBoxLayout `model_selection`. Use that container widget (never
-        # guess at a layout attribute) so the re-order reliably runs.
+        # Conf/iou captions must sit immediately before their spinboxes.
+        # These widgets are parked inside the "More" panel, so reorder
+        # against the spinbox's own parent layout — never the outer
+        # `model_selection` row, whose indexOf() is -1 and would append
+        # the labels after every other control.
+        self._ensure_conf_iou_label_order()
         container = self.model_selection_scroll_area.widget()
-        layout = container.layout() if container is not None else None
-        if layout is not None:
-            for label_name, spinbox_name in (
-                ("input_conf", "edit_conf"),
-                ("input_iou", "edit_iou"),
-            ):
-                lbl = container.findChild(QLabel, label_name)
-                spn = container.findChild(QDoubleSpinBox, spinbox_name)
-                if lbl is None or spn is None:
-                    continue
-                lbl_idx = layout.indexOf(lbl)
-                spn_idx = layout.indexOf(spn)
-                if lbl_idx < 0 or spn_idx < 0 or lbl_idx >= spn_idx:
-                    # Remove the label and re-insert it directly before
-                    # the spinbox so the visual order becomes
-                    # `置信度阈值  [0.25]  ...`.
-                    layout.removeWidget(lbl)
-                    layout.insertWidget(spn_idx, lbl)
-            layout.invalidate()
-            layout.activate()
         # Give the toolbar enough width so these parameter pairs (and the
         # model actions around them) are never visually truncated/clipped
         # inside the scroll area on narrow windows.
@@ -1527,23 +1506,29 @@ class AutoLabelingWidget(QWidget):
         so the existing per-widget show/hide logic (``update_visible_widgets``
         / ``hide_labeling_widgets``) keeps working unchanged — collapsing
         only toggles the wrapper container's visibility.
+
+        Order is significant: ``input_conf`` / ``input_iou`` are the
+        captions for the matching spinboxes and must stay immediately
+        before them. Do not sort by object name (``edit_*`` would then
+        precede ``input_*``).
         """
-        self._MORE_PANEL_WIDGETS = {
-            "button_run_rect",
-            "input_box_thres",
+        # Tuple, not set: insertion order is the visual order.
+        self._MORE_PANEL_WIDGETS = (
             "input_conf",
             "edit_conf",
             "input_iou",
             "edit_iou",
+            "input_box_thres",
+            "toggle_preserve_existing_annotations",
+            "button_classes_filter",
             "button_auto_decode",
             "button_cropping",
             "button_segment_everything",
             "button_skip_detection",
-            "toggle_preserve_existing_annotations",
-            "button_classes_filter",
+            "button_run_rect",
             "mask_fineness_value_label",
             "mask_fineness_slider",
-        }
+        )
         main_layout = self.findChild(QHBoxLayout, "model_selection")
         if main_layout is None:
             logger.warning(
@@ -1557,12 +1542,10 @@ class AutoLabelingWidget(QWidget):
         panel_layout.setContentsMargins(0, 0, 0, 0)
         panel_layout.setSpacing(6)
 
-        # Direct children of the main row.
-        direct_names = sorted(
-            self._MORE_PANEL_WIDGETS
-            - {"mask_fineness_value_label", "mask_fineness_slider"}
-        )
-        for name in direct_names:
+        mask_names = {"mask_fineness_value_label", "mask_fineness_slider"}
+        for name in self._MORE_PANEL_WIDGETS:
+            if name in mask_names:
+                continue
             widget = getattr(self, name)
             main_layout.removeWidget(widget)
             widget.setParent(self._more_panel)
@@ -1589,6 +1572,42 @@ class AutoLabelingWidget(QWidget):
         main_layout.insertWidget(close_index + 1, self._more_panel)
         self._more_panel.hide()
         self._update_model_selection_scroll_area_height()
+
+    def _ensure_conf_iou_label_order(self):
+        """Place 置信度阈值 / 交并比阈值 immediately before their spinboxes.
+
+        The owning layout is the spinbox's parent (the More panel after
+        ``_setup_more_panel``), not the outer toolbar row.
+        """
+        for label, spinbox in (
+            (self.input_conf, self.edit_conf),
+            (self.input_iou, self.edit_iou),
+        ):
+            parent = spinbox.parentWidget()
+            layout = parent.layout() if parent is not None else None
+            if layout is None:
+                continue
+            spn_idx = layout.indexOf(spinbox)
+            if spn_idx < 0:
+                continue
+            lbl_idx = layout.indexOf(label)
+            if lbl_idx >= 0 and lbl_idx < spn_idx:
+                continue
+            if lbl_idx >= 0:
+                layout.removeWidget(label)
+            else:
+                old_parent = label.parentWidget()
+                old_layout = (
+                    old_parent.layout() if old_parent is not None else None
+                )
+                if old_layout is not None:
+                    old_layout.removeWidget(label)
+            layout.insertWidget(spn_idx, label)
+        parent = self.edit_conf.parentWidget()
+        layout = parent.layout() if parent is not None else None
+        if layout is not None:
+            layout.invalidate()
+            layout.activate()
 
     def _on_toggle_more_panel(self, checked):
         self._more_panel.setVisible(checked)
@@ -1871,7 +1890,7 @@ class AutoLabelingWidget(QWidget):
         # If this model needs widgets parked inside the collapsed "More"
         # panel, expand it so the tools are actually visible.
         if hasattr(self, "_more_panel") and self._more_panel is not None:
-            panel_names = getattr(self, "_MORE_PANEL_WIDGETS", set())
+            panel_names = set(getattr(self, "_MORE_PANEL_WIDGETS", ()))
             if panel_names.intersection(widgets) and not self._more_panel.isVisible():
                 self._more_button.setChecked(True)
                 self._more_panel.show()
