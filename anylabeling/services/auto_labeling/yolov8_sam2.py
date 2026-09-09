@@ -42,7 +42,6 @@ class YOLOv8SegmentAnything2(YOLO):
             "edit_conf",
             "input_iou",
             "edit_iou",
-            "toggle_preserve_existing_annotations",
             "output_label",
             "output_select_combobox",
         ]

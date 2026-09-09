@@ -42,8 +42,6 @@ class YOLO(Model):
             "edit_conf",
             "input_iou",
             "edit_iou",
-            "toggle_preserve_existing_annotations",
-            "button_classes_filter",
         ]
         output_modes = {
             "point": QCoreApplication.translate("Model", "Point"),

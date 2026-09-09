@@ -139,8 +139,6 @@ class TestAutoLabelingLayout(unittest.TestCase):
             "input_iou",
             "output_label",
             "output_select_combobox",
-            "toggle_preserve_existing_annotations",
-            "button_classes_filter",
             "button_auto_decode",
             "button_cropping",
             "button_skip_detection",

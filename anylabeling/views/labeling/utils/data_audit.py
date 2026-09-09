@@ -26,14 +26,33 @@ from PyQt6.QtWidgets import (
 from anylabeling.views.labeling.logger import logger
 from anylabeling.views.labeling.widgets import Popup
 from anylabeling.views.labeling.utils.qt import new_icon_path
+from anylabeling.views.labeling.utils.quality import (
+    IMBALANCE_MIN_MAJORITY,
+    IMBALANCE_RATIO,
+    inspect_shape_quality,
+    json_txt_mismatch,
+)
 
-CATEGORY_ORDER = ("unlabeled", "empty", "corrupted", "orphan")
+CATEGORY_ORDER = (
+    "unlabeled",
+    "empty",
+    "corrupted",
+    "orphan",
+    "tiny",
+    "edge",
+    "imbalance",
+    "json_txt",
+)
 
 CATEGORY_TITLES = {
     "unlabeled": "无标注的图片",
     "empty": "空标注文件（shapes 为空）",
     "corrupted": "损坏的标注文件",
     "orphan": "孤立的标注文件（对应图片不存在）",
+    "tiny": "含极小框的图片",
+    "edge": "含贴边框的图片",
+    "imbalance": "类别数量失衡",
+    "json_txt": "JSON 与 YOLO txt 不一致",
 }
 
 
@@ -45,8 +64,8 @@ def audit_dataset(image_list, image_dir):
         image_dir: Folder that holds the label json files.
 
     Returns:
-        dict with keys ``unlabeled`` / ``empty`` / ``corrupted`` /
-        ``orphan``, each a sorted list of paths.
+        dict with keys in ``CATEGORY_ORDER``. ``imbalance`` holds
+        human-readable class-count lines; other keys are file paths.
     """
     results = {key: [] for key in CATEGORY_ORDER}
     if not image_dir or not osp.isdir(image_dir):
@@ -59,6 +78,7 @@ def audit_dataset(image_list, image_dir):
     image_basenames = {
         osp.splitext(osp.basename(p))[0] for p in images
     }
+    class_counts = {}
 
     for image_path in images:
         base = osp.splitext(osp.basename(image_path))[0]
@@ -71,11 +91,37 @@ def audit_dataset(image_list, image_dir):
                 data = json.load(f)
             if not isinstance(data, dict) or "shapes" not in data:
                 results["corrupted"].append(image_path)
-            elif not data["shapes"]:
+                continue
+            if not data["shapes"]:
                 results["empty"].append(image_path)
+            else:
+                stats = inspect_shape_quality(
+                    data.get("shapes") or [],
+                    int(data.get("imageWidth") or 0),
+                    int(data.get("imageHeight") or 0),
+                )
+                if stats["tiny"]:
+                    results["tiny"].append(image_path)
+                if stats["edge"]:
+                    results["edge"].append(image_path)
+                for label, count in stats["labels"].items():
+                    class_counts[label] = class_counts.get(label, 0) + count
+            if json_txt_mismatch(label_file, data):
+                results["json_txt"].append(image_path)
         except (json.JSONDecodeError, UnicodeDecodeError, OSError) as e:
             logger.warning(f"Audit: failed to read {label_file}: {e}")
             results["corrupted"].append(image_path)
+
+    if class_counts:
+        majority = max(class_counts.values())
+        if majority >= IMBALANCE_MIN_MAJORITY:
+            for label, count in sorted(class_counts.items()):
+                if count <= 0:
+                    continue
+                if majority / max(count, 1) >= IMBALANCE_RATIO:
+                    results["imbalance"].append(
+                        f"{label}：{count}（最多类 {majority}）"
+                    )
 
     for name in sorted(os.listdir(image_dir)):
         if not name.endswith(".json"):
@@ -137,10 +183,14 @@ def run_data_audit(parent):
                 [f"{CATEGORY_TITLES[key]}（{len(items)}）", ""]
             )
             for path in items:
-                child = QTreeWidgetItem(
-                    [osp.basename(path), path]
-                )
-                image_path = path if key != "orphan" else ""
+                if key == "imbalance":
+                    child = QTreeWidgetItem([path, ""])
+                    image_path = ""
+                else:
+                    child = QTreeWidgetItem(
+                        [osp.basename(path), path]
+                    )
+                    image_path = path if key != "orphan" else ""
                 child.setData(0, Qt.ItemDataRole.UserRole, image_path)
                 root.addChild(child)
             tree.addTopLevelItem(root)

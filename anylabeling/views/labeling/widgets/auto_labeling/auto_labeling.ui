@@ -320,22 +320,6 @@ font-size: 12px;</string>
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="toggle_preserve_existing_annotations">
-          <property name="text">
-              <string>Replace (On)</string>
-          </property>
-      </widget>
-     </item>
-     
-     <item>
-      <widget class="QPushButton" name="button_classes_filter">
-       <property name="text">
-        <string>Classes</string>
-       </property>
-      </widget>
-     </item>
-     
-     <item>
      <spacer name="horizontalSpacer">
       <property name="orientation">
        <enum>Qt::Horizontal</enum>

@@ -9,7 +9,6 @@ from anylabeling.config import get_config, get_work_directory
 from PyQt6 import uic
 from PyQt6.QtCore import Qt, pyqtSignal, pyqtSlot, QPoint, QTimer
 from PyQt6.QtWidgets import (
-    QDialog,
     QDoubleSpinBox,
     QFileDialog,
     QHBoxLayout,
@@ -49,15 +48,19 @@ from anylabeling.views.labeling.utils.style import (
     get_download_progress_bar_style,
     get_cancel_download_button_style,
 )
-from anylabeling.views.labeling.widgets.classes_filter_dialog import (
-    ClassesFilterDialog,
-)
 from anylabeling.views.labeling.widgets.searchable_model_dropdown import (
     _get_models_config_path,
     SearchableModelDropdownPopup,
 )
 
 _TOOLBAR_COMPACT = True
+_UNNAMED_CLASS = "unname"
+_PLACEHOLDER_CLASS_RE = re.compile(r"^class_\d+$")
+_SKIP_UNIQUE_LABELS = {
+    AutoLabelingMode.OBJECT,
+    AutoLabelingMode.ADD,
+    AutoLabelingMode.REMOVE,
+}
 
 
 def _toolbar_btn():
@@ -337,7 +340,87 @@ def _extract_class_names_from_onnx(weights_path, model_type):
     return [], "none", None
 
 
-def _build_custom_model_yaml_from_weights(weights_path: str) -> str:
+def _first_user_label(labels):
+    """Return the first real class name from a label-list sequence."""
+    if not labels:
+        return None
+    for name in labels:
+        if name is None:
+            continue
+        text = str(name).strip()
+        if not text or text in _SKIP_UNIQUE_LABELS:
+            continue
+        return text
+    return None
+
+
+def _labels_from_parent(parent):
+    """Collect class names from the Labels dock, then from saved config."""
+    labels = []
+    unique_list = getattr(parent, "unique_label_list", None) if parent else None
+    if unique_list is not None:
+        try:
+            count = unique_list.count()
+        except Exception:  # noqa: BLE001
+            count = 0
+        for row in range(count):
+            item = unique_list.item(row)
+            if item is None:
+                continue
+            labels.append(item.data(Qt.ItemDataRole.UserRole))
+    first = _first_user_label(labels)
+    if first:
+        return labels
+    config = getattr(parent, "_config", None) if parent else None
+    if isinstance(config, dict):
+        return list(config.get("labels") or [])
+    return labels
+
+
+def _classes_need_name_fallback(classes) -> bool:
+    """True when names came from placeholders rather than model metadata."""
+    if isinstance(classes, dict):
+        return False
+    if not classes:
+        return False
+    for name in classes:
+        text = "" if name is None else str(name).strip()
+        if not text:
+            continue
+        if text == _UNNAMED_CLASS:
+            continue
+        if _PLACEHOLDER_CLASS_RE.fullmatch(text):
+            continue
+        return False
+    return True
+
+
+def _resolve_custom_model_classes(classes, source, nc, first_label):
+    """Replace missing ONNX ``names`` with the first Labels-dock class.
+
+    Metadata names are kept. Otherwise every class id uses the first
+    label in the list, or ``unname`` when the list is empty.
+    """
+    if source == "metadata" and classes:
+        return list(classes), "metadata"
+    name = _first_user_label([first_label]) if first_label else None
+    if name:
+        resolved_source = "label_list"
+    else:
+        name = _UNNAMED_CLASS
+        resolved_source = "unname"
+    if isinstance(nc, int) and nc > 0:
+        count = nc
+    elif classes:
+        count = len(classes)
+    else:
+        count = 1
+    return [name] * count, resolved_source
+
+
+def _build_custom_model_yaml_from_weights(
+    weights_path: str, fallback_label: str | None = None
+) -> str:
     """Create a custom-model yaml pointing at ``weights_path``.
 
     The user is allowed to pick an ``.onnx`` weights file directly from the
@@ -383,8 +466,11 @@ def _build_custom_model_yaml_from_weights(weights_path: str) -> str:
     # Read or derive class names. Seg models reject empty classes (nc=0)
     # at decode time, so an auto-generated yaml must include a non-empty
     # ``classes`` list whenever we can.
-    classes, classes_source, _ = _extract_class_names_from_onnx(
+    classes, classes_source, nc = _extract_class_names_from_onnx(
         weights_abs, model_type
+    )
+    classes, classes_source = _resolve_custom_model_classes(
+        classes, classes_source, nc, fallback_label
     )
     if classes:
         logger.info(
@@ -568,16 +654,6 @@ class AutoLabelingWidget(QWidget):
         self.button_run.setText(self.tr("Run (i)"))
         self.button_run.clicked.connect(self.run_prediction)
 
-        # --- Configuration for: button_classes_filter ---
-        self.button_classes_filter.setStyleSheet(_toolbar_btn())
-        self.button_classes_filter.setText(self.tr("Classes"))
-        self.button_classes_filter.setToolTip(
-            "Filter which classes are detected / segmented"
-        )
-        self.button_classes_filter.clicked.connect(
-            self.on_classes_filter_clicked
-        )
-
         # --- Configuration for: input_box_thres ---
         self.input_box_thres.setText(self.tr("Box threshold"))
 
@@ -742,28 +818,6 @@ class AutoLabelingWidget(QWidget):
                 "Enable local cropping for rectangle prompts to improve accuracy "
                 "for small objects in high-resolution images"
             )
-        )
-
-        # --- Configuration for: toggle_preserve_existing_annotations ---
-        self.toggle_preserve_existing_annotations.setChecked(False)
-        self.toggle_preserve_existing_annotations.setCheckable(True)
-        self.toggle_preserve_existing_annotations.setStyleSheet(
-            _toolbar_btn()
-        )
-        self.toggle_preserve_existing_annotations_tooltip_on = self.tr(
-            "Existing shapes will be preserved during updates. Click to switch to overwriting."
-        )
-        self.toggle_preserve_existing_annotations_tooltip_off = self.tr(
-            "Existing shapes will be overwritten by new shapes during updates. Click to switch to preserving."
-        )
-        self.toggle_preserve_existing_annotations.setToolTip(
-            self.toggle_preserve_existing_annotations_tooltip_off
-        )
-        self.toggle_preserve_existing_annotations.setText(
-            self.tr("Replace (On)")
-        )
-        self.toggle_preserve_existing_annotations.toggled.connect(
-            self._on_toggle_preserve_existing_annotations_toggled
         )
 
         # --- Configuration for: button_skip_detection ---
@@ -1130,7 +1184,10 @@ class AutoLabelingWidget(QWidget):
                     ):
                         config_file = (
                             _build_custom_model_yaml_from_weights(
-                                selected_path
+                                selected_path,
+                                fallback_label=_first_user_label(
+                                    _labels_from_parent(self.parent)
+                                ),
                             )
                         )
                     else:
@@ -1570,7 +1627,7 @@ class AutoLabelingWidget(QWidget):
         """Fold secondary controls behind a collapsible "More" panel.
 
         The toolbar is one scrolling row of 25+ controls. Low-frequency
-        options (AMD/TinyObj/AMG/Skip Det/Replace/thresholds/IoU/classes/
+        options (AMD/TinyObj/AMG/Skip Det/thresholds/IoU/
         mask fineness) move into a wrapper that is hidden by default, so
         the primary row no longer overflows on typical window widths.
 
@@ -1591,8 +1648,6 @@ class AutoLabelingWidget(QWidget):
             "input_iou",
             "edit_iou",
             "input_box_thres",
-            "toggle_preserve_existing_annotations",
-            "button_classes_filter",
             "button_auto_decode",
             "button_cropping",
             "button_segment_everything",
@@ -1858,8 +1913,35 @@ class AutoLabelingWidget(QWidget):
                 _toolbar_btn()
             )
 
+    def _apply_loaded_model_class_fallback(self, model_config):
+        """If ONNX names are missing, use the first Labels-dock class."""
+        if not model_config:
+            return
+        model = model_config.get("model")
+        if model is None:
+            return
+        classes = getattr(model, "classes", None)
+        if not _classes_need_name_fallback(classes):
+            return
+        nc = getattr(model, "nc", None)
+        resolved, source = _resolve_custom_model_classes(
+            classes,
+            "shape",
+            nc,
+            _first_user_label(_labels_from_parent(self.parent)),
+        )
+        model.classes = resolved
+        model.nc = len(resolved)
+        if isinstance(getattr(model, "config", None), dict):
+            model.config["classes"] = resolved
+        model_config["classes"] = resolved
+        logger.info(
+            f"Custom-model class names filled from {source}: {resolved}"
+        )
+
     def on_new_model_loaded(self, model_config):
         """Enable model select combobox"""
+        self._apply_loaded_model_class_fallback(model_config)
         self.model_selection_button.setEnabled(True)
         self._apply_model_button_state(model_config)
 
@@ -1989,8 +2071,6 @@ class AutoLabelingWidget(QWidget):
             "input_iou",
             "output_label",
             "output_select_combobox",
-            "toggle_preserve_existing_annotations",
-            "button_classes_filter",
             "button_auto_decode",
             "button_cropping",
             "button_skip_detection",
@@ -2039,68 +2119,12 @@ class AutoLabelingWidget(QWidget):
         """Handle iou value changed"""
         self.model_manager.set_auto_labeling_iou(value)
 
-    def _on_toggle_preserve_existing_annotations_toggled(self, checked):
-        """Handle toggle button state change - update UI and notify backend"""
-        if checked:
-            self.toggle_preserve_existing_annotations.setText(
-                self.tr("Replace (Off)")
-            )
-            self.toggle_preserve_existing_annotations.setToolTip(
-                self.toggle_preserve_existing_annotations_tooltip_on
-            )
-        else:
-            self.toggle_preserve_existing_annotations.setText(
-                self.tr("Replace (On)")
-            )
-            self.toggle_preserve_existing_annotations.setToolTip(
-                self.toggle_preserve_existing_annotations_tooltip_off
-            )
-
-        # Notify backend
-        self.on_preserve_existing_annotations_state_changed(checked)
-
     def on_preserve_existing_annotations_state_changed(self, state):
         """Handle preserve existing annotations state changed"""
         self.initial_preserve_annotations_state = state
         self.model_manager.set_auto_labeling_preserve_existing_annotations_state(
             state
         )
-
-    def on_classes_filter_clicked(self):
-        """Open the classes filter dialog and apply the selection."""
-        if self.model_manager.loaded_model_config is None:
-            return
-        model = self.model_manager.loaded_model_config.get("model")
-        classes_attr = getattr(model, "classes", [])
-        if not classes_attr:
-            return
-        if isinstance(classes_attr, dict):
-            class_names = [
-                classes_attr[k] for k in sorted(classes_attr.keys())
-            ]
-        else:
-            class_names = list(classes_attr)
-
-        raw_filter = getattr(model, "filter_classes", None)
-        filter_names = None
-        if isinstance(raw_filter, list):
-            if (
-                raw_filter
-                and isinstance(raw_filter[0], int)
-                and not isinstance(classes_attr, dict)
-            ):
-                filter_names = [
-                    class_names[i]
-                    for i in raw_filter
-                    if 0 <= int(i) < len(class_names)
-                ]
-            else:
-                filter_names = raw_filter
-        dialog = ClassesFilterDialog(class_names, filter_names, parent=self)
-        if dialog.exec() == QDialog.DialogCode.Accepted:
-            self.model_manager.set_auto_labeling_filter_classes(
-                dialog.get_selected_classes()
-            )
 
     def on_cache_auto_label_changed(self, text, gid):
         self.model_manager.set_cache_auto_label(text, gid)

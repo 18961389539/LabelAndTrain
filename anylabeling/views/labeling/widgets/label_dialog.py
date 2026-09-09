@@ -19,6 +19,11 @@ from anylabeling.views.labeling.logger import logger
 from anylabeling.views.labeling.shape import Shape
 from anylabeling.views.labeling.widgets.popup import Popup
 from anylabeling.views.labeling.utils.qt import new_icon_path
+from anylabeling.views.labeling.utils.yolo_detect import (
+    CLASSES_FILENAME,
+    apply_class_renames_in_classes_txt,
+    rewrite_yolo_sidecars_for_images,
+)
 from anylabeling.views.labeling.utils.style import (
     get_cancel_btn_style,
     get_dialog_style,
@@ -1127,6 +1132,38 @@ class LabelModifyDialog(RangeTableDialog):
                 data["shapes"] = dst_shapes
                 with open(label_file, "w", encoding="utf-8") as f:
                     json.dump(data, f, indent=2, ensure_ascii=False)
+
+            mapping = {}
+            deleted = []
+            for label, info in (self.parent.label_info or {}).items():
+                if not isinstance(info, dict):
+                    continue
+                if info.get("delete"):
+                    deleted.append(label)
+                value = info.get("value")
+                if value:
+                    mapping[label] = value
+            extra = []
+            yolo_names = getattr(self.parent, "_yolo_class_names", None)
+            if callable(yolo_names):
+                extra = yolo_names()
+            dirs = {}
+            for i, image_file in enumerate(self.image_file_list):
+                if i < start_index - 1 or i > end_index - 1:
+                    continue
+                label_dir, _filename = os.path.split(image_file)
+                if self.parent.output_dir:
+                    label_dir = self.parent.output_dir
+                dirs.setdefault(label_dir, []).append(image_file)
+            for label_dir, paths in dirs.items():
+                apply_class_renames_in_classes_txt(
+                    os.path.join(label_dir, CLASSES_FILENAME),
+                    mapping,
+                    deleted,
+                )
+                rewrite_yolo_sidecars_for_images(
+                    paths, label_dir, extra_class_names=extra
+                )
             return True
         except Exception as e:
             logger.error(f"Error occurred while updating labels: {e}")

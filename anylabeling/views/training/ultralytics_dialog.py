@@ -31,7 +31,7 @@ from PyQt6.QtWidgets import (
     QSizePolicy,
 )
 
-from anylabeling.config import get_config
+from anylabeling.config import get_config, save_config as save_labeling_config
 from anylabeling.views.labeling.logger import logger
 from anylabeling.views.labeling.utils.qt import new_icon
 from anylabeling.views.labeling.utils.theme import get_theme
@@ -2492,7 +2492,73 @@ class UltralyticsDialog(QDialog):
             return
         widget._last_model_selection = ("Custom", name, yaml_path)
         widget.show()
+        self._sync_training_classes_to_label_dock(parent, classes)
+
+        def _on_exported_model_loaded(model_config):
+            try:
+                widget.model_manager.model_loaded.disconnect(
+                    _on_exported_model_loaded
+                )
+            except TypeError:
+                pass
+            if not model_config or not model_config.get("model"):
+                return
+            if parent is None:
+                return
+            reply = QMessageBox.question(
+                parent,
+                parent.tr("重新自动标注"),
+                parent.tr(
+                    "已加载训练权重。是否对未标注和低置信度图片重新自动标注？"
+                    "\n已确认的空标注（负样本）会跳过。"
+                ),
+                QMessageBox.StandardButton.Yes
+                | QMessageBox.StandardButton.No,
+            )
+            if reply != QMessageBox.StandardButton.Yes:
+                return
+            from anylabeling.views.labeling.utils.batch import run_all_images
+            from anylabeling.views.labeling.utils.quality import (
+                file_needs_re_autolabel,
+            )
+
+            output_dir = getattr(parent, "output_dir", None)
+            run_all_images(
+                parent,
+                prompt=False,
+                from_start=True,
+                skip_existing=False,
+                skip_if=lambda image_file, directory=output_dir: (
+                    not file_needs_re_autolabel(image_file, directory)
+                ),
+            )
+
+        widget.model_manager.model_loaded.connect(_on_exported_model_loaded)
         widget.model_manager.load_custom_model(yaml_path)
+
+    def _sync_training_classes_to_label_dock(self, parent, classes):
+        if parent is None or not classes:
+            return
+        from anylabeling.views.labeling.utils.yolo_detect import (
+            merge_class_names,
+        )
+
+        dock_names = []
+        unique_list = getattr(parent, "unique_label_list", None)
+        if unique_list is not None:
+            for row in range(unique_list.count()):
+                item = unique_list.item(row)
+                if item is None:
+                    continue
+                dock_names.append(item.data(Qt.ItemDataRole.UserRole))
+        merged = merge_class_names(classes, dock_names)
+        load_labels = getattr(parent, "load_labels", None)
+        if callable(load_labels):
+            load_labels(merged, clear_existing=True)
+        config = getattr(parent, "_config", None)
+        if isinstance(config, dict):
+            config["labels"] = merged
+            save_labeling_config(config)
 
     def reset_train_tab(self):
         self.training_status = "idle"

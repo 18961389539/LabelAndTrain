@@ -30,6 +30,10 @@ from anylabeling.services.auto_labeling import (
 from anylabeling.views.labeling.logger import logger
 from anylabeling.views.labeling.shape import Shape
 from anylabeling.views.labeling.utils._io import io_open
+from anylabeling.views.labeling.utils.yolo_detect import (
+    merge_class_names,
+    write_yolo_detect_sidecar,
+)
 from anylabeling.views.labeling.utils.qt import new_icon_path
 from anylabeling.views.labeling.utils.style import get_msg_box_style
 from anylabeling.views.labeling.widgets.popup import Popup
@@ -346,6 +350,7 @@ def _start_batch_processing(self):
 
 def _reset_batch_processing_state(self):
     self._batch_processing_active = False
+    self._batch_skip_if = None
     for attribute in (
         "text_prompt",
         "image_index",
@@ -418,6 +423,30 @@ def save_auto_labeling_result(self, image_file, auto_labeling_result):
         with io_open(label_file, "w") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
 
+        try:
+            extra_names = []
+            unique_list = getattr(self, "unique_label_list", None)
+            if unique_list is not None:
+                for row in range(unique_list.count()):
+                    item = unique_list.item(row)
+                    if item is None:
+                        continue
+                    extra_names.append(item.data(Qt.ItemDataRole.UserRole))
+            config = getattr(self, "_config", None) or {}
+            write_yolo_detect_sidecar(
+                label_file,
+                data.get("shapes") or [],
+                data.get("imageWidth") or 0,
+                data.get("imageHeight") or 0,
+                extra_class_names=merge_class_names(
+                    extra_names, config.get("labels") or []
+                ),
+            )
+        except Exception as e:  # noqa: BLE001
+            logger.error(
+                f"Failed to write YOLO txt for '{label_file}': {e}"
+            )
+
         # Keep the file-list badge in sync: a saved file whose final shapes
         # are empty is a negative sample (background image) for YOLO.
         marker = getattr(self.app, "mark_file_item_negative_state", None)
@@ -450,6 +479,7 @@ class BatchProcessingThread(QThread):
         text_prompt,
         skip_detection,
         skip_existing=False,
+        skip_if=None,
     ):
         super().__init__()
         self.app = app
@@ -459,6 +489,7 @@ class BatchProcessingThread(QThread):
         self.text_prompt = text_prompt
         self.skip_detection = skip_detection
         self.skip_existing = skip_existing
+        self.skip_if = skip_if
         self._succeeded = 0
         self._failed = 0
         self._failed_files = []
@@ -473,9 +504,19 @@ class BatchProcessingThread(QThread):
                 image_file = self.image_list[self.image_index]
                 image_index = self.image_index
 
-                if self.skip_existing and image_has_annotations(
-                    image_file, getattr(self.app, "output_dir", None)
-                ):
+                should_skip = False
+                if self.skip_if is not None:
+                    try:
+                        should_skip = bool(self.skip_if(image_file))
+                    except Exception as exc:  # noqa: BLE001
+                        logger.warning(
+                            f"Batch skip_if failed for {image_file}: {exc}"
+                        )
+                if not should_skip and self.skip_existing:
+                    should_skip = image_has_annotations(
+                        image_file, getattr(self.app, "output_dir", None)
+                    )
+                if should_skip:
                     self.image_index += 1
                     self.progress_updated.emit(
                         self.image_index,
@@ -569,6 +610,7 @@ def process_next_image(self, progress_dialog, batch=True):
         self.text_prompt,
         skip_detection,
         skip_existing=getattr(self, "_batch_skip_existing", False),
+        skip_if=getattr(self, "_batch_skip_if", None),
     )
 
     def _on_progress(value, label):
@@ -691,7 +733,9 @@ def show_progress_dialog_and_process(self):
     QTimer.singleShot(200, lambda: process_next_image(self, progress_dialog))
 
 
-def run_all_images(self):
+def run_all_images(
+    self, *, prompt=True, from_start=False, skip_existing=None, skip_if=None
+):
     if getattr(self, "_batch_processing_active", False):
         logger.warning("Batch processing is already running.")
         return
@@ -721,22 +765,35 @@ def run_all_images(self):
         )
         return
 
-    # Start from the currently opened image to the end of the list.
-    current_position = (
-        self.fn_to_index[str(self.filename)] + 1
-        if self.filename and str(self.filename) in self.fn_to_index
-        else 1
-    )
-    total_count = len(self.image_list)
-    options = BatchRunOptionsDialog(self, current_position, total_count)
-    if options.exec() != QDialog.DialogCode.Accepted:
-        return
-    self._batch_skip_existing = options.should_skip_existing()
+    if prompt:
+        # Start from the currently opened image to the end of the list.
+        current_position = (
+            self.fn_to_index[str(self.filename)] + 1
+            if self.filename and str(self.filename) in self.fn_to_index
+            else 1
+        )
+        total_count = len(self.image_list)
+        options = BatchRunOptionsDialog(self, current_position, total_count)
+        if options.exec() != QDialog.DialogCode.Accepted:
+            return
+        self._batch_skip_existing = options.should_skip_existing()
+        self._batch_skip_if = None
+    else:
+        self._batch_skip_existing = (
+            bool(skip_existing) if skip_existing is not None else False
+        )
+        self._batch_skip_if = skip_if
 
     logger.info("Start running all images...")
 
-    self.current_index = self.fn_to_index[str(self.filename)]
-    self.image_index = self.current_index
+    if from_start or not (
+        self.filename and str(self.filename) in self.fn_to_index
+    ):
+        self.current_index = 0
+        self.image_index = 0
+    else:
+        self.current_index = self.fn_to_index[str(self.filename)]
+        self.image_index = self.current_index
     self.text_prompt = ""
 
     model_type = self.auto_labeling_widget.model_manager.loaded_model_config[

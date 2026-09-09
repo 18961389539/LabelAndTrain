@@ -60,6 +60,17 @@ from .utils.style import (
 from ...config import get_config, save_config
 from .label_file import LabelFile, LabelFileError
 from .logger import logger
+from .utils.yolo_detect import (
+    merge_class_names,
+    rename_label_across_folder,
+    write_yolo_detect_sidecar,
+)
+from .utils.quality import (
+    format_save_quality_status,
+    inspect_shape_quality,
+    score_in_low_confidence_range,
+    shapes_have_low_confidence,
+)
 from .settings import SettingsController, SettingsDialog
 from .settings.runtime_applier import SettingsRuntimeApplier
 from .shape import Shape
@@ -109,6 +120,7 @@ FILE_ANNOTATION_ROLE = Qt.ItemDataRole.UserRole + 1
 # ordinary annotated files; negative samples are exported as empty .txt so
 # they participate in YOLO training as background samples.
 FILE_NEGATIVE_ROLE = Qt.ItemDataRole.UserRole + 2
+FILE_LOW_CONF_ROLE = Qt.ItemDataRole.UserRole + 3
 CHECKED_FIELD_PATTERN = re.compile(r'"checked"\s*:\s*(true|false)')
 FILE_SEARCH_COMPLETIONS = (
     "label::",
@@ -118,6 +130,7 @@ FILE_SEARCH_COMPLETIONS = (
     "type::rectangle",
     "difficult::1",
     "score::[0,0.5]",
+    "score::[0.25,0.45]",
     "description::1",
     "#1",
 )
@@ -380,7 +393,7 @@ class LabelingWidget(LabelDialog):
                 "- 序号：#N（如 #1、#10）\n"
                 "- 正则：<pattern>（如 <\\.png$>）\n"
                 "- 属性：difficult::1、gid::0、shape::1、label::xxx、type::xxx\n"
-                "- 分数：score::[0,0.5]\n"
+                "- 分数：score::[0,0.5]、score::[0.25,0.45]\n"
                 "- 描述：description::1\n"
                 "- 检查：checked::1、checked::0\n"
                 "输入时会提示常用前缀，按 Enter 执行搜索。"
@@ -412,6 +425,12 @@ class LabelingWidget(LabelDialog):
         self.file_filter_combo.addItem(self.tr("未标注"), "unannotated")
         self.file_filter_combo.addItem(self.tr("已标注"), "annotated")
         self.file_filter_combo.addItem(self.tr("已检查"), "checked")
+        self.file_filter_combo.addItem(self.tr("低置信度"), "low_conf")
+        self.file_filter_combo.setItemData(
+            self.file_filter_combo.count() - 1,
+            self.tr("框分数在 0.25～0.45 的图片"),
+            Qt.ItemDataRole.ToolTipRole,
+        )
         self.file_filter_combo.currentIndexChanged.connect(
             self._apply_file_filter
         )
@@ -2589,11 +2608,18 @@ class LabelingWidget(LabelDialog):
         if self._auto_save_feedback_timer is None:
             timer = QtCore.QTimer(self)
             timer.setSingleShot(True)
-            timer.timeout.connect(
-                lambda: self.status(self.tr("✓ 已保存（自动）"), 1500)
-            )
+            timer.timeout.connect(self._show_auto_save_feedback)
             self._auto_save_feedback_timer = timer
         self._auto_save_feedback_timer.start(800)
+
+    def _show_auto_save_feedback(self):
+        message = self.tr("✓ 已保存（自动）")
+        quality = getattr(self, "_last_quality_status", "") or ""
+        timeout = 1500
+        if quality:
+            message = f"{message}  {quality}"
+            timeout = 5000
+        self.status(message, timeout)
 
     def _window_title(self):
         title = __appname__
@@ -3493,6 +3519,8 @@ class LabelingWidget(LabelDialog):
     def _set_file_item_annotated(self, item, annotated, negative=False):
         item.setData(FILE_ANNOTATION_ROLE, bool(annotated))
         item.setData(FILE_NEGATIVE_ROLE, bool(annotated) and bool(negative))
+        if not annotated:
+            item.setData(FILE_LOW_CONF_ROLE, False)
         if self._config.get("file_list_checkbox_editable", False):
             item.setCheckState(
                 Qt.CheckState.Checked if annotated else Qt.CheckState.Unchecked
@@ -3519,6 +3547,68 @@ class LabelingWidget(LabelDialog):
 
     def _file_item_annotation_checked(self, item):
         return item.data(Qt.ItemDataRole.UserRole) is True
+
+    def _label_path_for_image(self, image_file):
+        label_file = osp.splitext(image_file)[0] + ".json"
+        if self.output_dir:
+            label_file = osp.join(self.output_dir, osp.basename(label_file))
+        return label_file
+
+    def _set_file_item_low_conf(self, item, has_low_conf):
+        value = bool(has_low_conf)
+        if item.data(FILE_LOW_CONF_ROLE) is value:
+            return
+        syncing = getattr(self, "_syncing_file_item", False)
+        self._syncing_file_item = True
+        try:
+            item.setData(FILE_LOW_CONF_ROLE, value)
+        finally:
+            self._syncing_file_item = syncing
+
+    def _file_item_has_low_conf(self, item):
+        cached = item.data(FILE_LOW_CONF_ROLE)
+        if cached is not None:
+            return bool(cached)
+        has_low_conf = False
+        label_file = self._label_path_for_image(item.text())
+        if QtCore.QFile.exists(label_file):
+            try:
+                with open(label_file, "r", encoding="utf-8") as handle:
+                    data = json.load(handle)
+                has_low_conf = shapes_have_low_confidence(
+                    data.get("shapes") if isinstance(data, dict) else None
+                )
+            except Exception:  # noqa: BLE001
+                has_low_conf = False
+        self._set_file_item_low_conf(item, has_low_conf)
+        return has_low_conf
+
+    def _note_save_quality(self, shapes, file_item=None):
+        image = getattr(self, "image", None)
+        image_width = image.width() if image is not None else 0
+        image_height = image.height() if image is not None else 0
+        stats = inspect_shape_quality(shapes, image_width, image_height)
+        self._last_quality_status = format_save_quality_status(stats)
+        if file_item is not None:
+            self._set_file_item_low_conf(
+                file_item, shapes_have_low_confidence(shapes)
+            )
+            combo = getattr(self, "file_filter_combo", None)
+            if combo is not None and combo.currentData() == "low_conf":
+                file_item.setHidden(not bool(file_item.data(FILE_LOW_CONF_ROLE)))
+        return self._last_quality_status
+
+    def _maybe_focus_low_confidence_shapes(self):
+        combo = getattr(self, "file_filter_combo", None)
+        if combo is None or combo.currentData() != "low_conf":
+            return
+        selected = [
+            shape
+            for shape in self.canvas.shapes
+            if score_in_low_confidence_range(getattr(shape, "score", None))
+        ]
+        if selected:
+            self.canvas.select_shapes(selected)
 
     def mark_file_item_negative_state(self, image_file, negative):
         """Public helper used by batch auto-label to flag a saved image as a
@@ -3938,6 +4028,8 @@ class LabelingWidget(LabelDialog):
                 visible = not annotated
             elif mode == "checked":
                 visible = checked
+            elif mode == "low_conf":
+                visible = self._file_item_has_low_conf(item)
             else:
                 visible = True
             item.setHidden(not visible)
@@ -4467,6 +4559,9 @@ class LabelingWidget(LabelDialog):
                 other_data=self.other_data,
                 flags=flags,
             )
+            write_sidecar = getattr(self, "_write_yolo_sidecar", None)
+            if write_sidecar is not None:
+                write_sidecar(filename, shapes)
             self.label_file = label_file
             items = self.file_list_widget.findItems(
                 self.image_path, Qt.MatchFlag.MatchExactly
@@ -4480,6 +4575,13 @@ class LabelingWidget(LabelDialog):
                 self._set_file_item_checked(
                     items[0], self._annotation_checked()
                 )
+                note_quality = getattr(self, "_note_save_quality", None)
+                if note_quality is not None:
+                    note_quality(shapes, items[0])
+            else:
+                note_quality = getattr(self, "_note_save_quality", None)
+                if note_quality is not None:
+                    note_quality(shapes)
             # Defensive refresh: tests may use a lightweight mock widget.
             refresh_progress = getattr(self, "_refresh_file_progress", None)
             if refresh_progress is not None:
@@ -4902,6 +5004,9 @@ class LabelingWidget(LabelDialog):
                 other_data=self.other_data,
                 flags=flags,
             )
+            write_sidecar = getattr(self, "_write_yolo_sidecar", None)
+            if write_sidecar is not None:
+                write_sidecar(filename, shapes)
             self.label_file = label_file
             items = self.file_list_widget.findItems(
                 self.image_path, Qt.MatchFlag.MatchExactly
@@ -4915,6 +5020,9 @@ class LabelingWidget(LabelDialog):
                 self._set_file_item_checked(
                     items[0], self._annotation_checked()
                 )
+                self._note_save_quality(shapes, items[0])
+            else:
+                self._note_save_quality(shapes)
             # disable allows next and previous image to proceed
             # self.filename = filename
             return True
@@ -4923,6 +5031,34 @@ class LabelingWidget(LabelDialog):
                 self.tr("Error saving label data"), self.tr("<b>%s</b>") % e
             )
             return False
+
+    def _yolo_class_names(self):
+        """Class names for YOLO ids: Labels dock first, then config."""
+        names = []
+        unique_list = getattr(self, "unique_label_list", None)
+        if unique_list is not None:
+            for row in range(unique_list.count()):
+                item = unique_list.item(row)
+                if item is None:
+                    continue
+                names.append(item.data(Qt.ItemDataRole.UserRole))
+        config = getattr(self, "_config", None) or {}
+        return merge_class_names(names, config.get("labels") or [])
+
+    def _write_yolo_sidecar(self, filename, shapes):
+        image = getattr(self, "image", None)
+        image_width = image.width() if image is not None else 0
+        image_height = image.height() if image is not None else 0
+        try:
+            write_yolo_detect_sidecar(
+                filename,
+                shapes,
+                image_width,
+                image_height,
+                extra_class_names=self._yolo_class_names(),
+            )
+        except Exception as e:  # noqa: BLE001
+            logger.error(f"Failed to write YOLO txt for {filename}: {e}")
 
     def duplicate_selected_shape(self):
         added_shapes = self.canvas.duplicate_selected_shapes()
@@ -5802,6 +5938,10 @@ class LabelingWidget(LabelDialog):
                         True,
                         negative=len(self.label_file.shapes) == 0,
                     )
+                    self._set_file_item_low_conf(
+                        neg_items[0],
+                        shapes_have_low_confidence(self.label_file.shapes),
+                    )
             except Exception:  # noqa: BLE001
                 pass
         else:
@@ -5939,6 +6079,7 @@ class LabelingWidget(LabelDialog):
         self.canvas_adjustment.show()
         self._position_canvas_adjustment()
         self._sync_empty_canvas_state()
+        self._maybe_focus_low_confidence_shapes()
 
         return True
 
@@ -6418,16 +6559,36 @@ class LabelingWidget(LabelDialog):
         self._config["labels"] = unique_labels
         save_config(self._config)
 
+        folder_changed = 0
+        label_dir = self.output_dir
+        if not label_dir and self.filename:
+            label_dir = osp.dirname(self.filename)
+        if label_dir:
+            paths = list(self.image_list or [])
+            if self.filename and self.filename not in paths:
+                paths = [self.filename, *paths]
+            folder_changed = rename_label_across_folder(
+                paths,
+                label_dir,
+                old_label,
+                new_label,
+                extra_class_names=self._yolo_class_names(),
+            )
+
         self.canvas.update()
         self._refresh_shape_filters()
         self._refresh_label_panel()
         self.set_dirty()
-        self.status(
-            self.tr("已将 %1 改为 %2").replace("%1", old_label).replace(
-                "%2", new_label
-            )
-            + (f" ({renamed})" if renamed else "")
+        status = self.tr("已将 %1 改为 %2").replace("%1", old_label).replace(
+            "%2", new_label
         )
+        if renamed:
+            status += f" ({renamed})"
+        if folder_changed:
+            status += self.tr(" · 文件夹 %1 个文件").replace(
+                "%1", str(folder_changed)
+            )
+        self.status(status)
 
     def change_output_dir_dialog(self, _value=False):
         default_output_dir = self.output_dir
@@ -6537,7 +6698,11 @@ class LabelingWidget(LabelDialog):
         try:
             name = osp.basename(str(self.filename)) if self.filename else ""
             if ok:
-                self.status(self.tr("✓ 已保存：%s") % name, 2500)
+                message = self.tr("✓ 已保存：%s") % name
+                quality = getattr(self, "_last_quality_status", "") or ""
+                if quality:
+                    message = f"{message}  {quality}"
+                self.status(message, 5000 if quality else 2500)
             else:
                 try:
                     t = get_theme()

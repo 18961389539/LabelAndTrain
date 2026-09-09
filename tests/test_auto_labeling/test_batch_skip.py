@@ -5,7 +5,10 @@ import unittest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 try:
-    from anylabeling.views.labeling.utils.batch import image_has_annotations
+    from anylabeling.views.labeling.utils.batch import (
+        BatchProcessingThread,
+        image_has_annotations,
+    )
 
     PYQT_AVAILABLE = True
 except Exception:
@@ -37,3 +40,21 @@ class TestImageHasAnnotations(unittest.TestCase):
             ) as handle:
                 json.dump({"shapes": []}, handle)
             self.assertFalse(image_has_annotations(image))
+
+
+@unittest.skipUnless(PYQT_AVAILABLE, "PyQt6 is required")
+class TestBatchSkipIf(unittest.TestCase):
+    def test_thread_stores_skip_if(self):
+        skip_if = lambda path: path.endswith("skip.jpg")
+        thread = BatchProcessingThread(
+            app=None,
+            image_list=[],
+            image_index=0,
+            model_type="yolov8s",
+            text_prompt="",
+            skip_detection=False,
+            skip_existing=False,
+            skip_if=skip_if,
+        )
+        self.assertIs(thread.skip_if, skip_if)
+        self.assertFalse(thread.skip_existing)
