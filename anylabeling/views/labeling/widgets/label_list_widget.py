@@ -4,6 +4,7 @@ from PyQt6.QtGui import QPalette
 from PyQt6.QtWidgets import QStyle
 
 from anylabeling.views.labeling.utils.theme import get_theme
+from anylabeling.views.labeling.utils.qt import new_icon
 
 LOCKED_ROLE = Qt.ItemDataRole.UserRole.value + 1
 
@@ -12,7 +13,7 @@ LOCKED_ROLE = Qt.ItemDataRole.UserRole.value + 1
 class HTMLDelegate(QtWidgets.QStyledItemDelegate):
     def __init__(self, parent=None):
         self.parent = parent
-        self._lock_icon = QtGui.QIcon(":/images/images/lock.svg")
+        self._lock_icon = new_icon("lock", "svg")
         self._lock_pixmaps = {}
         super(HTMLDelegate, self).__init__()
 

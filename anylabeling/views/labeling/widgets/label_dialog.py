@@ -876,7 +876,7 @@ class LabelModifyDialog(RangeTableDialog):
 
             delete_checkbox = QCheckBox()
             delete_checkbox.setChecked(info["delete"])
-            delete_checkbox.setIcon(QtGui.QIcon(":/images/images/delete.png"))
+            delete_checkbox.setIcon(utils.new_icon("delete"))
             delete_checkbox.stateChanged.connect(
                 lambda state, row=i: self.on_delete_checkbox_changed(
                     row, state

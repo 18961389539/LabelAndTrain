@@ -61,15 +61,28 @@ from ...config import get_config, save_config
 from .label_file import LabelFile, LabelFileError
 from .logger import logger
 from .utils.yolo_detect import (
+    CLASSES_FILENAME,
+    load_class_names,
     merge_class_names,
     rename_label_across_folder,
     write_yolo_detect_sidecar,
 )
+from .utils.active_learning import (
+    load_thresholds,
+    needs_review,
+    shape_uncertainty,
+    thresholds_for,
+)
 from .utils.quality import (
     format_save_quality_status,
     inspect_shape_quality,
-    score_in_low_confidence_range,
     shapes_have_low_confidence,
+)
+from .utils.smart_tools import (
+    run_missing_scan,
+    run_smart_analysis,
+    run_threshold_calibration,
+    show_iteration_dashboard,
 )
 from .settings import SettingsController, SettingsDialog
 from .settings.runtime_applier import SettingsRuntimeApplier
@@ -425,10 +438,10 @@ class LabelingWidget(LabelDialog):
         self.file_filter_combo.addItem(self.tr("未标注"), "unannotated")
         self.file_filter_combo.addItem(self.tr("已标注"), "annotated")
         self.file_filter_combo.addItem(self.tr("已检查"), "checked")
-        self.file_filter_combo.addItem(self.tr("低置信度"), "low_conf")
+        self.file_filter_combo.addItem(self.tr("待复核"), "low_conf")
         self.file_filter_combo.setItemData(
             self.file_filter_combo.count() - 1,
-            self.tr("框分数在 0.25～0.45 的图片"),
+            self.tr("含有未达自动接受阈值目标的图片；阈值可由「阈值校准」生成"),
             Qt.ItemDataRole.ToolTipRole,
         )
         self.file_filter_combo.currentIndexChanged.connect(
@@ -436,6 +449,7 @@ class LabelingWidget(LabelDialog):
         )
         self.file_filter_combo.setStyleSheet(get_plain_text_edit_style())
         self.file_progress_label = QLabel("")
+        self.file_progress_label.setWordWrap(True)
         self.file_progress_label.setStyleSheet(
             "color: rgba(120, 132, 145, 0.95); padding: 2px 4px;"
         )
@@ -725,6 +739,38 @@ class LabelingWidget(LabelDialog):
             ),
             enabled=True,
         )
+        smart_calibrate = action(
+            self.tr("1. 阈值校准"),
+            lambda: run_threshold_calibration(self),
+            None,
+            None,
+            self.tr("推荐先做：按各类置信度分布生成自动接受 / 建议复核阈值"),
+            enabled=True,
+        )
+        smart_analysis = action(
+            self.tr("2. 数据智能分析"),
+            lambda: run_smart_analysis(self),
+            None,
+            None,
+            self.tr("阈值校准后再做：难例排序、重复图片检测与配平建议"),
+            enabled=True,
+        )
+        smart_missing_scan = action(
+            self.tr("3. 漏标扫描"),
+            lambda: run_missing_scan(self),
+            None,
+            None,
+            self.tr("智能分析后再做：用当前模型找出置信度高但没有标注的目标"),
+            enabled=True,
+        )
+        smart_iteration = action(
+            self.tr("4. 迭代收益看板"),
+            lambda: show_iteration_dashboard(self),
+            None,
+            None,
+            self.tr("最后查看：每轮训练→回灌的边际收益与下一步建议"),
+            enabled=True,
+        )
         toggle_annotation_checked = action(
             self.tr("Mark as Checked"),
             self.set_annotation_checked,
@@ -732,6 +778,14 @@ class LabelingWidget(LabelDialog):
             None,
             self.tr("Mark current annotation as checked"),
             checkable=True,
+            enabled=False,
+        )
+        mark_checked_and_next = action(
+            self.tr("检查完成并下一张"),
+            self.mark_checked_and_next,
+            "Ctrl+J",
+            None,
+            self.tr("将当前图片标为已检查，并跳到下一张未检查图片"),
             enabled=False,
         )
 
@@ -1487,6 +1541,7 @@ class LabelingWidget(LabelDialog):
             delete_file=delete_file,
             delete_image_file=delete_image_file,
             toggle_annotation_checked=toggle_annotation_checked,
+            mark_checked_and_next=mark_checked_and_next,
             keep_prev_mode=keep_prev_mode,
             auto_use_last_label_mode=auto_use_last_label_mode,
             auto_use_last_gid_mode=auto_use_last_gid_mode,
@@ -1505,6 +1560,7 @@ class LabelingWidget(LabelDialog):
             save_visualization_image=save_visualization_image,
             undo_last_point=undo_last_point,
             undo=undo,
+            redo=redo,
             remove_point=remove_point,
             create_mode=create_mode,
             create_brush_polygon_mode=create_brush_polygon_mode,
@@ -1635,6 +1691,7 @@ class LabelingWidget(LabelDialog):
                 edit_mode,
                 brightness_contrast,
                 toggle_annotation_checked,
+                mark_checked_and_next,
                 shape_manager,
                 loop_thru_labels,
                 loop_select_labels,
@@ -1661,6 +1718,7 @@ class LabelingWidget(LabelDialog):
         ):
             self.addAction(digit_action)
         self.addAction(self.actions.toggle_annotation_checked)
+        self.addAction(self.actions.mark_checked_and_next)
 
         self.canvas.vertex_selected.connect(
             self.actions.remove_point.setEnabled
@@ -1701,7 +1759,13 @@ class LabelingWidget(LabelDialog):
                 close,
                 delete_file,
                 delete_image_file,
+                None,
                 data_audit,
+                smart_calibrate,
+                smart_analysis,
+                smart_missing_scan,
+                smart_iteration,
+                mark_checked_and_next,
                 None,
             ),
         )
@@ -1817,26 +1881,27 @@ class LabelingWidget(LabelDialog):
         self.tools = self.toolbar("Tools")
         # Menu buttons on Left
         self.actions.tool = (
-            # open_,
             opendir,
-            open_next_image,
             open_prev_image,
+            open_next_image,
             save,
             delete_file,
             None,
             create_mode,
-            self.actions.create_brush_polygon_mode,
             self.actions.create_rectangle_mode,
             self.actions.create_point_mode,
+            self.actions.create_brush_polygon_mode,
             None,
-            edit_brush_mode,
             edit_mode,
+            edit_brush_mode,
             delete,
             undo,
             redo,
+            None,
             loop_thru_labels,
             loop_select_labels,
             select_toggle_shapes,
+            None,
             run_all_images,
             toggle_auto_labeling_widget,
             None,
@@ -2501,8 +2566,8 @@ class LabelingWidget(LabelDialog):
         toolbar.setObjectName(f"{title}ToolBar")
         toolbar.setOrientation(Qt.Orientation.Vertical)
         toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
-        toolbar.setIconSize(QtCore.QSize(24, 24))
-        toolbar.setFixedWidth(40)
+        toolbar.setIconSize(QtCore.QSize(20, 20))
+        toolbar.setFixedWidth(56)
         toolbar.setSizePolicy(
             QtWidgets.QSizePolicy.Policy.Fixed,
             QtWidgets.QSizePolicy.Policy.MinimumExpanding,
@@ -2854,13 +2919,21 @@ class LabelingWidget(LabelDialog):
         self.actions.redo.setEnabled(self.canvas.is_shape_redoable)
         self.set_dirty()
 
-    def _reload_shapes_after_history_change(self):
+    def _reload_shapes_after_history_change(self, keep_redo=True):
         """Rebuild the object list from canvas.shapes after undo/redo.
 
         ``label_list.clear()`` emits selection/drop signals. Those slots
         must not run mid-rebuild: they would call ``item.shape()`` on
         items Qt is destroying, which crashes the process on Ctrl+Z.
+
+        The rebuild ends in ``canvas.load_shapes()`` which pushes the
+        restored state back onto the undo stack and — via
+        ``store_shapes()`` — clears the redo stack. Snapshot the redo
+        branch and put it back, otherwise Redo is always disabled.
         """
+        redo_backups = (
+            list(self.canvas.shapes_redo_backups) if keep_redo else None
+        )
         self._no_selection_slot = True
         selection_blocker = QtCore.QSignalBlocker(
             self.label_list.selectionModel()
@@ -2873,6 +2946,8 @@ class LabelingWidget(LabelDialog):
             del selection_blocker
             del drop_blocker
             self._no_selection_slot = False
+        if redo_backups is not None:
+            self.canvas.shapes_redo_backups = redo_backups
 
     def get_label_file_list(self):
         label_file_list = []
@@ -3447,6 +3522,9 @@ class LabelingWidget(LabelDialog):
             utils.new_icon("copy", "svg"), self.tr("Copy File Path")
         )
         menu.addSeparator()
+        check_and_next_action = menu.addAction(
+            self.tr("标记已检查并下一张")
+        )
         del_label_action = menu.addAction(
             utils.new_icon("trash", "svg"), self.tr("删除标注文件")
         )
@@ -3458,6 +3536,10 @@ class LabelingWidget(LabelDialog):
             self.copy_file_path(osp.basename(item.text()))
         elif action == copy_path_action:
             self.copy_file_path(item.text())
+        elif action == check_and_next_action:
+            self.file_list_widget.setCurrentItem(item)
+            self.load_file(item.text())
+            self.mark_checked_and_next()
         elif action == del_label_action:
             self._delete_via_context(item, include_image=False)
         elif action == del_image_action:
@@ -3565,6 +3647,37 @@ class LabelingWidget(LabelDialog):
         finally:
             self._syncing_file_item = syncing
 
+    def _active_label_dir(self):
+        directory = self.output_dir or None
+        if not directory and self.filename:
+            directory = osp.dirname(self.filename)
+        return directory
+
+    def _load_active_thresholds(self):
+        """Per-class accept/review thresholds for the open folder (cached)."""
+        directory = self._active_label_dir()
+        if not directory:
+            return {}
+        if getattr(self, "_al_threshold_dir", None) == directory and getattr(
+            self, "_al_thresholds", None
+        ) is not None:
+            return self._al_thresholds
+        self._al_threshold_dir = directory
+        self._al_thresholds = load_thresholds(directory)
+        return self._al_thresholds
+
+    def invalidate_active_thresholds(self):
+        """Drop the cached thresholds (called after a calibration run)."""
+        self._al_threshold_dir = None
+        self._al_thresholds = None
+
+    def _shapes_need_review(self, shapes):
+        thresholds = self._load_active_thresholds()
+        if thresholds:
+            return needs_review(shapes, thresholds=thresholds)
+        # No calibration yet: keep the historical fixed band.
+        return shapes_have_low_confidence(shapes)
+
     def _file_item_has_low_conf(self, item):
         cached = item.data(FILE_LOW_CONF_ROLE)
         if cached is not None:
@@ -3575,7 +3688,7 @@ class LabelingWidget(LabelDialog):
             try:
                 with open(label_file, "r", encoding="utf-8") as handle:
                     data = json.load(handle)
-                has_low_conf = shapes_have_low_confidence(
+                has_low_conf = self._shapes_need_review(
                     data.get("shapes") if isinstance(data, dict) else None
                 )
             except Exception:  # noqa: BLE001
@@ -3591,7 +3704,7 @@ class LabelingWidget(LabelDialog):
         self._last_quality_status = format_save_quality_status(stats)
         if file_item is not None:
             self._set_file_item_low_conf(
-                file_item, shapes_have_low_confidence(shapes)
+                file_item, self._shapes_need_review(shapes)
             )
             combo = getattr(self, "file_filter_combo", None)
             if combo is not None and combo.currentData() == "low_conf":
@@ -3602,11 +3715,14 @@ class LabelingWidget(LabelDialog):
         combo = getattr(self, "file_filter_combo", None)
         if combo is None or combo.currentData() != "low_conf":
             return
-        selected = [
-            shape
-            for shape in self.canvas.shapes
-            if score_in_low_confidence_range(getattr(shape, "score", None))
-        ]
+        thresholds = self._load_active_thresholds()
+        selected = []
+        for shape in self.canvas.shapes:
+            accept, review = thresholds_for(
+                getattr(shape, "label", "") or "", thresholds
+            )
+            if shape_uncertainty(shape, accept, review) > 0:
+                selected.append(shape)
         if selected:
             self.canvas.select_shapes(selected)
 
@@ -3672,6 +3788,7 @@ class LabelingWidget(LabelDialog):
         if not hasattr(self, "actions"):
             return
         action = self.actions.toggle_annotation_checked
+        quick_action = getattr(self.actions, "mark_checked_and_next", None)
         checked = self._annotation_checked()
         if action.isChecked() != checked:
             action.setChecked(checked)
@@ -3683,6 +3800,10 @@ class LabelingWidget(LabelDialog):
             tip = self.tr("Mark current annotation as checked")
         action.setToolTip(tip)
         action.setStatusTip(tip)
+        enabled = self.filename is not None and not self.image.isNull()
+        action.setEnabled(enabled)
+        if quick_action is not None:
+            quick_action.setEnabled(enabled)
 
     def _update_current_file_checked_item(self):
         item = self._current_file_item()
@@ -3704,6 +3825,18 @@ class LabelingWidget(LabelDialog):
             self._show_save_feedback(True)
         else:
             self._show_save_feedback(False)
+
+    def mark_checked_and_next(self, _value=False):
+        """Single-step review flow: check the file and keep moving."""
+        if self.filename is None or self.image.isNull():
+            return
+        current_filename = str(self.filename)
+        self.set_annotation_checked(True)
+        if self.filename is None:
+            return
+        self.open_next_unchecked_image()
+        if str(self.filename) == current_filename:
+            self.open_next_image()
 
     def _append_filter_submenus(
         self, parent_menu, prepend=False, after_filter_actions=None
@@ -4042,25 +4175,67 @@ class LabelingWidget(LabelDialog):
         total = self.file_list_widget.count()
         annotated = 0
         checked = 0
+        review = 0
         for row in range(total):
             item = self.file_list_widget.item(row)
             if bool(item.data(FILE_ANNOTATION_ROLE)):
                 annotated += 1
             if self._file_item_annotation_checked(item):
                 checked += 1
+            if self._file_item_has_low_conf(item):
+                review += 1
         if total <= 0:
             self.file_progress_label.setText("")
             return
-        text = fill_progress_template(
-            self.tr("已标 %1/%2 · 已检查 %3"),
-            annotated,
-            total,
-            checked,
+        first_line = (
+            self.tr("已标 %1/%2 · 已检查 %3 · 待复核 %4")
+            .replace("%1", str(annotated))
+            .replace("%2", str(total))
+            .replace("%3", str(checked))
+            .replace("%4", str(review))
         )
-        self.file_progress_label.setText(text)
+        threshold_text = (
+            self.tr("已校准阈值")
+            if self._load_active_thresholds()
+            else self.tr("默认阈值")
+        )
+        filter_text = self.file_filter_combo.currentText()
+        second_line = self.tr("筛选：%1 · 阈值来源：%2").replace(
+            "%1", filter_text
+        ).replace("%2", threshold_text)
+        self.file_progress_label.setText(f"{first_line}\n{second_line}")
 
     def _refresh_file_panel(self):
         self._apply_file_filter()
+
+    def _smart_tools_guide_message(self):
+        threshold_text = (
+            self.tr("已检测到当前文件夹的校准阈值。")
+            if self._load_active_thresholds()
+            else self.tr("当前仍在使用默认阈值，建议先跑一次阈值校准。")
+        )
+        return self.tr(
+            "推荐顺序：1 阈值校准 → 2 数据智能分析 → 3 漏标扫描 → 4 迭代收益看板。"
+        ) + "\n" + threshold_text
+
+    def _maybe_show_smart_tools_guide(self, directory):
+        if not directory:
+            return
+        thresholds = self._load_active_thresholds()
+        signature = (
+            osp.abspath(directory),
+            "calibrated" if thresholds else "default",
+        )
+        if getattr(self, "_smart_tools_guide_signature", None) == signature:
+            return
+        self._smart_tools_guide_signature = signature
+        popup = Popup(
+            self._smart_tools_guide_message(),
+            parent=self,
+            msec=4800,
+            icon=new_icon_path("copy-green", "svg"),
+        )
+        popup.show_popup(self, popup_height=72, position="bottom")
 
     def file_search_changed(self):
         search_text = self.file_search.text()
@@ -4760,10 +4935,12 @@ class LabelingWidget(LabelDialog):
         if label in self.label_info and not skip_label_info:
             return tuple(self.label_info[label]["color"])
         if self._config["shape_color"] == "auto":
-            if not self.unique_label_list.find_items_by_label(label):
+            items = self.unique_label_list.find_items_by_label(label)
+            if not items:
                 item = self.unique_label_list.create_item_from_label(label)
                 self.unique_label_list.addItem(item)
-            item = self.unique_label_list.find_items_by_label(label)[0]
+                items = [item]
+            item = items[0]
             label_id = self.unique_label_list.indexFromItem(item).row() + 1
             label_id += self._runtime_shape_color_shift
             return LABEL_COLORMAP[label_id % len(LABEL_COLORMAP)]
@@ -5940,7 +6117,7 @@ class LabelingWidget(LabelDialog):
                     )
                     self._set_file_item_low_conf(
                         neg_items[0],
-                        shapes_have_low_confidence(self.label_file.shapes),
+                        self._shapes_need_review(self.label_file.shapes),
                     )
             except Exception:  # noqa: BLE001
                 pass
@@ -7173,7 +7350,9 @@ class LabelingWidget(LabelDialog):
             self.async_exif_scanner.start_scan(image_files)
         self._refresh_file_panel()
         if pattern is None and image_files:
+            self._load_classes_from_folder(dirpath)
             self._maybe_prompt_missing_labels()
+            self._maybe_show_smart_tools_guide(dirpath)
 
         # Background "checked" dot refresh (after rows exist so the batch
         # callback can address them by index).
@@ -7193,6 +7372,76 @@ class LabelingWidget(LabelDialog):
             self._refresh_file_progress()
         except Exception as e:  # noqa: BLE001
             logger.warning(f"Failed to apply checked batch: {e}")
+
+    def _load_classes_from_folder(self, image_dir):
+        """Make the label panel follow ``classes.txt`` of the opened folder.
+
+        Two problems are fixed here:
+
+        * opening a folder used to ignore ``classes.txt`` entirely, so the
+          "还没有类别" prompt appeared even when the folder declared classes;
+        * the panel survived folder switches, so labels from a previously
+          opened folder stayed in the list and looked like classes that were
+          never in the file.
+
+        A folder that ships ``classes.txt`` is now authoritative and replaces
+        the panel. Folders without one are left alone, so labels from the
+        config keep working as before.
+        """
+        if not image_dir:
+            return []
+
+        names = []
+        for candidate_dir in (self.output_dir, image_dir):
+            if not candidate_dir:
+                continue
+            names = load_class_names(
+                osp.join(candidate_dir, CLASSES_FILENAME)
+            )
+            if names:
+                break
+        if not names:
+            return []
+
+        if self._panel_label_names() == names:
+            return names
+
+        self.unique_label_list.clear()
+        self.load_labels(names, clear_existing=False)
+        self._reset_label_dialog_labels(names)
+        logger.info(
+            f"Loaded {len(names)} classes from {CLASSES_FILENAME}: "
+            f"{', '.join(names)}"
+        )
+        return names
+
+    def _panel_label_names(self):
+        """Labels currently shown in the panel, in display order."""
+        names = []
+        for row in range(self.unique_label_list.count()):
+            item = self.unique_label_list.item(row)
+            if item is None:
+                continue
+            label = item.data(Qt.ItemDataRole.UserRole)
+            if label:
+                names.append(str(label))
+        return names
+
+    def _reset_label_dialog_labels(self, labels):
+        """Replace the label dialog's suggestion list with ``labels``."""
+        dialog = getattr(self, "label_dialog", None)
+        if dialog is None or not labels:
+            return
+        label_list = getattr(dialog, "label_list", None)
+        if label_list is None:
+            return
+        label_list.clear()
+        label_list.addItems(labels)
+        if getattr(dialog, "_sort_labels", False):
+            try:
+                dialog.sort_labels()
+            except Exception as e:  # noqa: BLE001
+                logger.warning(f"Failed to sort label dialog list: {e}")
 
     def _maybe_prompt_missing_labels(self):
         if self.unique_label_list.count() > 0:

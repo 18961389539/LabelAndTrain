@@ -5,6 +5,8 @@ One-click scan of the currently opened folder for:
 - empty label files (json exists but shapes == [])
 - corrupted label files (unreadable / malformed json)
 - orphan label files (json without a matching image)
+- images worth reviewing, ranked by model uncertainty
+- class / scale balancing advice
 
 Results are shown in a dialog; double-clicking an image row jumps to it.
 """
@@ -25,6 +27,15 @@ from PyQt6.QtWidgets import (
 
 from anylabeling.views.labeling.logger import logger
 from anylabeling.views.labeling.widgets import Popup
+from anylabeling.views.labeling.utils.active_learning import (
+    image_uncertainty,
+    load_thresholds,
+    needs_review,
+)
+from anylabeling.views.labeling.utils.data_intel import (
+    analyze_distribution,
+    suggest_balancing,
+)
 from anylabeling.views.labeling.utils.qt import new_icon_path
 from anylabeling.views.labeling.utils.quality import (
     IMBALANCE_MIN_MAJORITY,
@@ -35,25 +46,32 @@ from anylabeling.views.labeling.utils.quality import (
 
 CATEGORY_ORDER = (
     "unlabeled",
+    "review",
     "empty",
     "corrupted",
     "orphan",
     "tiny",
     "edge",
+    "balance",
     "imbalance",
     "json_txt",
 )
 
 CATEGORY_TITLES = {
     "unlabeled": "无标注的图片",
+    "review": "优先复核（按不确定性排序）",
     "empty": "空标注文件（shapes 为空）",
     "corrupted": "损坏的标注文件",
     "orphan": "孤立的标注文件（对应图片不存在）",
     "tiny": "含极小框的图片",
     "edge": "含贴边框的图片",
+    "balance": "配平建议",
     "imbalance": "类别数量失衡",
     "json_txt": "JSON 与 YOLO txt 不一致",
 }
+
+# How many "most uncertain" images the audit surfaces.
+REVIEW_LIMIT = 50
 
 
 def audit_dataset(image_list, image_dir):
@@ -79,24 +97,31 @@ def audit_dataset(image_list, image_dir):
         osp.splitext(osp.basename(p))[0] for p in images
     }
     class_counts = {}
+    thresholds = load_thresholds(image_dir)
+    review_scores = []
+    distribution_entries = []
 
     for image_path in images:
         base = osp.splitext(osp.basename(image_path))[0]
         label_file = osp.join(image_dir, base + ".json")
         if not osp.exists(label_file):
             results["unlabeled"].append(image_path)
+            distribution_entries.append((image_path, None))
             continue
         try:
             with open(label_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
             if not isinstance(data, dict) or "shapes" not in data:
                 results["corrupted"].append(image_path)
+                distribution_entries.append((image_path, None))
                 continue
+            distribution_entries.append((image_path, data))
             if not data["shapes"]:
                 results["empty"].append(image_path)
             else:
+                shapes = data.get("shapes") or []
                 stats = inspect_shape_quality(
-                    data.get("shapes") or [],
+                    shapes,
                     int(data.get("imageWidth") or 0),
                     int(data.get("imageHeight") or 0),
                 )
@@ -106,11 +131,24 @@ def audit_dataset(image_list, image_dir):
                     results["edge"].append(image_path)
                 for label, count in stats["labels"].items():
                     class_counts[label] = class_counts.get(label, 0) + count
+                if needs_review(shapes, thresholds=thresholds):
+                    review_scores.append(
+                        (image_path, image_uncertainty(shapes, thresholds=thresholds))
+                    )
             if json_txt_mismatch(label_file, data):
                 results["json_txt"].append(image_path)
         except (json.JSONDecodeError, UnicodeDecodeError, OSError) as e:
             logger.warning(f"Audit: failed to read {label_file}: {e}")
             results["corrupted"].append(image_path)
+
+    review_scores.sort(key=lambda item: (-item[1], item[0]))
+    results["review"] = [path for path, _ in review_scores[:REVIEW_LIMIT]]
+
+    if distribution_entries:
+        advice = suggest_balancing(analyze_distribution(distribution_entries))
+        # A single "nothing to fix" line is not worth a category.
+        if not (len(advice) == 1 and "未见明显问题" in advice[0]):
+            results["balance"] = advice
 
     if class_counts:
         majority = max(class_counts.values())
@@ -183,7 +221,7 @@ def run_data_audit(parent):
                 [f"{CATEGORY_TITLES[key]}（{len(items)}）", ""]
             )
             for path in items:
-                if key == "imbalance":
+                if key in ("imbalance", "balance"):
                     child = QTreeWidgetItem([path, ""])
                     image_path = ""
                 else:

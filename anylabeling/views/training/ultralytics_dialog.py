@@ -2457,6 +2457,32 @@ class UltralyticsDialog(QDialog):
             QMessageBox.critical(self, self.tr("Export Error"), message)
             self.append_training_log(f"Failed to start export: {message}")
 
+    def _record_active_learning_round(self, parent):
+        """Log one train -> relabel round for the marginal-gain dashboard."""
+        try:
+            from anylabeling.views.labeling.utils.active_learning import (
+                read_last_map50,
+            )
+            from anylabeling.views.labeling.utils.smart_tools import (
+                record_training_round,
+            )
+
+            map50 = None
+            if self.current_project_path:
+                map50 = read_last_map50(
+                    os.path.join(self.current_project_path, "results.csv")
+                )
+            record_training_round(
+                parent,
+                self.current_project_path,
+                model_name=os.path.basename(
+                    os.path.normpath(self.current_project_path or "")
+                ),
+                map50=map50,
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(f"Failed to record active learning round: {exc}")
+
     def _load_exported_weights_for_autolabel(self, onnx_path):
         classes = self._resolve_class_names()
         if not classes:
@@ -2505,24 +2531,52 @@ class UltralyticsDialog(QDialog):
                 return
             if parent is None:
                 return
+            from anylabeling.views.labeling.utils.active_learning import (
+                load_history,
+                suggest_next_step,
+            )
+            from anylabeling.views.labeling.utils.smart_tools import label_dir_for
+
+            label_dir = label_dir_for(parent)
+            suggestion = suggest_next_step(load_history(label_dir))
+            suggestion_text = self.tr("当前迭代建议：%1").replace(
+                "%1", suggestion["reason"]
+            )
             reply = QMessageBox.question(
                 parent,
-                parent.tr("重新自动标注"),
+                parent.tr("建议立即回灌"),
                 parent.tr(
-                    "已加载训练权重。是否对未标注和低置信度图片重新自动标注？"
+                    "已加载训练权重。建议立即对未标注和待复核图片重新自动标注，"
+                    "完成后会自动更新「迭代收益看板」。"
                     "\n已确认的空标注（负样本）会跳过。"
-                ),
+                    "\n\n%1\n\n是否现在开始？"
+                ).replace("%1", suggestion_text),
                 QMessageBox.StandardButton.Yes
                 | QMessageBox.StandardButton.No,
             )
             if reply != QMessageBox.StandardButton.Yes:
+                if hasattr(parent, "status"):
+                    parent.status(
+                        parent.tr("稍后可在「4. 迭代收益看板」查看下一步建议。"),
+                        4000,
+                    )
                 return
+            from anylabeling.views.labeling.utils.active_learning import (
+                count_annotations,
+            )
             from anylabeling.views.labeling.utils.batch import run_all_images
             from anylabeling.views.labeling.utils.quality import (
                 file_needs_re_autolabel,
             )
+            from anylabeling.views.labeling.utils.smart_tools import (
+                watch_relabel_result,
+            )
 
             output_dir = getattr(parent, "output_dir", None)
+            baseline = count_annotations(
+                list(getattr(parent, "image_list", None) or []), label_dir
+            )
+            self._record_active_learning_round(parent)
             run_all_images(
                 parent,
                 prompt=False,
@@ -2532,6 +2586,7 @@ class UltralyticsDialog(QDialog):
                     not file_needs_re_autolabel(image_file, directory)
                 ),
             )
+            watch_relabel_result(parent, label_dir, baseline)
 
         widget.model_manager.model_loaded.connect(_on_exported_model_loaded)
         widget.model_manager.load_custom_model(yaml_path)

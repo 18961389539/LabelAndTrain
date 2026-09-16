@@ -397,10 +397,6 @@ font-size: 12px;</string>
        <property name="text">
         <string/>
        </property>
-       <property name="icon">
-        <iconset resource="../../../../resources/resources.qrc">
-         <normaloff>:/images/images/cancel.png</normaloff>:/images/images/cancel.png</iconset>
-       </property>
        <property name="iconSize">
         <size>
          <width>12</width>

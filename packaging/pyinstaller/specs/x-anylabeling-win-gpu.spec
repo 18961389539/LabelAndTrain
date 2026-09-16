@@ -155,6 +155,7 @@ def _strip_msvc_runtime_binaries(binaries):
 onnxruntime_binaries = _collect_onnxruntime_dlls()
 msvc_runtime_binaries = _collect_msvc_runtime_dlls()
 matplotlib_datas = collect_data_files('matplotlib')
+lucide_datas = collect_data_files('lucide')
 
 a = Analysis(
     [_p('anylabeling', 'app.py')],
@@ -165,8 +166,9 @@ a = Analysis(
         (_p('anylabeling', 'configs', '*.yaml'), 'anylabeling/configs'),
         (_p('anylabeling', 'views', 'labeling', 'widgets', 'auto_labeling', 'auto_labeling.ui'), 'anylabeling/views/labeling/widgets/auto_labeling'),
         (_p('anylabeling', 'services', 'auto_labeling', 'configs', 'clip', '*'), 'anylabeling/services/auto_labeling/configs/clip'),
-    ] + matplotlib_datas,
+    ] + matplotlib_datas + lucide_datas,
     hiddenimports=[
+        'lucide',
         'matplotlib',
         'matplotlib.backends.backend_agg',
         'matplotlib.font_manager',

@@ -15,13 +15,16 @@ class ToolBar(QtWidgets.QFrame):
         self._icon_size = QtCore.QSize(24, 24)
         self._owned_widgets = []
 
+        self._button_size = QtCore.QSize(40, 40)
+
         layout = QtWidgets.QVBoxLayout(self)
         layout.setSpacing(0)
-        layout.setContentsMargins(2, 2, 2, 2)
+        layout.setContentsMargins(0, 0, 0, 0)
         self._content_widget = QtWidgets.QWidget(self)
+        self._content_widget.setObjectName("ToolBarContent")
         self._content_layout = QtWidgets.QVBoxLayout(self._content_widget)
-        self._content_layout.setSpacing(0)
-        self._content_layout.setContentsMargins(0, 0, 0, 0)
+        self._content_layout.setSpacing(4)
+        self._content_layout.setContentsMargins(6, 8, 6, 8)
         layout.addWidget(
             self._content_widget, 0, QtCore.Qt.AlignmentFlag.AlignTop
         )
@@ -33,31 +36,46 @@ class ToolBar(QtWidgets.QFrame):
 
         self._is_dark = get_mode() == "dark"
         t = get_theme()
-        separator_qss = ""
-        if self._is_dark:
-            separator_qss = f"""
-            QFrame#ToolBarSeparator {{
-                background: {t["border"]};
-            }}
-            """
+        separator_color = t["border"] if self._is_dark else t["border_light"]
+        hover_bg = t["surface_hover"]
+        checked_bg = t["surface_pressed"]
         self.setStyleSheet(f"""
             ToolBar {{
                 background: {t["background"]};
-                padding: 0px;
-                border: 2px solid {t["border"]};
-                border-radius: 5px;
+                border: 1px solid {t["border"]};
+                border-radius: 14px;
+            }}
+            QWidget#ToolBarContent {{
+                background: transparent;
             }}
             ToolBar QToolButton {{
-                min-width: 28px;
-                min-height: 28px;
-                max-width: 28px;
-                max-height: 28px;
-                border: none;
+                min-width: 40px;
+                min-height: 40px;
+                max-width: 40px;
+                max-height: 40px;
+                border: 1px solid transparent;
+                border-radius: 12px;
                 background: transparent;
                 padding: 0px;
                 margin: 0px;
             }}
-            {separator_qss}
+            ToolBar QToolButton:hover:!disabled {{
+                background: {hover_bg};
+                border-color: {t["border_light"]};
+            }}
+            ToolBar QToolButton:pressed:!disabled,
+            ToolBar QToolButton:checked:!disabled {{
+                background: {checked_bg};
+                border-color: {t["highlight"]};
+            }}
+            ToolBar QToolButton:disabled {{
+                background: transparent;
+                border-color: transparent;
+            }}
+            QFrame#ToolBarSeparator {{
+                background: {separator_color};
+                border-radius: 1px;
+            }}
             """)
 
     def sizeHint(self):
@@ -132,7 +150,8 @@ class ToolBar(QtWidgets.QFrame):
         btn.setDefaultAction(action)
         btn.setToolButtonStyle(self.toolButtonStyle())
         btn.setIconSize(self._icon_size)
-        btn.setFixedSize(28, 28)
+        btn.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
+        btn.setFixedSize(self._button_size)
         self._owned_widgets.append(btn)
         self._content_layout.addWidget(
             btn, 0, QtCore.Qt.AlignmentFlag.AlignCenter
@@ -146,10 +165,10 @@ class ToolBar(QtWidgets.QFrame):
         separator = QtWidgets.QFrame(self)
         separator.setObjectName("ToolBarSeparator")
         if self._orientation == QtCore.Qt.Orientation.Vertical:
-            separator.setFixedSize(24, 1)
-            separator.setContentsMargins(6, 4, 6, 4)
+            separator.setFixedSize(24, 2)
+            separator.setContentsMargins(8, 6, 8, 6)
         else:
-            separator.setFixedSize(1, 24)
+            separator.setFixedSize(2, 24)
         self._owned_widgets.append(separator)
         self._content_layout.addWidget(
             separator, 0, QtCore.Qt.AlignmentFlag.AlignCenter

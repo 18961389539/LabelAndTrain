@@ -1,6 +1,8 @@
+import functools
 import natsort
 import os
 import os.path as osp
+import tempfile
 from math import sqrt
 
 import numpy as np
@@ -9,6 +11,163 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 
 from anylabeling.views.labeling.logger import logger
 from .image import get_supported_image_extensions
+
+try:
+    from lucide import lucide_icon
+except Exception:  # noqa: BLE001
+    lucide_icon = None
+
+
+_LUCIDE_CACHE_DIR = osp.join(
+    tempfile.gettempdir(), "jl_labeling_and_train", "lucide_icons"
+)
+_LUCIDE_ICON_MAP = {
+    "auto-run": {"name": "play", "ext": "svg"},
+    "arrow-right": {"name": "arrow-right", "ext": "svg"},
+    "arrow-left": {"name": "arrow-left", "ext": "svg"},
+    "brain": {"name": "brain", "ext": "svg"},
+    "brush": {"name": "brush", "ext": "png"},
+    "brush_polygon": {"name": "brush", "ext": "png"},
+    "cancel": {"name": "x", "ext": "png"},
+    "caret-left": {"name": "chevron-left", "ext": "svg"},
+    "caret-down": {"name": "chevron-down", "ext": "svg"},
+    "caret-right": {"name": "chevron-right", "ext": "svg"},
+    "caret-up": {"name": "chevron-up", "ext": "svg"},
+    "cartesian": {"name": "crosshair", "ext": "png"},
+    "check": {"name": "check", "ext": "svg"},
+    "checkmark": {"name": "check", "ext": "svg", "stroke": "#0D9488"},
+    "checkmark-white": {
+        "name": "check",
+        "ext": "svg",
+        "stroke": "#ffffff",
+    },
+    "circle-selection": {"name": "circle-dot", "ext": "png"},
+    "color": {"name": "palette"},
+    "convert": {"name": "shuffle", "ext": "png"},
+    "copy": {"name": "copy"},
+    "copy-green": {
+        "name": "circle-check-big",
+        "ext": "svg",
+        "stroke": "#16a34a",
+    },
+    "crop": {"name": "crop", "ext": "png"},
+    "delete": {"name": "trash", "ext": "png"},
+    "digit0": {"name": "square", "ext": "png", "digit": "0"},
+    "digit1": {"name": "square", "ext": "png", "digit": "1"},
+    "digit2": {"name": "square", "ext": "png", "digit": "2"},
+    "digit3": {"name": "square", "ext": "png", "digit": "3"},
+    "digit4": {"name": "square", "ext": "png", "digit": "4"},
+    "digit5": {"name": "square", "ext": "png", "digit": "5"},
+    "digit6": {"name": "square", "ext": "png", "digit": "6"},
+    "digit7": {"name": "square", "ext": "png", "digit": "7"},
+    "digit8": {"name": "square", "ext": "png", "digit": "8"},
+    "digit9": {"name": "square", "ext": "png", "digit": "9"},
+    "done": {"name": "circle-check-big", "ext": "png"},
+    "edit": {"name": "pencil", "ext": "png"},
+    "eraser": {"name": "eraser", "ext": "svg"},
+    "error": {
+        "name": "circle-alert",
+        "ext": "svg",
+        "stroke": "#dc2626",
+    },
+    "eye": {"name": "eye"},
+    "file": {"name": "image", "ext": "png"},
+    "fit-window": {"name": "maximize", "ext": "png"},
+    "fit-width": {"name": "move-horizontal", "ext": "png"},
+    "folder": {"name": "folder", "ext": "svg"},
+    "hidden": {"name": "eye-off", "ext": "png"},
+    "icon": {"name": "scan-search", "ext": "png", "stroke": "#0D9488"},
+    "label": {"name": "tag", "ext": "png"},
+    "labels": {"name": "tags", "ext": "png"},
+    "lock": {"name": "lock", "ext": "svg"},
+    "loop": {"name": "repeat", "ext": "png"},
+    "navigator": {"name": "map", "ext": "svg"},
+    "open": {"name": "folder-open", "ext": "png"},
+    "overview": {"name": "layout-dashboard", "ext": "png"},
+    "paste": {"name": "clipboard-paste", "ext": "png"},
+    "point": {"name": "circle-dot", "ext": "png"},
+    "polygon": {"name": "pentagon", "ext": "png"},
+    "prev": {"name": "arrow-left", "ext": "svg"},
+    "rectangle": {"name": "square", "ext": "png"},
+    "redo": {"name": "redo-2", "ext": "png"},
+    "search": {"name": "search", "ext": "svg"},
+    "settings": {"name": "settings", "ext": "svg"},
+    "star": {"name": "star", "ext": "svg"},
+    "starred": {
+        "name": "star",
+        "ext": "svg",
+        "fill": "currentColor",
+    },
+    "trash": {"name": "trash", "ext": "svg"},
+    "undo": {"name": "undo-2", "ext": "png"},
+    "union": {"name": "combine", "ext": "png"},
+    "ultralytics": {"name": "scan-search", "ext": "png"},
+    "next": {"name": "arrow-right", "ext": "svg"},
+    "save": {"name": "save", "ext": "svg"},
+    "save-as": {"name": "save", "ext": "svg"},
+    "warning": {
+        "name": "triangle-alert",
+        "ext": "svg",
+        "stroke": "#d97706",
+    },
+    "zoom": {"name": "scan-search", "ext": "png"},
+    "zoom-in": {"name": "zoom-in", "ext": "png"},
+    "zoom-out": {"name": "zoom-out", "ext": "png"},
+}
+
+
+def _resource_icon_path(icon, ext):
+    return osp.join(f":/images/images/{icon}.{ext}")
+
+
+def _normalize_icon_path(path):
+    return path.replace("\\", "/")
+
+
+def _decorate_lucide_svg(svg, spec):
+    digit = spec.get("digit")
+    if digit is None:
+        return svg
+    text_fill = spec.get("digit_fill", spec.get("stroke", "currentColor"))
+    digit_markup = (
+        f'<text x="12" y="12.2" text-anchor="middle" '
+        f'dominant-baseline="middle" font-family="Arial, sans-serif" '
+        f'font-size="11" font-weight="700" fill="{text_fill}">{digit}</text>'
+    )
+    return svg.replace("</svg>", f"{digit_markup}</svg>")
+
+
+@functools.lru_cache(maxsize=None)
+def _lucide_icon_path(icon, ext):
+    if lucide_icon is None:
+        return None
+    spec = _LUCIDE_ICON_MAP.get(icon)
+    if not spec:
+        return None
+    target_ext = spec.get("ext", ext)
+    if target_ext != ext:
+        return None
+    lucide_name = spec["name"]
+    try:
+        svg = lucide_icon(
+            lucide_name,
+            width="24",
+            height="24",
+            stroke=spec.get("stroke", "currentColor"),
+            fill=spec.get("fill", "none"),
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Failed to render Lucide icon %s: %s", lucide_name, exc)
+        return None
+    svg = _decorate_lucide_svg(svg, spec)
+
+    os.makedirs(_LUCIDE_CACHE_DIR, exist_ok=True)
+    cache_name = f"{icon}.svg"
+    cache_path = osp.join(_LUCIDE_CACHE_DIR, cache_name)
+    if not osp.exists(cache_path):
+        with open(cache_path, "w", encoding="utf-8") as f:
+            f.write(svg)
+    return _normalize_icon_path(cache_path)
 
 
 def apply_application_font(font_family):
@@ -52,12 +211,15 @@ def scan_all_images(folder_path):
 
 
 def new_icon(icon, ext="png"):
-    return QtGui.QIcon(osp.join(f":/images/images/{icon}.{ext}"))
+    return QtGui.QIcon(new_icon_path(icon, ext))
 
 
 def new_icon_path(icon, ext="png"):
     """Returns the resource path string for an icon."""
-    return f":/images/images/{icon}.{ext}"
+    lucide_path = _lucide_icon_path(icon, ext)
+    if lucide_path:
+        return lucide_path
+    return _resource_icon_path(icon, ext)
 
 
 def new_button(text, icon=None, slot=None):

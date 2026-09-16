@@ -5,7 +5,7 @@ from typing import Any, Callable
 
 from PyQt6 import QtCore, QtGui, QtWidgets
 
-from anylabeling.views.labeling.utils.qt import new_icon_path
+from anylabeling.views.labeling.utils.qt import new_icon, new_icon_path
 from anylabeling.views.labeling.utils.style import (
     get_checkbox_indicator_style,
     get_double_spinbox_style,
@@ -253,7 +253,9 @@ class SettingsDialog(QtWidgets.QDialog):
         return pixmap
 
     def _brand_logo_pixmap(self) -> QtGui.QPixmap:
-        pixmap = QtGui.QPixmap(new_icon_path("icon", "png"))
+        pixmap = new_icon("icon").pixmap(
+            self._nav_icon_size, self._nav_icon_size
+        )
         if pixmap.isNull():
             return self._icon_pixmap(
                 "Brand", QtGui.QColor(*self._palette["left_active_text"])

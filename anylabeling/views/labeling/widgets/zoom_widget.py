@@ -6,26 +6,40 @@ from anylabeling.views.labeling.utils.theme import get_theme
 class ZoomWidget(QtWidgets.QSpinBox):
     def __init__(self, value=100):
         super().__init__()
+        self.setObjectName("ToolBarZoomWidget")
         self.setButtonSymbols(
             QtWidgets.QAbstractSpinBox.ButtonSymbols.NoButtons
         )
         self.setRange(1, 1000)
         self.setSuffix("%")
         self.setValue(value)
+        self.setKeyboardTracking(False)
         self.setToolTip(self.tr("Zoom Level"))
         self.setStatusTip(self.toolTip())
         self.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        self.setFixedSize(44, 34)
         font = self.font()
         font.setPointSize(9)
+        font.setBold(True)
         self.setFont(font)
 
         t = get_theme()
         self.setStyleSheet(f"""
             QSpinBox {{
-                background-color: transparent;
+                background-color: {t["surface"]};
                 color: {t["text"]};
-                border: none;
-                padding: 0;
-                min-height: 0;
+                border: 1px solid {t["border_light"]};
+                border-radius: 10px;
+                padding: 0 2px;
+                min-height: 34px;
+                selection-background-color: {t["selection"]};
+                selection-color: {t["selection_text"]};
+            }}
+            QSpinBox:focus {{
+                border-color: {t["highlight"]};
+            }}
+            QSpinBox:disabled {{
+                color: {t["text_secondary"]};
+                border-color: {t["border"]};
             }}
             """)

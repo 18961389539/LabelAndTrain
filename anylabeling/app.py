@@ -143,6 +143,57 @@ def _handle_fatal_startup_error():
     sys.exit(1)
 
 
+def _install_runtime_exception_hook(logger):
+    """Keep uncaught slot exceptions from killing the process.
+
+    PyQt6 calls ``qFatal()`` when a slot raises, so a single Python error
+    (e.g. ``self.actions.<missing attribute>``) terminated the app with no
+    visible message when launched from the packaged exe. Hooking
+    ``sys.excepthook`` logs the traceback and shows a dismissible dialog
+    instead, so the session — and the unsaved annotations — survive.
+    """
+
+    def _hook(exc_type, exc_value, exc_tb):
+        if issubclass(exc_type, (KeyboardInterrupt, SystemExit)):
+            sys.__excepthook__(exc_type, exc_value, exc_tb)
+            return
+
+        text = "".join(
+            traceback.format_exception(exc_type, exc_value, exc_tb)
+        )
+        try:
+            logger.error(f"Unhandled exception:\n{text}")
+        except Exception:  # noqa: BLE001
+            pass
+
+        log_path = ""
+        try:
+            log_dir = os.path.join(get_work_directory(), "xanylabeling_logs")
+            os.makedirs(log_dir, exist_ok=True)
+            stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            log_path = os.path.join(log_dir, f"runtime_error_{stamp}.log")
+            with open(log_path, "w", encoding="utf-8") as f:
+                f.write(text)
+        except Exception:  # noqa: BLE001
+            log_path = ""
+
+        try:
+            box = QtWidgets.QMessageBox()
+            box.setIcon(QtWidgets.QMessageBox.Icon.Warning)
+            box.setWindowTitle("JLLabelingAndTrain - 操作出错")
+            box.setText(
+                "刚才的操作触发了一个内部错误，程序已忽略该错误并继续运行。\n"
+                "建议先保存当前标注（Ctrl+S），然后重启程序。"
+                + (f"\n\n错误日志：\n{log_path}" if log_path else "")
+            )
+            box.setDetailedText(text)
+            box.exec()
+        except Exception:  # noqa: BLE001
+            print(text, file=sys.__stderr__)
+
+    sys.excepthook = _hook
+
+
 def _main():
     if sys.stderr is None:
         sys.stderr = open(os.devnull, "w")
@@ -471,6 +522,7 @@ def _main():
         app.setPalette(_dark_palette)
     app.setStyleSheet(get_app_stylesheet())
     app.processEvents()
+    _install_runtime_exception_hook(logger)
 
     app.setApplicationName(__appname__)
     app.setApplicationVersion(__version__)

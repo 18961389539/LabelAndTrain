@@ -343,6 +343,8 @@ def get_settings_combo_style() -> str:
 def get_model_selection_scroll_area_style(compact: bool = False):
     scrollbar_height = 10 if compact else 16
     scrollbar_margin = "0px 8px 0px 8px" if compact else "2px 12px 2px 12px"
+    right_arrow = new_icon_path("caret-right", "svg")
+    left_arrow = new_icon_path("caret-left", "svg")
     return f"""
         QScrollArea#model_selection_scroll_area {{
             background: transparent;
@@ -365,7 +367,7 @@ def get_model_selection_scroll_area_style(compact: bool = False):
             subcontrol-origin: margin;
             subcontrol-position: right;
             width: 12px;
-            image: url(:/images/images/caret-right.svg);
+            image: url({right_arrow});
         }}
         QScrollArea#model_selection_scroll_area QScrollBar::sub-line:horizontal {{
             background: transparent;
@@ -373,7 +375,7 @@ def get_model_selection_scroll_area_style(compact: bool = False):
             subcontrol-origin: margin;
             subcontrol-position: left;
             width: 12px;
-            image: url(:/images/images/caret-left.svg);
+            image: url({left_arrow});
         }}
         QScrollArea#model_selection_scroll_area QScrollBar::add-page:horizontal,
         QScrollArea#model_selection_scroll_area QScrollBar::sub-page:horizontal {{
@@ -539,11 +541,11 @@ def get_dock_style() -> str:
     if get_mode() == "dark":
         file_checked_bg = t["primary"]
         file_checked_border = t["primary"]
-        file_checkmark = ":/images/images/checkmark-white.svg"
+        file_checkmark = new_icon_path("checkmark-white", "svg")
     else:
         file_checked_bg = "#ffffff"
         file_checked_border = t["border_light"]
-        file_checkmark = ":/images/images/checkmark.svg"
+        file_checkmark = new_icon_path("checkmark", "svg")
     return f"""
         QDockWidget {{
             color: {t["text"]};

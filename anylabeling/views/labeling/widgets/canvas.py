@@ -11,6 +11,7 @@ from PyQt6.QtGui import QWheelEvent
 
 from anylabeling.services.auto_labeling.types import AutoLabelingMode
 from anylabeling.views.labeling.utils.colormap import label_colormap
+from anylabeling.views.labeling.utils.qt import new_icon_path
 from anylabeling.views.labeling.utils.theme import get_theme
 
 from .. import utils
@@ -1375,7 +1376,7 @@ class Canvas(
 
     def _vertex_eraser_cursor(self):
         if self._vertex_eraser_cursor_cache is None:
-            pixmap = QtGui.QPixmap(":/images/images/eraser.svg")
+            pixmap = QtGui.QPixmap(new_icon_path("eraser", "svg"))
             if pixmap.isNull():
                 return CURSOR_POINT
             self._vertex_eraser_cursor_cache = QtGui.QCursor(

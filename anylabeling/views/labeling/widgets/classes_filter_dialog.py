@@ -15,6 +15,7 @@ from anylabeling.views.labeling.utils.style import (
     get_dialog_style,
     get_ok_btn_style,
 )
+from anylabeling.views.labeling.utils.qt import new_icon_path
 from anylabeling.views.labeling.utils.theme import get_theme
 from anylabeling.views.labeling.widgets.searchable_model_dropdown import (
     SearchBar,
@@ -23,6 +24,7 @@ from anylabeling.views.labeling.widgets.searchable_model_dropdown import (
 
 def _list_widget_style() -> str:
     t = get_theme()
+    checkmark_path = new_icon_path("checkmark-white", "svg")
     return f"""
         QListWidget {{
             background-color: {t["background_secondary"]};
@@ -55,7 +57,7 @@ def _list_widget_style() -> str:
         QListWidget::indicator:checked {{
             background-color: {t["primary"]};
             border-color: {t["primary"]};
-            image: url(:/images/images/checkmark-white.svg);
+            image: url({checkmark_path});
         }}
     """
 

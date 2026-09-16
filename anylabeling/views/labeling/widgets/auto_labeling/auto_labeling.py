@@ -48,6 +48,7 @@ from anylabeling.views.labeling.utils.style import (
     get_download_progress_bar_style,
     get_cancel_download_button_style,
 )
+from anylabeling.views.labeling.utils.qt import new_icon
 from anylabeling.views.labeling.widgets.searchable_model_dropdown import (
     _get_models_config_path,
     SearchableModelDropdownPopup,
@@ -524,6 +525,7 @@ class AutoLabelingWidget(QWidget):
         self.parent = parent
         current_dir = os.path.dirname(__file__)
         uic.loadUi(os.path.join(current_dir, "auto_labeling.ui"), self)
+        self.button_close.setIcon(new_icon("cancel"))
         self._apply_compact_layout()
         self.model_selection_scroll_area.setStyleSheet(
             get_model_selection_scroll_area_style(compact=_TOOLBAR_COMPACT)

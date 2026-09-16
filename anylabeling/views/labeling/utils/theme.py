@@ -3,6 +3,7 @@ import subprocess
 from typing import Dict, Optional
 
 from PyQt6.QtGui import QColor, QPalette
+from anylabeling.views.labeling.utils.qt import new_icon_path
 
 try:
     import darkdetect as _darkdetect
@@ -200,11 +201,11 @@ def _checkbox_indicator_qss() -> str:
     if _active_mode == "dark":
         checked_bg = t["primary"]
         checked_border = t["primary"]
-        checkmark = ":/images/images/checkmark-white.svg"
+        checkmark = new_icon_path("checkmark-white", "svg")
     else:
         checked_bg = "#ffffff"
         checked_border = t["border_light"]
-        checkmark = ":/images/images/checkmark.svg"
+        checkmark = new_icon_path("checkmark", "svg")
     return f"""
         QCheckBox::indicator {{
             width: 16px;
@@ -295,7 +296,7 @@ def get_app_stylesheet() -> str:
         }}
         QMenu::indicator:non-exclusive:checked,
         QMenu::indicator:exclusive:checked {{
-            image: url(:/images/images/checkmark.svg);
+            image: url({new_icon_path("checkmark-white", "svg")});
         }}
         QMenu::item:disabled {{
             color: {t["text_secondary"]};
@@ -483,7 +484,7 @@ def get_app_stylesheet() -> str:
             width: 20px;
         }}
         QComboBox::down-arrow {{
-            image: url(:/images/images/caret-down.svg);
+            image: url({new_icon_path("caret-down", "svg")});
             width: 12px;
             height: 12px;
         }}
