@@ -9,7 +9,10 @@ try:
     import anylabeling.resources.resources  # noqa: F401
     from anylabeling.views.labeling.utils.qt import new_icon
     from anylabeling.views.labeling.utils.theme import init_theme
-    from anylabeling.views.labeling.widgets.toolbar import ToolBar
+    from anylabeling.views.labeling.widgets.toolbar import (
+        FloatingToolPanel,
+        ToolBar,
+    )
     from anylabeling.views.labeling.widgets.zoom_widget import ZoomWidget
 
     PYQT_AVAILABLE = True
@@ -77,8 +80,8 @@ class TestToolBarLayout(unittest.TestCase):
         self.app.processEvents()
 
         button = toolbar.widgetForAction(action)
-        self.assertGreaterEqual(button.width(), 32)
-        self.assertGreaterEqual(button.height(), 32)
+        self.assertGreaterEqual(button.width(), 30)
+        self.assertGreaterEqual(button.height(), 30)
         self.assertEqual(toolbar.iconSize(), QtCore.QSize(24, 24))
 
     def test_zoom_widget_matches_toolbar_module_width(self):
@@ -86,5 +89,32 @@ class TestToolBarLayout(unittest.TestCase):
         widget = ZoomWidget()
         self._widgets.append(widget)
 
-        self.assertEqual(widget.size(), QtCore.QSize(34, 26))
+        self.assertEqual(widget.size(), QtCore.QSize(30, 24))
         self.assertEqual(widget.alignment(), QtCore.Qt.AlignmentFlag.AlignCenter)
+
+    def test_floating_toolbar_panel_stays_clamped_in_parent(self):
+        init_theme("dark")
+        parent = QtWidgets.QWidget()
+        parent.resize(120, 180)
+        parent.show()
+        self._widgets.append(parent)
+
+        panel = FloatingToolPanel(parent)
+        content = QtWidgets.QFrame()
+        content.setFixedSize(40, 260)
+        panel.set_content_widget(content)
+        panel.show()
+        self._widgets.append(panel)
+        self.app.processEvents()
+
+        self.assertEqual(panel.pos(), QtCore.QPoint(8, 8))
+
+        panel.move(999, 999)
+        panel._user_moved = True
+        panel.sync_to_parent()
+        self.app.processEvents()
+
+        self.assertGreaterEqual(panel.x(), 8)
+        self.assertGreaterEqual(panel.y(), 8)
+        self.assertLessEqual(panel.x() + panel.width(), parent.width() - 8)
+        self.assertLessEqual(panel.y() + panel.height(), parent.height() - 8)

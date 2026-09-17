@@ -39,7 +39,7 @@ class TestQtIcons(unittest.TestCase):
         path = new_icon_path("settings", "svg")
         with open(path, "r", encoding="utf-8") as f:
             content = f.read()
-        self.assertIn("#f5f5f7", content.lower())
+        self.assertIn("#ffffff", content.lower())
 
     def test_unmapped_icon_keeps_qt_resource_path(self):
         path = new_icon_path("file", "svg")

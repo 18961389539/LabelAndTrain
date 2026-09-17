@@ -22,7 +22,7 @@ from .navigator_widget import NavigatorDialog
 from .overview_dialog import OverviewDialog
 from .polygon_sides_dialog import PolygonSidesDialog
 from .popup import Popup
-from .toolbar import ToolBar
+from .toolbar import FloatingToolPanel, ToolBar
 from .unique_label_qlist_widget import UniqueLabelQListWidget
 
 from .zoom_widget import ZoomWidget

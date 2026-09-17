@@ -17,21 +17,21 @@ class ZoomWidget(QtWidgets.QSpinBox):
         self.setToolTip(self.tr("Zoom Level"))
         self.setStatusTip(self.toolTip())
         self.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
-        self.setFixedSize(34, 26)
+        self.setFixedSize(30, 24)
         font = self.font()
-        font.setPointSize(8)
+        font.setPointSize(7)
         font.setBold(True)
         self.setFont(font)
 
         t = get_theme()
         self.setStyleSheet(f"""
             QSpinBox {{
-                background-color: {t["surface"]};
+                background-color: {t["button_bg"]};
                 color: {t["text"]};
-                border: 1px solid {t["border_light"]};
-                border-radius: 8px;
+                border: 1px solid {t["border"]};
+                border-radius: 7px;
                 padding: 0 1px;
-                min-height: 26px;
+                min-height: 24px;
                 selection-background-color: {t["selection"]};
                 selection-color: {t["selection_text"]};
             }}

@@ -126,10 +126,10 @@ def _normalize_icon_path(path):
 
 def _lucide_theme_signature():
     try:
-        from anylabeling.views.labeling.utils.theme import get_theme
+        from anylabeling.views.labeling.utils.theme import get_mode, get_theme
 
         theme = get_theme()
-        stroke = theme["text"]
+        stroke = "#ffffff" if get_mode() == "dark" else theme["text"]
         fill = stroke
     except Exception:  # noqa: BLE001
         app = QtWidgets.QApplication.instance()

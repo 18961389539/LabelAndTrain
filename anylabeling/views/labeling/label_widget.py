@@ -102,6 +102,7 @@ from .widgets import (
     CanvasEmptyStateWidget,
     CrosshairSettingsDialog,
     FileDialogPreview,
+    FloatingToolPanel,
     ShapeModifyDialog,
     GroupIDFilterComboBox,
     LabelDialog,
@@ -1913,7 +1914,9 @@ class LabelingWidget(LabelDialog):
         layout.setContentsMargins(0, 0, 0, 0)
 
         self.tools_scroll_area = self.toolbar_scroll_area(self.tools)
-        layout.addWidget(self.tools_scroll_area)
+        self.tools_panel = FloatingToolPanel(scroll_area.viewport())
+        self.tools_panel.setObjectName("ToolsFloatingPanel")
+        self.tools_panel.set_content_widget(self.tools_scroll_area)
         central_layout = QVBoxLayout()
         central_layout.setContentsMargins(0, 0, 0, 0)
         central_layout.setSpacing(2)
@@ -2000,7 +2003,7 @@ class LabelingWidget(LabelDialog):
         self._central_widget = scroll_area
 
         # Stretch central area (image view)
-        layout.setStretch(1, 1)
+        layout.setStretch(0, 1)
 
         right_sidebar_layout = QVBoxLayout()
         right_sidebar_layout.setContentsMargins(0, 0, 0, 0)
@@ -2147,6 +2150,7 @@ class LabelingWidget(LabelDialog):
 
         layout.addLayout(right_sidebar_layout)
         self.setLayout(layout)
+        QtCore.QTimer.singleShot(0, lambda: self._sync_tools_panel(reset=True))
 
         if output_file is not None and self._config["auto_save"]:
             logger.warning(
@@ -2566,8 +2570,8 @@ class LabelingWidget(LabelDialog):
         toolbar.setObjectName(f"{title}ToolBar")
         toolbar.setOrientation(Qt.Orientation.Vertical)
         toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
-        toolbar.setIconSize(QtCore.QSize(16, 16))
-        toolbar.setFixedWidth(42)
+        toolbar.setIconSize(QtCore.QSize(15, 15))
+        toolbar.setFixedWidth(38)
         toolbar.setSizePolicy(
             QtWidgets.QSizePolicy.Policy.Fixed,
             QtWidgets.QSizePolicy.Policy.MinimumExpanding,
@@ -2593,9 +2597,22 @@ class LabelingWidget(LabelDialog):
             QtWidgets.QSizePolicy.Policy.Fixed,
             QtWidgets.QSizePolicy.Policy.Expanding,
         )
-        scroll_area.setFixedWidth(toolbar.maximumWidth() + 6)
+        scroll_area.setFixedWidth(toolbar.maximumWidth() + 4)
         scroll_area.setWidget(toolbar)
         return scroll_area
+
+    def _sync_tools_panel(self, reset=False):
+        panel = getattr(self, "tools_panel", None)
+        scroll_area = getattr(self, "_central_widget", None)
+        if panel is None or scroll_area is None:
+            return
+        viewport = scroll_area.viewport()
+        if panel.parentWidget() is not viewport:
+            panel.setParent(viewport)
+            panel.show()
+        if reset:
+            panel.reset_position()
+        panel.sync_to_parent()
 
     def statusBar(self):
         return self.parent.parent.statusBar()
@@ -2609,6 +2626,7 @@ class LabelingWidget(LabelDialog):
         self.tools.clear()
         utils.add_actions(self.tools, tool)
         self.tools.setMinimumHeight(self.tools.sizeHint().height())
+        self._sync_tools_panel()
 
         self.canvas.menus[0].clear()
         utils.add_actions(self.canvas.menus[0], menu)
@@ -5899,6 +5917,7 @@ class LabelingWidget(LabelDialog):
         ):
             self._position_canvas_adjustment()
             self._position_empty_canvas_state()
+            self._sync_tools_panel()
         return super().eventFilter(obj, event)
 
     def brightness_contrast(self, _):
@@ -6322,6 +6341,7 @@ class LabelingWidget(LabelDialog):
             self.adjust_scale()
         self.update_thumbnail_pixmap()
         self._position_canvas_adjustment()
+        self._sync_tools_panel()
 
     def paint_canvas(self):
         if self.image.isNull():

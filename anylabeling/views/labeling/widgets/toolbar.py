@@ -4,6 +4,153 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 from anylabeling.views.labeling.utils.theme import get_mode, get_theme
 
 
+class FloatingToolPanel(QtWidgets.QFrame):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._content_widget = None
+        self._dragging = False
+        self._drag_offset = QtCore.QPoint()
+        self._user_moved = False
+
+        self.setObjectName("FloatingToolPanel")
+        self.setAttribute(QtCore.Qt.WidgetAttribute.WA_StyledBackground, True)
+
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.setSpacing(4)
+        layout.setContentsMargins(4, 4, 4, 4)
+
+        self._handle = QtWidgets.QFrame(self)
+        self._handle.setObjectName("FloatingToolPanelHandle")
+        self._handle.setFixedHeight(14)
+        self._handle.setCursor(QtCore.Qt.CursorShape.OpenHandCursor)
+        self._handle.installEventFilter(self)
+
+        handle_layout = QtWidgets.QHBoxLayout(self._handle)
+        handle_layout.setContentsMargins(0, 0, 0, 0)
+        handle_layout.setSpacing(0)
+
+        grip = QtWidgets.QLabel("⋮⋮", self._handle)
+        grip.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        grip.setObjectName("FloatingToolPanelGrip")
+        grip.setCursor(QtCore.Qt.CursorShape.OpenHandCursor)
+        grip.installEventFilter(self)
+        handle_layout.addWidget(grip)
+
+        layout.addWidget(self._handle)
+
+        self._content_layout = QtWidgets.QVBoxLayout()
+        self._content_layout.setSpacing(0)
+        self._content_layout.setContentsMargins(0, 0, 0, 0)
+        layout.addLayout(self._content_layout)
+
+        self._apply_style()
+
+    def _apply_style(self):
+        t = get_theme()
+        self.setStyleSheet(f"""
+            QFrame#FloatingToolPanel {{
+                background: {t["background_secondary"]};
+                border: 1px solid {t["border_light"]};
+                border-radius: 12px;
+            }}
+            QFrame#FloatingToolPanelHandle {{
+                background: {t["surface"]};
+                border: 1px solid {t["border"]};
+                border-radius: 7px;
+            }}
+            QLabel#FloatingToolPanelGrip {{
+                color: {t["text_secondary"]};
+                font-size: 10px;
+                font-weight: 700;
+                letter-spacing: 1px;
+            }}
+        """)
+
+    def set_content_widget(self, widget):
+        if self._content_widget is widget:
+            return
+        if self._content_widget is not None:
+            self._content_layout.removeWidget(self._content_widget)
+        self._content_widget = widget
+        if widget is not None:
+            widget.setParent(self)
+            self._content_layout.addWidget(widget)
+            widget.show()
+        self.sync_to_parent()
+
+    def default_position(self):
+        return QtCore.QPoint(8, 8)
+
+    def reset_position(self):
+        self._user_moved = False
+        self.move(self.default_position())
+        self.raise_()
+
+    def sync_to_parent(self):
+        parent = self.parentWidget()
+        if parent is None:
+            return
+        if self._content_widget is not None:
+            available_height = max(120, parent.height() - 16)
+            handle_height = self._handle.height()
+            margins = self.layout().contentsMargins()
+            spacing = self.layout().spacing()
+            content_max_height = max(
+                72,
+                available_height
+                - handle_height
+                - margins.top()
+                - margins.bottom()
+                - spacing,
+            )
+            self._content_widget.setMaximumHeight(content_max_height)
+            self.setMaximumHeight(available_height)
+        self.adjustSize()
+        if not self._user_moved:
+            self.move(self.default_position())
+        self._clamp_to_parent()
+        self.raise_()
+
+    def _clamp_to_parent(self):
+        parent = self.parentWidget()
+        if parent is None:
+            return
+        margin = 8
+        max_x = max(margin, parent.width() - self.width() - margin)
+        max_y = max(margin, parent.height() - self.height() - margin)
+        x = min(max(self.x(), margin), max_x)
+        y = min(max(self.y(), margin), max_y)
+        self.move(x, y)
+
+    def eventFilter(self, obj, event):
+        if obj not in {self._handle} and obj.parent() is not self._handle:
+            return super().eventFilter(obj, event)
+        if event.type() == QtCore.QEvent.Type.MouseButtonPress:
+            if event.button() == QtCore.Qt.MouseButton.LeftButton:
+                self._dragging = True
+                self._drag_offset = (
+                    event.globalPosition().toPoint() - self.frameGeometry().topLeft()
+                )
+                self._handle.setCursor(QtCore.Qt.CursorShape.ClosedHandCursor)
+                return True
+        elif event.type() == QtCore.QEvent.Type.MouseMove and self._dragging:
+            parent = self.parentWidget()
+            if parent is None:
+                return True
+            target = parent.mapFromGlobal(
+                event.globalPosition().toPoint() - self._drag_offset
+            )
+            self.move(target)
+            self._clamp_to_parent()
+            self._user_moved = True
+            return True
+        elif event.type() == QtCore.QEvent.Type.MouseButtonRelease and self._dragging:
+            self._dragging = False
+            self._handle.setCursor(QtCore.Qt.CursorShape.OpenHandCursor)
+            return True
+        return super().eventFilter(obj, event)
+
+
 class ToolBar(QtWidgets.QFrame):
     """Toolbar widget for labeling tool"""
 
@@ -15,7 +162,7 @@ class ToolBar(QtWidgets.QFrame):
         self._icon_size = QtCore.QSize(24, 24)
         self._owned_widgets = []
 
-        self._button_size = QtCore.QSize(32, 32)
+        self._button_size = QtCore.QSize(30, 30)
 
         layout = QtWidgets.QVBoxLayout(self)
         layout.setSpacing(0)
@@ -23,8 +170,8 @@ class ToolBar(QtWidgets.QFrame):
         self._content_widget = QtWidgets.QWidget(self)
         self._content_widget.setObjectName("ToolBarContent")
         self._content_layout = QtWidgets.QVBoxLayout(self._content_widget)
-        self._content_layout.setSpacing(1)
-        self._content_layout.setContentsMargins(4, 5, 4, 5)
+        self._content_layout.setSpacing(0)
+        self._content_layout.setContentsMargins(3, 4, 3, 4)
         layout.addWidget(
             self._content_widget, 0, QtCore.Qt.AlignmentFlag.AlignTop
         )
@@ -36,29 +183,30 @@ class ToolBar(QtWidgets.QFrame):
 
         self._is_dark = get_mode() == "dark"
         t = get_theme()
-        separator_color = t["border"] if self._is_dark else t["border_light"]
-        hover_bg = t["background_hover"]
-        checked_bg = (
-            t["primary_hover"] if self._is_dark else t["surface_pressed"]
+        separator_color = t["border_light"] if self._is_dark else t["border"]
+        base_bg = t["button_bg"] if self._is_dark else t["surface"]
+        hover_bg = t["button_hover"] if self._is_dark else t["background_hover"]
+        checked_bg = t["primary"] if self._is_dark else t["surface_pressed"]
+        checked_border = (
+            t["primary_hover"] if self._is_dark else t["highlight"]
         )
-        checked_border = t["primary"] if self._is_dark else t["highlight"]
         self.setStyleSheet(f"""
             ToolBar {{
-                background: {t["background"]};
-                border: 1px solid {t["border"]};
-                border-radius: 11px;
+                background: {t["background_secondary"]};
+                border: 1px solid {t["border_light"]};
+                border-radius: 10px;
             }}
             QWidget#ToolBarContent {{
                 background: transparent;
             }}
             ToolBar QToolButton {{
-                min-width: 32px;
-                min-height: 32px;
-                max-width: 32px;
-                max-height: 32px;
-                border: 1px solid transparent;
-                border-radius: 9px;
-                background: transparent;
+                min-width: 30px;
+                min-height: 30px;
+                max-width: 30px;
+                max-height: 30px;
+                border: 1px solid {t["border"]};
+                border-radius: 8px;
+                background: {base_bg};
                 padding: 0px;
                 margin: 0px;
             }}
@@ -72,8 +220,8 @@ class ToolBar(QtWidgets.QFrame):
                 border-color: {checked_border};
             }}
             ToolBar QToolButton:disabled {{
-                background: transparent;
-                border-color: transparent;
+                background: {t["background"]};
+                border-color: {t["border"]};
             }}
             QFrame#ToolBarSeparator {{
                 background: {separator_color};
@@ -168,8 +316,8 @@ class ToolBar(QtWidgets.QFrame):
         separator = QtWidgets.QFrame(self)
         separator.setObjectName("ToolBarSeparator")
         if self._orientation == QtCore.Qt.Orientation.Vertical:
-            separator.setFixedSize(20, 2)
-            separator.setContentsMargins(6, 3, 6, 3)
+            separator.setFixedSize(16, 1)
+            separator.setContentsMargins(5, 2, 5, 2)
         else:
             separator.setFixedSize(2, 24)
         self._owned_widgets.append(separator)
