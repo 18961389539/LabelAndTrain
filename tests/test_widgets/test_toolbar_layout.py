@@ -77,8 +77,8 @@ class TestToolBarLayout(unittest.TestCase):
         self.app.processEvents()
 
         button = toolbar.widgetForAction(action)
-        self.assertGreaterEqual(button.width(), 40)
-        self.assertGreaterEqual(button.height(), 40)
+        self.assertGreaterEqual(button.width(), 32)
+        self.assertGreaterEqual(button.height(), 32)
         self.assertEqual(toolbar.iconSize(), QtCore.QSize(24, 24))
 
     def test_zoom_widget_matches_toolbar_module_width(self):
@@ -86,5 +86,5 @@ class TestToolBarLayout(unittest.TestCase):
         widget = ZoomWidget()
         self._widgets.append(widget)
 
-        self.assertEqual(widget.size(), QtCore.QSize(44, 34))
+        self.assertEqual(widget.size(), QtCore.QSize(34, 26))
         self.assertEqual(widget.alignment(), QtCore.Qt.AlignmentFlag.AlignCenter)

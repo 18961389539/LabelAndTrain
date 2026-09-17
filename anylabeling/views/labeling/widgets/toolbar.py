@@ -15,7 +15,7 @@ class ToolBar(QtWidgets.QFrame):
         self._icon_size = QtCore.QSize(24, 24)
         self._owned_widgets = []
 
-        self._button_size = QtCore.QSize(40, 40)
+        self._button_size = QtCore.QSize(32, 32)
 
         layout = QtWidgets.QVBoxLayout(self)
         layout.setSpacing(0)
@@ -23,8 +23,8 @@ class ToolBar(QtWidgets.QFrame):
         self._content_widget = QtWidgets.QWidget(self)
         self._content_widget.setObjectName("ToolBarContent")
         self._content_layout = QtWidgets.QVBoxLayout(self._content_widget)
-        self._content_layout.setSpacing(4)
-        self._content_layout.setContentsMargins(6, 8, 6, 8)
+        self._content_layout.setSpacing(1)
+        self._content_layout.setContentsMargins(4, 5, 4, 5)
         layout.addWidget(
             self._content_widget, 0, QtCore.Qt.AlignmentFlag.AlignTop
         )
@@ -37,24 +37,27 @@ class ToolBar(QtWidgets.QFrame):
         self._is_dark = get_mode() == "dark"
         t = get_theme()
         separator_color = t["border"] if self._is_dark else t["border_light"]
-        hover_bg = t["surface_hover"]
-        checked_bg = t["surface_pressed"]
+        hover_bg = t["background_hover"]
+        checked_bg = (
+            t["primary_hover"] if self._is_dark else t["surface_pressed"]
+        )
+        checked_border = t["primary"] if self._is_dark else t["highlight"]
         self.setStyleSheet(f"""
             ToolBar {{
                 background: {t["background"]};
                 border: 1px solid {t["border"]};
-                border-radius: 14px;
+                border-radius: 11px;
             }}
             QWidget#ToolBarContent {{
                 background: transparent;
             }}
             ToolBar QToolButton {{
-                min-width: 40px;
-                min-height: 40px;
-                max-width: 40px;
-                max-height: 40px;
+                min-width: 32px;
+                min-height: 32px;
+                max-width: 32px;
+                max-height: 32px;
                 border: 1px solid transparent;
-                border-radius: 12px;
+                border-radius: 9px;
                 background: transparent;
                 padding: 0px;
                 margin: 0px;
@@ -66,7 +69,7 @@ class ToolBar(QtWidgets.QFrame):
             ToolBar QToolButton:pressed:!disabled,
             ToolBar QToolButton:checked:!disabled {{
                 background: {checked_bg};
-                border-color: {t["highlight"]};
+                border-color: {checked_border};
             }}
             ToolBar QToolButton:disabled {{
                 background: transparent;
@@ -165,8 +168,8 @@ class ToolBar(QtWidgets.QFrame):
         separator = QtWidgets.QFrame(self)
         separator.setObjectName("ToolBarSeparator")
         if self._orientation == QtCore.Qt.Orientation.Vertical:
-            separator.setFixedSize(24, 2)
-            separator.setContentsMargins(8, 6, 8, 6)
+            separator.setFixedSize(20, 2)
+            separator.setContentsMargins(6, 3, 6, 3)
         else:
             separator.setFixedSize(2, 24)
         self._owned_widgets.append(separator)

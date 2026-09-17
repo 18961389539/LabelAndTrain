@@ -17,9 +17,9 @@ class ZoomWidget(QtWidgets.QSpinBox):
         self.setToolTip(self.tr("Zoom Level"))
         self.setStatusTip(self.toolTip())
         self.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
-        self.setFixedSize(44, 34)
+        self.setFixedSize(34, 26)
         font = self.font()
-        font.setPointSize(9)
+        font.setPointSize(8)
         font.setBold(True)
         self.setFont(font)
 
@@ -29,9 +29,9 @@ class ZoomWidget(QtWidgets.QSpinBox):
                 background-color: {t["surface"]};
                 color: {t["text"]};
                 border: 1px solid {t["border_light"]};
-                border-radius: 10px;
-                padding: 0 2px;
-                min-height: 34px;
+                border-radius: 8px;
+                padding: 0 1px;
+                min-height: 26px;
                 selection-background-color: {t["selection"]};
                 selection-color: {t["selection_text"]};
             }}

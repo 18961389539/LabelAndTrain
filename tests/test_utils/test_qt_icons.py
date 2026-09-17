@@ -8,6 +8,7 @@ try:
 
     import anylabeling.resources.resources  # noqa: F401
     from anylabeling.views.labeling.utils.qt import new_icon, new_icon_path
+    from anylabeling.views.labeling.utils.theme import init_theme
 
     PYQT_AVAILABLE = True
 except Exception:
@@ -23,6 +24,7 @@ class TestQtIcons(unittest.TestCase):
             cls.app = QtWidgets.QApplication([])
 
     def test_lucide_mapped_icon_path_is_generated(self):
+        init_theme("light")
         path = new_icon_path("settings", "svg")
 
         self.assertTrue(os.path.isabs(path))
@@ -31,6 +33,13 @@ class TestQtIcons(unittest.TestCase):
         with open(path, "r", encoding="utf-8") as f:
             content = f.read()
         self.assertIn("lucide", content)
+
+    def test_dark_theme_lucide_icons_use_light_stroke(self):
+        init_theme("dark")
+        path = new_icon_path("settings", "svg")
+        with open(path, "r", encoding="utf-8") as f:
+            content = f.read()
+        self.assertIn("#f5f5f7", content.lower())
 
     def test_unmapped_icon_keeps_qt_resource_path(self):
         path = new_icon_path("file", "svg")

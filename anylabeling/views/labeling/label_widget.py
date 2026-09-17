@@ -2566,8 +2566,8 @@ class LabelingWidget(LabelDialog):
         toolbar.setObjectName(f"{title}ToolBar")
         toolbar.setOrientation(Qt.Orientation.Vertical)
         toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
-        toolbar.setIconSize(QtCore.QSize(20, 20))
-        toolbar.setFixedWidth(56)
+        toolbar.setIconSize(QtCore.QSize(16, 16))
+        toolbar.setFixedWidth(42)
         toolbar.setSizePolicy(
             QtWidgets.QSizePolicy.Policy.Fixed,
             QtWidgets.QSizePolicy.Policy.MinimumExpanding,

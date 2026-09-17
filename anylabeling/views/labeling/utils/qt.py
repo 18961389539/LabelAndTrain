@@ -124,6 +124,32 @@ def _normalize_icon_path(path):
     return path.replace("\\", "/")
 
 
+def _lucide_theme_signature():
+    try:
+        from anylabeling.views.labeling.utils.theme import get_theme
+
+        theme = get_theme()
+        stroke = theme["text"]
+        fill = stroke
+    except Exception:  # noqa: BLE001
+        app = QtWidgets.QApplication.instance()
+        if app is None:
+            stroke = "#1d1d1f"
+            fill = "#1d1d1f"
+        else:
+            palette = app.palette()
+            stroke = palette.color(QtGui.QPalette.ColorRole.ButtonText).name()
+            fill = stroke
+    signature = f"{stroke.lstrip('#')}_{fill.lstrip('#')}"
+    return signature, stroke, fill
+
+
+def _resolve_lucide_color(value, fallback):
+    if value in (None, "currentColor"):
+        return fallback
+    return value
+
+
 def _decorate_lucide_svg(svg, spec):
     digit = spec.get("digit")
     if digit is None:
@@ -138,7 +164,7 @@ def _decorate_lucide_svg(svg, spec):
 
 
 @functools.lru_cache(maxsize=None)
-def _lucide_icon_path(icon, ext):
+def _lucide_icon_path(icon, ext, theme_signature, default_stroke, default_fill):
     if lucide_icon is None:
         return None
     spec = _LUCIDE_ICON_MAP.get(icon)
@@ -153,17 +179,20 @@ def _lucide_icon_path(icon, ext):
             lucide_name,
             width="24",
             height="24",
-            stroke=spec.get("stroke", "currentColor"),
-            fill=spec.get("fill", "none"),
+            stroke=_resolve_lucide_color(
+                spec.get("stroke", "currentColor"), default_stroke
+            ),
+            fill=_resolve_lucide_color(spec.get("fill", "none"), default_fill),
         )
     except Exception as exc:  # noqa: BLE001
         logger.warning("Failed to render Lucide icon %s: %s", lucide_name, exc)
         return None
     svg = _decorate_lucide_svg(svg, spec)
 
-    os.makedirs(_LUCIDE_CACHE_DIR, exist_ok=True)
+    themed_cache_dir = osp.join(_LUCIDE_CACHE_DIR, theme_signature)
+    os.makedirs(themed_cache_dir, exist_ok=True)
     cache_name = f"{icon}.svg"
-    cache_path = osp.join(_LUCIDE_CACHE_DIR, cache_name)
+    cache_path = osp.join(themed_cache_dir, cache_name)
     if not osp.exists(cache_path):
         with open(cache_path, "w", encoding="utf-8") as f:
             f.write(svg)
@@ -216,7 +245,10 @@ def new_icon(icon, ext="png"):
 
 def new_icon_path(icon, ext="png"):
     """Returns the resource path string for an icon."""
-    lucide_path = _lucide_icon_path(icon, ext)
+    theme_signature, default_stroke, default_fill = _lucide_theme_signature()
+    lucide_path = _lucide_icon_path(
+        icon, ext, theme_signature, default_stroke, default_fill
+    )
     if lucide_path:
         return lucide_path
     return _resource_icon_path(icon, ext)
