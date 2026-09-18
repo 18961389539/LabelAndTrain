@@ -189,3 +189,6 @@ calibration_*.npy
 
 # WorkBuddy agent working artifacts
 smoke_home/
+
+# WorkBuddy 本地项目数据（非共享代码）
+.workbuddy/
