@@ -7,6 +7,7 @@ try:
     from PyQt6 import QtTest, QtWidgets
 
     from anylabeling.resources import resources  # noqa: F401
+    from anylabeling.views.labeling.utils.theme import get_theme, init_theme
     from anylabeling.views.labeling.widgets.canvas_adjustment import (
         CanvasAdjustmentWidget,
     )
@@ -86,6 +87,53 @@ class TestCanvasAdjustmentWidget(unittest.TestCase):
         self.assertEqual(len(signal_spy), 0)
         self.assertEqual(self.widget.brightness_value_label.text(), "1.20")
         self.assertEqual(self.widget.contrast_value_label.text(), "1.40")
+
+
+@unittest.skipUnless(
+    PYQT_AVAILABLE, "PyQt6 is required for canvas adjustment tests"
+)
+class TestCanvasAdjustmentTheming(unittest.TestCase):
+    """The overlay must track the active theme, never hard-code colors."""
+
+    def setUp(self):
+        self.app = QtWidgets.QApplication.instance()
+        if self.app is None:
+            self.app = QtWidgets.QApplication([])
+
+    def _rebuild_in(self, mode):
+        init_theme(mode)
+        return CanvasAdjustmentWidget()
+
+    def test_dark_card_differs_from_light_card(self):
+        light_widget = self._rebuild_in("light")
+        dark_widget = self._rebuild_in("dark")
+        try:
+            self.assertNotEqual(
+                light_widget.styleSheet(), dark_widget.styleSheet()
+            )
+        finally:
+            light_widget.close()
+            dark_widget.close()
+
+    def test_label_color_matches_active_theme_text(self):
+        widget = self._rebuild_in("dark")
+        try:
+            self.assertEqual(
+                widget.title_label.styleSheet(),
+                CanvasAdjustmentWidget._theme_title_css(),
+            )
+            self.assertIn(get_theme()["text"], widget.title_label.styleSheet())
+        finally:
+            widget.close()
+
+    def test_stylesheet_uses_theme_primary_for_slider(self):
+        light_widget = self._rebuild_in("light")
+        try:
+            self.assertIn(
+                get_theme()["primary"], light_widget.styleSheet()
+            )
+        finally:
+            light_widget.close()
 
 
 if __name__ == "__main__":

@@ -771,6 +771,97 @@ class UltralyticsDialog(QDialog):
                 QIcon(new_icon("caret-up", "svg"))
             )
 
+    def _compute_training_advice(self):
+        """Recommended config based on the labeling folder behind this dialog.
+
+        Returns the advice dict from :mod:`training_advisor`, or ``None``
+        (after telling the user) when there is no folder to analyse yet.
+        """
+        import json as _json
+
+        from anylabeling.views.labeling.utils.active_learning import (
+            load_history,
+        )
+        from anylabeling.views.labeling.utils.data_intel import (
+            analyze_distribution,
+        )
+        from anylabeling.views.labeling.utils.training_advisor import (
+            history_summary,
+            recommend_training_config,
+        )
+
+        parent = self.parent
+        image_list = getattr(parent, "image_list", None) or []
+        label_dir = getattr(parent, "output_dir", None)
+        if not label_dir and getattr(parent, "filename", None):
+            label_dir = os.path.dirname(parent.filename)
+        if not image_list or not label_dir:
+            QMessageBox.information(
+                self,
+                self.tr("智能推荐参数"),
+                self.tr("请先在标注界面打开一个图片文件夹，再点「智能推荐参数」。"),
+            )
+            return None
+
+        entries = []
+        for image_path in image_list:
+            label_file = os.path.join(
+                label_dir,
+                os.path.splitext(os.path.basename(image_path))[0] + ".json",
+            )
+            data = None
+            if os.path.isfile(label_file):
+                try:
+                    with open(label_file, "r", encoding="utf-8") as handle:
+                        data = _json.load(handle)
+                except (OSError, ValueError):
+                    data = None
+            entries.append((image_path, data))
+
+        stats = analyze_distribution(entries)
+        hist_info = history_summary(load_history(label_dir))
+        max_dim = None
+        image = getattr(parent, "image", None)
+        if image is not None and not image.isNull():
+            max_dim = max(image.width(), image.height())
+        return recommend_training_config(
+            stats, history=hist_info, max_image_dim=max_dim
+        )
+
+    def apply_recommended_config(self, advice):
+        """Write advice values into the config widgets; returns applied keys."""
+        applied = []
+        if not isinstance(advice, dict):
+            return applied
+        for key in ("epochs", "batch", "imgsz"):
+            widget = self.config_widgets.get(key)
+            value = advice.get(key)
+            if widget is None or not isinstance(value, int):
+                continue
+            try:
+                widget.setValue(value)
+            except Exception:  # noqa: BLE001
+                continue
+            applied.append(f"{key}={value}")
+        return applied
+
+    def run_smart_recommendation(self):
+        """Compute advice from the current labeling folder and apply it."""
+        advice = self._compute_training_advice()
+        if advice is None:
+            return
+        applied = self.apply_recommended_config(advice)
+        if not applied:
+            return
+        text = advice.get("text") or ""
+        QMessageBox.information(
+            self,
+            self.tr("智能推荐已应用"),
+            self.tr("已填入：%1\n\n%2")
+            .replace("%1", " · ".join(applied))
+            .replace("%2", text),
+        )
+
     def init_train_settings(self, parent_layout):
         group = QGroupBox(self.tr("Train Settings"))
         layout = QVBoxLayout(group)
@@ -1163,6 +1254,24 @@ class UltralyticsDialog(QDialog):
 
         advanced_container_layout.addWidget(self.advanced_content_widget)
         layout.addWidget(advanced_container)
+
+        # Smart recommendation button on its own row (the Basic row above is
+        # already dense; squeezing it there broke narrow windows).
+        from anylabeling.views.labeling.utils.style import (
+            get_highlight_button_style,
+        )
+
+        recommend_row = QHBoxLayout()
+        recommend_row.addStretch()
+        recommend_btn = QPushButton(self.tr("智能推荐参数"))
+        recommend_btn.setToolTip(
+            self.tr("基于当前标注文件夹与历史迭代自动填入 epochs/batch/imgsz")
+        )
+        recommend_btn.setStyleSheet(get_highlight_button_style(compact=True))
+        recommend_btn.clicked.connect(self.run_smart_recommendation)
+        recommend_row.addWidget(recommend_btn)
+        layout.addLayout(recommend_row)
+
         parent_layout.addWidget(group)
 
     def load_config_to_ui(self, config):

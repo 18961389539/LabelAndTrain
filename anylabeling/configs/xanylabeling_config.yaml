@@ -85,6 +85,11 @@ file_dock:
   movable: false
   floatable: false
 
+# floating tools panel (the draggable toolbar overlay on the canvas)
+tools_panel:
+  position: null  # [x, y] where the user last dragged it; null = default corner
+  collapsed: false
+
 # label_dialog
 show_label_text_field: true
 label_completion: startswith

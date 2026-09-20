@@ -5,12 +5,20 @@ from anylabeling.views.labeling.utils.theme import get_mode, get_theme
 
 
 class FloatingToolPanel(QtWidgets.QFrame):
+    #: Emitted when the user finishes dragging the panel (or double-clicks
+    #: the grip to reset it), carrying the panel's final position so the
+    #: caller can persist it.
+    positionCommitted = QtCore.pyqtSignal(int, int)
+    #: Emitted whenever the content is collapsed or expanded.
+    collapseToggled = QtCore.pyqtSignal(bool)
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self._content_widget = None
         self._dragging = False
         self._drag_offset = QtCore.QPoint()
         self._user_moved = False
+        self._collapsed = False
 
         self.setObjectName("FloatingToolPanel")
         self.setAttribute(QtCore.Qt.WidgetAttribute.WA_StyledBackground, True)
@@ -21,7 +29,7 @@ class FloatingToolPanel(QtWidgets.QFrame):
 
         self._handle = QtWidgets.QFrame(self)
         self._handle.setObjectName("FloatingToolPanelHandle")
-        self._handle.setFixedHeight(14)
+        self._handle.setFixedHeight(18)
         self._handle.setCursor(QtCore.Qt.CursorShape.OpenHandCursor)
         self._handle.installEventFilter(self)
 
@@ -35,6 +43,15 @@ class FloatingToolPanel(QtWidgets.QFrame):
         grip.setCursor(QtCore.Qt.CursorShape.OpenHandCursor)
         grip.installEventFilter(self)
         handle_layout.addWidget(grip)
+
+        self._collapse_btn = QtWidgets.QToolButton(self._handle)
+        self._collapse_btn.setObjectName("FloatingToolPanelCollapseBtn")
+        self._collapse_btn.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
+        self._collapse_btn.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
+        self._collapse_btn.setFixedSize(18, 16)
+        self._collapse_btn.clicked.connect(self.toggle_collapse)
+        self._update_collapse_button()
+        handle_layout.addWidget(self._collapse_btn)
 
         layout.addWidget(self._handle)
 
@@ -64,7 +81,58 @@ class FloatingToolPanel(QtWidgets.QFrame):
                 font-weight: 700;
                 letter-spacing: 1px;
             }}
+            QToolButton#FloatingToolPanelCollapseBtn {{
+                border: none;
+                background: transparent;
+                color: {t["text_secondary"]};
+                font-size: 9px;
+                padding: 0px;
+            }}
+            QToolButton#FloatingToolPanelCollapseBtn:hover {{
+                color: {t["text"]};
+                background: {t["background_hover"]};
+                border-radius: 4px;
+            }}
         """)
+
+    def _update_collapse_button(self):
+        if self._collapsed:
+            self._collapse_btn.setText("▲")
+            self._collapse_btn.setToolTip("展开工具栏")
+        else:
+            self._collapse_btn.setText("▼")
+            self._collapse_btn.setToolTip("收起工具栏")
+
+    def toggle_collapse(self):
+        self.set_collapsed(not self._collapsed)
+
+    def set_collapsed(self, collapsed):
+        collapsed = bool(collapsed)
+        if collapsed == self._collapsed:
+            return
+        self._collapsed = collapsed
+        self._update_collapse_button()
+        if self._content_widget is not None:
+            self._content_widget.setVisible(not collapsed)
+        self.sync_to_parent()
+        self.collapseToggled.emit(collapsed)
+
+    def is_collapsed(self):
+        return self._collapsed
+
+    def set_saved_position(self, x, y):
+        """Restore a previously persisted position (e.g. from config).
+
+        The panel is treated as user-moved so later syncs don't snap it
+        back to the default corner.
+        """
+        self.move(int(x), int(y))
+        self._user_moved = True
+        self._clamp_to_parent()
+        self.raise_()
+
+    def user_position(self):
+        return QtCore.QPoint(self.x(), self.y()) if self._user_moved else None
 
     def set_content_widget(self, widget):
         if self._content_widget is widget:
@@ -133,6 +201,11 @@ class FloatingToolPanel(QtWidgets.QFrame):
                 )
                 self._handle.setCursor(QtCore.Qt.CursorShape.ClosedHandCursor)
                 return True
+        elif event.type() == QtCore.QEvent.Type.MouseButtonDblClick:
+            if event.button() == QtCore.Qt.MouseButton.LeftButton:
+                self.reset_position()
+                self.positionCommitted.emit(self.x(), self.y())
+                return True
         elif event.type() == QtCore.QEvent.Type.MouseMove and self._dragging:
             parent = self.parentWidget()
             if parent is None:
@@ -147,6 +220,8 @@ class FloatingToolPanel(QtWidgets.QFrame):
         elif event.type() == QtCore.QEvent.Type.MouseButtonRelease and self._dragging:
             self._dragging = False
             self._handle.setCursor(QtCore.Qt.CursorShape.OpenHandCursor)
+            if self._user_moved:
+                self.positionCommitted.emit(self.x(), self.y())
             return True
         return super().eventFilter(obj, event)
 

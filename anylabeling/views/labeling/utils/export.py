@@ -18,6 +18,7 @@ from anylabeling.views.labeling.logger import logger
 from anylabeling.views.labeling.widgets import Popup
 from anylabeling.views.labeling.utils.qt import new_icon_path
 from anylabeling.views.labeling.utils.style import *
+from anylabeling.views.labeling.utils.theme import get_theme
 
 
 class ExportThread(QThread):
@@ -289,7 +290,7 @@ def export_yolo_annotation(self, mode):
     progress_dialog.setMinimumWidth(500)
     progress_dialog.setMinimumHeight(150)
     progress_dialog.setStyleSheet(
-        get_progress_dialog_style(color="#1d1d1f", height=20)
+        get_progress_dialog_style(color=get_theme()["text"], height=20)
     )
 
     try:
@@ -484,7 +485,7 @@ def export_voc_annotation(self, mode):
     progress_dialog.setMinimumWidth(500)
     progress_dialog.setMinimumHeight(150)
     progress_dialog.setStyleSheet(
-        get_progress_dialog_style(color="#1d1d1f", height=20)
+        get_progress_dialog_style(color=get_theme()["text"], height=20)
     )
 
     try:

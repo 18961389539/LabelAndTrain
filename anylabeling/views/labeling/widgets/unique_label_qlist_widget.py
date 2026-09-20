@@ -5,7 +5,14 @@ import html
 from PyQt6 import QtWidgets, QtGui
 from PyQt6.QtCore import Qt
 
+from ..utils.theme import get_theme
 from .escapable_qlist_widget import EscapableQListWidget
+
+
+def _badge_html(text, count):
+    """Append a theme-aware secondary-color count badge to ``text``."""
+    color = get_theme()["text_secondary"]
+    return f"{text}　<span style='color:{color};'>{count}</span>"
 
 
 class UniqueLabelQListWidget(EscapableQListWidget):
@@ -38,7 +45,7 @@ class UniqueLabelQListWidget(EscapableQListWidget):
         else:
             text = "{}".format(html.escape("" if label is None else str(label)))
         if count is not None:
-            text = f"{text}　<span style='color:rgba(120,132,145,0.95);'>{count}</span>"
+            text = _badge_html(text, count)
         qlabel.setText(text)
         if color is not None:
             background_color = QtGui.QColor(*color, opacity)
@@ -91,10 +98,7 @@ class UniqueLabelQListWidget(EscapableQListWidget):
             # Remove the previous badge (everything after the full-width space).
             stripped = text.split("　", 1)[0]
             if count is not None:
-                qlabel.setText(
-                    f"{stripped}　"
-                    f"<span style='color:rgba(120,132,145,0.95);'>{count}</span>"
-                )
+                qlabel.setText(_badge_html(stripped, count))
             else:
                 qlabel.setText(stripped)
             item.setSizeHint(qlabel.sizeHint())

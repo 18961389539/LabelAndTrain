@@ -17,7 +17,7 @@ from PyQt6 import QtCore, QtWidgets
 from PyQt6.QtCore import Qt
 
 from ..utils.qt import new_icon
-from ..utils.theme import get_theme
+from ..utils.theme import get_theme, get_mode
 
 
 class CanvasAdjustmentWidget(QtWidgets.QWidget):
@@ -44,19 +44,35 @@ class CanvasAdjustmentWidget(QtWidgets.QWidget):
     BC_MAX = 150
     BC_DEFAULT = 50  # 50 / 50 == 1.00 (neutral)
 
-    _LABEL_CSS = (
-        "QLabel { color: #333; font-size: 11px; background: transparent; }"
-    )
-    _TITLE_CSS = (
-        "QLabel { color: #333; font-size: 11px; font-weight: 600;"
-        " background: transparent; }"
-    )
-    _RESET_CSS = (
-        "QPushButton { background: rgba(120, 120, 120, 60);"
-        " border-radius: 3px; font-size: 11px; color: #333; padding: 0; }"
-        "QPushButton:hover { background: rgba(120, 120, 120, 110); }"
-        "QPushButton:pressed { background: rgba(120, 120, 120, 150); }"
-    )
+    @staticmethod
+    def _theme_text_css():
+        """CSS for plain child labels, colored by the active theme."""
+        t = get_theme()
+        return (
+            f"QLabel {{ color: {t['text']}; font-size: 11px;"
+            " background: transparent; }"
+        )
+
+    @staticmethod
+    def _theme_title_css():
+        """CSS for the panel title, colored by the active theme."""
+        t = get_theme()
+        return (
+            f"QLabel {{ color: {t['text']}; font-size: 11px; font-weight: 600;"
+            " background: transparent; }"
+        )
+
+    @staticmethod
+    def _theme_reset_css():
+        """CSS for the compact reset button, hover/pressed tinted by theme."""
+        t = get_theme()
+        return (
+            f"QPushButton {{ background: {t['button_bg']};"
+            " border-radius: 3px; font-size: 11px; padding: 0;"
+            f" color: {t['text']}; }}"
+            f"QPushButton:hover {{ background: {t['button_hover']}; }}"
+            f"QPushButton:pressed {{ background: {t['button_pressed']}; }}"
+        )
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -75,18 +91,19 @@ class CanvasAdjustmentWidget(QtWidgets.QWidget):
         header_layout = QtWidgets.QHBoxLayout()
         header_layout.setContentsMargins(0, 0, 0, 0)
         self.title_label = QtWidgets.QLabel(self.tr("Canvas Display"))
-        self.title_label.setStyleSheet(self._TITLE_CSS)
+        self.title_label.setStyleSheet(self._theme_title_css())
         self.toggle_button = QtWidgets.QToolButton()
         self.toggle_button.setIcon(new_icon("caret-up", "svg"))
         self.toggle_button.setIconSize(QtCore.QSize(10, 10))
         self.toggle_button.setFixedSize(20, 20)
         self.toggle_button.setToolTip(self.tr("Collapse adjustments"))
         self.toggle_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        t = get_theme()
         self.toggle_button.setStyleSheet(
             "QToolButton { background: transparent; border: none;"
             " border-radius: 3px; padding: 4px; }"
-            "QToolButton:hover { background: rgba(120, 120, 120, 60); }"
-            "QToolButton:pressed { background: rgba(120, 120, 120, 100); }"
+            f"QToolButton:hover {{ background: {t['background_hover']}; }}"
+            f"QToolButton:pressed {{ background: {t['surface_pressed']}; }}"
         )
         header_layout.addWidget(self.title_label)
         header_layout.addStretch()
@@ -145,17 +162,24 @@ class CanvasAdjustmentWidget(QtWidgets.QWidget):
         self.contrast_slider.valueChanged.connect(self._on_bc_changed)
 
     def _build_stylesheet(self):
-        """Translucent white card with theme-blue sliders."""
-        primary = get_theme().get("primary", "#0D9488")
+        """Theme-aware translucent card with accent-colored sliders."""
+        t = get_theme()
+        if get_mode() == "dark":
+            card_bg = "rgba(45, 45, 50, 210)"
+            groove_bg = "rgba(255, 255, 255, 45)"
+        else:
+            card_bg = "rgba(255, 255, 255, 220)"
+            groove_bg = "rgba(0, 0, 0, 55)"
+        primary = t["primary"]
         return f"""
         #canvas_adjustment {{
-            background: rgba(255, 255, 255, 220);
-            border: none;
+            background: {card_bg};
+            border: 1px solid {t['border_light']};
             border-radius: 6px;
         }}
         #canvas_adjustment QSlider::groove:horizontal {{
             height: 4px;
-            background: rgba(0, 0, 0, 55);
+            background: {groove_bg};
             border-radius: 2px;
         }}
         #canvas_adjustment QSlider::handle:horizontal {{
@@ -189,7 +213,7 @@ class CanvasAdjustmentWidget(QtWidgets.QWidget):
 
         name_label = QtWidgets.QLabel(title)
         name_label.setFixedWidth(64)
-        name_label.setStyleSheet(self._LABEL_CSS)
+        name_label.setStyleSheet(self._theme_text_css())
         name_label.setToolTip(tooltip)
 
         slider = QtWidgets.QSlider(Qt.Orientation.Horizontal)
@@ -206,13 +230,13 @@ class CanvasAdjustmentWidget(QtWidgets.QWidget):
         value_label.setAlignment(
             Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
         )
-        value_label.setStyleSheet(self._LABEL_CSS)
+        value_label.setStyleSheet(self._theme_text_css())
         value_label.setToolTip(tooltip)
         self._set_value_text(value_label, default)
 
         reset_btn = QtWidgets.QPushButton("↺")
         reset_btn.setFixedSize(22, 20)
-        reset_btn.setStyleSheet(self._RESET_CSS)
+        reset_btn.setStyleSheet(self._theme_reset_css())
         reset_btn.setToolTip(self.tr("Reset to default"))
         reset_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         reset_btn.clicked.connect(

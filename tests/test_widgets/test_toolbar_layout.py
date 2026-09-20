@@ -118,3 +118,169 @@ class TestToolBarLayout(unittest.TestCase):
         self.assertGreaterEqual(panel.y(), 8)
         self.assertLessEqual(panel.x() + panel.width(), parent.width() - 8)
         self.assertLessEqual(panel.y() + panel.height(), parent.height() - 8)
+
+    def _make_panel(self):
+        """Floating panel over a roomy parent, with a fixed content area."""
+        parent = QtWidgets.QWidget()
+        parent.resize(400, 400)
+        parent.show()
+        self._widgets.append(parent)
+
+        panel = FloatingToolPanel(parent)
+        content = QtWidgets.QFrame()
+        content.setFixedSize(40, 200)
+        panel.set_content_widget(content)
+        panel.show()
+        self._widgets.append(panel)
+        self.app.processEvents()
+        return panel, content
+
+    @staticmethod
+    def _fake_mouse_event(evt_type, global_pos):
+        return QtGui.QMouseEvent(
+            evt_type,
+            QtCore.QPointF(10, 10),
+            QtCore.QPointF(global_pos),
+            QtCore.Qt.MouseButton.LeftButton,
+            QtCore.Qt.MouseButton.LeftButton,
+            QtCore.Qt.KeyboardModifier.NoModifier,
+        )
+
+    def test_floating_toolbar_double_click_on_handle_resets_position(self):
+        panel, _ = self._make_panel()
+        committed = []
+        panel.positionCommitted.connect(
+            lambda x, y: committed.append((x, y))
+        )
+
+        panel.set_saved_position(60, 40)
+        self.assertEqual(panel.pos(), QtCore.QPoint(60, 40))
+        self.assertTrue(panel._user_moved)
+
+        self.assertTrue(
+            panel.eventFilter(
+                panel._handle,
+                self._fake_mouse_event(
+                    QtCore.QEvent.Type.MouseButtonDblClick,
+                    QtCore.QPoint(70, 50),
+                ),
+            )
+        )
+        self.assertEqual(panel.pos(), panel.default_position())
+        self.assertFalse(panel._user_moved)
+        self.assertEqual(
+            committed, [(panel.default_position().x(), panel.default_position().y())]
+        )
+
+    def test_floating_toolbar_drag_release_commits_position(self):
+        panel, _ = self._make_panel()
+        committed = []
+        panel.positionCommitted.connect(
+            lambda x, y: committed.append((x, y))
+        )
+        self.assertEqual(panel.pos(), QtCore.QPoint(8, 8))
+
+        # Synthetic press/move/release over the grip, mimicking a real drag.
+        fg = panel.frameGeometry()
+        press_global = fg.topLeft() + QtCore.QPoint(5, 5)
+        self.assertTrue(
+            panel.eventFilter(
+                panel._handle,
+                self._fake_mouse_event(
+                    QtCore.QEvent.Type.MouseButtonPress, press_global
+                ),
+            )
+        )
+        self.assertTrue(panel._dragging)
+
+        move_global = press_global + QtCore.QPoint(20, 10)
+        self.assertTrue(
+            panel.eventFilter(
+                panel._handle,
+                self._fake_mouse_event(
+                    QtCore.QEvent.Type.MouseMove, move_global
+                ),
+            )
+        )
+        self.assertTrue(panel._user_moved)
+        self.assertNotEqual(panel.pos(), QtCore.QPoint(8, 8))
+
+        self.assertTrue(
+            panel.eventFilter(
+                panel._handle,
+                self._fake_mouse_event(
+                    QtCore.QEvent.Type.MouseButtonRelease, move_global
+                ),
+            )
+        )
+        self.assertFalse(panel._dragging)
+        # The committed position matches where the panel actually landed.
+        self.assertEqual(committed, [(panel.x(), panel.y())])
+        self.assertEqual(len(committed), 1)
+
+    def test_floating_toolbar_collapse_hides_content_and_toggles(self):
+        panel, content = self._make_panel()
+        toggled = []
+        panel.collapseToggled.connect(toggled.append)
+
+        self.assertTrue(content.isVisible())
+        self.assertEqual(panel._collapse_btn.text(), "▼")
+
+        panel.set_collapsed(True)
+        self.assertTrue(panel.is_collapsed())
+        self.assertFalse(content.isVisible())
+        self.assertEqual(panel._collapse_btn.text(), "▲")
+        self.assertEqual(panel._collapse_btn.toolTip(), "展开工具栏")
+
+        # Idempotent: collapsing again emits nothing.
+        panel.set_collapsed(True)
+        self.assertEqual(toggled, [True])
+
+        panel.set_collapsed(False)
+        self.assertFalse(panel.is_collapsed())
+        self.assertTrue(content.isVisible())
+        self.assertEqual(panel._collapse_btn.text(), "▼")
+        self.assertEqual(panel._collapse_btn.toolTip(), "收起工具栏")
+        self.assertEqual(toggled, [True, False])
+
+        # toggle_collapse flips back to collapsed.
+        panel.toggle_collapse()
+        self.assertTrue(panel.is_collapsed())
+        self.assertFalse(content.isVisible())
+
+    def test_floating_toolbar_saved_position_survives_sync(self):
+        panel, _ = self._make_panel()
+        panel.set_saved_position(30, 22)
+        panel.sync_to_parent()
+        self.assertEqual(panel.pos(), QtCore.QPoint(30, 22))
+        self.assertTrue(panel._user_moved)
+        self.assertEqual(panel.user_position(), QtCore.QPoint(30, 22))
+
+    def test_config_roundtrip_persists_tools_panel_state(self):
+        import os.path as osp
+        import tempfile
+
+        from anylabeling import config as cfg_module
+
+        old_config_file = cfg_module.current_config_file
+        old_work_dir = cfg_module.get_work_directory()
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                cfg_module.set_work_directory(tmp)
+                # Point the loader at the per-user rc file like the real app.
+                cfg_module.current_config_file = osp.join(tmp, ".xanylabelingrc")
+                cfg = cfg_module.get_config()
+                self.assertIn("tools_panel", cfg)
+                self.assertIsNone(cfg["tools_panel"].get("position"))
+                self.assertFalse(cfg["tools_panel"].get("collapsed"))
+
+                cfg["tools_panel"]["position"] = [42, 17]
+                cfg["tools_panel"]["collapsed"] = True
+                self.assertTrue(cfg_module.save_config(cfg))
+
+                reloaded = cfg_module.get_config()
+                self.assertEqual(reloaded["tools_panel"]["position"], [42, 17])
+                self.assertTrue(reloaded["tools_panel"]["collapsed"])
+        finally:
+            cfg_module.current_config_file = old_config_file
+            cfg_module.set_work_directory(old_work_dir)

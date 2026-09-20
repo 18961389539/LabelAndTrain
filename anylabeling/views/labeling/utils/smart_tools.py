@@ -21,6 +21,7 @@ from PyQt6.QtWidgets import (
     QDialog,
     QHBoxLayout,
     QLabel,
+    QMessageBox,
     QProgressDialog,
     QPushButton,
     QTreeWidget,
@@ -44,6 +45,12 @@ from anylabeling.views.labeling.utils.active_learning import (
     suggest_next_step,
     update_last_iteration,
 )
+from anylabeling.views.labeling.utils.archiver import (
+    ARCHIVE_DIRNAME,
+    archive_duplicates_plan,
+    finalize_moves,
+)
+from anylabeling.views.labeling.utils.data_audit import audit_dataset
 from anylabeling.views.labeling.utils.data_intel import (
     analyze_distribution,
     find_duplicate_groups,
@@ -51,15 +58,25 @@ from anylabeling.views.labeling.utils.data_intel import (
     mine_hard_examples,
     suggest_balancing,
 )
+from anylabeling.views.labeling.utils.review_queue import next_review_target
+from anylabeling.views.labeling.utils.training_advisor import (
+    history_summary,
+    preflight_checks,
+    recommend_training_config,
+)
 from anylabeling.views.labeling.utils.qt import new_icon_path
 from anylabeling.views.labeling.utils.theme import get_theme
 from anylabeling.views.labeling.widgets import Popup
 
 __all__ = [
     "label_dir_for",
+    "run_duplicate_archive",
     "run_missing_scan",
+    "run_review_jump",
     "run_smart_analysis",
+    "run_template_propagation",
     "run_threshold_calibration",
+    "run_training_advice",
     "show_iteration_dashboard",
     "watch_relabel_result",
 ]
@@ -164,14 +181,22 @@ class _ResultDialog(QDialog):
         if hint:
             label = QLabel(hint)
             label.setWordWrap(True)
-            label.setStyleSheet("color: #86868b; font-size: 12px;")
+            label.setStyleSheet(
+                f"color: {get_theme()['text_secondary']}; font-size: 12px;"
+            )
             layout.addWidget(label)
 
         self.setStyleSheet(_dialog_style())
 
     def add_category(self, title, rows):
         """``rows`` is a list of ``(text, detail, image_path_or_None)``."""
+        from PyQt6.QtGui import QFont
+
         root = QTreeWidgetItem([f"{title}（{len(rows)}）", ""])
+        font = QFont()
+        font.setBold(True)
+        root.setFont(0, font)
+        root.setForeground(0, QtGui.QColor(get_theme()["highlight_text"]))
         for text, detail, image_path in rows:
             child = QTreeWidgetItem([text, detail or ""])
             child.setData(0, RESULT_PATH_ROLE, image_path or "")
@@ -228,6 +253,7 @@ def _dialog_style():
             padding: 6px;
         }}
         QTreeWidget::item {{ padding: 3px 2px; }}
+        QTreeWidget::item:hover {{ background-color: {theme["background_hover"]}; }}
         QTreeWidget::item:selected {{ background-color: {theme["primary"]}; }}
         QPushButton {{
             background-color: {theme["surface"]};
@@ -239,7 +265,17 @@ def _dialog_style():
             padding: 0 14px;
         }}
         QPushButton:hover {{ background-color: {theme["background_hover"]}; }}
+        QPushButton:pressed {{ background-color: {theme["surface_pressed"]}; }}
     """
+
+
+def _highlight_button():
+    """Accent style for the primary action in smart-tool dialogs."""
+    from anylabeling.views.labeling.utils.style import (
+        get_highlight_button_style,
+    )
+
+    return get_highlight_button_style(compact=True)
 
 
 def _result_rows(dialog):
@@ -428,89 +464,149 @@ def run_smart_analysis(parent):
         _notify(parent, parent.tr("当前没有可分析的图片。"), "warning")
         return
 
+    paths = [path for path, _ in entries]
+    thresholds = load_thresholds(directory)
+
+    def _job(emit_progress):
+        stats = analyze_distribution(entries)
+        emit_progress(len(entries) // 2, len(entries))
+        hard = mine_hard_examples(
+            [
+                (path, (data or {}).get("shapes") if data else None)
+                for path, data in entries
+            ],
+            thresholds=thresholds,
+            top_k=HARD_EXAMPLE_LIMIT,
+        )
+        duplicates = find_duplicate_groups(
+            paths,
+            progress=lambda done, total: emit_progress(
+                len(entries) // 2 + done // 2, len(entries)
+            ),
+        )
+        return stats, hard, duplicates
+
     progress = _make_progress_dialog(
         parent, parent.tr("正在分析数据集…"), len(entries)
     )
-    paths = [path for path, _ in entries]
-
-    stats = analyze_distribution(entries)
-    progress.setValue(max(1, len(entries) // 2))
-
-    thresholds = load_thresholds(directory)
-    hard = mine_hard_examples(
-        [
-            (path, (data or {}).get("shapes") if data else None)
-            for path, data in entries
-        ],
-        thresholds=thresholds,
-        top_k=HARD_EXAMPLE_LIMIT,
+    thread = _SmartTaskThread(_job, total=len(entries))
+    thread.progress_updated.connect(
+        lambda done, total: progress.setValue(min(total, done))
     )
-
-    duplicates = find_duplicate_groups(
-        paths,
-        progress=lambda done, total: progress.setValue(
-            min(total, len(entries) // 2 + int(done / max(total, 1) * len(entries) / 2))
-        ),
-    )
-    progress.close()
-
-    dialog = _ResultDialog(
-        parent,
-        parent.tr("数据智能分析"),
-        parent.tr("双击条目可跳转到对应图片。"),
-    )
-
-    advice = suggest_balancing(stats)
-    dialog.add_category(
-        parent.tr("配平建议"),
-        [(line, "", "") for line in advice],
-    )
-
-    dialog.add_category(
-        parent.tr("难例优先复核"),
-        [
-            (
-                osp.basename(path),
-                parent.tr("不确定性 %1").replace("%1", f"{score:.2f}"),
-                path,
-            )
-            for path, score in hard
-        ]
-        or [(parent.tr("暂无（所有图片都较确定）"), "", "")],
-    )
-
-    duplicate_rows = []
-    for group in duplicates:
-        head = group[0]
-        duplicate_rows.append(
-            (
-                osp.basename(head),
-                parent.tr("与 %1 张图重复").replace("%1", str(len(group) - 1)),
-                head,
-            )
+    thread.error_occurred.connect(
+        lambda message: (
+            progress.close(),
+            logger.error(f"Smart analysis failed: {message}"),
+            _notify(parent, parent.tr("分析失败：%1").replace("%1", message), "warning"),
         )
-    dialog.add_category(
-        parent.tr("疑似重复图片"),
-        duplicate_rows or [(parent.tr("未发现重复图片"), "", "")],
     )
 
-    summary = (
-        parent.tr(
-            "共 %1 张图 · 已标注 %2 · 标注框 %3 个 · 小目标 %4 个"
+    def _finish(payload):
+        progress.close()
+        stats, hard, duplicates = payload
+
+        dialog = _ResultDialog(
+            parent,
+            parent.tr("数据智能分析"),
+            parent.tr("双击条目可跳转到对应图片。"),
         )
-        .replace("%1", str(stats["total_images"]))
-        .replace("%2", str(stats["labeled_images"]))
-        .replace("%3", str(stats["total_shapes"]))
-        .replace("%4", str(stats["area_buckets"]["small"]))
-    )
-    title = QLabel(summary)
-    title.setStyleSheet("font-size: 13px; font-weight: 500; padding: 2px;")
-    dialog.layout().insertWidget(0, title)
-    _append_result_dialog_actions(
-        dialog, parent, directory, parent.tr("数据智能分析")
-    )
 
-    dialog.exec()
+        advice = suggest_balancing(stats)
+        dialog.add_category(
+            parent.tr("配平建议"),
+            [(line, "", "") for line in advice],
+        )
+
+        dialog.add_category(
+            parent.tr("难例优先复核"),
+            [
+                (
+                    osp.basename(path),
+                    parent.tr("不确定性 %1").replace("%1", f"{score:.2f}"),
+                    path,
+                )
+                for path, score in hard
+            ]
+            or [(parent.tr("暂无（所有图片都较确定）"), "", "")],
+        )
+
+        duplicate_rows = []
+        for group in duplicates:
+            head = group[0]
+            duplicate_rows.append(
+                (
+                    osp.basename(head),
+                    parent.tr("与 %1 张图重复").replace("%1", str(len(group) - 1)),
+                    head,
+                )
+            )
+        dialog.add_category(
+            parent.tr("疑似重复图片"),
+            duplicate_rows or [(parent.tr("未发现重复图片"), "", "")],
+        )
+
+        summary = (
+            parent.tr(
+                "共 %1 张图 · 已标注 %2 · 标注框 %3 个 · 小目标 %4 个"
+            )
+            .replace("%1", str(stats["total_images"]))
+            .replace("%2", str(stats["labeled_images"]))
+            .replace("%3", str(stats["total_shapes"]))
+            .replace("%4", str(stats["area_buckets"]["small"]))
+        )
+        title = QLabel(summary)
+        title.setStyleSheet(
+            "font-size: 13px; font-weight: 500; padding: 2px;"
+        )
+        dialog.layout().insertWidget(0, title)
+        _append_result_dialog_actions(
+            dialog, parent, directory, parent.tr("数据智能分析")
+        )
+
+        dialog.exec()
+
+    thread.result_ready.connect(_finish)
+    progress.canceled.connect(thread.request_cancel)
+    parent._smart_analysis_thread = thread
+    thread.start()
+
+
+# --------------------------------------------------------------------------
+# background task thread
+# --------------------------------------------------------------------------
+class _SmartTaskThread(QThread):
+    """Run a pure compute job off the UI thread.
+
+    The job receives an ``emit_progress(done, total)`` callable and returns
+    a single payload; errors are routed to :attr:`error_occurred`. Keeps
+    hash-heavy scans (duplicates, template matching) from freezing the UI.
+    """
+
+    progress_updated = pyqtSignal(int, int)
+    result_ready = pyqtSignal(object)
+    error_occurred = pyqtSignal(str)
+
+    def __init__(self, fn, total=1):
+        super().__init__()
+        self._fn = fn
+        self._total = max(1, total)
+        self._cancel_requested = False
+
+    def run(self):
+        try:
+            result = self._fn(self._emit_progress)
+        except Exception as exc:  # noqa: BLE001
+            self.error_occurred.emit(str(exc))
+            return
+        self.result_ready.emit(result)
+
+    def _emit_progress(self, done, total=0):
+        if self._cancel_requested:
+            return
+        self.progress_updated.emit(int(done), int(total) or self._total)
+
+    def request_cancel(self):
+        self._cancel_requested = True
 
 
 def _make_progress_dialog(parent, title, maximum):
@@ -672,6 +768,7 @@ def run_missing_scan(parent, iou_threshold=0.5, min_score=DEFAULT_ACCEPT):
             rows = [(parent.tr("未发现疑似漏标"), "", "")]
         dialog.add_category(parent.tr("疑似漏标的框"), rows)
         write_button = QPushButton(parent.tr("写入标注"))
+        write_button.setStyleSheet(_highlight_button())
 
         def _write():
             written = _write_missing(parent, results)
@@ -823,3 +920,331 @@ def current_thresholds(parent):
     """``(thresholds, accept, review)`` for the currently open folder."""
     thresholds = load_thresholds(label_dir_for(parent))
     return thresholds, DEFAULT_ACCEPT, DEFAULT_REVIEW
+
+
+# --------------------------------------------------------------------------
+# action 5: smart review queue navigation
+# --------------------------------------------------------------------------
+def run_review_jump(parent, forward=True):
+    """Open the next/previous image that still needs human review."""
+    directory = label_dir_for(parent)
+    if not directory:
+        _notify(parent, parent.tr("请先打开一个图片文件夹。"), "warning")
+        return
+    entries = list(_label_entries(parent))
+    if not entries:
+        _notify(parent, parent.tr("当前没有可分析的图片。"), "warning")
+        return
+
+    results = audit_dataset([path for path, _ in entries], directory)
+    queue = [osp.normpath(osp.abspath(p)) for p in (results.get("review") or [])]
+    if not queue:
+        _notify(parent, parent.tr("太棒了，暂无待复核图片。"))
+        return
+
+    current = None
+    if parent.filename:
+        current = osp.normpath(osp.abspath(parent.filename))
+    target, index = next_review_target(queue, current, forward=forward)
+    if target is None:
+        _notify(parent, parent.tr("已到复核队列末尾。"), "info")
+        return
+    parent.load_file(target)
+    status = getattr(parent, "status", None)
+    if callable(status):
+        status(parent.tr("待复核队列 %1/%2").replace("%1", str(index + 1)).replace("%2", str(len(queue))))
+
+
+# --------------------------------------------------------------------------
+# action 6: one-click duplicate archive
+# --------------------------------------------------------------------------
+def run_duplicate_archive(parent):
+    """Move near-duplicate images (and their sidecars) out of the folder."""
+    directory = label_dir_for(parent)
+    if not directory:
+        _notify(parent, parent.tr("请先打开一个图片文件夹。"), "warning")
+        return
+    paths = _image_list(parent)
+    if not paths:
+        _notify(parent, parent.tr("当前没有可分析的图片。"), "warning")
+        return
+
+    progress = _make_progress_dialog(
+        parent, parent.tr("正在查找重复图片…"), max(1, len(paths))
+    )
+    groups = find_duplicate_groups(
+        paths,
+        progress=lambda done, total: progress.setValue(
+            min(len(paths), 1 + int(done / max(total, 1) * len(paths)))
+        ),
+    )
+    progress.close()
+
+    plan = archive_duplicates_plan(groups, directory)
+    if not plan:
+        _notify(parent, parent.tr("没有发现可归档的重复图片。"))
+        return
+    images = [src for src, _ in plan if _looks_like_image(src)]
+    answer = QMessageBox.question(
+        parent,
+        parent.tr("一键去重归档"),
+        parent.tr(
+            "将归档 %1 张重复图片及其标注到「%2」文件夹，是否继续？"
+        ).replace("%1", str(len(images))).replace("%2", ARCHIVE_DIRNAME),
+        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        QMessageBox.StandardButton.No,
+    )
+    if answer != QMessageBox.StandardButton.Yes:
+        return
+
+    moved, _skipped = finalize_moves(plan)
+    # If the file we are looking at got archived, move on.
+    reloader = getattr(parent, "import_image_folder", None)
+    if callable(reloader) and osp.isdir(directory):
+        try:
+            reloader(directory, load=False)
+        except Exception:  # noqa: BLE001
+            logger.warning("Duplicate archive: failed to reload file list")
+    _notify(
+        parent,
+        parent.tr("已归档 %1 项（打开「%2」文件夹可查）").replace("%1", str(len(moved))).replace("%2", ARCHIVE_DIRNAME),
+    )
+
+
+def _looks_like_image(path):
+    from anylabeling.views.labeling.utils.image import (
+        get_supported_image_extensions,
+    )
+
+    return osp.splitext(str(path))[1].lower() in set(
+        get_supported_image_extensions()
+    )
+
+
+# --------------------------------------------------------------------------
+# action 7: training advice
+# --------------------------------------------------------------------------
+def run_training_advice(parent):
+    """Pre-flight checks plus suggested hyperparameters for the next round."""
+    directory = label_dir_for(parent)
+    if not directory:
+        _notify(parent, parent.tr("请先打开一个图片文件夹。"), "warning")
+        return
+    entries = list(_label_entries(parent))
+    if not entries:
+        _notify(parent, parent.tr("当前没有可分析的图片。"), "warning")
+        return
+
+    stats = analyze_distribution(entries)
+    history = load_history(directory)
+    hist_info = history_summary(history)
+
+    max_dim = None
+    image = getattr(parent, "image", None)
+    if image is not None and not image.isNull():
+        max_dim = max(image.width(), image.height())
+
+    checks = preflight_checks(stats)
+    advice = recommend_training_config(stats, history=hist_info, max_image_dim=max_dim)
+
+    dialog = _ResultDialog(
+        parent,
+        parent.tr("训练建议"),
+        parent.tr("训练前预检与下一轮超参初值，可按推荐手动填入训练面板。"),
+    )
+    dialog.add_category(
+        parent.tr("预检"),
+        [(check["message"], "", "") for check in checks],
+    )
+    dialog.add_category(
+        parent.tr("推荐初值"),
+        [
+            (
+                f"Epochs={advice['epochs']} · Batch={advice['batch']} · imgsz={advice['imgsz']}",
+                advice["text"],
+                "",
+            )
+        ],
+    )
+    _append_result_dialog_actions(
+        dialog, parent, directory, parent.tr("训练建议")
+    )
+    dialog.exec()
+
+
+# --------------------------------------------------------------------------
+# action 9: smart template pre-labeling (batch)
+# --------------------------------------------------------------------------
+def run_template_propagation(parent):
+    """Pre-label unlabeled images by copying a visually similar labelled one.
+
+    For each unlabeled image the best-matching labelled template (dhash
+    distance) is found and its shapes are scaled into the target. All
+    proposals land in a review dialog; 「写入预标注」applies them to the
+    label jsons in one click.
+    """
+    from anylabeling.views.labeling.utils.shape_propagate import (
+        plan_template_propagation,
+    )
+
+    directory = label_dir_for(parent)
+    if not directory:
+        _notify(parent, parent.tr("请先打开一个图片文件夹。"), "warning")
+        return
+    entries = list(_label_entries(parent))
+    if not entries:
+        _notify(parent, parent.tr("当前没有可分析的图片。"), "warning")
+        return
+
+    templates = []
+    targets = []
+    for image_path, data in entries:
+        shapes = (data or {}).get("shapes") if data else None
+        if shapes:
+            templates.append(image_path)
+        else:
+            targets.append(image_path)
+    if not templates:
+        _notify(parent, parent.tr("至少需要一张已标注图片作为模板。"), "warning")
+        return
+    if not targets:
+        _notify(parent, parent.tr("没有未标注的图片需要预标注。"))
+        return
+
+    def _job(emit_progress):
+        return plan_template_propagation(
+            directory,
+            targets,
+            templates,
+            progress=lambda done, total: emit_progress(done, total),
+        )
+
+    progress = _make_progress_dialog(
+        parent, parent.tr("正在匹配相似模板并生成预标注…"), len(targets)
+    )
+    thread = _SmartTaskThread(_job, total=len(targets))
+    thread.progress_updated.connect(
+        lambda done, total: progress.setValue(min(total, done))
+    )
+    thread.error_occurred.connect(
+        lambda message: (
+            progress.close(),
+            logger.error(f"Template propagation failed: {message}"),
+            _notify(parent, parent.tr("匹配失败：%1").replace("%1", message), "warning"),
+        )
+    )
+
+    def _finish(batch):
+        progress.close()
+        if not batch:
+            _notify(parent, parent.tr("没有找到与已标注模板足够相似的未标注图片。"))
+            return
+
+        dialog = _ResultDialog(
+            parent,
+            parent.tr("智能模板预标注"),
+            parent.tr(
+                "每张未标注图片按相似度匹配一张已标注模板生成预标注框，"
+                "请先人工抽查再批量写入。"
+            ),
+        )
+        rows = []
+        for item in batch:
+            rows.append(
+                (
+                    osp.basename(item["target"]),
+                    (
+                        f"模板 {osp.basename(item['template'])}"
+                        f" · 距离 {item['distance']} · 计划 {len(item['shapes'])} 框"
+                    ),
+                    item["target"],
+                )
+            )
+        dialog.add_category(parent.tr("可预标注的图片"), rows)
+        write_button = QPushButton(parent.tr("写入预标注"))
+        write_button.setStyleSheet(_highlight_button())
+
+        def _write():
+            written, failed = _write_prelabels(parent, batch)
+            dialog.accept()
+            if failed:
+                _notify(
+                    parent,
+                    parent.tr("已写入 %1 项，%2 项失败。").replace("%1", str(written)).replace("%2", str(failed)),
+                    "warning",
+                )
+            else:
+                _notify(
+                    parent,
+                    parent.tr("已写入 %1 张图片的预标注。").replace("%1", str(written)),
+                )
+
+        write_button.clicked.connect(_write)
+        _append_result_dialog_actions(
+            dialog,
+            parent,
+            directory,
+            parent.tr("智能模板预标注"),
+            extra_buttons=[write_button],
+        )
+        dialog.exec()
+
+    thread.result_ready.connect(_finish)
+    progress.canceled.connect(thread.request_cancel)
+    parent._template_propagation_thread = thread
+    thread.start()
+
+
+def _write_prelabels(parent, batch):
+    """Write planned shapes into each target label json. Returns ``(n, n_fail)``."""
+    from anylabeling.views.labeling.utils.shape_propagate import _image_size
+
+    written = 0
+    failed = 0
+    for item in batch:
+        label_file = item.get("label_file")
+        if not label_file:
+            continue
+        data = {}
+        if osp.isfile(label_file):
+            try:
+                with open(label_file, "r", encoding="utf-8") as handle:
+                    data = json.load(handle)
+            except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+                data = {}
+        if not isinstance(data, dict):
+            data = {}
+        size = (0, 0)
+        try:
+            size = _image_size(item["target"]) or (0, 0)
+        except Exception:  # noqa: BLE001
+            pass
+        data.setdefault("imageWidth", size[0] or data.get("imageWidth", 0))
+        data.setdefault("imageHeight", size[1] or data.get("imageHeight", 0))
+        shapes = data.setdefault("shapes", [])
+        shapes.extend(item["shapes"])
+        try:
+            with open(label_file, "w", encoding="utf-8") as handle:
+                json.dump(data, handle, ensure_ascii=False, indent=2)
+            written += 1
+        except OSError as exc:
+            logger.warning(f"Template propagation: failed to write {label_file}: {exc}")
+            failed += 1
+    # Reload the image currently open if it received new pre-labels, so the
+    # canvas picks them up. We never rebuild the whole file list here: that
+    # would reset the user's current file and may raise a save prompt.
+    current = getattr(parent, "filename", None)
+    if current and any(
+        osp.normpath(osp.abspath(item.get("target") or ""))
+        == osp.normpath(osp.abspath(current))
+        for item in batch
+    ):
+        loader = getattr(parent, "load_file", None)
+        if callable(loader):
+            try:
+                loader(current)
+            except Exception:  # noqa: BLE001
+                logger.warning(
+                    "Template propagation: failed to reload current image"
+                )
+    return written, failed

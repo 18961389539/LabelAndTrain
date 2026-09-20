@@ -169,7 +169,7 @@ def get_export_option_style():
 
         QLineEdit {{
             border: 1px solid {t["border"]};
-            border-radius: 8;
+            border-radius: 8px;
             background-color: {t["background_secondary"]};
             font-size: 13px;
             height: 36px;
@@ -180,8 +180,8 @@ def get_export_option_style():
             border-radius: 8px;
         }}
         QLineEdit:focus {{
-            border: 3px solid "{t["highlight"]}";
-            background-color: "{t["background_secondary"]}";
+            border: 2px solid {t["highlight"]};
+            background-color: {t["background_secondary"]};
         }}
 
         {get_checkbox_indicator_style()}
@@ -729,6 +729,53 @@ def get_panel_style() -> str:
     )
 
 
+def get_instruction_bar_style() -> str:
+    """
+    Returns a stylesheet for the shortcut hint bar above the canvas.
+
+    A subtle, rounded card that is always readable (dark or light theme)
+    without competing with the canvas itself.
+
+    Returns:
+        str: QSS stylesheet string targeting QLabel#LabelInstructionBar.
+    """
+    t = get_theme()
+    return f"""
+        QLabel#LabelInstructionBar {{
+            background-color: {t["surface"]};
+            border: 1px solid {t["border"]};
+            border-radius: 6px;
+            color: {t["text_secondary"]};
+            font-size: 12px;
+            padding: 3px 8px;
+            margin: 0 4px;
+        }}
+    """
+
+
+def keycap_html(text: str) -> str:
+    """
+    Wraps a shortcut label into a rich-text keycap chip.
+
+    Produces the accent-colored, semibold span used inside the canvas hint
+    bar. Shortcut labels are plain keys ("R", "Ctrl+S") so this is purely a
+    visual helper, but the output is HTML-escaped for safety.
+
+    Args:
+        text: The shortcut label to render.
+
+    Returns:
+        str: HTML span fragment.
+    """
+    import html as _html
+
+    t = get_theme()
+    return (
+        f'<span style="color:{t["highlight_text"]};font-weight:600;">'
+        f"{_html.escape(str(text))}</span>"
+    )
+
+
 def get_plain_text_edit_style() -> str:
     """
     Returns a borderless, theme-aware stylesheet for QPlainTextEdit.
@@ -759,7 +806,7 @@ def get_lineedit_style():
     return f"""
         QLineEdit {{
             border: 1px solid {t["border"]};
-            border-radius: 8;
+            border-radius: 8px;
             background-color: {t["background_secondary"]};
             font-size: 13px;
             height: 24px;
@@ -770,8 +817,8 @@ def get_lineedit_style():
             border-radius: 8px;
         }}
         QLineEdit:focus {{
-            border: 3px solid "{t["highlight"]}";
-            background-color: "{t["background_secondary"]}";
+            border: 2px solid {t["highlight"]};
+            background-color: {t["background_secondary"]};
         }}
     """
 

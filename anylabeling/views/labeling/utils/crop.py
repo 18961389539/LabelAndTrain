@@ -40,6 +40,7 @@ from anylabeling.views.labeling.utils.style import (
     get_progress_dialog_style,
     get_spinbox_style,
 )
+from anylabeling.views.labeling.utils.theme import get_theme
 
 __all__ = ["save_crop"]
 
@@ -371,7 +372,7 @@ def save_crop(self):
     progress_dialog.setMinimumWidth(400)
     progress_dialog.setMinimumHeight(150)
     progress_dialog.setStyleSheet(
-        get_progress_dialog_style(color="#1d1d1f", height=20)
+        get_progress_dialog_style(color=get_theme()["text"], height=20)
     )
     progress_dialog.show()
 

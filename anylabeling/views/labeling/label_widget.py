@@ -51,11 +51,13 @@ from .utils.style import (
     get_checkbox_indicator_style,
     get_dialog_style,
     get_dock_style,
+    get_instruction_bar_style,
     get_ok_btn_style,
     get_panel_style,
     get_plain_text_edit_style,
     get_settings_button_style,
     get_toolbar_scroll_area_style,
+    keycap_html,
 )
 from ...config import get_config, save_config
 from .label_file import LabelFile, LabelFileError
@@ -79,11 +81,20 @@ from .utils.quality import (
     shapes_have_low_confidence,
 )
 from .utils.smart_tools import (
+    run_duplicate_archive,
     run_missing_scan,
+    run_review_jump,
     run_smart_analysis,
+    run_template_propagation,
     run_threshold_calibration,
+    run_training_advice,
     show_iteration_dashboard,
 )
+from .utils.shortcuts_help import (
+    build_shortcut_rows,
+    filter_shortcut_rows,
+)
+from .utils.recent_dirs import push_recent_dir
 from .settings import SettingsController, SettingsDialog
 from .settings.runtime_applier import SettingsRuntimeApplier
 from .shape import Shape
@@ -452,7 +463,7 @@ class LabelingWidget(LabelDialog):
         self.file_progress_label = QLabel("")
         self.file_progress_label.setWordWrap(True)
         self.file_progress_label.setStyleSheet(
-            "color: rgba(120, 132, 145, 0.95); padding: 2px 4px;"
+            "color: %s; padding: 2px 4px;" % get_theme()["text_secondary"]
         )
         self.file_list_widget = QtWidgets.QListWidget()
         self.file_list_widget.setObjectName("FileList")
@@ -733,7 +744,7 @@ class LabelingWidget(LabelDialog):
             self.tr("数据体检"),
             lambda: run_data_audit(self),
             None,
-            None,
+            "icon",
             self.tr(
                 "Scan the folder for unlabeled images, empty/corrupted "
                 "labels and orphan label files"
@@ -744,7 +755,7 @@ class LabelingWidget(LabelDialog):
             self.tr("1. 阈值校准"),
             lambda: run_threshold_calibration(self),
             None,
-            None,
+            "settings",
             self.tr("推荐先做：按各类置信度分布生成自动接受 / 建议复核阈值"),
             enabled=True,
         )
@@ -752,7 +763,7 @@ class LabelingWidget(LabelDialog):
             self.tr("2. 数据智能分析"),
             lambda: run_smart_analysis(self),
             None,
-            None,
+            "overview",
             self.tr("阈值校准后再做：难例排序、重复图片检测与配平建议"),
             enabled=True,
         )
@@ -760,7 +771,7 @@ class LabelingWidget(LabelDialog):
             self.tr("3. 漏标扫描"),
             lambda: run_missing_scan(self),
             None,
-            None,
+            "search",
             self.tr("智能分析后再做：用当前模型找出置信度高但没有标注的目标"),
             enabled=True,
         )
@@ -768,8 +779,48 @@ class LabelingWidget(LabelDialog):
             self.tr("4. 迭代收益看板"),
             lambda: show_iteration_dashboard(self),
             None,
-            None,
+            "loop",
             self.tr("最后查看：每轮训练→回灌的边际收益与下一步建议"),
+            enabled=True,
+        )
+        smart_review = action(
+            self.tr("5. 智能复核（下一张待复核）"),
+            lambda: run_review_jump(self),
+            None,
+            "check",
+            self.tr("按不确定性优先级跳到下一张待复核的图片（再次点击可继续跳）"),
+            enabled=True,
+        )
+        smart_propagate = action(
+            self.tr("6. 标注传播（上一张→当前图）"),
+            self._propagate_previous_labels,
+            None,
+            "copy",
+            self.tr("把上一张已标注图片的框按比例复制到当前图片，自动跳过重复框"),
+            enabled=True,
+        )
+        smart_archive = action(
+            self.tr("7. 一键去重归档"),
+            lambda: run_duplicate_archive(self),
+            None,
+            "trash",
+            self.tr("把近重复图片及其标注移动到「._duplicates_archive」文件夹"),
+            enabled=True,
+        )
+        smart_advice = action(
+            self.tr("8. 训练建议"),
+            lambda: run_training_advice(self),
+            None,
+            "brain",
+            self.tr("训练前预检 + 基于当前数据与历史轮次推荐 epochs/batch/imgsz 初值"),
+            enabled=True,
+        )
+        smart_template = action(
+            self.tr("9. 智能模板预标注（批量）"),
+            lambda: run_template_propagation(self),
+            None,
+            "labels",
+            self.tr("为未标注图片按相似度匹配已标注模板，批量生成预标注后再人工确认"),
             enabled=True,
         )
         toggle_annotation_checked = action(
@@ -1135,6 +1186,13 @@ class LabelingWidget(LabelDialog):
             tip=self.tr(
                 "Manage Labels: Rename, Delete, Hide/Show, Adjust Color"
             ),
+        )
+        shortcuts_help = action(
+            self.tr("快捷键速查"),
+            self.show_shortcuts_help,
+            None,
+            icon="search",
+            tip=self.tr("查看所有可用快捷键，可按快捷键或功能搜索"),
         )
         gid_manager = action(
             self.tr("Group ID Manager"),
@@ -1734,9 +1792,14 @@ class LabelingWidget(LabelDialog):
             export=self.menu(self.tr("Export")),
             tool=self.menu(self.tr("Tool")),
             train=self.menu(self.tr("Train")),
+            smart_tools=self.menu(self.tr("智能工具")),
             recent_files=QtWidgets.QMenu(self.tr("Open Recent")),
+            recent_dirs=QtWidgets.QMenu(self.tr("打开最近文件夹")),
         )
         self.menus.recent_files.aboutToShow.connect(self.update_file_menu)
+        self.menus.recent_dirs.aboutToShow.connect(
+            self._update_recent_dirs_menu
+        )
         self.canvas_label_filter_menu_0 = None
         self.canvas_gid_filter_menu_0 = None
         self.canvas_label_filter_menu_1 = None
@@ -1751,6 +1814,7 @@ class LabelingWidget(LabelDialog):
                 open_next_unchecked_image,
                 open_prev_unchecked_image,
                 opendir,
+                self.menus.recent_dirs,
                 self.menus.recent_files,
                 save,
                 save_as,
@@ -1761,13 +1825,23 @@ class LabelingWidget(LabelDialog):
                 delete_file,
                 delete_image_file,
                 None,
+                mark_checked_and_next,
+                None,
+            ),
+        )
+        utils.add_actions(
+            self.menus.smart_tools,
+            (
                 data_audit,
                 smart_calibrate,
                 smart_analysis,
                 smart_missing_scan,
                 smart_iteration,
-                mark_checked_and_next,
-                None,
+                smart_review,
+                smart_propagate,
+                smart_archive,
+                smart_advice,
+                smart_template,
             ),
         )
         utils.add_actions(self.menus.train, (ultralytics_train,))
@@ -1785,6 +1859,8 @@ class LabelingWidget(LabelDialog):
                 shape_manager,
                 None,
                 shape_converter,
+                None,
+                shortcuts_help,
             ),
         )
         utils.add_actions(self.menus.theme, theme_mode_actions)
@@ -1917,14 +1993,19 @@ class LabelingWidget(LabelDialog):
         self.tools_panel = FloatingToolPanel(scroll_area.viewport())
         self.tools_panel.setObjectName("ToolsFloatingPanel")
         self.tools_panel.set_content_widget(self.tools_scroll_area)
+        self.tools_panel.positionCommitted.connect(
+            self._on_tools_panel_position_committed
+        )
+        self.tools_panel.collapseToggled.connect(
+            self._on_tools_panel_collapse_toggled
+        )
         central_layout = QVBoxLayout()
         central_layout.setContentsMargins(0, 0, 0, 0)
         central_layout.setSpacing(2)
         self.label_instruction = QLabel(self.get_labeling_instruction())
+        self.label_instruction.setObjectName("LabelInstructionBar")
         self.label_instruction.setContentsMargins(0, 0, 0, 0)
-        self.label_instruction.setStyleSheet(
-            "margin: 0; padding: 0 4px; font-size: 12px;"
-        )
+        self.label_instruction.setStyleSheet(get_instruction_bar_style())
         self.label_instruction.setWordWrap(True)
         self.label_instruction.setTextFormat(Qt.TextFormat.RichText)
         self.auto_labeling_widget = AutoLabelingWidget(self)
@@ -2150,7 +2231,7 @@ class LabelingWidget(LabelDialog):
 
         layout.addLayout(right_sidebar_layout)
         self.setLayout(layout)
-        QtCore.QTimer.singleShot(0, lambda: self._sync_tools_panel(reset=True))
+        QtCore.QTimer.singleShot(0, self._restore_tools_panel_state)
 
         if output_file is not None and self._config["auto_save"]:
             logger.warning(
@@ -2353,16 +2434,35 @@ class LabelingWidget(LabelDialog):
 
     def get_labeling_instruction(self):
         shortcuts = self._config.get("shortcuts", {})
-        prev_sc = self._format_instruction_shortcut(shortcuts.get("open_prev"))
-        next_sc = self._format_instruction_shortcut(shortcuts.get("open_next"))
-        rect_sc = self._format_instruction_shortcut(
-            shortcuts.get("create_rectangle")
+        prev_sc = keycap_html(
+            self._format_instruction_shortcut(shortcuts.get("open_prev"))
         )
-        save_sc = self._format_instruction_shortcut(shortcuts.get("save"))
+        next_sc = keycap_html(
+            self._format_instruction_shortcut(shortcuts.get("open_next"))
+        )
+        rect_sc = keycap_html(
+            self._format_instruction_shortcut(
+                shortcuts.get("create_rectangle")
+            )
+        )
+        save_sc = keycap_html(
+            self._format_instruction_shortcut(shortcuts.get("save"))
+        )
         auto_visible = (
             hasattr(self, "auto_labeling_widget")
             and self.auto_labeling_widget.isVisible()
         )
+        if not getattr(self, "filename", None):
+            open_dir_sc = keycap_html(
+                self._format_instruction_shortcut(shortcuts.get("open_dir"))
+            )
+            return (
+                self.tr("尚未打开图片：%1 打开文件夹，%2/%3 切图，%4 画框。")
+                .replace("%1", open_dir_sc)
+                .replace("%2", prev_sc)
+                .replace("%3", next_sc)
+                .replace("%4", rect_sc)
+            )
         if auto_visible:
             return self.tr(
                 "自动标注：点选或框选提示 → 生成结果 → 人工改框 · "
@@ -2441,8 +2541,16 @@ class LabelingWidget(LabelDialog):
             else 0
         )
         zoom = self.zoom_widget.value()
+        size_text = ""
+        image = getattr(self, "image", None)
+        if image is not None and not image.isNull():
+            size_text = (
+                self.tr(" · %1x%2")
+                .replace("%1", str(image.width()))
+                .replace("%2", str(image.height()))
+            )
         label.setText(
-            self.tr("标注 %1 框 · 缩放 %2%")
+            (self.tr("标注 %1 框 · 缩放 %2%") + size_text)
             .replace("%1", str(shape_count))
             .replace("%2", str(zoom))
         )
@@ -2451,13 +2559,15 @@ class LabelingWidget(LabelDialog):
         label = getattr(self, "_save_state_label", None)
         if label is None:
             return
+        t = get_theme()
         if not self.filename:
-            label.setText(self.tr("就绪"))
-            return
-        if self.dirty:
-            label.setText(self.tr("未保存"))
-            return
-        label.setText(self.tr("已保存"))
+            state, color = self.tr("就绪"), t["text_secondary"]
+        elif self.dirty:
+            state, color = self.tr("未保存"), t["warning"]
+        else:
+            state, color = self.tr("已保存"), t["success"]
+        label.setText(state)
+        label.setStyleSheet(f"padding: 0 10px; color: {color};")
 
     def _sync_empty_canvas_state(self):
         overlay = getattr(self, "empty_canvas_state", None)
@@ -2600,6 +2710,39 @@ class LabelingWidget(LabelDialog):
         scroll_area.setFixedWidth(toolbar.maximumWidth() + 4)
         scroll_area.setWidget(toolbar)
         return scroll_area
+
+    def _restore_tools_panel_state(self):
+        """Restore the floating toolbar's position/collapsed state.
+
+        Runs once after the layout is ready: first snap to the default
+        corner, then apply whatever the user saved in the config so a
+        dragged/repositioned panel survives restarts.
+        """
+        self._sync_tools_panel(reset=True)
+        panel = getattr(self, "tools_panel", None)
+        if panel is None:
+            return
+        saved = self._config.get("tools_panel")
+        if not isinstance(saved, dict):
+            return
+        pos = saved.get("position")
+        if isinstance(pos, (list, tuple)) and len(pos) == 2:
+            try:
+                panel.set_saved_position(int(pos[0]), int(pos[1]))
+            except (TypeError, ValueError):
+                logger.debug("Ignoring invalid tools_panel position: %r", pos)
+        if saved.get("collapsed"):
+            panel.set_collapsed(True)
+
+    def _on_tools_panel_position_committed(self, x, y):
+        panel_state = self._config.setdefault("tools_panel", {})
+        panel_state["position"] = [int(x), int(y)]
+        save_config(self._config)
+
+    def _on_tools_panel_collapse_toggled(self, collapsed):
+        panel_state = self._config.setdefault("tools_panel", {})
+        panel_state["collapsed"] = bool(collapsed)
+        save_config(self._config)
 
     def _sync_tools_panel(self, reset=False):
         panel = getattr(self, "tools_panel", None)
@@ -3549,6 +3692,18 @@ class LabelingWidget(LabelDialog):
         del_image_action = menu.addAction(
             utils.new_icon("trash", "svg"), self.tr("删除图片文件")
         )
+        menu.addSeparator()
+        sort_menu = menu.addMenu(self.tr("排序方式"))
+        sort_name = sort_menu.addAction(self.tr("按文件名"))
+        sort_time = sort_menu.addAction(self.tr("按修改时间"))
+        sort_annotation = sort_menu.addAction(self.tr("按标注状态"))
+        current_sort = getattr(self, "_file_sort_mode", "name")
+        sort_name.setCheckable(True)
+        sort_time.setCheckable(True)
+        sort_annotation.setCheckable(True)
+        sort_name.setChecked(current_sort == "name")
+        sort_time.setChecked(current_sort == "time")
+        sort_annotation.setChecked(current_sort == "annotation")
         action = menu.exec(self.file_list_widget.mapToGlobal(point))
         if action == copy_name_action:
             self.copy_file_path(osp.basename(item.text()))
@@ -3562,6 +3717,109 @@ class LabelingWidget(LabelDialog):
             self._delete_via_context(item, include_image=False)
         elif action == del_image_action:
             self._delete_via_context(item, include_image=True)
+        elif action in (sort_name, sort_time, sort_annotation):
+            mode = {
+                sort_name: "name",
+                sort_time: "time",
+                sort_annotation: "annotation",
+            }[action]
+            self._file_sort_mode = mode
+            self._apply_file_sort()
+
+    def _file_sort_key(self, item, mode):
+        """Stable sort key for a file-list row under the given mode."""
+        text = item.text() or ""
+        if mode == "time":
+            try:
+                return (os.path.getmtime(text), text)
+            except OSError:
+                return (0.0, text)
+        if mode == "annotation":
+            checked = item.data(Qt.ItemDataRole.UserRole) is True
+            annotated = bool(item.data(FILE_ANNOTATION_ROLE))
+            negative = bool(item.data(FILE_NEGATIVE_ROLE))
+            low_conf = bool(item.data(FILE_LOW_CONF_ROLE))
+            status = (
+                0
+                if checked
+                else 1
+                if annotated
+                else 2
+                if negative
+                else 3
+                if low_conf
+                else 4
+            )
+            return (status, text.lower())
+        return (osp.basename(text).lower(),)
+
+    def _apply_file_sort(self):
+        """Re-order the file list rows without losing the current selection."""
+        widget = self.file_list_widget
+        if widget.count() <= 1:
+            return
+        mode = getattr(self, "_file_sort_mode", "name")
+        current = widget.currentItem()
+        current_text = current.text() if current else None
+        count = widget.count()
+        items = [widget.takeItem(0) for _ in range(count)]
+        items.sort(key=lambda item: self._file_sort_key(item, mode))
+        for item in items:
+            widget.addItem(item)
+        if current_text is not None:
+            for row in range(widget.count()):
+                if widget.item(row).text() == current_text:
+                    widget.setCurrentRow(row)
+                    widget.scrollToItem(widget.item(row))
+                    break
+
+    def show_shortcuts_help(self):
+        """Dialog listing every configured shortcut with a search box."""
+        shortcuts = self._config.get("shortcuts", {})
+        rows = build_shortcut_rows(shortcuts)
+        dialog = QtWidgets.QDialog(self)
+        dialog.setWindowTitle(self.tr("快捷键速查"))
+        dialog.resize(460, 520)
+        layout = QtWidgets.QVBoxLayout(dialog)
+        layout.setContentsMargins(12, 12, 12, 12)
+        layout.setSpacing(8)
+
+        search = QtWidgets.QLineEdit()
+        search.setPlaceholderText(self.tr("搜索快捷键或功能（如 Ctrl+Z / 撤销）…"))
+        layout.addWidget(search)
+
+        tree = QtWidgets.QTreeWidget()
+        tree.setHeaderLabels([self.tr("快捷键"), self.tr("功能"), self.tr("分组")])
+        tree.setColumnWidth(0, 110)
+        tree.setColumnWidth(1, 240)
+        tree.setRootIsDecorated(False)
+        tree.setAlternatingRowColors(True)
+        layout.addWidget(tree, 1)
+
+        def render():
+            tree.clear()
+            for key_text, description, group_title in filter_shortcut_rows(
+                rows, search.text()
+            ):
+                item = QtWidgets.QTreeWidgetItem([key_text, description, group_title])
+                tree.addTopLevelItem(item)
+
+        def on_query(_text):
+            render()
+            if tree.topLevelItemCount():
+                tree.scrollToTop()
+
+        search.textChanged.connect(on_query)
+        render()
+
+        close_btn = QtWidgets.QPushButton(self.tr("关闭"))
+        close_btn.clicked.connect(dialog.accept)
+        close_btn.setFixedWidth(80)
+        button_row = QtWidgets.QHBoxLayout()
+        button_row.addStretch()
+        button_row.addWidget(close_btn)
+        layout.addLayout(button_row)
+        dialog.exec()
 
     def _delete_via_context(self, item, include_image):
         """Right-click delete from the file list.
@@ -3590,6 +3848,41 @@ class LabelingWidget(LabelDialog):
             icon=new_icon_path("copy-green", "svg"),
         )
         popup.show_popup(self, copy_msg=file_path, position="default")
+
+    def _recent_dir_list(self):
+        """Recent folders persisted in QSettings, newest first."""
+        raw = self.settings.value("recent_dirs", []) or []
+        if isinstance(raw, list):
+            return [str(item) for item in raw if str(item)]
+        return [str(raw)] if raw else []
+
+    def _record_recent_dir(self, directory):
+        """Push a folder to the recent list and persist it."""
+        if not directory:
+            return
+        dirs = push_recent_dir(self._recent_dir_list(), directory)
+        self.settings.setValue("recent_dirs", dirs)
+
+    def _update_recent_dirs_menu(self):
+        menu = self.menus.recent_dirs
+        menu.clear()
+        dirs = self._recent_dir_list()
+        if not dirs:
+            empty_action = menu.addAction(self.tr("（暂无最近文件夹）"))
+            empty_action.setEnabled(False)
+            return
+        for path in dirs:
+            action = menu.addAction(osp.basename(osp.normpath(path)))
+            action.setToolTip(path)
+            action.triggered.connect(
+                functools.partial(self.load_recent_dir, path)
+            )
+
+    def load_recent_dir(self, directory):
+        """Reopen a folder picked from the recent-folders menu."""
+        if not directory:
+            return
+        self.import_image_folder(directory, load=True)
 
     def _label_file_checked(self, label_file):
         if not QtCore.QFile.exists(label_file):
@@ -3670,6 +3963,103 @@ class LabelingWidget(LabelDialog):
         if not directory and self.filename:
             directory = osp.dirname(self.filename)
         return directory
+
+    def _prev_labeled_image(self):
+        """Walk back from the current image; first labelled one wins.
+
+        Returns ``(image_path, label_file, (w, h))`` or ``None``.
+        """
+        paths = self.image_list
+        if not paths:
+            return None
+        start = self.file_list_widget.currentRow()
+        if start < 0:
+            return None
+        for index in range(start - 1, -1, -1):
+            image_path = paths[index]
+            label_file = self._label_path_for_image(image_path)
+            if not osp.exists(label_file):
+                continue
+            try:
+                with open(label_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                if isinstance(data, dict) and data.get("shapes"):
+                    probe = QtGui.QImage(image_path)
+                    img_size = (
+                        (probe.width(), probe.height())
+                        if not probe.isNull()
+                        else None
+                    )
+                    return image_path, label_file, img_size
+            except (OSError, ValueError):
+                continue
+        return None
+
+    def _propagate_previous_labels(self):
+        """Copy annotations from the previous image, scaled to this one."""
+        from anylabeling.views.labeling.utils.shape_propagate import (
+            propagate_labels,
+        )
+
+        if not self.filename:
+            self.status(self.tr("请先打开一张图片再使用标注传播。"), 3000)
+            return
+        image = getattr(self, "image", None)
+        if image is None or image.isNull():
+            image = QtGui.QImage(self.filename)
+        dst_w, dst_h = image.width(), image.height()
+        if dst_w <= 0 or dst_h <= 0:
+            self.status(self.tr("无法读取当前图片尺寸。"), 3000)
+            return
+
+        prev = self._prev_labeled_image()
+        if prev is None:
+            self.status(self.tr("当前图片之前没有可复制的标注。"), 3000)
+            return
+        _prev_path, prev_file, prev_size = prev
+
+        existing = []
+        for shape in self.canvas.shapes:
+            existing.append(
+                {
+                    "label": shape.label,
+                    "shape_type": getattr(shape, "shape_type", "rectangle"),
+                    "points": [[p.x(), p.y()] for p in shape.points],
+                }
+            )
+
+        planned = propagate_labels(
+            prev_file, prev_size, dst_w, dst_h, existing_shapes=existing
+        )
+        if not planned:
+            self.status(self.tr("没有需要复制的新标注（已存在或来源为空）。"), 3000)
+            return
+
+        new_shapes = []
+        for payload in planned:
+            shape = Shape(
+                label=payload.get("label") or "",
+                shape_type=payload.get("shape_type") or "rectangle",
+            )
+            for point in payload.get("points") or []:
+                shape.add_point(QtCore.QPointF(float(point[0]), float(point[1])))
+            if (
+                len(shape.points) > 1
+                and shape.shape_type not in ("point", "linestrip")
+            ):
+                shape.close()
+            new_shapes.append(shape)
+
+        self.load_shapes(
+            list(self.canvas.shapes) + new_shapes, replace=True
+        )
+        self.set_dirty()
+        self.status(
+            self.tr("已从上一张图复制 %1 个标注。").replace(
+                "%1", str(len(new_shapes))
+            ),
+            4000,
+        )
 
     def _load_active_thresholds(self):
         """Per-class accept/review thresholds for the open folder (cached)."""
@@ -3772,6 +4162,7 @@ class LabelingWidget(LabelDialog):
 
     def _create_file_list_item(self, file, label_file, read_checked=True):
         item = QtWidgets.QListWidgetItem(file)
+        item.setToolTip(file)
         flags = Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
         if self._config.get("file_list_checkbox_editable", False):
             flags |= Qt.ItemFlag.ItemIsUserCheckable
@@ -6074,6 +6465,12 @@ class LabelingWidget(LabelDialog):
             self.file_list_widget.setCurrentRow(
                 self.fn_to_index[str(filename)]
             )
+            current_item = self.file_list_widget.currentItem()
+            if current_item is not None:
+                self.file_list_widget.scrollToItem(
+                    current_item,
+                    QtWidgets.QAbstractItemView.ScrollHint.EnsureVisible,
+                )
             self.file_list_widget.update()
             return False
 
@@ -6648,7 +7045,14 @@ class LabelingWidget(LabelDialog):
             for row in range(self.unique_label_list.count()):
                 item = self.unique_label_list.item(row)
                 label = item.data(Qt.ItemDataRole.UserRole) or ""
-                self.unique_label_list.set_label_count(label, counts.get(label))
+                count = counts.get(label)
+                self.unique_label_list.set_label_count(label, count)
+                if count is not None:
+                    item.setToolTip(
+                        self.tr("%1（当前图片 %2 个）")
+                        .replace("%1", str(label))
+                        .replace("%2", str(count))
+                    )
                 matched = (
                     not query or query in str(label).lower()
                 )
@@ -7304,6 +7708,7 @@ class LabelingWidget(LabelDialog):
             return
 
         self.last_open_dir = dirpath
+        self._record_recent_dir(dirpath)
         self.filename = None
         self.file_list_widget.clear()
         image_files = []

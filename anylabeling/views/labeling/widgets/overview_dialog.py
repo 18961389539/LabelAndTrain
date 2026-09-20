@@ -24,6 +24,7 @@ from anylabeling.views.labeling.utils.style import (
     get_dialog_style,
     get_progress_dialog_style,
 )
+from anylabeling.views.labeling.utils.theme import get_theme
 from anylabeling.views.labeling.widgets.popup import Popup
 from anylabeling.views.labeling.widgets.range_table_dialog import (
     RangeTableDialog,
@@ -40,8 +41,6 @@ def _get_overview_style() -> str:
     Returns:
         str: QSS stylesheet string for OverviewDialog.
     """
-    from anylabeling.views.labeling.utils.theme import get_theme
-
     t = get_theme()
     return get_dialog_style() + f"""
         .secondary-button {{
@@ -204,7 +203,7 @@ class OverviewDialog(RangeTableDialog):
         progress_dialog.setMinimumWidth(400)
         progress_dialog.setMinimumHeight(150)
         progress_dialog.setStyleSheet(
-            get_progress_dialog_style(color="#1d1d1f", height=20)
+            get_progress_dialog_style(color=get_theme()["text"], height=20)
         )
 
         if start_index == -1:
