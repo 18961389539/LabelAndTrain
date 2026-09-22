@@ -73,3 +73,25 @@ class TestModelTaskGroups(unittest.TestCase):
         )
         self.assertFalse(offer_cpu)
         self.assertIn("\u6743\u91cd", message)
+
+
+class TestGroupedListingsResolveToRealModels(unittest.TestCase):
+    def test_every_listed_model_type_is_loadable(self):
+        # The other direction of "every loadable type has a group": names left
+        # over from pruned upstream families make the taxonomy look bigger than
+        # this build is, and hide whether a listing is actually real.
+        listed = {
+            model_type
+            for types in TASK_TYPE_GROUPS.values()
+            for model_type in types
+        }
+        self.assertEqual(sorted(listed - set(_CUSTOM_MODELS)), [])
+
+    def test_classification_model_is_not_filed_under_detect(self):
+        # yolov8_cls used to fall through to the prefix match on "yolov8" and
+        # land in the detection group, burying it under the wrong filter.
+        self.assertEqual(group_for_model_type("yolov8_cls"), "classify")
+
+    def test_classify_group_is_offerable(self):
+        self.assertIn("classify", TASK_FILTER_ORDER)
+        self.assertIn("classify", TASK_GROUP_LABELS)

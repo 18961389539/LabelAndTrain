@@ -6,31 +6,18 @@ TASK_TYPE_GROUPS = {
     "detect": {
         "yolov8",
         "yolo26",
-        "yolov5",
-        "yolov6",
-        "yolov7",
-        "yolov9",
-        "yolov10",
-        "yolov8_obb",
-        "gold_yolo",
-        "rfdetr",
-        "grounding_dino",
-        "deim",
-        "dfine",
     },
     "segment": {
         "yolov8_seg",
         "yolo26_seg",
         "segment_anything_2",
         "yolov8_sam2",
-        "sam",
-        "sam2",
     },
     "pose": {
         "yolo26_pose",
-        "yolov8_pose",
-        "dwpose",
-        "rtmo",
+    },
+    "classify": {
+        "yolov8_cls",
     },
 }
 
@@ -39,10 +26,11 @@ TASK_GROUP_LABELS = {
     "detect": "检测",
     "segment": "分割",
     "pose": "姿态",
+    "classify": "分类",
     "other": "其他",
 }
 
-TASK_FILTER_ORDER = ("all", "detect", "segment", "pose", "other")
+TASK_FILTER_ORDER = ("all", "detect", "segment", "pose", "classify", "other")
 
 
 def group_for_model_type(model_type: str) -> str:
