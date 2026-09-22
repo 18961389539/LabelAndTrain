@@ -321,3 +321,120 @@ class TestStaleAuditDialog(unittest.TestCase):
         self.assertEqual(
             [row for row in dialog.all_rows() if row["shape_ref"]], []
         )
+
+
+class TestStaleDeleteBackup(unittest.TestCase):
+    """Bulk deletion bypasses undo, so the snapshot is the only way back."""
+
+    def setUp(self):
+        import json
+        import os
+        import tempfile
+
+        from anylabeling.views.labeling.utils import smart_tools
+
+        self.json = json
+        self.os = os
+        self.smart_tools = smart_tools
+        self.tmp = tempfile.TemporaryDirectory()
+        self.label = os.path.join(self.tmp.name, "a.json")
+        self.stale = {
+            "label": "cat",
+            "points": [[0, 0], [10, 10]],
+            "source": "model",
+            "model": "run_01",
+        }
+        keep = {"label": "dog", "points": [[1, 1], [2, 2]], "source": "human"}
+        with open(self.label, "w", encoding="utf-8") as handle:
+            json.dump({"shapes": [self.stale, keep], "checked": False}, handle)
+        self.ref = {
+            "index": 0,
+            "marker": smart_tools._shape_marker(self.stale),
+        }
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def _live_labels(self):
+        path = self.os.path.join(self.tmp.name, "a.json")
+        with open(path, "r", encoding="utf-8") as handle:
+            return [shape["label"] for shape in self.json.load(handle)["shapes"]]
+
+    def _backups(self):
+        root = self.os.path.join(self.tmp.name, ".label_backups")
+        if not self.os.path.isdir(root):
+            return []
+        out = []
+        for run in sorted(self.os.listdir(root)):
+            for name in self.os.listdir(self.os.path.join(root, run)):
+                out.append(self.os.path.join(root, run, name))
+        return out
+
+    def test_backup_holds_the_pre_delete_content(self):
+        counts = self.smart_tools.apply_stale_deletions(
+            {self.label: [self.ref]}, "run_07", label_dir=self.tmp.name
+        )
+        self.assertEqual(counts["deleted"], 1)
+        self.assertEqual(self._live_labels(), ["dog"])
+        backups = self._backups()
+        self.assertEqual(len(backups), 1)
+        with open(backups[0], "r", encoding="utf-8") as handle:
+            saved = self.json.load(handle)
+        self.assertEqual(
+            [shape["label"] for shape in saved["shapes"]], ["cat", "dog"]
+        )
+        self.assertTrue(counts["backup_dir"])
+
+    def test_failed_backup_aborts_the_whole_batch(self):
+        from unittest import mock
+
+        with mock.patch.object(
+            self.smart_tools.shutil, "copy2", side_effect=OSError("locked")
+        ):
+            counts = self.smart_tools.apply_stale_deletions(
+                {self.label: [self.ref]}, "run_07", label_dir=self.tmp.name
+            )
+        self.assertTrue(counts["backup_failed"])
+        self.assertEqual(counts["deleted"], 0)
+        self.assertEqual(self._live_labels(), ["cat", "dog"])
+        self.assertEqual(self._backups(), [])
+
+    def test_nothing_to_delete_creates_no_backup(self):
+        human_only = {"label": "dog", "points": [[1, 1], [2, 2]], "source": "human"}
+        with open(self.label, "w", encoding="utf-8") as handle:
+            self.json.dump({"shapes": [human_only], "checked": False}, handle)
+        ref = {"index": 0, "marker": self.smart_tools._shape_marker(human_only)}
+        counts = self.smart_tools.apply_stale_deletions(
+            {self.label: [ref]}, "run_07", label_dir=self.tmp.name
+        )
+        self.assertEqual(counts["deleted"], 0)
+        self.assertFalse(self.os.path.exists(self.os.path.join(self.tmp.name, ".label_backups")))
+
+    def test_retention_prunes_only_our_own_backup_runs(self):
+        from unittest import mock
+
+        root = self.os.path.join(self.tmp.name, ".label_backups")
+        for name in ("20260101_000000", "20260102_000000", "20260103_000000"):
+            self.os.makedirs(self.os.path.join(root, name), exist_ok=True)
+        self.os.makedirs(self.os.path.join(root, "notes"), exist_ok=True)
+
+        with mock.patch.object(self.smart_tools, "BACKUP_KEEP_RUNS", 1):
+            self.smart_tools.apply_stale_deletions(
+                {self.label: [self.ref]}, "run_07", label_dir=self.tmp.name
+            )
+
+        runs = sorted(
+            name
+            for name in self.os.listdir(root)
+            if self.os.path.isdir(self.os.path.join(root, name))
+        )
+        self.assertIn("notes", runs)
+        stamped = [name for name in runs if name != "notes"]
+        self.assertEqual(len(stamped), 1)
+        # What survives must be the run this call just wrote, i.e. the copy of
+        # the label file, not one of the synthetic older folders.
+        self.assertTrue(
+            self.os.path.isfile(
+                self.os.path.join(root, stamped[0], "a.json")
+            )
+        )

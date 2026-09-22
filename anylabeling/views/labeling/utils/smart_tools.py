@@ -12,6 +12,7 @@ import json
 import os
 import os.path as osp
 import re
+import shutil
 import time
 
 from PyQt6.QtCore import Qt, QThread, QTimer, QUrl, pyqtSignal
@@ -884,7 +885,52 @@ def _write_missing(parent, results):
 # --------------------------------------------------------------------------
 # stale model-box cleanup (used by action 10)
 # --------------------------------------------------------------------------
-def apply_stale_deletions(targets, current_model, skip_files=None):
+BACKUP_ROOT_NAME = ".label_backups"
+BACKUP_STAMP_PATTERN = re.compile(r"\d{8}_\d{6}$")
+# Bulk deletions bypass the undo stack, so every run keeps its own snapshot.
+BACKUP_KEEP_RUNS = 20
+
+
+def _prune_backup_runs(backup_root):
+    """Drop our own oldest timestamped backup runs beyond the retention."""
+    try:
+        names = [
+            name
+            for name in os.listdir(backup_root)
+            if BACKUP_STAMP_PATTERN.fullmatch(name)
+            and osp.isdir(osp.join(backup_root, name))
+        ]
+    except OSError:
+        return
+    for name in sorted(names, reverse=True)[BACKUP_KEEP_RUNS:]:
+        try:
+            shutil.rmtree(osp.join(backup_root, name))
+        except OSError as exc:
+            logger.warning(f"Could not prune label backup run {name}: {exc}")
+
+
+def backup_label_files(label_files, label_dir, stamp):
+    """Copy the label files that are about to change into a backup run.
+
+    Returns ``None`` when the backup could not be completed, which the caller
+    must treat as "do not delete anything".
+    """
+    backup_root = osp.join(label_dir, BACKUP_ROOT_NAME)
+    destination = osp.join(backup_root, stamp)
+    try:
+        os.makedirs(destination, exist_ok=True)
+        for label_file in label_files:
+            shutil.copy2(
+                label_file, osp.join(destination, osp.basename(label_file))
+            )
+    except OSError as exc:
+        logger.warning(f"Label backup failed: {exc}")
+        return None
+    _prune_backup_runs(backup_root)
+    return destination
+
+
+def apply_stale_deletions(targets, current_model, skip_files=None, label_dir=None):
     """Delete the stale model boxes a reviewed report pointed at.
 
     ``targets`` maps a label file to the shape references the report showed.
@@ -892,6 +938,11 @@ def apply_stale_deletions(targets, current_model, skip_files=None):
     same box and still attributable to another model, so anything the user
     moved, relabelled or locked between reporting and deleting is skipped
     rather than removed.
+
+    When ``label_dir`` is given the files that are about to change are copied
+    into ``<label_dir>/.label_backups/<stamp>/`` first, and the whole batch is
+    abandoned if that backup cannot be completed -- this deletion does not go
+    through the undo stack, so the snapshot is the only way back.
     """
     skipped_files = set(skip_files or ())
     counts = {
@@ -900,7 +951,10 @@ def apply_stale_deletions(targets, current_model, skip_files=None):
         "skipped_locked": 0,
         "skipped_changed": 0,
         "skipped_unavailable": 0,
+        "backup_dir": None,
+        "backup_failed": False,
     }
+    pending = {}
     for label_file, refs in (targets or {}).items():
         if not refs:
             continue
@@ -931,6 +985,22 @@ def apply_stale_deletions(targets, current_model, skip_files=None):
             continue
         if not doomed:
             continue
+        pending[label_file] = (data, shapes, doomed)
+
+    if not pending:
+        return counts
+
+    if label_dir:
+        stamp = time.strftime("%Y%m%d_%H%M%S")
+        counts["backup_dir"] = backup_label_files(pending, label_dir, stamp)
+        if counts["backup_dir"] is None:
+            counts["backup_failed"] = True
+            counts["skipped_unavailable"] += sum(
+                len(doomed) for _, _, doomed in pending.values()
+            )
+            return counts
+
+    for label_file, (data, shapes, doomed) in pending.items():
         data["shapes"] = [
             shape for i, shape in enumerate(shapes) if i not in doomed
         ]
@@ -1328,7 +1398,8 @@ def _delete_reported_stale(parent, dialog):
         parent.tr(
             "将从 %1 个文件中删除选中的 %2 个框。\n"
             "锁定、来源不明以及报告之后被改动过的框会自动跳过。\n"
-            "此操作不进入撤销栈，建议先提交或备份标注目录。"
+            "此操作不进入撤销栈，删除前会把涉及的标注文件备份到 "
+            ".label_backups。"
         )
         .replace("%1", str(len(targets)))
         .replace("%2", str(total)),
@@ -1349,7 +1420,12 @@ def _delete_reported_stale(parent, dialog):
     if open_label in targets and getattr(parent, "dirty", False):
         skip.add(open_label)
 
-    counts = apply_stale_deletions(targets, current_model, skip_files=skip)
+    counts = apply_stale_deletions(
+        targets,
+        current_model,
+        skip_files=skip,
+        label_dir=label_dir_for(parent),
+    )
 
     if open_label and open_label not in skip and osp.isfile(open_label):
         parent.load_file(filename)
@@ -1357,10 +1433,24 @@ def _delete_reported_stale(parent, dialog):
     if callable(refresh):
         refresh()
 
+    if counts["backup_failed"]:
+        _notify(
+            parent,
+            parent.tr("备份失败，已放弃删除，标注文件未作修改。"),
+            "warning",
+        )
+        return
     if counts["deleted"]:
-        message = parent.tr("已删除 %1 个框（涉及 %2 个文件）").replace(
-            "%1", str(counts["deleted"])
-        ).replace("%2", str(counts["files"]))
+        message = (
+            parent.tr("已删除 %1 个框（涉及 %2 个文件），备份在 %3")
+            .replace("%1", str(counts["deleted"]))
+            .replace("%2", str(counts["files"]))
+            .replace(
+                "%3",
+                osp.basename(counts["backup_dir"] or "")
+                or parent.tr("未备份"),
+            )
+        )
         _notify(parent, message, "copy-green")
     else:
         _notify(parent, parent.tr("没有框被删除。"), "warning")
