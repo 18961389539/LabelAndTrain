@@ -15,6 +15,129 @@ from .config import (
 )
 
 
+MANIFEST_NAME = "manifest.json"
+
+
+def load_dataset_manifest(dataset_path: str):
+    """Read the manifest for a dataset given its dir or its ``data.yaml``.
+
+    Returns ``None`` for datasets built before manifests existed, so callers
+    keep working with older runs instead of failing on them.
+    """
+    if not dataset_path:
+        return None
+    directory = (
+        dataset_path
+        if os.path.isdir(dataset_path)
+        else os.path.dirname(os.path.abspath(dataset_path))
+    )
+    manifest_file = os.path.join(directory, MANIFEST_NAME)
+    if not os.path.isfile(manifest_file):
+        return None
+    try:
+        with open(manifest_file, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
+DATASET_RUN_PATTERN = re.compile(r".+_\d{8}_\d{6}(_\d+)?$")
+
+
+def collect_dataset_runs(task_root: str):
+    """Dataset build directories under ``task_root``, newest first."""
+    if not os.path.isdir(task_root):
+        return []
+    runs = []
+    for name in os.listdir(task_root):
+        path = os.path.join(task_root, name)
+        if not os.path.isdir(path) or not DATASET_RUN_PATTERN.fullmatch(name):
+            continue
+        try:
+            runs.append((os.path.getmtime(path), path))
+        except OSError:
+            continue
+    runs.sort(key=lambda item: item[0], reverse=True)
+    return [path for _, path in runs]
+
+
+def directory_size(path: str) -> int:
+    total = 0
+    for root, _, files in os.walk(path):
+        for name in files:
+            try:
+                total += os.path.getsize(os.path.join(root, name))
+            except OSError:
+                continue
+    return total
+
+
+def plan_dataset_prune(runs, keep: int, current_dir: str = None):
+    """Pick old builds to drop, keeping the newest ``keep`` *besides* the
+    current one.
+
+    The run the just-finished training used is never a candidate, whatever its
+    age, so the answer can never delete the data a result refers to.
+    """
+    current = os.path.normpath(current_dir) if current_dir else None
+    candidates = [
+        path
+        for path in runs
+        if os.path.normpath(path) != current
+    ]
+    to_delete = candidates[keep:] if keep and keep > 0 else list(candidates)
+    return to_delete
+
+
+def prune_datasets(task_root: str, keep: int, current_dir: str = None):
+    """Delete old builds; returns ``(deleted_paths, reclaimed_bytes, failed)``."""
+    runs = collect_dataset_runs(task_root)
+    deleted = []
+    failed = []
+    reclaimed = 0
+    for path in plan_dataset_prune(runs, keep, current_dir):
+        size = directory_size(path)
+        try:
+            shutil.rmtree(path)
+        except OSError:
+            failed.append(path)
+            continue
+        deleted.append(path)
+        reclaimed += size
+    return deleted, reclaimed, failed
+
+
+def file_sha1(path: str):
+    """Content hash of a file, or ``None`` when it cannot be read."""
+    digest = hashlib.sha1()
+    try:
+        with open(path, "rb") as f:
+            for chunk in iter(lambda: f.read(65536), b""):
+                digest.update(chunk)
+    except OSError:
+        return None
+    return digest.hexdigest()
+
+
+def _manifest_entries(pairs, split: str, label_digests: dict) -> List[dict]:
+    entries = []
+    for image_file, label_file in pairs:
+        entries.append(
+            {
+                "image": os.path.abspath(image_file),
+                "label": (
+                    os.path.abspath(label_file) if label_file else None
+                ),
+                "sha1": (
+                    label_digests.get(label_file) if label_file else None
+                ),
+                "split": split,
+            }
+        )
+    return entries
+
+
 def create_yolo_dataset(
     image_list: List[str],
     task_type: str,
@@ -24,6 +147,7 @@ def create_yolo_dataset(
     pose_cfg_file: str = None,
     skip_empty_files: bool = False,
     only_checked_files: bool = False,
+    seed: int = None,
 ) -> str:
     """Create YOLO dataset from image list and annotations.
 
@@ -36,10 +160,15 @@ def create_yolo_dataset(
         pose_cfg_file: Optional pose config file for pose detection
         skip_empty_files: Whether to skip empty label files
         only_checked_files: Whether to use only checked files
+        seed: Split seed; a random one is drawn and recorded when omitted
 
     Returns:
-        Path to created dataset directory
+        Path to created dataset directory. ``manifest.json`` inside it records
+        the exact annotations the run was built from, so a completed training
+        can be tied back to the data it actually saw.
     """
+    if seed is None:
+        seed = random.SystemRandom().randrange(1, 2**31 - 1)
     from anylabeling.views.labeling.label_converter import LabelConverter
 
     def _process_images_batch(
@@ -138,6 +267,14 @@ def create_yolo_dataset(
     temp_dir = os.path.join(
         get_dataset_path(), task_type.lower(), f"{data_file_name}_{timestamp}"
     )
+    # The name only carries second precision: two builds in the same second
+    # would share a directory and the second one would overwrite the first,
+    # including its manifest.
+    if os.path.exists(temp_dir):
+        suffix = 2
+        while os.path.exists(f"{temp_dir}_{suffix}"):
+            suffix += 1
+        temp_dir = f"{temp_dir}_{suffix}"
 
     if task_type == "Classify":
         train_dir = os.path.join(temp_dir, "train")
@@ -159,6 +296,7 @@ def create_yolo_dataset(
 
     background_images = []
     valid_images = []
+    label_digests = {}
     valid_shapes = TASK_SHAPE_MAPPINGS.get(task_type, [])
 
     for image_file in image_list:
@@ -176,8 +314,10 @@ def create_yolo_dataset(
             continue
 
         try:
-            with open(label_file, "r", encoding="utf-8") as f:
-                label_info = json.load(f)
+            with open(label_file, "rb") as f:
+                label_bytes = f.read()
+            label_info = json.loads(label_bytes.decode("utf-8"))
+            label_digests[label_file] = hashlib.sha1(label_bytes).hexdigest()
 
             if (
                 only_checked_files
@@ -211,8 +351,9 @@ def create_yolo_dataset(
             background_images.append(image_file)
             continue
 
-    # ensure train/val split is randomized
-    valid_images = random.sample(valid_images, k=len(valid_images))
+    # ensure train/val split is randomized, but reproducible from the seed
+    # recorded in the manifest
+    valid_images = random.Random(seed).sample(valid_images, k=len(valid_images))
 
     train_count = int(len(valid_images) * dataset_ratio)
     train_valid_images = valid_images[:train_count]
@@ -293,6 +434,38 @@ def create_yolo_dataset(
         data["val"] = "images/val"
 
     save_yaml_config(data, yaml_file)
+
+    if task_type == "Classify":
+        train_pairs = train_valid_images
+        classes = [class_names[i] for i in sorted(class_names)]
+    else:
+        train_pairs = all_train_images
+        classes = list(getattr(converter, "classes", []) or [])
+    manifest = {
+        "schema": 1,
+        "created": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "task": task_type,
+        "dataset_ratio": dataset_ratio,
+        "seed": seed,
+        "only_checked_files": only_checked_files,
+        "skip_empty_files": skip_empty_files,
+        "classes": classes,
+        "counts": {
+            "requested": len(image_list),
+            "valid": len(valid_images),
+            "train": len(train_pairs),
+            "val": len(val_valid_images),
+            "background": len(background_images),
+        },
+        "data_yaml": yaml_file,
+        "data_yaml_sha1": file_sha1(yaml_file),
+        "files": _manifest_entries(
+            train_pairs, "train", label_digests
+        ) + _manifest_entries(val_valid_images, "val", label_digests),
+    }
+    manifest_file = os.path.join(temp_dir, "manifest.json")
+    with open(manifest_file, "w", encoding="utf-8") as f:
+        json.dump(manifest, f, ensure_ascii=False, indent=2)
 
     return temp_dir
 

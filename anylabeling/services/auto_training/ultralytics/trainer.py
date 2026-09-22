@@ -3,11 +3,9 @@ import logging
 import os
 import queue
 import signal
-import shutil
 import subprocess
 import sys
 import tempfile
-import time
 import threading
 import traceback
 from io import StringIO
@@ -18,7 +16,7 @@ from PyQt6.QtCore import QObject, pyqtSignal
 
 from anylabeling.config import get_work_directory
 
-from .config import get_settings_config_path, get_trainer_root_dir
+from .config import get_trainer_root_dir
 
 TRAINING_WORKER_EVENT_PREFIX = "__XANYLABELING_TRAIN_EVENT__="
 
@@ -175,29 +173,9 @@ class TrainingManager:
                     except OSError:
                         pass
 
-            def save_settings_config():
-                save_path = os.path.join(
-                    train_args["project"], train_args["name"]
-                )
-                save_file = os.path.join(save_path, "settings.json")
-
-                while (
-                    self.is_training
-                    and not self.stop_event.is_set()
-                    and not os.path.exists(save_path)
-                ):
-                    time.sleep(1)
-
-                if os.path.exists(save_path):
-                    shutil.copy2(get_settings_config_path(), save_file)
-
             training_thread = threading.Thread(target=run_training)
             training_thread.daemon = True
             training_thread.start()
-
-            config_thread = threading.Thread(target=save_settings_config)
-            config_thread.daemon = True
-            config_thread.start()
 
             return True, "Training started successfully"
 

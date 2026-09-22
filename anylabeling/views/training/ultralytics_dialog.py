@@ -1,6 +1,7 @@
 import csv
 import datetime
 import glob
+import json
 import os
 import platform
 import re
@@ -44,9 +45,15 @@ from anylabeling.services.auto_training.ultralytics.exporter import (
     get_export_manager,
 )
 from anylabeling.services.auto_training.ultralytics.general import (
+    collect_dataset_runs,
     create_yolo_dataset,
+    directory_size,
+    file_sha1,
     format_classes_display,
+    load_dataset_manifest,
     parse_string_to_digit_list,
+    plan_dataset_prune,
+    prune_datasets,
 )
 from anylabeling.services.auto_training.ultralytics.style import *
 from anylabeling.services.auto_training.ultralytics.trainer import (
@@ -1848,6 +1855,128 @@ class UltralyticsDialog(QDialog):
                 image_label.setToolTip("")
                 self.image_paths[i] = None
 
+    KEEP_DATASET_BUILDS = 5
+    MIN_CLEANUP_OFFER_BYTES = 100 * 1024 * 1024
+
+    def _offer_dataset_cleanup(self):
+        """Ask before dropping old dataset builds the loop left behind.
+
+        Every training copies the images on Windows and never reclaims them, so
+        without this the folder only grows. The build the finished run used is
+        excluded regardless of age.
+        """
+        task_root = os.path.join(
+            get_dataset_path(), (self.selected_task_type or "").lower()
+        )
+        manifest = getattr(self, "_last_dataset_manifest", None) or {}
+        current = None
+        if manifest.get("data_yaml"):
+            current = os.path.dirname(manifest["data_yaml"])
+        candidates = plan_dataset_prune(
+            collect_dataset_runs(task_root), self.KEEP_DATASET_BUILDS, current
+        )
+        if not candidates:
+            return
+        size = sum(directory_size(path) for path in candidates)
+        if size < self.MIN_CLEANUP_OFFER_BYTES:
+            return
+
+        answer = QMessageBox.question(
+            self,
+            self.tr("清理历史数据集副本"),
+            self.tr(
+                "训练留下的数据集副本占用 %1，共 %2 个旧目录。\n"
+                "是否删除本次训练之外的旧副本？最近的 %3 个会被保留。"
+            )
+            .replace("%1", f"{size / (1024 * 1024):.1f} MB")
+            .replace("%2", str(len(candidates)))
+            .replace("%3", str(self.KEEP_DATASET_BUILDS)),
+        )
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+
+        deleted, freed, failed = prune_datasets(
+            task_root, self.KEEP_DATASET_BUILDS, current
+        )
+        self.append_training_log(
+            self.tr("已清理 %1 个数据集副本，释放 %2 MB。").replace(
+                "%1", str(len(deleted))
+            ).replace("%2", f"{freed / (1024 * 1024):.1f}")
+        )
+        if failed:
+            self.append_training_log(
+                self.tr("有 %1 个目录无法删除（可能被占用）。").replace(
+                    "%1", str(len(failed))
+                )
+            )
+
+    def write_run_metadata(self):
+        """Record what this run trained on, beside its weights.
+
+        The dataset is a mutable set of label JSONs that keeps being edited
+        after training, so without this snapshot a completed run cannot be
+        tied back to the annotations and arguments that produced it.
+        """
+        project_path = self.current_project_path
+        if not project_path or not os.path.isdir(project_path):
+            return None
+
+        manifest = getattr(self, "_last_dataset_manifest", None) or {}
+        dataset_dir = (
+            os.path.dirname(manifest.get("data_yaml") or "") or None
+        )
+        manifest_path = (
+            os.path.join(dataset_dir, "manifest.json") if dataset_dir else None
+        )
+        weights = os.path.join(project_path, "weights", "best.pt")
+        metrics = parse_training_metrics(
+            os.path.join(project_path, "results.csv")
+        )
+        started_at = getattr(self, "_training_started_at", None)
+        meta = {
+            "schema": 1,
+            "task": self.selected_task_type,
+            "project": os.path.dirname(project_path),
+            "name": os.path.basename(project_path),
+            "started_at": (
+                time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(started_at))
+                if started_at
+                else None
+            ),
+            "finished_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "weights": {
+                "path": weights if os.path.isfile(weights) else None,
+                "sha1": file_sha1(weights),
+            },
+            "train_args": dict(getattr(self, "_last_train_args", None) or {}),
+            "dataset": {
+                "dir": dataset_dir,
+                "manifest": manifest_path,
+                "manifest_sha1": file_sha1(manifest_path)
+                if manifest_path
+                else None,
+                "seed": manifest.get("seed"),
+                "classes": manifest.get("classes"),
+                "counts": manifest.get("counts"),
+            },
+            "metrics": None
+            if metrics is None
+            else {
+                "loss": metrics[0],
+                "map50": metrics[1],
+                "epochs": metrics[2],
+            },
+        }
+
+        meta_path = os.path.join(project_path, "run_meta.json")
+        try:
+            with open(meta_path, "w", encoding="utf-8") as f:
+                json.dump(meta, f, ensure_ascii=False, indent=2)
+        except OSError as e:  # noqa: BLE001
+            logger.warning(f"Failed to write run metadata: {e}")
+            return None
+        return meta_path
+
     def on_training_event(self, event_type, data):
         if event_type == "training_started":
             self.training_status = "training"
@@ -1869,6 +1998,8 @@ class UltralyticsDialog(QDialog):
             self.append_training_log(self.tr("Training is about to start..."))
         elif event_type == "training_completed":
             self.training_status = "completed"
+            self.write_run_metadata()
+            self._offer_dataset_cleanup()
             self.update_training_status_display()
             self.stop_training_button.setVisible(False)
             self.start_training_button.setVisible(False)
@@ -2263,7 +2394,18 @@ class UltralyticsDialog(QDialog):
             for key, value in advanced_params.items():
                 if key not in xany_params_to_exclude:
                     train_args[key] = value
+            # The split was already drawn with this seed while building the
+            # dataset; handing it to Ultralytics keeps the whole run tied to
+            # the manifest instead of re-randomising on every other axis.
+            manifest = load_dataset_manifest(data_path)
+            if manifest and manifest.get("seed") is not None:
+                train_args.setdefault("seed", manifest["seed"])
             self.total_epochs = train_args.get("epochs", 100)
+            # Kept for run_meta.json: the payload file the worker reads is
+            # deleted when the process ends, so this is the only record of the
+            # arguments this run was launched with.
+            self._last_train_args = dict(train_args)
+            self._last_dataset_manifest = manifest
 
             # Log the training command
             cmd_parts = ["yolo", self.selected_task_type.lower(), "train"]
