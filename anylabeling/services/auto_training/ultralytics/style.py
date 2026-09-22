@@ -87,8 +87,6 @@ def get_custom_table_style():
             color: {t["text_secondary"]};
             font-weight: 600;
             font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
             padding: 16px;
             border: none;
             border-bottom: 2px solid {t["border"]};

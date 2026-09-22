@@ -22,97 +22,92 @@ _LUCIDE_CACHE_DIR = osp.join(
     tempfile.gettempdir(), "jl_labeling_and_train", "lucide_icons"
 )
 _LUCIDE_ICON_MAP = {
-    "auto-run": {"name": "play", "ext": "svg"},
-    "arrow-right": {"name": "arrow-right", "ext": "svg"},
-    "arrow-left": {"name": "arrow-left", "ext": "svg"},
-    "brain": {"name": "brain", "ext": "svg"},
-    "brush": {"name": "brush", "ext": "png"},
-    "brush_polygon": {"name": "brush", "ext": "png"},
-    "cancel": {"name": "x", "ext": "png"},
-    "caret-left": {"name": "chevron-left", "ext": "svg"},
-    "caret-down": {"name": "chevron-down", "ext": "svg"},
-    "caret-right": {"name": "chevron-right", "ext": "svg"},
-    "caret-up": {"name": "chevron-up", "ext": "svg"},
-    "cartesian": {"name": "crosshair", "ext": "png"},
-    "check": {"name": "check", "ext": "svg"},
-    "checkmark": {"name": "check", "ext": "svg", "stroke": "#0D9488"},
+    "auto-run": {"name": "play"},
+    "arrow-right": {"name": "arrow-right"},
+    "arrow-left": {"name": "arrow-left"},
+    "brain": {"name": "brain"},
+    "brush": {"name": "brush"},
+    "brush_polygon": {"name": "brush"},
+    "cancel": {"name": "x"},
+    "caret-left": {"name": "chevron-left"},
+    "caret-down": {"name": "chevron-down"},
+    "caret-right": {"name": "chevron-right"},
+    "caret-up": {"name": "chevron-up"},
+    "cartesian": {"name": "crosshair"},
+    "check": {"name": "check"},
+    "checkmark": {"name": "check", "stroke": "#0D9488"},
     "checkmark-white": {
         "name": "check",
-        "ext": "svg",
         "stroke": "#ffffff",
     },
-    "circle-selection": {"name": "circle-dot", "ext": "png"},
+    "circle-selection": {"name": "circle-dot"},
     "color": {"name": "palette"},
-    "convert": {"name": "shuffle", "ext": "png"},
+    "convert": {"name": "shuffle"},
     "copy": {"name": "copy"},
     "copy-green": {
         "name": "circle-check-big",
-        "ext": "svg",
         "stroke": "#16a34a",
     },
-    "crop": {"name": "crop", "ext": "png"},
-    "delete": {"name": "trash", "ext": "png"},
-    "digit0": {"name": "square", "ext": "png", "digit": "0"},
-    "digit1": {"name": "square", "ext": "png", "digit": "1"},
-    "digit2": {"name": "square", "ext": "png", "digit": "2"},
-    "digit3": {"name": "square", "ext": "png", "digit": "3"},
-    "digit4": {"name": "square", "ext": "png", "digit": "4"},
-    "digit5": {"name": "square", "ext": "png", "digit": "5"},
-    "digit6": {"name": "square", "ext": "png", "digit": "6"},
-    "digit7": {"name": "square", "ext": "png", "digit": "7"},
-    "digit8": {"name": "square", "ext": "png", "digit": "8"},
-    "digit9": {"name": "square", "ext": "png", "digit": "9"},
-    "done": {"name": "circle-check-big", "ext": "png"},
-    "edit": {"name": "pencil", "ext": "png"},
-    "eraser": {"name": "eraser", "ext": "svg"},
+    "crop": {"name": "crop"},
+    "delete": {"name": "trash"},
+    "digit0": {"name": "square", "digit": "0"},
+    "digit1": {"name": "square", "digit": "1"},
+    "digit2": {"name": "square", "digit": "2"},
+    "digit3": {"name": "square", "digit": "3"},
+    "digit4": {"name": "square", "digit": "4"},
+    "digit5": {"name": "square", "digit": "5"},
+    "digit6": {"name": "square", "digit": "6"},
+    "digit7": {"name": "square", "digit": "7"},
+    "digit8": {"name": "square", "digit": "8"},
+    "digit9": {"name": "square", "digit": "9"},
+    "done": {"name": "circle-check-big"},
+    "edit": {"name": "pencil"},
+    "eraser": {"name": "eraser"},
     "error": {
         "name": "circle-alert",
-        "ext": "svg",
         "stroke": "#dc2626",
     },
     "eye": {"name": "eye"},
-    "file": {"name": "image", "ext": "png"},
-    "fit-window": {"name": "maximize", "ext": "png"},
-    "fit-width": {"name": "move-horizontal", "ext": "png"},
-    "folder": {"name": "folder", "ext": "svg"},
-    "hidden": {"name": "eye-off", "ext": "png"},
-    "icon": {"name": "scan-search", "ext": "png", "stroke": "#0D9488"},
-    "label": {"name": "tag", "ext": "png"},
-    "labels": {"name": "tags", "ext": "png"},
-    "lock": {"name": "lock", "ext": "svg"},
-    "loop": {"name": "repeat", "ext": "png"},
-    "navigator": {"name": "map", "ext": "svg"},
-    "open": {"name": "folder-open", "ext": "png"},
-    "overview": {"name": "layout-dashboard", "ext": "png"},
-    "paste": {"name": "clipboard-paste", "ext": "png"},
-    "point": {"name": "circle-dot", "ext": "png"},
-    "polygon": {"name": "pentagon", "ext": "png"},
-    "prev": {"name": "arrow-left", "ext": "svg"},
-    "rectangle": {"name": "square", "ext": "png"},
-    "redo": {"name": "redo-2", "ext": "png"},
-    "search": {"name": "search", "ext": "svg"},
-    "settings": {"name": "settings", "ext": "svg"},
-    "star": {"name": "star", "ext": "svg"},
+    "file": {"name": "image"},
+    "fit-window": {"name": "maximize"},
+    "fit-width": {"name": "move-horizontal"},
+    "folder": {"name": "folder"},
+    "hidden": {"name": "eye-off"},
+    "icon": {"name": "scan-search", "stroke": "#0D9488"},
+    "label": {"name": "tag"},
+    "labels": {"name": "tags"},
+    "lock": {"name": "lock"},
+    "loop": {"name": "repeat"},
+    "navigator": {"name": "map"},
+    "open": {"name": "folder-open"},
+    "overview": {"name": "layout-dashboard"},
+    "paste": {"name": "clipboard-paste"},
+    "point": {"name": "circle-dot"},
+    "polygon": {"name": "pentagon"},
+    "prev": {"name": "arrow-left"},
+    "rectangle": {"name": "square"},
+    "redo": {"name": "redo-2"},
+    "search": {"name": "search"},
+    "settings": {"name": "settings"},
+    "star": {"name": "star"},
     "starred": {
         "name": "star",
-        "ext": "svg",
         "fill": "currentColor",
     },
-    "trash": {"name": "trash", "ext": "svg"},
-    "undo": {"name": "undo-2", "ext": "png"},
-    "union": {"name": "combine", "ext": "png"},
-    "ultralytics": {"name": "scan-search", "ext": "png"},
-    "next": {"name": "arrow-right", "ext": "svg"},
-    "save": {"name": "save", "ext": "svg"},
-    "save-as": {"name": "save", "ext": "svg"},
+    "trash": {"name": "trash"},
+    "undo": {"name": "undo-2"},
+    "union": {"name": "combine"},
+    "ultralytics": {"name": "scan-search"},
+    "next": {"name": "arrow-right"},
+    "save": {"name": "save"},
+    "save-as": {"name": "save"},
     "warning": {
         "name": "triangle-alert",
-        "ext": "svg",
         "stroke": "#d97706",
     },
-    "zoom": {"name": "scan-search", "ext": "png"},
-    "zoom-in": {"name": "zoom-in", "ext": "png"},
-    "zoom-out": {"name": "zoom-out", "ext": "png"},
+    "zoom": {"name": "scan-search"},
+    "zoom-in": {"name": "zoom-in"},
+    "zoom-out": {"name": "zoom-out"},
 }
 
 
@@ -164,15 +159,16 @@ def _decorate_lucide_svg(svg, spec):
 
 
 @functools.lru_cache(maxsize=None)
-def _lucide_icon_path(icon, ext, theme_signature, default_stroke, default_fill):
+def _lucide_icon_path(icon, theme_signature, default_stroke, default_fill):
     if lucide_icon is None:
         return None
     spec = _LUCIDE_ICON_MAP.get(icon)
     if not spec:
         return None
-    target_ext = spec.get("ext", ext)
-    if target_ext != ext:
-        return None
+    # Lucide always renders SVG, so the caller's requested extension is not a
+    # gate: a mapped name must resolve to the themed stroke icon even when the
+    # call site asked for the legacy png (which is how `save`/`search` ended up
+    # off-theme or empty).
     lucide_name = spec["name"]
     try:
         svg = lucide_icon(
@@ -239,15 +235,83 @@ def scan_all_images(folder_path):
         return []
 
 
+_ICON_RASTER_SIZE = 128
+_ICON_PIXMAP_CACHE = {}
+
+
+def _tinted_pixmap(source, color):
+    """Recolor `source`'s opaque pixels to `color`, keeping its alpha shape."""
+    out = QtGui.QImage(
+        source.size(), QtGui.QImage.Format.Format_ARGB32_Premultiplied
+    )
+    out.fill(QtCore.Qt.GlobalColor.transparent)
+    painter = QtGui.QPainter(out)
+    painter.setCompositionMode(
+        QtGui.QPainter.CompositionMode.CompositionMode_Source
+    )
+    painter.fillRect(out.rect(), QtGui.QColor(color))
+    painter.setCompositionMode(
+        QtGui.QPainter.CompositionMode.CompositionMode_DestinationIn
+    )
+    painter.drawImage(0, 0, source)
+    painter.end()
+    return QtGui.QPixmap.fromImage(out)
+
+
+def _icon_pixmaps(path):
+    """Normal and disabled rasters for `path`, cached per (path, theme tint).
+
+    Qt generates ``QIcon.Mode.Disabled`` from the source artwork unchanged, so
+    a disabled button keeps a full-brightness glyph — on the dark theme that
+    made inert controls the most prominent thing on the bar. Registering both
+    modes as rasters is what makes the dimmed variant actually win.
+    """
+    from anylabeling.views.labeling.utils.theme import get_theme
+
+    tint = get_theme()["text_placeholder"]
+    key = (path, tint)
+    cached = _ICON_PIXMAP_CACHE.get(key)
+    if cached is not None:
+        return cached
+
+    source = QtGui.QPixmap(path)
+    result = (None, None)
+    if not source.isNull():
+        normal = source.scaled(
+            _ICON_RASTER_SIZE,
+            _ICON_RASTER_SIZE,
+            QtCore.Qt.AspectRatioMode.KeepAspectRatio,
+            QtCore.Qt.TransformationMode.SmoothTransformation,
+        )
+        disabled = _tinted_pixmap(normal.toImage(), tint)
+        result = (normal, disabled)
+
+    _ICON_PIXMAP_CACHE[key] = result
+    return result
+
+
 def new_icon(icon, ext="png"):
-    return QtGui.QIcon(new_icon_path(icon, ext))
+    path = new_icon_path(icon, ext)
+    # QPixmap needs a running QGuiApplication; callers that resolve icons at
+    # import time fall back to a plain file-backed icon.
+    normal, disabled = (
+        _icon_pixmaps(path)
+        if QtWidgets.QApplication.instance() is not None
+        else (None, None)
+    )
+    if normal is None:
+        return QtGui.QIcon(path)
+    qt_icon = QtGui.QIcon()
+    qt_icon.addPixmap(normal, QtGui.QIcon.Mode.Normal)
+    qt_icon.addPixmap(disabled, QtGui.QIcon.Mode.Disabled)
+    return qt_icon
 
 
 def new_icon_path(icon, ext="png"):
     """Returns the resource path string for an icon."""
     theme_signature, default_stroke, default_fill = _lucide_theme_signature()
     lucide_path = _lucide_icon_path(
-        icon, ext, theme_signature, default_stroke, default_fill
+        icon, theme_signature, default_stroke, default_fill
     )
     if lucide_path:
         return lucide_path

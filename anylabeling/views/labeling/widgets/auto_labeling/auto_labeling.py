@@ -4,7 +4,7 @@ import yaml
 import collections
 from pathlib import Path
 
-from anylabeling.config import get_config, get_work_directory
+from anylabeling.config import get_config, get_work_directory, save_config
 
 from PyQt6 import uic
 from PyQt6.QtCore import Qt, pyqtSignal, pyqtSlot, QPoint, QTimer
@@ -1699,8 +1699,30 @@ class AutoLabelingWidget(QWidget):
         close_index = main_layout.indexOf(self.button_close)
         main_layout.insertWidget(close_index, self._more_button)
         main_layout.insertWidget(close_index + 1, self._more_panel)
-        self._more_panel.hide()
+        expanded = self._more_panel_expanded()
+        self._more_button.setChecked(expanded)
+        self._more_panel.setVisible(expanded)
+        self._more_button.setText("更多 ▴" if expanded else "更多 ▾")
         self._update_model_selection_scroll_area_height()
+
+    def _more_panel_expanded(self):
+        config = getattr(self.parent, "_config", None)
+        if not isinstance(config, dict):
+            return False
+        section = config.get("auto_labeling")
+        if not isinstance(section, dict):
+            return False
+        return bool(section.get("more_panel_expanded", False))
+
+    def _save_more_panel_expanded(self, expanded):
+        config = getattr(self.parent, "_config", None)
+        if not isinstance(config, dict):
+            return
+        section = config.setdefault("auto_labeling", {})
+        if not isinstance(section, dict):
+            return
+        section["more_panel_expanded"] = bool(expanded)
+        save_config(config)
 
     def _ensure_conf_iou_label_order(self):
         """Place 置信度阈值 / 交并比阈值 immediately before their spinboxes.
@@ -1742,6 +1764,7 @@ class AutoLabelingWidget(QWidget):
         self._more_panel.setVisible(checked)
         self._more_button.setText("更多 ▴" if checked else "更多 ▾")
         self._update_model_selection_scroll_area_height()
+        self._save_more_panel_expanded(checked)
 
     @staticmethod
     def _format_bytes(n):

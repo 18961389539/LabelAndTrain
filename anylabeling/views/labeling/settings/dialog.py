@@ -2026,7 +2026,57 @@ class SettingsDialog(QtWidgets.QDialog):
         self.status_label.setStyleSheet(f"color: {color};")
         self.status_label.setText(text)
 
-    def closeEvent(self, event: QtGui.QCloseEvent) -> None:
+    def _dirty_pages_text(self) -> str:
+        return "、".join(
+            self._display_primary_text(primary)
+            for primary in sorted(self._dirty_primaries)
+        )
+
+    def _confirm_discard_unsaved(self) -> bool:
+        """Ask what to do with pending edits. True means the dialog may close.
+
+        Edits only reach the config on Save (``defer_runtime_apply``), so a
+        bare ``×`` would otherwise throw away work without a word.
+        """
+        if not self._dirty_primaries:
+            return True
+        pages = self._dirty_pages_text()
+        box = QtWidgets.QMessageBox(self)
+        box.setIcon(QtWidgets.QMessageBox.Icon.Warning)
+        box.setWindowTitle(self.tr("Unsaved Changes"))
+        box.setText(self.tr("以下页面的修改尚未保存：{pages}").format(pages=pages))
+        box.setInformativeText(self.tr("关闭设置窗口后这些修改会丢失。"))
+        box.setStyleSheet(self._message_box_style())
+        save_button = box.addButton(
+            self.tr("保存并关闭"),
+            QtWidgets.QMessageBox.ButtonRole.AcceptRole,
+        )
+        discard_button = box.addButton(
+            self.tr("放弃修改"),
+            QtWidgets.QMessageBox.ButtonRole.DestructiveRole,
+        )
+        box.addButton(
+            self.tr("继续编辑"), QtWidgets.QMessageBox.ButtonRole.RejectRole
+        )
+        box.setDefaultButton(save_button)
+        box.exec()
+        clicked = box.clickedButton()
+        if clicked is save_button:
+            self._on_save_clicked()
+            # A validation error leaves the page dirty; keep the dialog open
+            # so the user sees the status text instead of losing edits.
+            return not self._dirty_primaries
+        return clicked is discard_button
+
+    def reject(self) -> None:
+        """Handle both the window ``×`` and Esc.
+
+        ``QDialog.closeEvent`` forwards to ``reject()``, so this is the one
+        path every dismissal takes -- guarding here keeps the user from
+        losing edits without duplicating the prompt.
+        """
+        if not self._confirm_discard_unsaved():
+            return
         self._controller.close_session()
         self._dirty_primaries.clear()
         self.shortcuts_save_button.setEnabled(False)
@@ -2034,7 +2084,7 @@ class SettingsDialog(QtWidgets.QDialog):
             self._show_primary_status(self._active_primary)
         self._did_show_once = False
         self._restore_combo_animation_if_needed()
-        super().closeEvent(event)
+        super().reject()
 
     def paintEvent(self, event: QtGui.QPaintEvent) -> None:
         super().paintEvent(event)

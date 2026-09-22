@@ -369,7 +369,6 @@ class TrainingConfirmDialog(QDialog):
                 border: 1px solid {t["border"]};
                 border-radius: 6px;
                 padding: 12px;
-                line-height: 1.4;
             }}
         """)
         layout.addWidget(command_display)

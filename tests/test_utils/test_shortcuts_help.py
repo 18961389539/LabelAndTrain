@@ -80,5 +80,71 @@ class TestFilterShortcutRows(unittest.TestCase):
         self.assertEqual(filter_shortcut_rows(rows, "zzzz"), [])
 
 
+class TestAdvertisedShortcuts(unittest.TestCase):
+    """The help dialog is the only place users learn the bindings, so a row
+    must never point at a key that nothing reads (see the six `create_*`
+    keys that were advertised for years without a QAction)."""
+
+    def setUp(self):
+        from anylabeling.views.labeling.settings.schema import (
+            SHORTCUT_DUPLICATE_WHITELIST,
+            load_template_config,
+        )
+
+        self.shortcuts = load_template_config().get("shortcuts", {})
+        self.whitelist = SHORTCUT_DUPLICATE_WHITELIST
+
+    def test_every_advertised_key_exists_in_config(self):
+        unknown = sorted(
+            key
+            for _title, entries in SHORTCUT_GROUPS
+            for key, _desc in entries
+            if key not in self.shortcuts
+        )
+        self.assertEqual(
+            unknown, [], "help rows pointing at missing config keys"
+        )
+
+    def test_no_duplicate_rows(self):
+        pairs = [
+            (title, key)
+            for title, entries in SHORTCUT_GROUPS
+            for key, _desc in entries
+        ]
+        self.assertEqual(len(pairs), len(set(pairs)))
+
+    def test_no_ambiguous_binding(self):
+        by_value = {}
+        for key, value in self.shortcuts.items():
+            for item in value if isinstance(value, list) else [value]:
+                if item:
+                    by_value.setdefault(str(item), []).append(key)
+        ambiguous = {
+            value: sorted(keys)
+            for value, keys in by_value.items()
+            if len(keys) > 1
+            and frozenset(f"shortcuts.{k}" for k in keys)
+            not in self.whitelist
+        }
+        self.assertEqual(
+            ambiguous, {}, "two actions share one key: Qt drops both"
+        )
+
+    def test_every_supported_shape_is_advertised(self):
+        from anylabeling.views.labeling.shape import Shape
+
+        advertised = {
+            key
+            for _title, entries in SHORTCUT_GROUPS
+            for key, _desc in entries
+        }
+        missing = sorted(
+            f"create_{shape}"
+            for shape in Shape.get_supported_shape()
+            if f"create_{shape}" not in advertised
+        )
+        self.assertEqual(missing, [])
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -22,15 +22,29 @@ def preflight_checks(stats):
             ``missing_json`` and ``class_counts`` (label -> object count),
             matching ``analyze_distribution`` output.
 
-    Returns:
-        List of ``{"level": "err"|"warn"|"ok", "message": str}``.
+        Returns:
+            List of ``{"level": "err"|"warn"|"ok", "code": str, "message":
+            str}``. ``code`` is the stable machine-readable handle; ``message``
+            is display text and must not be parsed by callers.
     """
     checks = []
     if not isinstance(stats, dict) or not stats:
-        return [{"level": "err", "message": "没有可分析的数据。"}]
+        return [
+            {
+                "level": "err",
+                "code": "no_data",
+                "message": "没有可分析的数据。",
+            }
+        ]
     total = int(stats.get("total_images") or 0)
     if total == 0:
-        return [{"level": "err", "message": "数据集为空：请先打开并标注一个图片文件夹。"}]
+        return [
+            {
+                "level": "err",
+                "code": "empty_dataset",
+                "message": "数据集为空：请先打开并标注一个图片文件夹。",
+            }
+        ]
 
     missing = int(stats.get("missing_json") or 0)
     labeled = int(stats.get("labeled_images") or 0)
@@ -38,6 +52,7 @@ def preflight_checks(stats):
         checks.append(
             {
                 "level": "warn",
+                "code": "unlabeled_majority",
                 "message": f"超过一半图片未标注（{missing}/{total}），训练前建议先补齐标注。",
             }
         )
@@ -45,6 +60,7 @@ def preflight_checks(stats):
         checks.append(
             {
                 "level": "ok",
+                "code": "unlabeled_minor",
                 "message": f"未标注图片 {missing} 张（{missing * 100.0 // max(total, 1)}%），可用自动标注/复核流程补齐。",
             }
         )
@@ -59,6 +75,9 @@ def preflight_checks(stats):
                 checks.append(
                     {
                         "level": "warn",
+                        "code": "few_samples",
+                        "label": label,
+                        "count": count,
                         "message": (
                             f"类别「{label}」只有 {count} 个目标"
                             f"（少于建议的 {MIN_SAMPLES_PER_CLASS}），请重点补充。"
@@ -66,22 +85,33 @@ def preflight_checks(stats):
                     }
                 )
             if majority and majority >= max(count, 1) * IMBALANCE_WARN_RATIO:
+                detail = (
+                    f"{label}（{count}）远少于最多类（{majority}），"
+                    "训练时建议启用类别权重或在数据集中补样本。"
+                )
                 checks.append(
                     {
                         "level": "warn",
-                        "message": (
-                            f"类别不平衡：{label}（{count}）远少于最多类（{majority}），"
-                            "训练时建议启用类别权重或在数据集中补样本。"
-                        ),
+                        "code": "imbalance",
+                        "label": label,
+                        "count": count,
+                        "detail": detail,
+                        "message": f"类别不平衡：{detail}",
                     }
                 )
     elif labeled == 0:
         checks.append(
-            {"level": "err", "message": "没有任何已标注目标，无法开始训练。"}
+            {
+                "level": "err",
+                "code": "no_targets",
+                "message": "没有任何已标注目标，无法开始训练。",
+            }
         )
 
     if not checks:
-        checks.append({"level": "ok", "message": "预检通过，数据分布健康。"})
+        checks.append(
+            {"level": "ok", "code": "healthy", "message": "预检通过，数据分布健康。"}
+        )
     return checks
 
 
@@ -173,15 +203,14 @@ def recommend_training_config(stats, history=None, max_image_dim=None):
     elif labeled >= MUCH_DATA_THRESHOLD:
         lines.append("数据量充足，可减少轮数并用更大 imgsz 提速收敛。")
 
-    imbalance_warns = [c for c in checks if "类别不平衡" in c["message"]]
-    few_warns = [c for c in checks if "只有" in c["message"]]
+    imbalance_warns = [c for c in checks if c["code"] == "imbalance"]
+    few_warns = [c for c in checks if c["code"] == "few_samples"]
     if imbalance_warns:
-        lines.append("检测到类别不平衡：" + imbalance_warns[0]["message"].split("：", 1)[-1])
+        lines.append("检测到类别不平衡：" + imbalance_warns[0]["detail"])
     elif few_warns:
         lines.append("存在小类样本不足，建议先做主动学习补充硬样例。" + few_warns[0]["message"])
 
-    warns = [c for c in checks if c["level"] == "warn" and "超过一半" in c["message"]]
-    if warns:
+    if any(c["code"] == "unlabeled_majority" for c in checks):
         missing = stats.get("missing_json") or 0
         total = stats.get("total_images") or 0
         lines.append(f"另有 {missing}/{total} 张未标注，训练指标可能偏低。")

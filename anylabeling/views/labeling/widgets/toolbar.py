@@ -1,6 +1,7 @@
 """Defines toolbar for anylabeling, including"""
 
 from PyQt6 import QtCore, QtGui, QtWidgets
+from anylabeling.views.labeling.utils.qt import new_icon
 from anylabeling.views.labeling.utils.theme import get_mode, get_theme
 
 
@@ -49,6 +50,7 @@ class FloatingToolPanel(QtWidgets.QFrame):
         self._collapse_btn.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
         self._collapse_btn.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
         self._collapse_btn.setFixedSize(18, 16)
+        self._collapse_btn.setIconSize(QtCore.QSize(12, 12))
         self._collapse_btn.clicked.connect(self.toggle_collapse)
         self._update_collapse_button()
         handle_layout.addWidget(self._collapse_btn)
@@ -79,7 +81,6 @@ class FloatingToolPanel(QtWidgets.QFrame):
                 color: {t["text_secondary"]};
                 font-size: 10px;
                 font-weight: 700;
-                letter-spacing: 1px;
             }}
             QToolButton#FloatingToolPanelCollapseBtn {{
                 border: none;
@@ -97,11 +98,11 @@ class FloatingToolPanel(QtWidgets.QFrame):
 
     def _update_collapse_button(self):
         if self._collapsed:
-            self._collapse_btn.setText("▲")
-            self._collapse_btn.setToolTip("展开工具栏")
+            self._collapse_btn.setIcon(new_icon("caret-up", "svg"))
+            self._collapse_btn.setToolTip(self.tr("展开工具栏"))
         else:
-            self._collapse_btn.setText("▼")
-            self._collapse_btn.setToolTip("收起工具栏")
+            self._collapse_btn.setIcon(new_icon("caret-down", "svg"))
+            self._collapse_btn.setToolTip(self.tr("收起工具栏"))
 
     def toggle_collapse(self):
         self.set_collapsed(not self._collapsed)
@@ -260,11 +261,12 @@ class ToolBar(QtWidgets.QFrame):
         t = get_theme()
         separator_color = t["border_light"] if self._is_dark else t["border"]
         base_bg = t["button_bg"] if self._is_dark else t["surface"]
-        hover_bg = t["button_hover"] if self._is_dark else t["background_hover"]
-        checked_bg = t["primary"] if self._is_dark else t["surface_pressed"]
-        checked_border = (
-            t["primary_hover"] if self._is_dark else t["highlight"]
-        )
+        hover_bg = t["button_hover"] if self._is_dark else t["button_bg"]
+        # Same accent-tinted treatment in both themes: light mode previously
+        # reused a near-identical grey for the active tool, so the current
+        # drawing mode was indistinguishable from an idle button.
+        checked_bg = t["primary_soft"]
+        checked_border = t["primary"]
         self.setStyleSheet(f"""
             ToolBar {{
                 background: {t["background_secondary"]};
@@ -295,7 +297,7 @@ class ToolBar(QtWidgets.QFrame):
                 border-color: {checked_border};
             }}
             ToolBar QToolButton:disabled {{
-                background: {t["background"]};
+                background: {t["background_secondary"]};
                 border-color: {t["border"]};
             }}
             QFrame#ToolBarSeparator {{

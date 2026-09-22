@@ -42,6 +42,9 @@ class TestSettingsDialogLayout(unittest.TestCase):
             defer_runtime_apply=True,
         )
         dialog = SettingsDialog(None, controller)
+        # Closing now prompts about pending edits; tests opt into the prompt
+        # explicitly so a stray dirty page cannot block the suite on a modal.
+        dialog._confirm_discard_unsaved = lambda: True
         dialog.show()
         self.app.processEvents()
         self._resources.append((dialog, controller))
@@ -237,7 +240,82 @@ class TestSettingsDialogLayout(unittest.TestCase):
         controller.update_field("model_hub", next_value, schedule_save=False)
         self.assertEqual(controller.get_value("model_hub"), next_value)
 
+        dialog._confirm_discard_unsaved = lambda: True
         dialog.close()
         self.app.processEvents()
 
         self.assertEqual(controller.get_value("model_hub"), initial_value)
+
+    def _mark_hub_dirty(self, dialog):
+        """Change model_hub through the editor path, as the UI does."""
+        controller = dialog._controller
+        field = controller._field_map["model_hub"]
+        initial_value = controller.get_value(field.key)
+        next_value = next(
+            v for v in field.options if v != initial_value
+        )
+        dialog._on_editor_value_changed(field, next_value)
+        self.app.processEvents()
+        return field, initial_value, next_value
+
+    def test_close_with_unsaved_changes_asks_before_discarding(self):
+        dialog = self._create_dialog()
+        controller = dialog._controller
+        _field, initial_value, next_value = self._mark_hub_dirty(dialog)
+
+        self.assertEqual(controller.get_value("model_hub"), next_value)
+        self.assertEqual(dialog._dirty_primaries, {"General"})
+
+        asked = []
+
+        def fake_confirm():
+            asked.append(sorted(dialog._dirty_primaries))
+            return False
+
+        dialog._confirm_discard_unsaved = fake_confirm
+        dialog.close()
+        self.app.processEvents()
+
+        self.assertEqual(asked, [["General"]])
+        self.assertTrue(dialog._dirty_primaries)
+        self.assertEqual(controller.get_value("model_hub"), next_value)
+        self.assertTrue(dialog.isVisible())
+
+    def test_prompt_names_the_dirty_pages(self):
+        dialog = self._create_dialog()
+        dialog._set_primary_dirty("Canvas", True)
+        dialog._set_primary_dirty("General", True)
+        text = dialog._dirty_pages_text()
+        self.assertIn(dialog._display_primary_text("Canvas"), text)
+        self.assertIn(dialog._display_primary_text("General"), text)
+        self.assertLess(
+            text.index(dialog._display_primary_text("Canvas")),
+            text.index(dialog._display_primary_text("General")),
+        )
+
+    def test_clean_close_does_not_ask(self):
+        dialog = self._create_dialog()
+        calls = []
+        dialog._confirm_discard_unsaved = lambda: calls.append(1) or True
+        dialog.close()
+        self.app.processEvents()
+        self.assertEqual(calls, [1])
+        self.assertFalse(dialog.isVisible())
+
+    def test_save_and_close_persists_edits(self):
+        dialog = self._create_dialog()
+        del dialog._confirm_discard_unsaved
+        controller = dialog._controller
+        saved = []
+        controller._save_callback = lambda cfg: saved.append(cfg) or True
+        self._mark_hub_dirty(dialog)
+
+        dialog._on_save_clicked()
+        self.app.processEvents()
+
+        self.assertEqual(len(saved), 1)
+        self.assertFalse(dialog._dirty_primaries)
+        # Nothing pending anymore, so closing must not prompt.
+        dialog.close()
+        self.app.processEvents()
+        self.assertEqual(controller.get_value("model_hub"), saved[0]["model_hub"])

@@ -14,6 +14,7 @@ LIGHT: Dict[str, str] = {
     "primary": "#0D9488",
     "primary_hover": "#14B8A6",
     "primary_pressed": "#0B8076",
+    "primary_soft": "#D6EEE9",
     "background": "#FAFAF9",
     "background_secondary": "#F5F5F1",
     "background_hover": "#E8E7E2",
@@ -47,6 +48,7 @@ DARK: Dict[str, str] = {
     "primary": "#2DD4BF",
     "primary_hover": "#5EEAD4",
     "primary_pressed": "#14B8A6",
+    "primary_soft": "#1D3B38",
     "background": "#161618",
     "background_secondary": "#232326",
     "background_hover": "#303034",
@@ -225,17 +227,121 @@ def _checkbox_indicator_qss() -> str:
     """
 
 
+def _light_accent_qss() -> str:
+    """
+    Returns QSS for the controls the native Windows style paints in its own blue.
+
+    Light mode otherwise keeps native rendering on purpose, but the accent
+    surfaces (selection, check/radio indicators, progress chunk) came out in
+    system blue while everything styled by this app uses the teal palette.
+    Only those are overridden; widget-level stylesheets still win.
+
+    Returns:
+        str: QSS stylesheet string for the active light theme.
+    """
+    t = _active_theme
+    return f"""
+        {_checkbox_indicator_qss()}
+
+        QRadioButton {{
+            spacing: 6px;
+        }}
+        QRadioButton::indicator {{
+            width: 16px;
+            height: 16px;
+            border-radius: 8px;
+            border: 1px solid {t["border_light"]};
+            background-color: #ffffff;
+        }}
+        QRadioButton::indicator:hover {{
+            border-color: {t["primary"]};
+        }}
+        QRadioButton::indicator:checked {{
+            background-color: {t["primary"]};
+            border-color: {t["primary"]};
+        }}
+
+        QAbstractItemView {{
+            selection-background-color: {t["selection"]};
+            selection-color: {t["selection_text"]};
+            outline: none;
+        }}
+        QListView::item:selected, QListWidget::item:selected,
+        QTreeView::item:selected, QTreeWidget::item:selected,
+        QTableView::item:selected, QTableWidget::item:selected {{
+            background-color: {t["selection"]};
+            color: {t["selection_text"]};
+        }}
+        QListView::item:selected:!active, QListWidget::item:selected:!active,
+        QTreeView::item:selected:!active, QTreeWidget::item:selected:!active,
+        QTableView::item:selected:!active, QTableWidget::item:selected:!active {{
+            background-color: {t["selection"]};
+            color: {t["selection_text"]};
+        }}
+
+        QLineEdit, QTextEdit, QPlainTextEdit {{
+            selection-background-color: {t["selection"]};
+            selection-color: {t["selection_text"]};
+        }}
+
+        QProgressBar {{
+            background-color: {t["surface"]};
+            border: none;
+            border-radius: 4px;
+            text-align: center;
+            color: {t["text"]};
+        }}
+        QProgressBar::chunk {{
+            background-color: {t["primary"]};
+            border-radius: 3px;
+        }}
+
+        QMenu {{
+            background-color: {t["background_secondary"]};
+            color: {t["text"]};
+            border: 1px solid {t["border"]};
+            border-radius: 6px;
+            padding: 4px 0 4px 8px;
+        }}
+        QMenu::item {{
+            padding: 6px 24px 6px 8px;
+            border-radius: 4px;
+            background-color: transparent;
+        }}
+        QMenu::item:selected {{
+            background-color: {t["surface_hover"]};
+            color: {t["text"]};
+        }}
+        QMenu::item:disabled {{
+            color: {t["text_secondary"]};
+        }}
+        QMenu::separator {{
+            height: 1px;
+            background-color: {t["border"]};
+            margin: 4px 0;
+        }}
+
+        QToolTip {{
+            background-color: {t["tooltip_bg"]};
+            color: {t["tooltip_text"]};
+            border: none;
+            border-radius: 4px;
+            padding: 2px 6px;
+        }}
+    """
+
+
 def get_app_stylesheet() -> str:
     """
     Returns a comprehensive QSS stylesheet for the active theme, suitable
     for application-level application via QApplication.setStyleSheet().
-    Returns an empty string for light mode to preserve original behavior.
+    Light mode gets the narrower accent-only sheet, see _light_accent_qss().
 
     Returns:
-        str: QSS stylesheet string, or empty string when mode is 'light'.
+        str: QSS stylesheet string for the active theme.
     """
     if _active_mode == "light":
-        return ""
+        return _light_accent_qss()
     t = _active_theme
     return f"""
         QMainWindow, QDialog {{

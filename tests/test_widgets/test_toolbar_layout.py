@@ -218,18 +218,40 @@ class TestToolBarLayout(unittest.TestCase):
         self.assertEqual(committed, [(panel.x(), panel.y())])
         self.assertEqual(len(committed), 1)
 
+    @staticmethod
+    def _icon_pixels(icon):
+        image = (
+            icon.pixmap(QtCore.QSize(16, 16))
+            .toImage()
+            .convertToFormat(QtGui.QImage.Format.Format_ARGB32)
+        )
+        return bytes(
+            image.constBits().asarray(
+                image.height() * image.bytesPerLine()
+            )
+        )
+
     def test_floating_toolbar_collapse_hides_content_and_toggles(self):
         panel, content = self._make_panel()
         toggled = []
         panel.collapseToggled.connect(toggled.append)
 
         self.assertTrue(content.isVisible())
-        self.assertEqual(panel._collapse_btn.text(), "▼")
+        expanded_icon = panel._collapse_btn.icon()
+        self.assertFalse(expanded_icon.isNull())
+        self.assertEqual(panel._collapse_btn.toolTip(), "收起工具栏")
 
         panel.set_collapsed(True)
         self.assertTrue(panel.is_collapsed())
         self.assertFalse(content.isVisible())
-        self.assertEqual(panel._collapse_btn.text(), "▲")
+        collapsed_icon = panel._collapse_btn.icon()
+        self.assertFalse(collapsed_icon.isNull())
+        # The two states must render different artwork, otherwise the button
+        # gives no clue whether the panel is open or shut.
+        self.assertNotEqual(
+            self._icon_pixels(collapsed_icon),
+            self._icon_pixels(expanded_icon),
+        )
         self.assertEqual(panel._collapse_btn.toolTip(), "展开工具栏")
 
         # Idempotent: collapsing again emits nothing.
@@ -239,8 +261,11 @@ class TestToolBarLayout(unittest.TestCase):
         panel.set_collapsed(False)
         self.assertFalse(panel.is_collapsed())
         self.assertTrue(content.isVisible())
-        self.assertEqual(panel._collapse_btn.text(), "▼")
         self.assertEqual(panel._collapse_btn.toolTip(), "收起工具栏")
+        self.assertEqual(
+            self._icon_pixels(panel._collapse_btn.icon()),
+            self._icon_pixels(expanded_icon),
+        )
         self.assertEqual(toggled, [True, False])
 
         # toggle_collapse flips back to collapsed.

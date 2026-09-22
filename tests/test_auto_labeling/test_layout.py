@@ -15,6 +15,7 @@ try:
         get_model_selection_scroll_area_style,
     )
     from anylabeling.views.labeling.widgets.auto_labeling.auto_labeling import (
+        _TOOLBAR_COMPACT,
         AutoLabelingWidget,
         update_model_selection_scroll_area_height,
     )
@@ -55,7 +56,11 @@ class TestAutoLabelingLayout(unittest.TestCase):
         scroll_area = form.findChild(
             QtWidgets.QScrollArea, "model_selection_scroll_area"
         )
-        scroll_area.setStyleSheet(get_model_selection_scroll_area_style())
+        # Match what the widget applies at runtime; a hand-written default
+        # here selected the non-compact scrollbar and asserted the compact one.
+        scroll_area.setStyleSheet(
+            get_model_selection_scroll_area_style(compact=_TOOLBAR_COMPACT)
+        )
         container = form.findChild(
             QtWidgets.QWidget, "model_selection_container"
         )
@@ -103,7 +108,8 @@ class TestAutoLabelingLayout(unittest.TestCase):
 
         self.assertGreater(scroll_area.horizontalScrollBar().maximum(), 0)
         self.assertEqual(
-            scroll_area.horizontalScrollBar().sizeHint().height(), 10
+            scroll_area.horizontalScrollBar().sizeHint().height(),
+            10 if _TOOLBAR_COMPACT else 16,
         )
         self.assertEqual(
             scroll_area.height(),
@@ -248,6 +254,11 @@ class TestAutoLabelingLayout(unittest.TestCase):
         scroll_top = widget.model_selection_scroll_area.geometry().top()
 
         self.assertEqual(button_top, scroll_top)
+        # With no model loaded 运行 is hidden, and a hidden widget keeps its
+        # last geometry, so the pairing can only be measured once it is on
+        # the row -- which is the state this assertion describes.
+        widget.button_run.setVisible(True)
+        self.app.processEvents()
         run_right = widget.button_run.mapTo(
             widget, widget.button_run.rect().topRight()
         ).x()
