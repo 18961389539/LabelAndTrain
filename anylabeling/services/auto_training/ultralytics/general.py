@@ -148,6 +148,7 @@ def create_yolo_dataset(
     skip_empty_files: bool = False,
     only_checked_files: bool = False,
     seed: int = None,
+    seed_source: str = "generated",
 ) -> str:
     """Create YOLO dataset from image list and annotations.
 
@@ -161,6 +162,8 @@ def create_yolo_dataset(
         skip_empty_files: Whether to skip empty label files
         only_checked_files: Whether to use only checked files
         seed: Split seed; a random one is drawn and recorded when omitted
+        seed_source: "project" when the seed is pinned per dataset, so the
+            manifest says whether rounds are comparable by construction
 
     Returns:
         Path to created dataset directory. ``manifest.json`` inside it records
@@ -447,6 +450,7 @@ def create_yolo_dataset(
         "task": task_type,
         "dataset_ratio": dataset_ratio,
         "seed": seed,
+        "seed_source": seed_source,
         "only_checked_files": only_checked_files,
         "skip_empty_files": skip_empty_files,
         "classes": classes,

@@ -2316,6 +2316,26 @@ class UltralyticsDialog(QDialog):
             else:
                 self.append_training_log(self.tr("Cancel to stop training"))
 
+    def _project_split_seed(self):
+        """``(seed, source)`` pinned for the dataset currently being trained.
+
+        The same seed across rounds is what makes two mAP numbers comparable;
+        a freshly random split every round turns val-set churn into an
+        apparent model improvement.
+        """
+        from anylabeling.views.labeling.project import (
+            get_or_create_split_seed,
+            label_dir_for_dataset,
+        )
+
+        label_dir = label_dir_for_dataset(
+            self.output_dir, getattr(self, "image_list", None)
+        )
+        if not label_dir:
+            return None, "generated"
+        seed, created = get_or_create_split_seed(label_dir)
+        return seed, "project" if created else "pinned"
+
     def get_training_args(self, config, data_path=None):
         try:
             if data_path is None:
@@ -2329,6 +2349,7 @@ class UltralyticsDialog(QDialog):
                 else:
                     # Synchronous fallback (the train-tab entry point runs
                     # this step on a background thread and passes data_path).
+                    seed, seed_source = self._project_split_seed()
                     temp_dir = create_yolo_dataset(
                         self.image_list,
                         self.selected_task_type,
@@ -2342,6 +2363,8 @@ class UltralyticsDialog(QDialog):
                         config["checkpoint"].get(
                             "only_checked_files", False
                         ),
+                        seed=seed,
+                        seed_source=seed_source,
                     )
                     logger.info(
                         f"Successfully created YOLO dataset at {temp_dir}"
@@ -2478,6 +2501,9 @@ class UltralyticsDialog(QDialog):
         temp_dir = None
         error_msg = ""
         try:
+            # Runs on a worker thread: no widget calls here. The seed reaches
+            # the log through the training command line on the UI thread.
+            seed, seed_source = self._project_split_seed()
             temp_dir = create_yolo_dataset(
                 self.image_list,
                 self.selected_task_type,
@@ -2487,6 +2513,8 @@ class UltralyticsDialog(QDialog):
                 config["basic"].get("pose_config"),
                 config["checkpoint"].get("skip_empty_files", False),
                 config["checkpoint"].get("only_checked_files", False),
+                seed=seed,
+                seed_source=seed_source,
             )
         except Exception as e:  # noqa: BLE001
             logger.error(f"Dataset preparation failed: {e}")

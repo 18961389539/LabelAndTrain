@@ -147,6 +147,25 @@ def test_hash_reveals_annotations_edited_after_the_run(dataset_root, tmp_path):
     assert general.file_sha1(label_path) != recorded
 
 
+def test_manifest_records_seed_source_for_pinned_splits(dataset_root, tmp_path):
+    images = _make_dataset(tmp_path, count=4)
+    out = create_yolo_dataset(
+        images,
+        "Detect",
+        0.5,
+        _data_file(tmp_path),
+        None,
+        None,
+        False,
+        False,
+        seed=5,
+        seed_source="pinned",
+    )
+    manifest = _manifest(out)
+    assert manifest["seed"] == 5
+    assert manifest["seed_source"] == "pinned"
+
+
 def test_manifest_loader_accepts_dir_or_yaml(dataset_root, tmp_path):
     out, _ = _build(tmp_path, dataset_root, seed=11)
     assert load_dataset_manifest(out)["seed"] == 11
