@@ -1,8 +1,11 @@
 import copy
+import os
 import unittest
 
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+
 try:
-    from PyQt6 import QtCore
+    from PyQt6 import QtWidgets
 
     from anylabeling.views.labeling.settings.controller import (
         SettingsController,
@@ -21,9 +24,12 @@ except Exception:
 class TestSettingsController(unittest.TestCase):
 
     def setUp(self):
-        self.app = QtCore.QCoreApplication.instance()
+        # Must be a QApplication, not a bare QCoreApplication: the instance is
+        # process-wide, and widget tests running after this one would reuse it
+        # and crash while building QWidgets.
+        self.app = QtWidgets.QApplication.instance()
         if self.app is None:
-            self.app = QtCore.QCoreApplication([])
+            self.app = QtWidgets.QApplication([])
         self.config = copy.deepcopy(load_template_config())
         self.applied = []
         self.saved = []
