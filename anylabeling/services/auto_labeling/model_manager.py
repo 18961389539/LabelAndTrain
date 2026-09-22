@@ -719,6 +719,30 @@ class ModelManager(QObject):
                     f"❌ Error in loading model: {model_config['type']} with error: {str(e)}"
                 )
                 return
+        elif model_config["type"] == "yolov8_cls":
+            from .yolov8_cls import YOLOv8Cls
+
+            try:
+                model_config["model"] = YOLOv8Cls(
+                    model_config, on_message=self.new_model_status.emit
+                )
+                with self.loaded_model_config_lock:
+                    self.loaded_model_config = model_config
+                self.auto_segmentation_model_unselected.emit()
+                logger.info(
+                    f"✅ Model loaded successfully: {model_config['type']}"
+                )
+            except Exception as e:  # noqa
+                template = "Error in loading model: {error_message}"
+                translated_template = self.tr(template)
+                error_text = translated_template.format(error_message=str(e))
+                self.new_model_status.emit(error_text)
+                self.model_load_failed.emit(error_text)
+                logger.error(
+                    f"❌ Error in loading model: {model_config['type']} with error: {str(e)}"
+                )
+                return
+
     def set_cache_auto_label(self, text, gid):
         """Set cache auto label"""
         if (

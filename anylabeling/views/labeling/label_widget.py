@@ -147,6 +147,9 @@ LABEL_OPACITY = 128
 CHECKED_FIELD = "checked"
 REVIEW_STATE_FIELD = "review_state"
 REVIEWED_AT_FIELD = "reviewed_at"
+# Whole-image class suggestions from a classification model. Deliberately not
+# shapes: a suggestion becomes an annotation only when a human confirms it.
+PREDICTIONS_FIELD = "predictions"
 FILE_CHECKED_COLOR = "#22A06B"
 FILE_ANNOTATED_COLOR = "#3B82F6"
 FILE_UNCHECKED_COLOR = "#8C98A4"
@@ -869,6 +872,16 @@ class LabelingWidget(LabelDialog):
             shortcuts.get("mark_rejected_and_next"),
             None,
             self.tr("将当前图片标为需返工，并跳到下一张未检查图片"),
+            enabled=False,
+        )
+        # Menu-only on purpose: no shortcut key is invented here, so there is no
+        # config entry that could drift from a real binding.
+        confirm_classification = action(
+            self.tr("确认分类建议"),
+            self.confirm_classification,
+            None,
+            None,
+            self.tr("把分类模型的整图建议写入图片类别（flags）"),
             enabled=False,
         )
 
@@ -1684,6 +1697,7 @@ class LabelingWidget(LabelDialog):
             toggle_annotation_checked=toggle_annotation_checked,
             mark_checked_and_next=mark_checked_and_next,
             mark_rejected_and_next=mark_rejected_and_next,
+            confirm_classification=confirm_classification,
             keep_prev_mode=keep_prev_mode,
             auto_use_last_label_mode=auto_use_last_label_mode,
             auto_use_last_gid_mode=auto_use_last_gid_mode,
@@ -1942,6 +1956,7 @@ class LabelingWidget(LabelDialog):
                 None,
                 mark_checked_and_next,
                 mark_rejected_and_next,
+                confirm_classification,
                 None,
             ),
         )
@@ -4370,10 +4385,105 @@ class LabelingWidget(LabelDialog):
     def _sync_annotation_checked_state(self):
         self._update_annotation_checked_action()
         self._update_current_file_checked_item()
+        self._update_classification_action()
 
     def set_annotation_checked(self, checked):
         state = REVIEW_CONFIRMED if checked else REVIEW_UNCHECKED
         self._apply_review_state(state)
+
+    def _classification_suggestions(self):
+        """``(suggestions, model_name)`` recorded for the open file."""
+        data = self.other_data.get(PREDICTIONS_FIELD)
+        if isinstance(data, dict):
+            return list(data.get("classes") or []), data.get("model")
+        if isinstance(data, list):
+            return list(data), None
+        return [], None
+
+    def _apply_model_predictions(self, predictions):
+        """Store classifier suggestions on the open file, still unconfirmed."""
+        if self.filename is None or self.image.isNull():
+            return
+        cleaned = [
+            item
+            for item in predictions or []
+            if isinstance(item, dict) and item.get("label")
+        ]
+        if cleaned:
+            self.other_data[PREDICTIONS_FIELD] = {
+                "model": cleaned[0].get("model"),
+                "created_at": cleaned[0].get("created_at"),
+                "classes": cleaned,
+            }
+        else:
+            self.other_data.pop(PREDICTIONS_FIELD, None)
+        self._update_classification_action()
+        label_file = self.get_label_file()
+        if self.save_labels(label_file):
+            self.set_clean()
+        if cleaned:
+            top = cleaned[0]
+            score = float(top.get("score") or 0.0)
+            self.status(
+                self.tr("分类建议：%1（%2），确认后才写入类别")
+                .replace("%1", str(top.get("label")))
+                .replace("%2", f"{score:.2f}"),
+                5000,
+            )
+        else:
+            self.status(self.tr("分类模型没有达到阈值的建议"), 3000)
+
+    def confirm_classification(self, _value=False):
+        """Accept the top suggestion into the image flags.
+
+        The Classify training path reads flags, so this is the point where a
+        model suggestion becomes training data - and the only place the label
+        JSON can record it without a score.
+        """
+        if self.filename is None or self.image.isNull():
+            return
+        suggestions, _model_name = self._classification_suggestions()
+        if not suggestions:
+            self.status(self.tr("当前图片没有可确认的分类建议"), 3000)
+            return
+        label = str(suggestions[0].get("label") or "")
+        if not label:
+            return
+
+        flags = {}
+        for row in range(self.flag_widget.count()):
+            item = self.flag_widget.item(row)
+            flags[item.text()] = item.checkState() == Qt.CheckState.Checked
+        flags[label] = True
+        self.load_flags(flags)
+        self.set_dirty()
+        label_file = self.get_label_file()
+        saved = self.save_labels(label_file)
+        if saved:
+            self.set_clean()
+        self._show_save_feedback(saved)
+        self._update_classification_action()
+
+    def _update_classification_action(self):
+        action = getattr(self.actions, "confirm_classification", None)
+        if action is None:
+            return
+        suggestions, _model_name = self._classification_suggestions()
+        enabled = bool(suggestions) and self.filename is not None
+        action.setEnabled(enabled)
+        if suggestions:
+            top = suggestions[0]
+            text = self.tr("确认分类建议：%1").replace(
+                "%1", str(top.get("label"))
+            )
+            tip = self.tr("把模型建议写入图片类别，之后仍可手工改判")
+        else:
+            text = self.tr("确认分类建议")
+            tip = self.tr("没有待确认的分类建议")
+        if action.text() != text:
+            action.setText(text)
+        action.setToolTip(tip)
+        action.setStatusTip(tip)
 
     def _apply_review_state(self, state):
         """Record a review verdict on the current file and save it."""
@@ -8133,6 +8243,13 @@ class LabelingWidget(LabelDialog):
                 return
 
         new_shapes = auto_labeling_result.shapes
+        predictions = getattr(auto_labeling_result, "predictions", None)
+        if predictions is not None:
+            # A classifier returns a whole-image suggestion rather than shapes;
+            # handling it here keeps it out of the shape-replacement logic,
+            # which would otherwise clear the canvas on an empty shape list.
+            self._apply_model_predictions(predictions)
+            return
         stamp_model_shapes(new_shapes, self._current_model_identity())
         # YOLO-consistent guard: a prediction that found *nothing* must not
         # silently erase human ground truth. When the model outputs no

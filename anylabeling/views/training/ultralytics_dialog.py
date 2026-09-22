@@ -2708,8 +2708,8 @@ class UltralyticsDialog(QDialog):
                 self,
                 self.tr("暂不支持"),
                 self.tr(
-                    "当前自动标注支持检测 / 分割 / 姿态权重（ONNX）。"
-                    "分类请先导出后，再手动加载对应模型。"
+                    "该任务暂无对应的自动标注类型，请先导出权重后手动加载模型。"
+                    "已支持：检测 / 分割 / 姿态 / 分类（ONNX）。"
                 ),
             )
             return
@@ -2849,6 +2849,9 @@ class UltralyticsDialog(QDialog):
             model_path=onnx_path,
             classes=classes,
             has_visible=has_visible,
+            # A classifier ranks its top-k; a 0.25 floor would silently drop
+            # every suggestion once the classes are many.
+            conf_threshold=0.0 if self.selected_task_type == "Classify" else 0.25,
         )
         parent = self.parent()
         self.accept()

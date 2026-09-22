@@ -361,11 +361,85 @@ def _reset_batch_processing_state(self):
             delattr(self, attribute)
 
 
+def save_classification_predictions(self, image_file, predictions):
+    """Record whole-image class suggestions for one image.
+
+    Kept apart from the shape path on purpose: a suggestion is not an
+    annotation, so it must neither replace nor extend ``shapes``, and the YOLO
+    sidecar has nothing to write from it.
+    """
+    label_file = osp.splitext(image_file)[0] + ".json"
+    if self.output_dir:
+        label_file = osp.join(self.output_dir, osp.basename(label_file))
+
+    cleaned = [
+        item
+        for item in predictions or []
+        if isinstance(item, dict) and item.get("label")
+    ]
+
+    if osp.isfile(label_file):
+        try:
+            with io_open(label_file, "r") as handle:
+                data = json.load(handle)
+        except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+            logger.warning(f"Classification pass: unreadable {label_file}")
+            return False
+        if not isinstance(data, dict):
+            return False
+    else:
+        config = getattr(self, "_config", None) or {}
+        image_data = None
+        if config.get("store_data"):
+            try:
+                with open(image_file, "rb") as handle:
+                    image_data = base64.b64encode(handle.read()).decode(
+                        "utf-8"
+                    )
+            except OSError:
+                image_data = None
+        image_width, image_height = get_image_size(image_file)
+        data = {
+            "version": __version__,
+            "flags": {},
+            "shapes": [],
+            "imagePath": osp.basename(image_file),
+            "imageData": image_data,
+            "imageHeight": image_height,
+            "imageWidth": image_width,
+            "description": "",
+        }
+
+    if cleaned:
+        data["predictions"] = {
+            "model": cleaned[0].get("model"),
+            "created_at": cleaned[0].get("created_at"),
+            "classes": cleaned,
+        }
+    else:
+        data.pop("predictions", None)
+
+    with io_open(label_file, "w") as handle:
+        json.dump(data, handle, ensure_ascii=False, indent=2)
+    return True
+
+
 def save_auto_labeling_result(self, image_file, auto_labeling_result):
     try:
         label_file = osp.splitext(image_file)[0] + ".json"
         if self.output_dir:
             label_file = osp.join(self.output_dir, osp.basename(label_file))
+
+        predictions = (
+            getattr(auto_labeling_result, "predictions", None)
+            if auto_labeling_result is not None
+            else None
+        )
+        if predictions is not None:
+            # A classifier produced a whole-image suggestion, not shapes.
+            return save_classification_predictions(
+                self, image_file, predictions
+            )
 
         if auto_labeling_result is None:
             new_shapes = []

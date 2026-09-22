@@ -5,7 +5,14 @@ class DownloadCancelledError(Exception):
 
 
 class AutoLabelingResult:
-    def __init__(self, shapes, replace=True, description="", image_path=None):
+    def __init__(
+        self,
+        shapes,
+        replace=True,
+        description="",
+        image_path=None,
+        predictions=None,
+    ):
         """Initialize AutoLabelingResult
 
         Args:
@@ -16,12 +23,19 @@ class AutoLabelingResult:
             Defaults to "".
             image_path (str, optional): Source image path used for
             prediction. Defaults to None.
+            predictions (List[dict], optional): Whole-image suggestions from a
+            classification model, as
+            ``{"label", "score", "model", "created_at"}``. Kept apart from
+            shapes on purpose: a suggestion is not an annotation until a human
+            confirms it, and flags cannot carry a score or a model name.
+            Defaults to None.
         """
 
         self.shapes = shapes
         self.replace = replace
         self.description = description
         self.image_path = image_path
+        self.predictions = predictions
 
 
 class AutoLabelingMode:

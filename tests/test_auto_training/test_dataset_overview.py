@@ -111,8 +111,7 @@ def test_autolabel_type_and_name_helpers():
     # Pose used to be None here, which encoded the missing loop-back rather
     # than testing it; the yolo26_pose adapter is loadable so it maps now.
     assert autolabel_type_for_task("Pose") == "yolo26_pose"
-    # No classification auto-labeling type exists in this build yet.
-    assert autolabel_type_for_task("Classify") is None
+    assert autolabel_type_for_task("Classify") == "yolov8_cls"
     assert autolabel_type_for_task("Obb") is None
     assert sanitize_custom_model_name("detect run #1") == "detect_run_1"
 

@@ -65,6 +65,38 @@ class TestWidgetWiring(unittest.TestCase):
     def test_model_identity_is_safe_without_a_loaded_model(self):
         self.assertIsNone(self.widget._current_model_identity())
 
+    def test_classification_confirm_action_is_bound_and_off_by_default(self):
+        action = self.widget.actions.confirm_classification
+        self.assertFalse(action.isEnabled())
+        # Deliberately no shortcut: an advertised key with no binding is the
+        # drift this test file exists to catch, so do not add one here.
+        self.assertEqual(list(action.shortcuts()), [])
+        texts = [
+            menu.text()
+            for menu in self.widget.menus.file.actions()
+            if menu.text()
+        ]
+        self.assertTrue(
+            any("确认分类建议" in text for text in texts),
+            texts,
+        )
+
+    def test_no_suggestion_until_predictions_are_recorded(self):
+        self.widget.other_data = {}
+        self.assertEqual(self.widget._classification_suggestions(), ([], None))
+        self.widget._update_classification_action()
+        self.assertFalse(self.widget.actions.confirm_classification.isEnabled())
+
+        self.widget.other_data = {
+            "predictions": {
+                "model": "run_07_best",
+                "classes": [{"label": "cat", "score": 0.91}],
+            }
+        }
+        suggestions, model_name = self.widget._classification_suggestions()
+        self.assertEqual(model_name, "run_07_best")
+        self.assertEqual(suggestions[0]["label"], "cat")
+
     def test_review_state_reader_defaults_to_unchecked(self):
         self.widget.other_data = {}
         self.assertEqual(self.widget._current_review_state(), "unchecked")

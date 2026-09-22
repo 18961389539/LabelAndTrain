@@ -272,6 +272,7 @@ def autolabel_type_for_task(task_type) -> Optional[str]:
         "Detect": "yolov8",
         "Segment": "yolov8_seg",
         "Pose": "yolo26_pose",
+        "Classify": "yolov8_cls",
     }
     return mapping.get(task_type)
 
@@ -292,6 +293,7 @@ def write_autolabel_model_yaml(
     classes,
     has_visible: bool = None,
     kpt_threshold: float = None,
+    conf_threshold: float = 0.25,
 ):
     """Write a custom-model yaml that ModelManager.load_custom_model can load.
 
@@ -303,7 +305,7 @@ def write_autolabel_model_yaml(
         "name": name,
         "display_name": display_name,
         "model_path": os.path.abspath(model_path),
-        "conf_threshold": 0.25,
+        "conf_threshold": conf_threshold,
         "iou_threshold": 0.45,
         "classes": dict(classes) if isinstance(classes, dict) else list(classes or []),
     }
