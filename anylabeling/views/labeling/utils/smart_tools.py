@@ -15,7 +15,7 @@ import re
 import time
 
 from PyQt6.QtCore import Qt, QThread, QTimer, QUrl, pyqtSignal
-from PyQt6.QtGui import QDesktopServices
+from PyQt6.QtGui import QColor, QDesktopServices
 from PyQt6.QtWidgets import (
     QAbstractItemView,
     QDialog,
@@ -30,6 +30,19 @@ from PyQt6.QtWidgets import (
 )
 
 from anylabeling.views.labeling.logger import logger
+from anylabeling.views.labeling.provenance import (
+    SOURCE_HUMAN,
+    SOURCE_MODEL,
+    SOURCE_UNKNOWN,
+    collect_other_model_shapes,
+    describe_shape,
+    get_source,
+    is_deletable_stale_shape,
+    is_from_other_model,
+    model_of,
+    stamp_model_shapes,
+)
+from anylabeling.views.labeling.utils._io import save_json
 from anylabeling.views.labeling.utils.active_learning import (
     DEFAULT_ACCEPT,
     DEFAULT_REVIEW,
@@ -74,6 +87,7 @@ __all__ = [
     "run_missing_scan",
     "run_review_jump",
     "run_smart_analysis",
+    "run_stale_model_audit",
     "run_template_propagation",
     "run_threshold_calibration",
     "run_training_advice",
@@ -85,11 +99,21 @@ HARD_EXAMPLE_LIMIT = 50
 RESULT_PATH_ROLE = Qt.ItemDataRole.UserRole
 RESULT_CATEGORY_ROLE = Qt.ItemDataRole.UserRole + 1
 RESULT_DETAIL_ROLE = Qt.ItemDataRole.UserRole + 2
+# Where a row points at one specific shape: {"index", "label", "marker"}.
+RESULT_SHAPE_REF_ROLE = Qt.ItemDataRole.UserRole + 3
 
 
 # --------------------------------------------------------------------------
 # shared helpers
 # --------------------------------------------------------------------------
+def _label_file_for_image(image_path, directory):
+    """Label json path for an image, honouring a separate output dir."""
+    label_file = osp.splitext(image_path)[0] + ".json"
+    if directory:
+        label_file = osp.join(directory, osp.basename(label_file))
+    return label_file
+
+
 def label_dir_for(parent):
     """Folder that actually holds the label json files."""
     directory = getattr(parent, "output_dir", None) or None
@@ -189,19 +213,27 @@ class _ResultDialog(QDialog):
         self.setStyleSheet(_dialog_style())
 
     def add_category(self, title, rows):
-        """``rows`` is a list of ``(text, detail, image_path_or_None)``."""
+        """``rows`` is ``(text, detail, image_path_or_None)`` per entry.
+
+        A fourth element is accepted and stored as the shape reference, so a
+        row can point at one shape instead of one image.
+        """
         from PyQt6.QtGui import QFont
 
         root = QTreeWidgetItem([f"{title}（{len(rows)}）", ""])
         font = QFont()
         font.setBold(True)
         root.setFont(0, font)
-        root.setForeground(0, QtGui.QColor(get_theme()["highlight_text"]))
-        for text, detail, image_path in rows:
+        root.setForeground(0, QColor(get_theme()["highlight_text"]))
+        for row in rows:
+            text, detail, image_path = row[0], row[1], row[2]
+            shape_ref = row[3] if len(row) > 3 else None
             child = QTreeWidgetItem([text, detail or ""])
             child.setData(0, RESULT_PATH_ROLE, image_path or "")
             child.setData(0, RESULT_CATEGORY_ROLE, title)
             child.setData(1, RESULT_DETAIL_ROLE, detail or "")
+            if shape_ref is not None:
+                child.setData(0, RESULT_SHAPE_REF_ROLE, shape_ref)
             root.addChild(child)
         self.tree.addTopLevelItem(root)
         root.setExpanded(True)
@@ -224,6 +256,7 @@ class _ResultDialog(QDialog):
                     "text": item.text(0),
                     "detail": item.data(1, RESULT_DETAIL_ROLE) or item.text(1),
                     "image_path": item.data(0, RESULT_PATH_ROLE) or "",
+                    "shape_ref": item.data(0, RESULT_SHAPE_REF_ROLE),
                 }
             )
         return rows
@@ -691,8 +724,11 @@ def _shapes_to_payloads(shapes):
             try:
                 payloads.append(shape.to_dict())
                 continue
-            except Exception:  # noqa: BLE001
-                pass
+            except Exception as e:  # noqa: BLE001
+                logger.warning(
+                    "Dropping a shape that failed to serialize "
+                    f"(label={getattr(shape, 'label', '?')}): {e}"
+                )
         if isinstance(shape, dict):
             payloads.append(dict(shape))
     return payloads
@@ -826,6 +862,7 @@ def _write_missing(parent, results):
         data = _read_label(label_file)
         if data is None:
             continue
+        stamp_model_shapes(payloads, parent._current_model_identity())
         shapes = data.setdefault("shapes", [])
         existing = {_shape_marker(shape) for shape in shapes}
         for payload in payloads:
@@ -842,6 +879,72 @@ def _write_missing(parent, results):
         except OSError as exc:
             logger.warning(f"Missing scan: failed to write {label_file}: {exc}")
     return written
+
+
+# --------------------------------------------------------------------------
+# stale model-box cleanup (used by action 10)
+# --------------------------------------------------------------------------
+def apply_stale_deletions(targets, current_model, skip_files=None):
+    """Delete the stale model boxes a reviewed report pointed at.
+
+    ``targets`` maps a label file to the shape references the report showed.
+    A reference is honoured only while the shape at that index is still the
+    same box and still attributable to another model, so anything the user
+    moved, relabelled or locked between reporting and deleting is skipped
+    rather than removed.
+    """
+    skipped_files = set(skip_files or ())
+    counts = {
+        "deleted": 0,
+        "files": 0,
+        "skipped_locked": 0,
+        "skipped_changed": 0,
+        "skipped_unavailable": 0,
+    }
+    for label_file, refs in (targets or {}).items():
+        if not refs:
+            continue
+        data = _read_label(label_file)
+        if not isinstance(data, dict):
+            counts["skipped_unavailable"] += len(refs)
+            continue
+        shapes = data.get("shapes") or []
+        doomed = set()
+        for ref in refs:
+            index = ref.get("index")
+            if not isinstance(index, int) or not 0 <= index < len(shapes):
+                counts["skipped_unavailable"] += 1
+                continue
+            shape = shapes[index]
+            if _shape_marker(shape) != ref.get("marker"):
+                counts["skipped_changed"] += 1
+                continue
+            if shape.get("locked"):
+                counts["skipped_locked"] += 1
+                continue
+            if not is_deletable_stale_shape(shape, current_model):
+                counts["skipped_changed"] += 1
+                continue
+            doomed.add(index)
+        if label_file in skipped_files:
+            counts["skipped_changed"] += len(doomed)
+            continue
+        if not doomed:
+            continue
+        data["shapes"] = [
+            shape for i, shape in enumerate(shapes) if i not in doomed
+        ]
+        try:
+            save_json(data, label_file)
+        except OSError as exc:
+            logger.warning(
+                f"Stale cleanup: failed to write {label_file}: {exc}"
+            )
+            counts["skipped_unavailable"] += len(doomed)
+            continue
+        counts["deleted"] += len(doomed)
+        counts["files"] += 1
+    return counts
 
 
 # --------------------------------------------------------------------------
@@ -1073,6 +1176,214 @@ def run_training_advice(parent):
 
 
 # --------------------------------------------------------------------------
+# action 10: stale model-box audit (report only; cleanup stays manual)
+# --------------------------------------------------------------------------
+
+
+def run_stale_model_audit(parent):
+    """List boxes produced by a model other than the one currently loaded.
+
+    Deliberately report-only: a box may have been corrected by hand after the
+    old model drew it, so deleting requires looking at the list first.
+    """
+    directory = label_dir_for(parent)
+    if not directory:
+        _notify(parent, parent.tr("请先打开一个图片文件夹。"), "warning")
+        return
+    entries = list(_label_entries(parent))
+    if not entries:
+        _notify(parent, parent.tr("当前没有可分析的图片。"), "warning")
+        return
+
+    current_model = parent._current_model_identity()
+    by_producer = {}
+    counts = {SOURCE_HUMAN: 0, SOURCE_UNKNOWN: 0}
+    current_model_boxes = 0
+    for image_path, data in entries:
+        if not data:
+            continue
+        for index, shape in collect_other_model_shapes(data, current_model):
+            if shape.get("locked"):
+                continue
+            producer = model_of(shape) or parent.tr("未记录来源")
+            label_name, detail = describe_shape(shape)
+            ref = {
+                "index": index,
+                "marker": _shape_marker(shape),
+                "label_file": _label_file_for_image(image_path, directory),
+            }
+            by_producer.setdefault(producer, []).append(
+                (
+                    osp.basename(image_path),
+                    f"{label_name} · {detail}".strip(" ·"),
+                    image_path,
+                    ref,
+                )
+            )
+        for shape in data.get("shapes") or []:
+            source = get_source(shape)
+            if source in counts:
+                counts[source] += 1
+            elif source == SOURCE_MODEL and not is_from_other_model(
+                shape, current_model
+            ):
+                current_model_boxes += 1
+
+    stale_total = sum(len(rows) for rows in by_producer.values())
+    dialog = _ResultDialog(
+        parent,
+        parent.tr("旧轮模型框盘点"),
+        parent.tr(
+            "双击条目可跳转到对应图片；勾选条目后可删除。被锁定的框、"
+            "来源不明的框以及期间被改动过的框都不会被删除。"
+        ),
+    )
+    dialog.add_category(
+        parent.tr("概览"),
+        [
+            (
+                parent.tr("当前模型：%1").replace(
+                    "%1", current_model or parent.tr("未加载")
+                ),
+                "",
+                "",
+            ),
+            (
+                parent.tr("可清理的旧轮模型框 %1 个").replace(
+                    "%1", str(stale_total)
+                ),
+                parent.tr("由其它模型产生，未被本轮结果覆盖"),
+                "",
+            ),
+            (
+                parent.tr("本轮模型框 %1 个").replace(
+                    "%1", str(current_model_boxes)
+                ),
+                "",
+                "",
+            ),
+            (
+                parent.tr("人工框 %1 个").replace(
+                    "%1", str(counts[SOURCE_HUMAN])
+                ),
+                "",
+                "",
+            ),
+            (
+                parent.tr("来源不明 %1 个").replace(
+                    "%1", str(counts[SOURCE_UNKNOWN])
+                ),
+                parent.tr("早于来源记录功能，不参与清理"),
+                "",
+            ),
+        ],
+    )
+    for producer in sorted(by_producer):
+        dialog.add_category(
+            parent.tr("来自 %1（%2 个）").replace("%1", producer).replace(
+                "%2", str(len(by_producer[producer]))
+            ),
+            by_producer[producer],
+        )
+    if not by_producer:
+        dialog.add_category(
+            parent.tr("可清理项"),
+            [(parent.tr("没有其它模型留下的框"), "", "")],
+        )
+    delete_button = QPushButton(parent.tr("删除所选"))
+    delete_button.clicked.connect(
+        lambda: _delete_reported_stale(parent, dialog)
+    )
+    _append_result_dialog_actions(
+        dialog,
+        parent,
+        directory,
+        parent.tr("旧轮模型框盘点"),
+        extra_buttons=[delete_button],
+    )
+    dialog.exec()
+
+
+def _delete_reported_stale(parent, dialog):
+    """Delete exactly the stale boxes the reviewed report has selected."""
+    rows = [row for row in dialog.selected_rows() if row.get("shape_ref")]
+    if not rows:
+        _notify(parent, parent.tr("请先在列表中选择要删除的框。"), "warning")
+        return
+
+    targets = {}
+    for row in rows:
+        ref = dict(row["shape_ref"])
+        label_file = ref.pop("label_file", None)
+        if not label_file:
+            continue
+        targets.setdefault(label_file, []).append(ref)
+    if not targets:
+        return
+
+    total = sum(len(refs) for refs in targets.values())
+    answer = QMessageBox.question(
+        parent,
+        parent.tr("删除旧轮模型框"),
+        parent.tr(
+            "将从 %1 个文件中删除选中的 %2 个框。\n"
+            "锁定、来源不明以及报告之后被改动过的框会自动跳过。\n"
+            "此操作不进入撤销栈，建议先提交或备份标注目录。"
+        )
+        .replace("%1", str(len(targets)))
+        .replace("%2", str(total)),
+    )
+    if answer != QMessageBox.StandardButton.Yes:
+        return
+
+    current_model = parent._current_model_identity()
+    open_label = None
+    filename = getattr(parent, "filename", None)
+    if filename:
+        open_label = _label_file_for_image(
+            filename, label_dir_for(parent)
+        )
+    # The open file lives in the canvas too: editing it on disk while unsaved
+    # human work is pending would lose that work, so leave it alone.
+    skip = set()
+    if open_label in targets and getattr(parent, "dirty", False):
+        skip.add(open_label)
+
+    counts = apply_stale_deletions(targets, current_model, skip_files=skip)
+
+    if open_label and open_label not in skip and osp.isfile(open_label):
+        parent.load_file(filename)
+    refresh = getattr(parent, "_refresh_file_panel", None)
+    if callable(refresh):
+        refresh()
+
+    if counts["deleted"]:
+        message = parent.tr("已删除 %1 个框（涉及 %2 个文件）").replace(
+            "%1", str(counts["deleted"])
+        ).replace("%2", str(counts["files"]))
+        _notify(parent, message, "copy-green")
+    else:
+        _notify(parent, parent.tr("没有框被删除。"), "warning")
+    skipped = (
+        counts["skipped_locked"]
+        + counts["skipped_changed"]
+        + counts["skipped_unavailable"]
+    )
+    if skipped:
+        logger.info(
+            "Stale cleanup skipped %d boxes (locked=%d, changed=%d, "
+            "unavailable=%d)"
+            % (
+                skipped,
+                counts["skipped_locked"],
+                counts["skipped_changed"],
+                counts["skipped_unavailable"],
+            )
+        )
+    dialog.reject()
+
+
+# --------------------------------------------------------------------------
 # action 9: smart template pre-labeling (batch)
 # --------------------------------------------------------------------------
 def run_template_propagation(parent):
@@ -1217,8 +1528,10 @@ def _write_prelabels(parent, batch):
         size = (0, 0)
         try:
             size = _image_size(item["target"]) or (0, 0)
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception as e:  # noqa: BLE001
+            logger.warning(
+                f"Failed to read image size for {item['target']}: {e}"
+            )
         data.setdefault("imageWidth", size[0] or data.get("imageWidth", 0))
         data.setdefault("imageHeight", size[1] or data.get("imageHeight", 0))
         shapes = data.setdefault("shapes", [])

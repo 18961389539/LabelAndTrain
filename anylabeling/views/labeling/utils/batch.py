@@ -28,6 +28,7 @@ from anylabeling.services.auto_labeling import (
     _SKIP_DET_MODELS,
 )
 from anylabeling.views.labeling.logger import logger
+from anylabeling.views.labeling.provenance import stamp_model_shapes
 from anylabeling.views.labeling.shape import Shape
 from anylabeling.views.labeling.utils._io import io_open
 from anylabeling.views.labeling.utils.yolo_detect import (
@@ -374,6 +375,9 @@ def save_auto_labeling_result(self, image_file, auto_labeling_result):
             new_shapes = [
                 shape.to_dict() for shape in auto_labeling_result.shapes
             ]
+            stamp_model_shapes(
+                new_shapes, self._current_model_identity()
+            )
             new_description = auto_labeling_result.description
             replace = auto_labeling_result.replace
         if osp.exists(label_file):

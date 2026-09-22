@@ -16,14 +16,26 @@ from PyQt6 import QtCore
 from PyQt6.QtCore import QObject, pyqtSignal
 
 from anylabeling.views.labeling.logger import logger
+from anylabeling.views.labeling.schema import (
+    REVIEW_CONFIRMED,
+    REVIEW_UNCHECKED,
+)
 
 CHECKED_FIELD_PATTERN = re.compile(r'"checked"\s*:\s*(true|false)')
+REVIEW_STATE_PATTERN = re.compile(
+    r'"review_state"\s*:\s*"(unchecked|confirmed|rejected)"'
+)
 
 
-def _label_file_checked(label_file: str) -> bool:
-    """Scan a label JSON for its review "checked" flag without full parse."""
+def _label_file_review_state(label_file: str) -> str:
+    """Scan a label JSON for its review state without a full parse.
+
+    ``review_state`` sits right after ``checked`` in the template, so it is
+    always in the first few bytes; files written before that field existed
+    fall back on the legacy ``checked`` flag.
+    """
     if not osp.exists(label_file):
-        return False
+        return REVIEW_UNCHECKED
     try:
         buffer = ""
         with open(label_file, "r", encoding="utf-8") as f:
@@ -32,12 +44,22 @@ def _label_file_checked(label_file: str) -> bool:
                 if not chunk:
                     break
                 buffer = buffer[-32:] + chunk
+                match = REVIEW_STATE_PATTERN.search(buffer)
+                if match:
+                    return match.group(1)
                 match = CHECKED_FIELD_PATTERN.search(buffer)
                 if match:
-                    return match.group(1) == "true"
+                    if match.group(1) == "true":
+                        return REVIEW_CONFIRMED
+                    return REVIEW_UNCHECKED
     except Exception:  # noqa: BLE001
-        return False
-    return False
+        return REVIEW_UNCHECKED
+    return REVIEW_UNCHECKED
+
+
+def _label_file_checked(label_file: str) -> bool:
+    """Scan a label JSON for its review "checked" flag without full parse."""
+    return _label_file_review_state(label_file) == REVIEW_CONFIRMED
 
 
 class LabelCheckWorker(QObject):
@@ -65,7 +87,7 @@ class LabelCheckWorker(QObject):
         for i, label_file in enumerate(self.label_files):
             if self._should_stop:
                 break
-            results.append(_label_file_checked(label_file))
+            results.append(_label_file_review_state(label_file))
             if len(results) >= self.batch_size:
                 self.batch_ready.emit(i + 1 - len(results), results)
                 results = []

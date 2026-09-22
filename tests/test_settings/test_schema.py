@@ -1,6 +1,9 @@
 import unittest
 
 try:
+    from anylabeling.views.labeling.utils.shortcuts_help import (
+        SHORTCUT_GROUPS,
+    )
     from anylabeling.views.labeling.settings.schema import (
         EXCLUDED_KEYS,
         SETTING_FIELDS,
@@ -24,14 +27,30 @@ except Exception:
 class TestSettingsSchema(unittest.TestCase):
 
     def test_field_count(self):
-        self.assertEqual(len(SETTING_FIELDS), 118)
+        self.assertEqual(len(SETTING_FIELDS), 121)
 
     def test_shortcut_and_non_shortcut_count(self):
         shortcut_fields = [
             field for field in SETTING_FIELDS if field.primary == "Shortcuts"
         ]
-        self.assertEqual(len(shortcut_fields), 72)
+        # +mark_checked_and_next, +show_shortcuts_help: both used to be
+        # hard-coded literals on the QAction, so nothing could rebind them.
+        # +mark_rejected_and_next: the "send back for rework" quick action.
+        self.assertEqual(len(shortcut_fields), 75)
         self.assertEqual(len(SETTING_FIELDS) - len(shortcut_fields), 46)
+        keys = {field.key for field in shortcut_fields}
+        self.assertIn("shortcuts.mark_checked_and_next", keys)
+        self.assertIn("shortcuts.mark_rejected_and_next", keys)
+        self.assertIn("shortcuts.show_shortcuts_help", keys)
+        for shape_mode in (
+            "create_cuboid",
+            "create_rotation",
+            "create_quadrilateral",
+            "create_circle",
+            "create_line",
+            "create_linestrip",
+        ):
+            self.assertIn(f"shortcuts.{shape_mode}", keys)
 
     def test_defaults_cover_all_keys(self):
         defaults = defaults_map()
@@ -100,10 +119,22 @@ class TestSettingsSchema(unittest.TestCase):
         self.assertIn("shape.line_width", shape_keys)
         self.assertEqual(
             len(shortcut_fields),
-            72,
+            75,
         )
         for key in SETTINGS_SHORTCUT_KEYS_CORE:
             self.assertIn(key, [field.key for field in shortcut_fields])
+        # Every advertised key must be rebindable, or the help dialog points at
+        # a shortcut the Shortcuts page cannot change.
+        shortcut_keys = {field.key for field in shortcut_fields}
+        advertised = {
+            f"shortcuts.{key}"
+            for _title, entries in SHORTCUT_GROUPS
+            for key, _desc in entries
+        }
+        self.assertEqual(
+            sorted(advertised - shortcut_keys),
+            [],
+        )
         self.assertEqual(len(canvas_fields), 18)
         canvas_keys = {field.key for field in canvas_fields}
         self.assertIn("canvas.crosshair.show", canvas_keys)

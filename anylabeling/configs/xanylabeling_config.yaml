@@ -90,6 +90,9 @@ tools_panel:
   position: null  # [x, y] where the user last dragged it; null = default corner
   collapsed: false
 
+auto_labeling:
+  more_panel_expanded: false  # keep the 更多 panel (conf/iou thresholds) open
+
 # label_dialog
 show_label_text_field: true
 label_completion: startswith
@@ -154,6 +157,9 @@ shortcuts:
   open_next_unchecked: Ctrl+Shift+D
   open_prev_unchecked: Ctrl+Shift+A
   toggle_annotation_checked: Ctrl+Alt+K
+  mark_checked_and_next: Ctrl+Shift+J
+  mark_rejected_and_next: Ctrl+Shift+K
+  show_shortcuts_help: F1
 
   zoom_in: [Ctrl++]
   zoom_out: Ctrl+-

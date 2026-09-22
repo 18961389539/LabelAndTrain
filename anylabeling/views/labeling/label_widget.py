@@ -45,6 +45,7 @@ from ...app_info import (
     __preferred_device__,
 )
 from . import utils
+from .utils.async_label_check import _label_file_review_state
 from .utils.theme import get_theme
 from .utils.style import (
     get_cancel_btn_style,
@@ -61,6 +62,13 @@ from .utils.style import (
 )
 from ...config import get_config, save_config
 from .label_file import LabelFile, LabelFileError
+from .provenance import model_display_name, stamp_model_shapes
+from .schema import (
+    REVIEW_CONFIRMED,
+    REVIEW_REJECTED,
+    REVIEW_STATES,
+    REVIEW_UNCHECKED,
+)
 from .logger import logger
 from .utils.yolo_detect import (
     CLASSES_FILENAME,
@@ -85,6 +93,7 @@ from .utils.smart_tools import (
     run_missing_scan,
     run_review_jump,
     run_smart_analysis,
+    run_stale_model_audit,
     run_template_propagation,
     run_threshold_calibration,
     run_training_advice,
@@ -136,17 +145,21 @@ from anylabeling.views.common.toaster import QToaster
 LABEL_COLORMAP = utils.label_colormap()
 LABEL_OPACITY = 128
 CHECKED_FIELD = "checked"
+REVIEW_STATE_FIELD = "review_state"
+REVIEWED_AT_FIELD = "reviewed_at"
 FILE_CHECKED_COLOR = "#22A06B"
 FILE_ANNOTATED_COLOR = "#3B82F6"
 FILE_UNCHECKED_COLOR = "#8C98A4"
 FILE_NEGATIVE_COLOR = "#F59E0B"
+FILE_REJECTED_COLOR = "#D9534F"
 FILE_ANNOTATION_ROLE = Qt.ItemDataRole.UserRole + 1
 # Distinguishes "confirmed empty (negative sample, no objects)" from
 # ordinary annotated files; negative samples are exported as empty .txt so
 # they participate in YOLO training as background samples.
 FILE_NEGATIVE_ROLE = Qt.ItemDataRole.UserRole + 2
 FILE_LOW_CONF_ROLE = Qt.ItemDataRole.UserRole + 3
-CHECKED_FIELD_PATTERN = re.compile(r'"checked"\s*:\s*(true|false)')
+# Review state of the row: unchecked / confirmed / rejected.
+FILE_REVIEW_ROLE = Qt.ItemDataRole.UserRole + 4
 FILE_SEARCH_COMPLETIONS = (
     "label::",
     "checked::0",
@@ -450,6 +463,7 @@ class LabelingWidget(LabelDialog):
         self.file_filter_combo.addItem(self.tr("未标注"), "unannotated")
         self.file_filter_combo.addItem(self.tr("已标注"), "annotated")
         self.file_filter_combo.addItem(self.tr("已检查"), "checked")
+        self.file_filter_combo.addItem(self.tr("需返工"), "rework")
         self.file_filter_combo.addItem(self.tr("待复核"), "low_conf")
         self.file_filter_combo.setItemData(
             self.file_filter_combo.count() - 1,
@@ -472,6 +486,7 @@ class LabelingWidget(LabelDialog):
             "checked": _create_file_status_icon(FILE_CHECKED_COLOR, True),
             "annotated": _create_file_status_icon(FILE_ANNOTATED_COLOR, True),
             "negative": _create_file_status_icon(FILE_NEGATIVE_COLOR, True),
+            "rejected": _create_file_status_icon(FILE_REJECTED_COLOR, True),
             "unannotated": _create_file_status_icon(
                 FILE_UNCHECKED_COLOR, False
             ),
@@ -823,6 +838,14 @@ class LabelingWidget(LabelDialog):
             self.tr("为未标注图片按相似度匹配已标注模板，批量生成预标注后再人工确认"),
             enabled=True,
         )
+        smart_stale_audit = action(
+            self.tr("10. 旧轮模型框盘点"),
+            lambda: run_stale_model_audit(self),
+            None,
+            "layers",
+            self.tr("列出由其它模型留下、可考虑清理的框（只报告，不删除）"),
+            enabled=True,
+        )
         toggle_annotation_checked = action(
             self.tr("Mark as Checked"),
             self.set_annotation_checked,
@@ -835,9 +858,17 @@ class LabelingWidget(LabelDialog):
         mark_checked_and_next = action(
             self.tr("检查完成并下一张"),
             self.mark_checked_and_next,
-            "Ctrl+J",
+            shortcuts["mark_checked_and_next"],
             None,
             self.tr("将当前图片标为已检查，并跳到下一张未检查图片"),
+            enabled=False,
+        )
+        mark_rejected_and_next = action(
+            self.tr("打回并下一张"),
+            self.mark_rejected_and_next,
+            shortcuts.get("mark_rejected_and_next"),
+            None,
+            self.tr("将当前图片标为需返工，并跳到下一张未检查图片"),
             enabled=False,
         )
 
@@ -956,6 +987,57 @@ class LabelingWidget(LabelDialog):
             shortcuts["create_point"],
             "point",
             self.tr("Start drawing points"),
+            enabled=False,
+        )
+        # These six existed only as config keys: the shortcuts-help dialog
+        # advertised them, but no QAction ever bound them, so the shapes were
+        # reachable through the digit-shortcut manager alone.
+        create_cuboid_mode = action(
+            self.tr("创建立方体"),
+            lambda: self.toggle_draw_mode(False, create_mode="cuboid"),
+            shortcuts["create_cuboid"],
+            None,
+            self.tr("开始画立方体"),
+            enabled=False,
+        )
+        create_rotation_mode = action(
+            self.tr("创建旋转框"),
+            lambda: self.toggle_draw_mode(False, create_mode="rotation"),
+            shortcuts["create_rotation"],
+            None,
+            self.tr("开始画旋转框"),
+            enabled=False,
+        )
+        create_quadrilateral_mode = action(
+            self.tr("创建四边形"),
+            lambda: self.toggle_draw_mode(False, create_mode="quadrilateral"),
+            shortcuts["create_quadrilateral"],
+            None,
+            self.tr("开始画四边形"),
+            enabled=False,
+        )
+        create_circle_mode = action(
+            self.tr("创建圆"),
+            lambda: self.toggle_draw_mode(False, create_mode="circle"),
+            shortcuts["create_circle"],
+            None,
+            self.tr("开始画圆"),
+            enabled=False,
+        )
+        create_line_mode = action(
+            self.tr("创建线段"),
+            lambda: self.toggle_draw_mode(False, create_mode="line"),
+            shortcuts["create_line"],
+            None,
+            self.tr("开始画线段"),
+            enabled=False,
+        )
+        create_linestrip_mode = action(
+            self.tr("创建折线"),
+            lambda: self.toggle_draw_mode(False, create_mode="linestrip"),
+            shortcuts["create_linestrip"],
+            None,
+            self.tr("开始画折线"),
             enabled=False,
         )
         digit_shortcut_0 = action(
@@ -1190,7 +1272,7 @@ class LabelingWidget(LabelDialog):
         shortcuts_help = action(
             self.tr("快捷键速查"),
             self.show_shortcuts_help,
-            None,
+            shortcuts["show_shortcuts_help"],
             icon="search",
             tip=self.tr("查看所有可用快捷键，可按快捷键或功能搜索"),
         )
@@ -1601,6 +1683,7 @@ class LabelingWidget(LabelDialog):
             delete_image_file=delete_image_file,
             toggle_annotation_checked=toggle_annotation_checked,
             mark_checked_and_next=mark_checked_and_next,
+            mark_rejected_and_next=mark_rejected_and_next,
             keep_prev_mode=keep_prev_mode,
             auto_use_last_label_mode=auto_use_last_label_mode,
             auto_use_last_gid_mode=auto_use_last_gid_mode,
@@ -1627,6 +1710,12 @@ class LabelingWidget(LabelDialog):
             edit_brush_mode=edit_brush_mode,
             create_rectangle_mode=create_rectangle_mode,
             create_point_mode=create_point_mode,
+            create_cuboid_mode=create_cuboid_mode,
+            create_rotation_mode=create_rotation_mode,
+            create_quadrilateral_mode=create_quadrilateral_mode,
+            create_circle_mode=create_circle_mode,
+            create_line_mode=create_line_mode,
+            create_linestrip_mode=create_linestrip_mode,
             digit_shortcut_0=digit_shortcut_0,
             digit_shortcut_1=digit_shortcut_1,
             digit_shortcut_2=digit_shortcut_2,
@@ -1637,6 +1726,18 @@ class LabelingWidget(LabelDialog):
             digit_shortcut_7=digit_shortcut_7,
             digit_shortcut_8=digit_shortcut_8,
             digit_shortcut_9=digit_shortcut_9,
+            digit_shortcut_actions=(
+                digit_shortcut_0,
+                digit_shortcut_1,
+                digit_shortcut_2,
+                digit_shortcut_3,
+                digit_shortcut_4,
+                digit_shortcut_5,
+                digit_shortcut_6,
+                digit_shortcut_7,
+                digit_shortcut_8,
+                digit_shortcut_9,
+            ),
             upload_image_flags_file=upload_image_flags_file,
             upload_label_flags_file=upload_label_flags_file,
             upload_label_classes_file=upload_label_classes_file,
@@ -1713,6 +1814,12 @@ class LabelingWidget(LabelDialog):
                 create_brush_polygon_mode,
                 create_rectangle_mode,
                 create_point_mode,
+                create_rotation_mode,
+                create_quadrilateral_mode,
+                create_circle_mode,
+                create_line_mode,
+                create_linestrip_mode,
+                create_cuboid_mode,
                 None,
                 edit_mode,
                 edit_brush_mode,
@@ -1737,6 +1844,12 @@ class LabelingWidget(LabelDialog):
                 create_brush_polygon_mode,
                 create_rectangle_mode,
                 create_point_mode,
+                create_cuboid_mode,
+                create_rotation_mode,
+                create_quadrilateral_mode,
+                create_circle_mode,
+                create_line_mode,
+                create_linestrip_mode,
                 digit_shortcut_0,
                 digit_shortcut_1,
                 digit_shortcut_2,
@@ -1751,6 +1864,7 @@ class LabelingWidget(LabelDialog):
                 brightness_contrast,
                 toggle_annotation_checked,
                 mark_checked_and_next,
+                mark_rejected_and_next,
                 shape_manager,
                 loop_thru_labels,
                 loop_select_labels,
@@ -1778,6 +1892,7 @@ class LabelingWidget(LabelDialog):
             self.addAction(digit_action)
         self.addAction(self.actions.toggle_annotation_checked)
         self.addAction(self.actions.mark_checked_and_next)
+        self.addAction(self.actions.mark_rejected_and_next)
 
         self.canvas.vertex_selected.connect(
             self.actions.remove_point.setEnabled
@@ -1826,6 +1941,7 @@ class LabelingWidget(LabelDialog):
                 delete_image_file,
                 None,
                 mark_checked_and_next,
+                mark_rejected_and_next,
                 None,
             ),
         )
@@ -1842,6 +1958,7 @@ class LabelingWidget(LabelDialog):
                 smart_archive,
                 smart_advice,
                 smart_template,
+                smart_stale_audit,
             ),
         )
         utils.add_actions(self.menus.train, (ultralytics_train,))
@@ -2787,6 +2904,12 @@ class LabelingWidget(LabelDialog):
             self.actions.create_brush_polygon_mode,
             self.actions.create_rectangle_mode,
             self.actions.create_point_mode,
+            self.actions.create_rotation_mode,
+            self.actions.create_quadrilateral_mode,
+            self.actions.create_circle_mode,
+            self.actions.create_line_mode,
+            self.actions.create_linestrip_mode,
+            self.actions.create_cuboid_mode,
             None,
             self.actions.edit_mode,
             self.actions.edit_brush_mode,
@@ -2848,7 +2971,7 @@ class LabelingWidget(LabelDialog):
         self.status(message, timeout)
 
     def _window_title(self):
-        title = __appname__
+        title = f"{__appname__} v{__version__}"
         if self.filename is not None:
             current_index, total_count = self.get_image_progress_info()
             basename = osp.basename(str(self.filename))
@@ -2869,20 +2992,7 @@ class LabelingWidget(LabelDialog):
         self.dirty = False
         self.actions.save.setEnabled(False)
         self.actions.union_selection.setEnabled(False)
-        self.actions.create_mode.setEnabled(True)
-        self.actions.create_brush_polygon_mode.setEnabled(True)
-        self.actions.create_rectangle_mode.setEnabled(True)
-        self.actions.create_point_mode.setEnabled(True)
-        self.actions.digit_shortcut_0.setEnabled(True)
-        self.actions.digit_shortcut_1.setEnabled(True)
-        self.actions.digit_shortcut_2.setEnabled(True)
-        self.actions.digit_shortcut_3.setEnabled(True)
-        self.actions.digit_shortcut_4.setEnabled(True)
-        self.actions.digit_shortcut_5.setEnabled(True)
-        self.actions.digit_shortcut_6.setEnabled(True)
-        self.actions.digit_shortcut_7.setEnabled(True)
-        self.actions.digit_shortcut_8.setEnabled(True)
-        self.actions.digit_shortcut_9.setEnabled(True)
+        self._enable_create_mode_actions()
 
         self.update_progress_title()
         self._update_save_state_label()
@@ -3503,37 +3613,44 @@ class LabelingWidget(LabelDialog):
         self.canvas.create_mode = create_mode
         self.canvas._brush_drawing = False
         if edit:
-            self.actions.create_mode.setEnabled(True)
-            self.actions.create_brush_polygon_mode.setEnabled(True)
-            self.actions.create_rectangle_mode.setEnabled(True)
-            self.actions.create_point_mode.setEnabled(True)
-            self.actions.digit_shortcut_0.setEnabled(True)
-            self.actions.digit_shortcut_1.setEnabled(True)
-            self.actions.digit_shortcut_2.setEnabled(True)
-            self.actions.digit_shortcut_3.setEnabled(True)
-            self.actions.digit_shortcut_4.setEnabled(True)
-            self.actions.digit_shortcut_5.setEnabled(True)
-            self.actions.digit_shortcut_6.setEnabled(True)
-            self.actions.digit_shortcut_7.setEnabled(True)
-            self.actions.digit_shortcut_8.setEnabled(True)
-            self.actions.digit_shortcut_9.setEnabled(True)
+            self._enable_create_mode_actions()
         else:
             self.hide_attributes_panel()
             self.actions.union_selection.setEnabled(False)
-            create_actions = {
-                "polygon": self.actions.create_mode,
-                "rectangle": self.actions.create_rectangle_mode,
-                "point": self.actions.create_point_mode,
-            }
+            create_actions = self._create_mode_actions()
             if create_mode not in create_actions:
                 raise ValueError(f"Unsupported create_mode: {create_mode}")
-            self.actions.create_mode.setEnabled(True)
-            self.actions.create_brush_polygon_mode.setEnabled(True)
-            self.actions.create_rectangle_mode.setEnabled(True)
-            self.actions.create_point_mode.setEnabled(True)
+            self._enable_create_mode_actions()
             create_actions[create_mode].setEnabled(False)
         self.actions.edit_mode.setEnabled(not edit)
         self.update_labeling_instruction()
+
+    def _create_mode_actions(self):
+        """Map each canvas draw mode to the action that selects it.
+
+        Kept in sync with ``Shape.get_supported_shape()``; a mode missing here
+        raises in ``toggle_draw_mode`` instead of silently doing nothing.
+        """
+        actions = self.actions
+        return {
+            "polygon": actions.create_mode,
+            "rectangle": actions.create_rectangle_mode,
+            "point": actions.create_point_mode,
+            "cuboid": actions.create_cuboid_mode,
+            "rotation": actions.create_rotation_mode,
+            "quadrilateral": actions.create_quadrilateral_mode,
+            "circle": actions.create_circle_mode,
+            "line": actions.create_line_mode,
+            "linestrip": actions.create_linestrip_mode,
+        }
+
+    def _enable_create_mode_actions(self):
+        """Re-arm every drawing mode when leaving or entering one."""
+        for mode_action in self._create_mode_actions().values():
+            mode_action.setEnabled(True)
+        self.actions.create_brush_polygon_mode.setEnabled(True)
+        for digit_action in self.actions.digit_shortcut_actions:
+            digit_action.setEnabled(True)
 
     def toggle_brush_polygon_mode(self):
         """Toggle brush drawing mode for polygons."""
@@ -3766,6 +3883,10 @@ class LabelingWidget(LabelDialog):
         items.sort(key=lambda item: self._file_sort_key(item, mode))
         for item in items:
             widget.addItem(item)
+        # Every row just moved, so the path -> row map has to follow it;
+        # a stale map makes _current_file_item() point at another image.
+        for row in range(widget.count()):
+            self.fn_to_index[widget.item(row).text()] = row
         if current_text is not None:
             for row in range(widget.count()):
                 if widget.item(row).text() == current_text:
@@ -3798,10 +3919,12 @@ class LabelingWidget(LabelDialog):
 
         def render():
             tree.clear()
-            for key_text, description, group_title in filter_shortcut_rows(
+            for group_title, key_text, description in filter_shortcut_rows(
                 rows, search.text()
             ):
-                item = QtWidgets.QTreeWidgetItem([key_text, description, group_title])
+                item = QtWidgets.QTreeWidgetItem(
+                    [key_text, description, group_title]
+                )
                 tree.addTopLevelItem(item)
 
         def on_query(_text):
@@ -3884,30 +4007,33 @@ class LabelingWidget(LabelDialog):
             return
         self.import_image_folder(directory, load=True)
 
-    def _label_file_checked(self, label_file):
+    def _review_state_for_label_file(self, label_file):
         if not QtCore.QFile.exists(label_file):
-            return False
-        try:
-            buffer = ""
-            with open(label_file, "r", encoding="utf-8") as f:
-                while True:
-                    chunk = f.read(8192)
-                    if not chunk:
-                        break
-                    buffer = buffer[-32:] + chunk
-                    match = CHECKED_FIELD_PATTERN.search(buffer)
-                    if match:
-                        return match.group(1) == "true"
-        except Exception:
-            return False
-        return False
+            return REVIEW_UNCHECKED
+        return _label_file_review_state(label_file)
+
+    def _label_file_checked(self, label_file):
+        state = self._review_state_for_label_file(label_file)
+        return state == REVIEW_CONFIRMED
 
     def _set_file_item_checked(self, item, checked):
-        changed = item.data(Qt.ItemDataRole.UserRole) is not checked
+        state = REVIEW_CONFIRMED if checked else REVIEW_UNCHECKED
+        return self._set_file_item_review_state(item, state)
+
+    def _set_file_item_review_state(self, item, state):
+        changed = (
+            item.data(Qt.ItemDataRole.UserRole) is not self._is_confirmed(state)
+            or item.data(FILE_REVIEW_ROLE) != state
+        )
         if changed:
-            item.setData(Qt.ItemDataRole.UserRole, checked)
+            item.setData(Qt.ItemDataRole.UserRole, self._is_confirmed(state))
+            item.setData(FILE_REVIEW_ROLE, state)
         self._refresh_file_item_status_icon(item)
         return changed
+
+    @staticmethod
+    def _is_confirmed(state):
+        return state == REVIEW_CONFIRMED
 
     def _set_file_item_annotated(self, item, annotated, negative=False):
         item.setData(FILE_ANNOTATION_ROLE, bool(annotated))
@@ -3923,8 +4049,16 @@ class LabelingWidget(LabelDialog):
     def _refresh_file_item_status_icon(self, item):
         annotated = bool(item.data(FILE_ANNOTATION_ROLE))
         negative = bool(item.data(FILE_NEGATIVE_ROLE))
-        checked = item.data(Qt.ItemDataRole.UserRole) is True
-        if checked:
+        state = item.data(FILE_REVIEW_ROLE) or (
+            REVIEW_CONFIRMED
+            if item.data(Qt.ItemDataRole.UserRole) is True
+            else REVIEW_UNCHECKED
+        )
+        if state == REVIEW_REJECTED:
+            # Sent back for rework: still untrained, but needs eyes on it.
+            item.setIcon(self.file_status_icons["rejected"])
+            item.setToolTip(self.tr("已打回（需返工）"))
+        elif state == REVIEW_CONFIRMED:
             item.setIcon(self.file_status_icons["checked"])
             item.setToolTip(self.tr("已检查"))
         elif annotated and negative:
@@ -4178,10 +4312,13 @@ class LabelingWidget(LabelDialog):
                 item.setCheckState(Qt.CheckState.Unchecked)
         # Reading the JSON is slow on large folders; batch callers pass
         # read_checked=False and let the background checker fill the dot.
-        checked = (
-            self._label_file_checked(label_file) if read_checked else False
+        state = (
+            self._review_state_for_label_file(label_file)
+            if read_checked
+            else REVIEW_UNCHECKED
         )
-        item.setData(Qt.ItemDataRole.UserRole, checked)
+        item.setData(Qt.ItemDataRole.UserRole, state == REVIEW_CONFIRMED)
+        item.setData(FILE_REVIEW_ROLE, state)
         self._refresh_file_item_status_icon(item)
         return item
 
@@ -4190,14 +4327,23 @@ class LabelingWidget(LabelDialog):
             return None
         return self.file_list_widget.item(self.fn_to_index[str(self.filename)])
 
+    def _current_review_state(self):
+        state = self.other_data.get(REVIEW_STATE_FIELD)
+        if state in REVIEW_STATES:
+            return state
+        if self.other_data.get(CHECKED_FIELD, False) is True:
+            return REVIEW_CONFIRMED
+        return REVIEW_UNCHECKED
+
     def _annotation_checked(self):
-        return self.other_data.get(CHECKED_FIELD, False) is True
+        return self._current_review_state() == REVIEW_CONFIRMED
 
     def _update_annotation_checked_action(self):
         if not hasattr(self, "actions"):
             return
         action = self.actions.toggle_annotation_checked
         quick_action = getattr(self.actions, "mark_checked_and_next", None)
+        reject_action = getattr(self.actions, "mark_rejected_and_next", None)
         checked = self._annotation_checked()
         if action.isChecked() != checked:
             action.setChecked(checked)
@@ -4213,20 +4359,38 @@ class LabelingWidget(LabelDialog):
         action.setEnabled(enabled)
         if quick_action is not None:
             quick_action.setEnabled(enabled)
+        if reject_action is not None:
+            reject_action.setEnabled(enabled)
 
     def _update_current_file_checked_item(self):
         item = self._current_file_item()
         if item is not None:
-            self._set_file_item_checked(item, self._annotation_checked())
+            self._set_file_item_review_state(item, self._current_review_state())
 
     def _sync_annotation_checked_state(self):
         self._update_annotation_checked_action()
         self._update_current_file_checked_item()
 
     def set_annotation_checked(self, checked):
+        state = REVIEW_CONFIRMED if checked else REVIEW_UNCHECKED
+        self._apply_review_state(state)
+
+    def _apply_review_state(self, state):
+        """Record a review verdict on the current file and save it."""
         if self.filename is None or self.image.isNull():
             return
-        self.other_data[CHECKED_FIELD] = bool(checked)
+        self.other_data[REVIEW_STATE_FIELD] = state
+        # `checked` stays written for every consumer that has always read it,
+        # including the "train on checked files only" dataset filter.
+        self.other_data[CHECKED_FIELD] = state == REVIEW_CONFIRMED
+        if state == REVIEW_UNCHECKED:
+            self.other_data.pop(REVIEWED_AT_FIELD, None)
+        else:
+            self.other_data[REVIEWED_AT_FIELD] = (
+                QtCore.QDateTime.currentDateTime().toString(
+                    QtCore.Qt.DateFormat.ISODate
+                )
+            )
         self._sync_annotation_checked_state()
         label_file = self.get_label_file()
         if self.save_labels(label_file):
@@ -4241,6 +4405,18 @@ class LabelingWidget(LabelDialog):
             return
         current_filename = str(self.filename)
         self.set_annotation_checked(True)
+        if self.filename is None:
+            return
+        self.open_next_unchecked_image()
+        if str(self.filename) == current_filename:
+            self.open_next_image()
+
+    def mark_rejected_and_next(self, _value=False):
+        """Send the current image back for rework and keep moving."""
+        if self.filename is None or self.image.isNull():
+            return
+        current_filename = str(self.filename)
+        self._apply_review_state(REVIEW_REJECTED)
         if self.filename is None:
             return
         self.open_next_unchecked_image()
@@ -4570,6 +4746,10 @@ class LabelingWidget(LabelDialog):
                 visible = not annotated
             elif mode == "checked":
                 visible = checked
+            elif mode == "rework":
+                visible = (
+                    item.data(FILE_REVIEW_ROLE) == REVIEW_REJECTED
+                )
             elif mode == "low_conf":
                 visible = self._file_item_has_low_conf(item)
             else:
@@ -4585,6 +4765,7 @@ class LabelingWidget(LabelDialog):
         annotated = 0
         checked = 0
         review = 0
+        rework = 0
         for row in range(total):
             item = self.file_list_widget.item(row)
             if bool(item.data(FILE_ANNOTATION_ROLE)):
@@ -4593,15 +4774,18 @@ class LabelingWidget(LabelDialog):
                 checked += 1
             if self._file_item_has_low_conf(item):
                 review += 1
+            if item.data(FILE_REVIEW_ROLE) == REVIEW_REJECTED:
+                rework += 1
         if total <= 0:
             self.file_progress_label.setText("")
             return
         first_line = (
-            self.tr("已标 %1/%2 · 已检查 %3 · 待复核 %4")
+            self.tr("已标 %1/%2 · 已检查 %3 · 待复核 %4 · 需返工 %5")
             .replace("%1", str(annotated))
             .replace("%2", str(total))
             .replace("%3", str(checked))
             .replace("%4", str(review))
+            .replace("%5", str(rework))
         )
         threshold_text = (
             self.tr("已校准阈值")
@@ -6919,7 +7103,7 @@ class LabelingWidget(LabelDialog):
             return
         if (
             not self.may_continue(silent=True)
-            or len(self.image_list) <= 0
+            or self.file_list_widget.count() <= 0
             or self.filename is None
         ):
             return
@@ -6930,7 +7114,7 @@ class LabelingWidget(LabelDialog):
             if item.isHidden():
                 continue
             if not self._file_item_annotation_checked(item):
-                filename = self.image_list[i]
+                filename = item.text()
                 if filename:
                     self.load_file(filename)
                 break
@@ -6940,18 +7124,18 @@ class LabelingWidget(LabelDialog):
             return
         if (
             not self.may_continue(silent=True)
-            or len(self.image_list) <= 0
+            or self.file_list_widget.count() <= 0
             or self.filename is None
         ):
             return
 
         current_index = self.fn_to_index[str(self.filename)]
-        for i in range(current_index + 1, len(self.image_list)):
+        for i in range(current_index + 1, self.file_list_widget.count()):
             item = self.file_list_widget.item(i)
             if item.isHidden():
                 continue
             if not self._file_item_annotation_checked(item):
-                filename = self.image_list[i]
+                filename = item.text()
                 if filename:
                     self.load_file(filename)
                 break
@@ -7427,6 +7611,13 @@ class LabelingWidget(LabelDialog):
 
     def delete_image_file(self):
         if len(self.image_list) < 2:
+            self.status(
+                self.tr(
+                    "至少需要两张图片才能删除图片文件："
+                    "删除后会自动切到相邻图片。"
+                ),
+                4000,
+            )
             return
 
         mb = QtWidgets.QMessageBox
@@ -7678,7 +7869,7 @@ class LabelingWidget(LabelDialog):
         self.filename = None
         valid_files = []
         for file in image_files:
-            if file in self.image_list or not file.lower().endswith(
+            if file in self.fn_to_index or not file.lower().endswith(
                 tuple(extensions)
             ):
                 continue
@@ -7691,7 +7882,7 @@ class LabelingWidget(LabelDialog):
             self.file_list_widget.addItem(item)
             self.fn_to_index[file] = self.file_list_widget.count() - 1
 
-        if len(self.image_list) > 1:
+        if self.file_list_widget.count() > 1:
             self.actions.open_next_image.setEnabled(True)
             self.actions.open_prev_image.setEnabled(True)
             self.actions.open_next_unchecked_image.setEnabled(True)
@@ -7711,6 +7902,9 @@ class LabelingWidget(LabelDialog):
         self._record_recent_dir(dirpath)
         self.filename = None
         self.file_list_widget.clear()
+        # Rows are renumbered below, so the old folder's entries must go too:
+        # a stale index makes _current_file_item() point at another image.
+        self.fn_to_index.clear()
         image_files = []
         label_files = []
 
@@ -7786,14 +7980,14 @@ class LabelingWidget(LabelDialog):
                 label_files, on_batch=self._apply_checked_batch
             )
 
-    def _apply_checked_batch(self, start_index, checked_list):
-        """Apply a batch of review-flag results to file rows by index."""
+    def _apply_checked_batch(self, start_index, state_list):
+        """Apply a batch of review-state results to file rows by index."""
         try:
-            for offset, checked in enumerate(checked_list):
+            for offset, state in enumerate(state_list):
                 row = start_index + offset
                 item = self.file_list_widget.item(row)
                 if item is not None:
-                    self._set_file_item_checked(item, checked)
+                    self._set_file_item_review_state(item, state)
             self._refresh_file_progress()
         except Exception as e:  # noqa: BLE001
             logger.warning(f"Failed to apply checked batch: {e}")
@@ -7917,6 +8111,11 @@ class LabelingWidget(LabelDialog):
         self.update_labeling_instruction()
 
     @pyqtSlot()
+    def _current_model_identity(self):
+        """Name of the loaded auto-labeling model, used for shape provenance."""
+        manager = getattr(self.auto_labeling_widget, "model_manager", None)
+        return model_display_name(getattr(manager, "loaded_model_config", None))
+
     def new_shapes_from_auto_labeling(self, auto_labeling_result):
         """Apply auto labeling results to the current image."""
         if not self.image or not self.image_path:
@@ -7934,6 +8133,7 @@ class LabelingWidget(LabelDialog):
                 return
 
         new_shapes = auto_labeling_result.shapes
+        stamp_model_shapes(new_shapes, self._current_model_identity())
         # YOLO-consistent guard: a prediction that found *nothing* must not
         # silently erase human ground truth. When the model outputs no
         # shapes (empty/background or missed detection) and the current

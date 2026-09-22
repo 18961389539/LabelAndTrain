@@ -5,6 +5,12 @@ from PyQt6 import QtCore, QtGui
 
 from . import utils
 from ..labeling.logger import logger
+from .provenance import (
+    SOURCE_HUMAN,
+    SOURCE_MODEL,
+    SOURCE_UNKNOWN,
+    SOURCES,
+)
 
 # TODO(unknown):
 # - [opt] Store paths instead of creating new ones at each paint.
@@ -45,6 +51,8 @@ class Shape:
         "attributes",
         "kie_linking",
         "locked",
+        "source",
+        "model",
     ]
 
     # The following class variables influence the drawing of all shape objects.
@@ -78,6 +86,8 @@ class Shape:
         direction=0,
         attributes=None,
         kie_linking=None,
+        source=None,
+        model=None,
     ):
         if attributes is None:
             attributes = {}
@@ -89,6 +99,10 @@ class Shape:
         self.description = description
         self.difficult = difficult
         self.kie_linking = kie_linking
+        # A shape built interactively is human work; loaded shapes override
+        # this from the file (absent means "unknown", never "human").
+        self.source = source if source in SOURCES else SOURCE_HUMAN
+        self.model = model
         self.points = []
         self.fill = False
         self.hovered = False
@@ -150,6 +164,9 @@ class Shape:
             dictData["direction"] = self.direction
         if self.locked:
             dictData["locked"] = True
+        dictData["source"] = self.source
+        if self.source == SOURCE_MODEL and self.model:
+            dictData["model"] = self.model
         dictData = {
             **self.other_data,
             **dictData,
@@ -159,6 +176,9 @@ class Shape:
     def load_from_dict(self, data: dict, close=True):
         self.label = data["label"]
         self.score = data.get("score")
+        source = data.get("source")
+        self.source = source if source in SOURCES else SOURCE_UNKNOWN
+        self.model = data.get("model")
         self.points = [QtCore.QPointF(p[0], p[1]) for p in data["points"]]
         self.group_id = data.get("group_id")
         self.description = data.get("description", "")

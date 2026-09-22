@@ -11,7 +11,15 @@ ImageFile.LOAD_TRUNCATED_IMAGES = True
 from . import utils
 from .label_converter import LabelConverter
 from .logger import logger
-from .schema import XLABEL_BASIC_FIELDS, create_xlabel_template
+from .schema import (
+    REVIEW_CONFIRMED,
+    REVIEW_STATES,
+    REVIEW_UNCHECKED,
+    XLABEL_BASIC_FIELDS,
+    create_xlabel_template,
+    is_review_confirmed,
+    review_state_of,
+)
 from .shape import Shape
 from .utils._io import safe_replace
 
@@ -117,7 +125,12 @@ class LabelFile:
 
         # Add new fields if not available
         other_data["description"] = other_data.get("description", "")
-        other_data["checked"] = data.get("checked", False) is True
+        review_state = review_state_of(data)
+        other_data["review_state"] = review_state
+        other_data["reviewed_at"] = data.get("reviewed_at")
+        # `checked` always mirrors the state: existing consumers, including
+        # the "train on checked files only" filter, keep reading it.
+        other_data["checked"] = is_review_confirmed(review_state)
 
         # Only replace data after everything is loaded.
         self.flags = flags
@@ -149,6 +162,11 @@ class LabelFile:
         if flags is None:
             flags = {}
         checked = other_data.get("checked", False) is True
+        review_state = other_data.get("review_state")
+        if review_state not in REVIEW_STATES:
+            review_state = REVIEW_CONFIRMED if checked else REVIEW_UNCHECKED
+        reviewed_at = other_data.get("reviewed_at")
+        checked = is_review_confirmed(review_state)
         for i, shape in enumerate(shapes):
             if shape["shape_type"] == "rectangle":
                 sorted_box = LabelConverter.calculate_bounding_box(
@@ -166,6 +184,8 @@ class LabelFile:
         data = create_xlabel_template(
             flags=flags,
             checked=checked,
+            review_state=review_state,
+            reviewed_at=reviewed_at,
             shapes=shapes,
             image_path=image_path,
             image_data=image_data,
@@ -174,7 +194,7 @@ class LabelFile:
         )
 
         for key, value in other_data.items():
-            if key == "checked":
+            if key in ("checked", "review_state", "reviewed_at"):
                 continue
             assert key not in data
             data[key] = value

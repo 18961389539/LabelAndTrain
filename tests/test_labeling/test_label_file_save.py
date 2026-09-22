@@ -75,3 +75,117 @@ class TestLabelFileSave(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestReviewStatePersistence(unittest.TestCase):
+    """`review_state` is authoritative; `checked` mirrors it for old readers."""
+
+    def _label_path(self, directory, name="a.json"):
+        return os.path.join(directory, name)
+
+    def _write_image(self, directory, name="a.png"):
+        """`LabelFile.load` validates dimensions, so the image must exist."""
+        path = os.path.join(directory, name)
+        if not os.path.exists(path):
+            Image.new("RGB", (2, 3), "white").save(path)
+        return name
+
+    def _save_with(self, filename, other_data):
+        directory = os.path.dirname(filename)
+        image_name = self._write_image(directory)
+        label_file.LabelFile().save(
+            filename=filename,
+            shapes=[],
+            image_path=image_name,
+            image_height=3,
+            image_width=2,
+            image_data=None,
+            other_data=other_data,
+        )
+
+    def _read(self, filename):
+        with open(filename, "r", encoding="utf-8") as stream:
+            return json.load(stream)
+
+    def test_rejected_writes_state_and_clears_checked(self):
+        with tempfile.TemporaryDirectory() as directory:
+            filename = self._label_path(directory)
+            self._save_with(
+                filename,
+                {
+                    "checked": True,
+                    "review_state": "rejected",
+                    "reviewed_at": "2026-09-21T20:00:00",
+                },
+            )
+            data = self._read(filename)
+            self.assertEqual(data["review_state"], "rejected")
+            self.assertIs(data["checked"], False)
+            self.assertEqual(data["reviewed_at"], "2026-09-21T20:00:00")
+
+    def test_confirmed_state_forces_checked_true(self):
+        with tempfile.TemporaryDirectory() as directory:
+            filename = self._label_path(directory)
+            self._save_with(
+                filename, {"checked": False, "review_state": "confirmed"}
+            )
+            self.assertIs(self._read(filename)["checked"], True)
+
+    def test_legacy_file_derives_state_from_checked(self):
+        with tempfile.TemporaryDirectory() as directory:
+            self._write_image(directory, "legacy.png")
+            filename = self._label_path(directory, "legacy.json")
+            with open(filename, "w", encoding="utf-8") as stream:
+                json.dump(
+                    {
+                        "version": "0.0.0",
+                        "flags": {},
+                        "checked": True,
+                        "shapes": [],
+                        "imagePath": "legacy.png",
+                        "imageData": None,
+                        "imageHeight": 1,
+                        "imageWidth": 1,
+                    },
+                    stream,
+                )
+            label = label_file.LabelFile()
+            label.image_dir = directory
+            label.load(filename)
+            self.assertEqual(label.other_data["review_state"], "confirmed")
+            self.assertIs(label.other_data["checked"], True)
+
+    def test_state_survives_a_save_round_trip(self):
+        with tempfile.TemporaryDirectory() as directory:
+            filename = self._label_path(directory)
+            self._save_with(
+                filename,
+                {
+                    "review_state": "rejected",
+                    "reviewed_at": "2026-09-21T20:00:00",
+                    "custom_note": "keep me",
+                },
+            )
+            label = label_file.LabelFile()
+            label.image_dir = directory
+            label.load(filename)
+            self.assertEqual(label.other_data["review_state"], "rejected")
+            self.assertEqual(label.other_data["custom_note"], "keep me")
+
+    def test_scanner_agrees_with_full_parse(self):
+        from anylabeling.views.labeling.utils.async_label_check import (
+            _label_file_review_state,
+        )
+
+        for state in ("unchecked", "confirmed", "rejected"):
+            with self.subTest(state=state):
+                with tempfile.TemporaryDirectory() as directory:
+                    filename = self._label_path(directory)
+                    self._save_with(filename, {"review_state": state})
+                    label = label_file.LabelFile()
+                    label.image_dir = directory
+                    label.load(filename)
+                    self.assertEqual(
+                        _label_file_review_state(filename),
+                        label.other_data["review_state"],
+                    )
