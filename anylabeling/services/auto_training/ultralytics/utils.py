@@ -271,6 +271,7 @@ def autolabel_type_for_task(task_type) -> Optional[str]:
     mapping = {
         "Detect": "yolov8",
         "Segment": "yolov8_seg",
+        "Pose": "yolo26_pose",
     }
     return mapping.get(task_type)
 
@@ -289,8 +290,14 @@ def write_autolabel_model_yaml(
     display_name,
     model_path,
     classes,
+    has_visible: bool = None,
+    kpt_threshold: float = None,
 ):
-    """Write a custom-model yaml that ModelManager.load_custom_model can load."""
+    """Write a custom-model yaml that ModelManager.load_custom_model can load.
+
+    ``classes`` stays a mapping for pose models, which read it as
+    ``{class: [keypoint names]}``; flattening it to a list breaks them.
+    """
     payload = {
         "type": model_type,
         "name": name,
@@ -298,8 +305,14 @@ def write_autolabel_model_yaml(
         "model_path": os.path.abspath(model_path),
         "conf_threshold": 0.25,
         "iou_threshold": 0.45,
-        "classes": list(classes or []),
+        "classes": dict(classes) if isinstance(classes, dict) else list(classes or []),
     }
+    if isinstance(classes, dict):
+        # The pose adapter derives kpt_shape from these when the ONNX carries
+        # no metadata, so the visibility flag has to agree with the names.
+        payload["has_visible"] = True if has_visible is None else bool(has_visible)
+        if kpt_threshold is not None:
+            payload["kpt_threshold"] = float(kpt_threshold)
     parent = os.path.dirname(yaml_path)
     if parent:
         os.makedirs(parent, exist_ok=True)

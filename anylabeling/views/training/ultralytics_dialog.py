@@ -2708,8 +2708,8 @@ class UltralyticsDialog(QDialog):
                 self,
                 self.tr("暂不支持"),
                 self.tr(
-                    "当前自动标注只支持检测 / 分割权重（ONNX）。"
-                    "姿态和分类请先导出后，再手动加载对应模型。"
+                    "当前自动标注支持检测 / 分割 / 姿态权重（ONNX）。"
+                    "分类请先导出后，再手动加载对应模型。"
                 ),
             )
             return
@@ -2778,8 +2778,51 @@ class UltralyticsDialog(QDialog):
         except Exception as exc:  # noqa: BLE001
             logger.warning(f"Failed to record active learning round: {exc}")
 
+    def _resolve_pose_classes(self):
+        """``({class: [keypoint names]}, has_visible)`` from the pose config.
+
+        The pose adapter reads ``classes`` as a mapping and derives
+        ``kpt_shape`` from it when the exported ONNX carries no metadata, so
+        the names must come from the same pose config training used.
+        """
+        path = ""
+        widget = self.config_widgets.get("pose_config")
+        if widget is not None:
+            path = widget.text().strip().strip('"')
+        if not path or not os.path.isfile(path):
+            return None, True
+        try:
+            data = load_yaml_config(path)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(f"Failed to read pose config {path}: {exc}")
+            return None, True
+        classes = (data or {}).get("classes")
+        if not isinstance(classes, dict) or not classes:
+            return None, True
+        mapping = {}
+        for class_name, key_points in classes.items():
+            if not isinstance(key_points, (list, tuple)) or not key_points:
+                return None, True
+            mapping[str(class_name)] = [str(name) for name in key_points]
+        return mapping, bool((data or {}).get("has_visible", True))
+
     def _load_exported_weights_for_autolabel(self, onnx_path):
-        classes = self._resolve_class_names()
+        has_visible = True
+        if self.selected_task_type == "Pose":
+            classes, has_visible = self._resolve_pose_classes()
+            if not classes:
+                QMessageBox.warning(
+                    self,
+                    self.tr("缺少姿态配置"),
+                    self.tr(
+                        "姿态回灌需要与训练时一致的 pose 配置"
+                        "（classes: 类名 → 关键点名列表）。"
+                        "请在数据页填好 Pose Config 后重试。"
+                    ),
+                )
+                return
+        else:
+            classes = self._resolve_class_names()
         if not classes:
             QMessageBox.warning(
                 self,
@@ -2805,6 +2848,7 @@ class UltralyticsDialog(QDialog):
             display_name=display_name,
             model_path=onnx_path,
             classes=classes,
+            has_visible=has_visible,
         )
         parent = self.parent()
         self.accept()

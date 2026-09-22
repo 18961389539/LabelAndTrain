@@ -108,5 +108,129 @@ def test_write_autolabel_model_yaml(tmp_path):
 def test_autolabel_type_and_name_helpers():
     assert autolabel_type_for_task("Detect") == "yolov8"
     assert autolabel_type_for_task("Segment") == "yolov8_seg"
-    assert autolabel_type_for_task("Pose") is None
+    # Pose used to be None here, which encoded the missing loop-back rather
+    # than testing it; the yolo26_pose adapter is loadable so it maps now.
+    assert autolabel_type_for_task("Pose") == "yolo26_pose"
+    # No classification auto-labeling type exists in this build yet.
+    assert autolabel_type_for_task("Classify") is None
+    assert autolabel_type_for_task("Obb") is None
     assert sanitize_custom_model_name("detect run #1") == "detect_run_1"
+
+
+def _write_pose_config(tmp_path, payload):
+    path = tmp_path / "pose.yaml"
+    path.write_text(yaml.safe_dump(payload), encoding="utf-8")
+    return str(path)
+
+
+class _LineEdit:
+    def __init__(self, text):
+        self._text = text
+
+    def text(self):
+        return self._text
+
+
+def _dialog_with_pose_config(tmp_path, text):
+    from anylabeling.views.training.ultralytics_dialog import (
+        UltralyticsDialog,
+    )
+
+    fake = type(
+        "Dialog",
+        (),
+        {"config_widgets": {"pose_config": _LineEdit(text)}},
+    )()
+    fake._resolve_pose_classes = UltralyticsDialog._resolve_pose_classes.__get__(
+        fake
+    )
+    return fake
+
+
+def test_pose_yaml_keeps_the_keypoint_mapping(tmp_path):
+    from anylabeling.services.auto_training.ultralytics.utils import (
+        write_autolabel_model_yaml,
+    )
+
+    path = str(tmp_path / "model.yaml")
+    write_autolabel_model_yaml(
+        path,
+        model_type="yolo26_pose",
+        name="run_best",
+        display_name="训练权重 · run",
+        model_path=str(tmp_path / "best.onnx"),
+        classes={"person": ["nose", "leye", "reye"]},
+        has_visible=False,
+    )
+    payload = yaml.safe_load(open(path, "r", encoding="utf-8"))
+
+    # The adapter iterates classes.items(); a flattened list breaks it.
+    assert isinstance(payload["classes"], dict)
+    assert payload["classes"] == {"person": ["nose", "leye", "reye"]}
+    assert payload["has_visible"] is False
+
+
+def test_detect_yaml_stays_a_plain_class_list(tmp_path):
+    from anylabeling.services.auto_training.ultralytics.utils import (
+        write_autolabel_model_yaml,
+    )
+
+    path = str(tmp_path / "model.yaml")
+    write_autolabel_model_yaml(
+        path,
+        model_type="yolov8",
+        name="run_best",
+        display_name="d",
+        model_path=str(tmp_path / "best.onnx"),
+        classes=["cat", "dog"],
+        has_visible=False,
+    )
+    payload = yaml.safe_load(open(path, "r", encoding="utf-8"))
+    assert payload["classes"] == ["cat", "dog"]
+    # has_visible is a pose-only key; leaking it would confuse other adapters.
+    assert "has_visible" not in payload
+
+
+def test_pose_classes_come_from_the_training_pose_config(tmp_path):
+    config = _write_pose_config(
+        tmp_path,
+        {
+            "classes": {"person": ["nose", "lsho"]},
+            "has_visible": False,
+        },
+    )
+    dialog = _dialog_with_pose_config(tmp_path, config)
+    classes, has_visible = dialog._resolve_pose_classes()
+    assert classes == {"person": ["nose", "lsho"]}
+    assert has_visible is False
+
+
+def test_pose_config_missing_or_malformed_returns_none(tmp_path):
+    dialog = _dialog_with_pose_config(tmp_path, "")
+    assert dialog._resolve_pose_classes() == (None, True)
+
+    dialog = _dialog_with_pose_config(
+        tmp_path, str(tmp_path / "does_not_exist.yaml")
+    )
+    assert dialog._resolve_pose_classes() == (None, True)
+
+    # `classes` must be a non-empty mapping of name -> non-empty list.
+    for payload in (
+        {},
+        {"classes": []},
+        {"classes": {}},
+        {"classes": {"person": []}},
+        {"classes": {"person": "nose"}},
+    ):
+        config = _write_pose_config(tmp_path, payload)
+        dialog = _dialog_with_pose_config(tmp_path, config)
+        assert dialog._resolve_pose_classes() == (None, True), payload
+
+
+def test_pose_config_with_quoted_path_still_loads(tmp_path):
+    config = _write_pose_config(
+        tmp_path, {"classes": {"person": ["nose"]}, "has_visible": True}
+    )
+    dialog = _dialog_with_pose_config(tmp_path, f'"{config}"')
+    classes, _visible = dialog._resolve_pose_classes()
+    assert classes == {"person": ["nose"]}
