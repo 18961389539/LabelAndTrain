@@ -261,7 +261,13 @@ class ModelManager(QObject):
             kept.append(model)
         if removed:
             config["custom_models"] = kept
-            save_config(config)
+            if not save_config(config):
+                self.new_model_status.emit(
+                    self.tr(
+                        "Failed to save the custom-model list; the removed "
+                        "model will come back after the next restart."
+                    )
+                )
             self.load_model_configs()
             logger.info(f"Removed custom model config: {config_file}")
         return removed
@@ -389,7 +395,13 @@ class ModelManager(QObject):
         # Save config
         config = get_config()
         config["custom_models"] = custom_models
-        save_config(config)
+        if not save_config(config):
+            self.new_model_status.emit(
+                self.tr(
+                    "Failed to save the custom-model list; this model will "
+                    "be gone after the next restart."
+                )
+            )
 
         # Reload model configs
         self.load_model_configs()

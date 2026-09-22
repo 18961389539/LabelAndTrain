@@ -32,6 +32,8 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 
 from anylabeling.app_info import (
     __appname__,
+    __upstream_name__,
+    __upstream_version__,
     __version__,
     __url__,
     CLI_HELP_MSG,
@@ -42,6 +44,9 @@ from anylabeling.config import (
     get_work_directory,
 )
 from anylabeling import config as anylabeling_config
+
+# Holds file objects that must stay open for the whole process lifetime.
+_KEEP_OPEN_LOGS = []
 
 
 def is_wsl_environment():
@@ -366,7 +371,10 @@ def _main():
         "checks": lambda args: __import__(
             "anylabeling.views.common.checks", fromlist=["run_checks"]
         ).run_checks(),
-        "version": lambda args: print(__version__),
+        "version": lambda args: print(
+            f"{__appname__} {__version__}"
+            f" (based on {__upstream_name__} {__upstream_version__})"
+        ),
         "config": lambda args: print(
             os.path.join(get_work_directory(), ".xanylabelingrc")
         ),
@@ -385,7 +393,7 @@ def _main():
         return
 
     from anylabeling.views.mainwindow import MainWindow
-    from anylabeling.views.labeling.logger import logger
+    from anylabeling.views.labeling.logger import PlainFormatter, logger
     from anylabeling.views.labeling.utils import new_icon, gradient_text
     from anylabeling.views.labeling.utils.theme import (
         init_theme,
@@ -435,28 +443,33 @@ def _main():
     # --- Crash diagnostics (file logs + faulthandler) ---------------------
     try:
         import faulthandler
+        from logging.handlers import RotatingFileHandler
 
         log_dir = os.path.join(get_work_directory(), "xanylabeling_logs")
         os.makedirs(log_dir, exist_ok=True)
-        _fh = logging.FileHandler(
+        _fh = RotatingFileHandler(
             os.path.join(log_dir, "app.log"),
+            maxBytes=5 * 1024 * 1024,
+            backupCount=3,
             encoding="utf-8",
-            mode="a",
         )
         _fh.setFormatter(
-            logging.Formatter(
+            PlainFormatter(
                 "%(asctime)s | %(levelname)s | %(name)s:%(lineno)d - "
                 "%(message)s"
             )
         )
         logger.addHandler(_fh)
-        faulthandler.enable(
-            file=open(
-                os.path.join(log_dir, "faulthandler.log"),
-                "w",
-                encoding="utf-8",
-            )
+        # faulthandler writes to this raw handle, so it must outlive the
+        # startup scope: a garbage-collected file would leave it writing into
+        # a closed descriptor.
+        _faulthandler_log = open(
+            os.path.join(log_dir, "faulthandler.log"),
+            "w",
+            encoding="utf-8",
         )
+        _KEEP_OPEN_LOGS.append(_faulthandler_log)
+        faulthandler.enable(file=_faulthandler_log)
         logger.info(f"📝 Crash diagnostics enabled: {log_dir}")
     except Exception as e:  # noqa: BLE001
         logger.warning(f"Could not enable crash diagnostics: {e}")

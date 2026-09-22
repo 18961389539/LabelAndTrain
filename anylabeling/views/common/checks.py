@@ -6,7 +6,13 @@ import sys
 
 sys.path.append(str(Path(__file__).parent.parent))
 
-from anylabeling.app_info import __appname__, __version__, __preferred_device__
+from anylabeling.app_info import (
+    __appname__,
+    __upstream_name__,
+    __upstream_version__,
+    __version__,
+    __preferred_device__,
+)
 from anylabeling.views.labeling.utils.general import collect_system_info
 
 
@@ -30,6 +36,7 @@ def run_checks() -> None:
         app_info = {
             "App Name": __appname__,
             "App Version": __version__,
+            "Upstream": f"{__upstream_name__} {__upstream_version__}",
             "Preferred Device": __preferred_device__,
         }
         system_info, pkg_info = collect_system_info()

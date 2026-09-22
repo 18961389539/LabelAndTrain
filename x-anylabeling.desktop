@@ -1,7 +1,7 @@
 [Desktop Entry]
 Name=JLLabelingAndTrain
 Comment=Advanced Auto Labeling Solution with Added Features
-Exec=JLLabelingAndTrain
+Exec=jllabelingandtrain
 Icon=anylabeling/resources/images/logo.png
 Terminal=false
 Type=Application

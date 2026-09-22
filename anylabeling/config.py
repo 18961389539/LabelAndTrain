@@ -130,7 +130,7 @@ def save_config(config):
             yaml.safe_dump(config, f, allow_unicode=True)
         return True
     except Exception:  # noqa
-        logger.warning(f"Failed to save config: {user_config_file}")
+        logger.exception(f"Failed to save config: {user_config_file}")
         return False
 
 

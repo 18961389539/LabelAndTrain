@@ -1475,7 +1475,10 @@ class UltralyticsDialog(QDialog):
 
     def save_current_config(self):
         try:
-            save_config(self.get_current_config())
+            # save_config() never raises — it returns False when the write
+            # fails, so "Success" here used to be shown on a failed save.
+            if not save_config(self.get_current_config()):
+                raise RuntimeError(get_settings_config_path())
             template = self.tr("Configuration saved successfully to %s")
             msg_test = template % get_settings_config_path()
             QMessageBox.information(self, self.tr("Success"), msg_test)
@@ -1483,6 +1486,31 @@ class UltralyticsDialog(QDialog):
             QMessageBox.warning(
                 self, self.tr("Error"), f"Failed to save config: {str(e)}"
             )
+
+    def _describe_dir_contents(self, project_dir):
+        """Summarize what an overwrite would destroy, for the confirm text."""
+        try:
+            entries = os.listdir(project_dir)
+        except OSError:
+            return self.tr("（无法读取目录内容）")
+        weights = os.path.join(project_dir, "weights")
+        has_weights = os.path.isdir(weights) and bool(os.listdir(weights))
+        args_path = os.path.join(project_dir, "args.yaml")
+        parts = []
+        if has_weights:
+            parts.append(self.tr("包含已训练权重 weights/"))
+        elif os.path.isdir(weights):
+            parts.append(self.tr("仅有空的 weights/ 目录"))
+        if os.path.isfile(args_path):
+            parts.append(self.tr("含上次训练参数 args.yaml"))
+        others = [
+            name for name in entries if name not in ("weights", "args.yaml")
+        ]
+        if others:
+            parts.append(self.tr("以及 %d 个其它文件/子目录") % len(others))
+        if not parts:
+            return self.tr("目录为空，删除不会丢失内容。")
+        return "、".join(parts) + self.tr("。删除后不可恢复。")
 
     def start_training(self):
         if self.training_status == "training":
@@ -1541,7 +1569,13 @@ class UltralyticsDialog(QDialog):
                 self,
                 self.tr("Directory Exists"),
                 self.tr(
-                    "Project directory already exists! Do you want to overwrite it?\nIf not, please manually modify the `Name` field value."
+                    "将删除已有项目目录并重新开始训练：\n"
+                    "{path}\n\n"
+                    "{detail}\n"
+                    "确定要覆盖吗？如需保留，请点「否」并修改「Name」字段。"
+                ).format(
+                    path=project_dir,
+                    detail=self._describe_dir_contents(project_dir),
                 ),
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                 QMessageBox.StandardButton.No,
@@ -1556,6 +1590,16 @@ class UltralyticsDialog(QDialog):
                 except Exception as e:
                     error_msg = f"Failed to remove directory: {str(e)}"
                     logger.error(error_msg)
+                    QMessageBox.critical(
+                        self,
+                        self.tr("Directory Exists"),
+                        self.tr(
+                            "无法删除该目录，训练已取消。\n"
+                            "{path}\n原因：{error}\n\n"
+                            "如果目录正被资源管理器或其它程序占用，"
+                            "请先关闭后重试。"
+                        ).format(path=project_dir, error=str(e)),
+                    )
                     return
             else:
                 return

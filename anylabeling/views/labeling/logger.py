@@ -1,4 +1,5 @@
 import logging
+import re
 import sys
 from functools import wraps
 from typing import Callable, Dict
@@ -53,6 +54,15 @@ class ColoredFormatter(logging.Formatter):
         record.lineno2 = termcolor.colored(record.lineno, color="cyan")
 
         return record
+
+
+class PlainFormatter(logging.Formatter):
+    """Drops ANSI escapes so file logs stay greppable."""
+
+    _ANSI_ESCAPE = re.compile(r"\x1b\[[0-9;]*m")
+
+    def format(self, record: logging.LogRecord) -> str:
+        return self._ANSI_ESCAPE.sub("", super().format(record))
 
 
 @singleton

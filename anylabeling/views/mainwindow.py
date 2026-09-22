@@ -5,7 +5,13 @@ import os
 from PyQt6 import QtCore
 from PyQt6.QtWidgets import QMainWindow, QStatusBar, QVBoxLayout, QWidget
 
-from ..app_info import __appdescription__, __appname__, __version__
+from ..app_info import (
+    __appdescription__,
+    __appname__,
+    __upstream_name__,
+    __upstream_version__,
+    __version__,
+)
 from .labeling.label_wrapper import LabelingWrapper
 
 
@@ -62,7 +68,9 @@ class MainWindow(QMainWindow):
 
         status_bar = QStatusBar()
         status_bar.showMessage(
-            f"{__appname__} v{__version__} - {__appdescription__}"
+            f"{__appname__} v{__version__}"
+            f" (based on {__upstream_name__} {__upstream_version__})"
+            f" - {__appdescription__}"
         )
         self.setStatusBar(status_bar)
         self._restore_window_geometry()
