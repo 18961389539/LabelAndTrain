@@ -2742,7 +2742,9 @@ class UltralyticsDialog(QDialog):
             watch_relabel_result(parent, label_dir, baseline)
 
         widget.model_manager.model_loaded.connect(_on_exported_model_loaded)
-        widget.model_manager.load_custom_model(yaml_path)
+        # Pin it: the iteration history now references this model, so the
+        # custom-model cap must never evict it behind the user's back.
+        widget.model_manager.load_custom_model(yaml_path, pin=True)
 
     def _sync_training_classes_to_label_dock(self, parent, classes):
         if parent is None or not classes:

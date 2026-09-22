@@ -30,10 +30,27 @@ from anylabeling.services.auto_labeling import (
 )
 
 
+def pick_eviction_index(custom_models):
+    """Least recently used entry that is safe to drop, or ``None``.
+
+    Entries pinned by the label -> train -> auto-label loop are skipped: the
+    iteration history references them by name, so evicting one would leave a
+    recorded round pointing at a model that can no longer be loaded.
+    """
+    candidates = [
+        (model.get("last_used", 0) or 0, index)
+        for index, model in enumerate(custom_models)
+        if not model.get("keep")
+    ]
+    if not candidates:
+        return None
+    return min(candidates)[1]
+
+
 class ModelManager(QObject):
     """Model manager"""
 
-    MAX_NUM_CUSTOM_MODELS = 5
+    MAX_NUM_CUSTOM_MODELS = 30
     CUSTOM_MODEL_NAME_PATTERN = re.compile(r"[A-Za-z0-9._-]+")
     model_configs_changed = pyqtSignal(list)
     new_model_status = pyqtSignal(str)
@@ -272,7 +289,7 @@ class ModelManager(QObject):
             logger.info(f"Removed custom model config: {config_file}")
         return removed
 
-    def load_custom_model(self, config_file):
+    def load_custom_model(self, config_file, pin=False):
         """Run custom model loading in a thread"""
         config_file = os.path.normpath(os.path.abspath(config_file))
         if (
@@ -359,6 +376,8 @@ class ModelManager(QObject):
 
         # Add or replace custom model
         custom_models = get_config().get("custom_models", [])
+        if pin:
+            model_config["keep"] = True
         matched_index = None
         for i, model in enumerate(custom_models):
             if os.path.normpath(model["config_file"]) == os.path.normpath(
@@ -367,29 +386,43 @@ class ModelManager(QObject):
                 matched_index = i
                 break
         if matched_index is not None:
+            previous = custom_models[matched_index]
+            if "keep" not in model_config and previous.get("keep"):
+                model_config["keep"] = True
             model_config["last_used"] = time.time()
             custom_models[matched_index] = model_config
         else:
             if len(custom_models) >= self.MAX_NUM_CUSTOM_MODELS:
-                custom_models.sort(
-                    key=lambda x: x.get("last_used", 0), reverse=True
-                )
-                evicted = custom_models.pop()
-                evicted_name = evicted.get("display_name", evicted.get("name", ""))
-                logger.warning(
-                    f"Custom model limit reached "
-                    f"({self.MAX_NUM_CUSTOM_MODELS}); evicting "
-                    f"{evicted_name}"
-                )
-                self.new_model_status.emit(
-                    self.tr(
-                        "Custom model limit reached (%d). "
-                        "Removed the least recently used model: %s. "
-                        "Use the trash icon in the model list to manage "
-                        "custom models."
+                victim = pick_eviction_index(custom_models)
+                if victim is None:
+                    self.new_model_status.emit(
+                        self.tr(
+                            "Custom model limit (%d) reached, but every "
+                            "model is pinned by an iteration round. Adding "
+                            "this one without removing anything; unpin or "
+                            "delete models you no longer need."
+                        )
+                        % self.MAX_NUM_CUSTOM_MODELS
                     )
-                    % (self.MAX_NUM_CUSTOM_MODELS, evicted_name)
-                )
+                else:
+                    evicted = custom_models.pop(victim)
+                    evicted_name = evicted.get(
+                        "display_name", evicted.get("name", "")
+                    )
+                    logger.warning(
+                        f"Custom model limit reached "
+                        f"({self.MAX_NUM_CUSTOM_MODELS}); evicting "
+                        f"{evicted_name}"
+                    )
+                    self.new_model_status.emit(
+                        self.tr(
+                            "Custom model limit reached (%d). "
+                            "Removed the least recently used model: %s. "
+                            "Use the trash icon in the model list to manage "
+                            "custom models."
+                        )
+                        % (self.MAX_NUM_CUSTOM_MODELS, evicted_name)
+                    )
             custom_models = [model_config] + custom_models
 
         # Save config
