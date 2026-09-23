@@ -2,7 +2,7 @@
 
 ## 1. Installation and Deployment
 
-X-AnyLabeling provides multiple installation methods. You can install the official package directly via `pip` to get the latest stable version, install from source by cloning the official GitHub repository, or use the convenient GUI installer package.
+This fork (JLLabelingAndTrain) installs one way only: **from this repository's source**. It is not published on PyPI and ships no prebuilt package — the `x-anylabeling-cvhub` wheel and the installers under upstream's GitHub Releases belong to **X-AnyLabeling itself**, and neither contains the features this repository's README describes.
 
 > [!NOTE]
 > **Advanced Features**: The following advanced features are only available through Git clone installation. Please refer to the corresponding documentation for configuration instructions.
@@ -110,38 +110,19 @@ source .venv-cu13/bin/activate     # Linux
 
 ### 1.2 Installation
 
-#### 1.2.1 Pip Installation (Beta Pre-release)
+This fork is **not published on PyPI**. Installing `x-anylabeling-cvhub` gets you
+upstream's application, which has none of the features described in this
+repository's README — build from source instead:
 
-You can easily install the latest beta pre-release version of X-AnyLabeling with the following commands (using `uv pip` is recommended):
-
-```bash
-pip install -U uv
-
-# CPU [Windows/Linux/macOS]
-uv pip install --pre "x-anylabeling-cvhub[cpu]"
-
-# CUDA 12.x is the default GPU option [Windows/Linux]
-uv pip install --pre "x-anylabeling-cvhub[gpu]"
-
-# CUDA 11.x [Windows/Linux]
-uv pip install --pre "x-anylabeling-cvhub[gpu-cu11]"
-
-# CUDA 13.x [Windows/Linux]
-uv pip install --pre "x-anylabeling-cvhub[gpu-cu13]"
-```
-
-#### 1.2.2 Git Clone (Recommended)
-
-**Step a.** Clone the repository.
+**Step a.** Clone this fork.
 
 ```bash
-git clone https://github.com/CVHub520/X-AnyLabeling.git
-cd X-AnyLabeling
+git clone https://github.com/18961389539/LabelAndTrain.git
+cd LabelAndTrain
 ```
 
-After cloning the repository, you can choose to install the dependencies in either developer mode or regular mode according to your needs.
-
-**Step b.** Install the dependencies.
+**Step b.** Install it in editable mode with the extra that matches your hardware
+(`uv pip` is recommended; plain `pip` works the same):
 
 ```bash
 pip install -U uv
@@ -149,7 +130,7 @@ pip install -U uv
 # CPU [Windows/Linux/macOS]
 uv pip install -e ".[cpu]"
 
-# CUDA 12.x is the default GPU option [Windows/Linux]
+# CUDA 12.x [Windows/Linux]
 uv pip install -e ".[gpu]"
 
 # CUDA 11.x [Windows/Linux]
@@ -159,37 +140,45 @@ uv pip install -e ".[gpu-cu11]"
 uv pip install -e ".[gpu-cu13]"
 ```
 
-If you need to perform secondary development or package compilation, you can install the `dev` dependencies simultaneously, for example:
+**Step c.** Launch it.
 
 ```bash
-uv pip install -e ".[cpu,dev]"
+jllabelingandtrain
 ```
+
+> [!NOTE]
+> Install only one of the `cpu`, `gpu-cu11`, `gpu`, or `gpu-cu13` extras in an
+> environment. CUDA 11.x additionally requires `onnx >= 1.15.0, < 1.16.1`.
+
+After cloning the repository, install the dependencies with the extra that
+matches your hardware. For secondary development or building the packaged
+executable, add `dev` as well, e.g. `uv pip install -e ".[cpu,dev]"`.
 
 > [!NOTE]
 > If you switch to a new project directory, rerun the install command there, otherwise the environment will reference the source code from the previous directory.
 
-After installation, you can verify it by running the following command:
+Verify the install by running:
 
 ```bash
-xanylabeling checks   # Display system and version information
+jllabelingandtrain checks   # Display system and version information
 ```
 
 You can also run the following commands to get other information:
 
 ```bash
-xanylabeling help     # Display help information
-xanylabeling version  # Display version number
-xanylabeling config   # Display configuration file path
+jllabelingandtrain help     # Display help information
+jllabelingandtrain version  # Display version number
+jllabelingandtrain config   # Display configuration file path
 ```
 
 After verification, you can run the application directly:
 
 ```bash
-xanylabeling
+jllabelingandtrain
 ```
 
 > [!TIP]
-> You can use `xanylabeling --help` to view all available command line options. Please refer to the **Command Line Parameters** table below for complete parameter descriptions.
+> You can use `jllabelingandtrain --help` to view all available command line options. Please refer to the **Command Line Parameters** table below for complete parameter descriptions.
 
 | Option                     | Description                                                                                                   |
 |----------------------------|---------------------------------------------------------------------------------------------------------------|
@@ -217,8 +206,8 @@ xanylabeling
 We also supports batch conversion between multiple annotation formats:
 
 ```bash
-xanylabeling convert         # List all supported conversion tasks
-xanylabeling convert <task>  # Show detailed help and examples for a specific task, i.e., xlabel2yolo
+jllabelingandtrain convert         # List all supported conversion tasks
+jllabelingandtrain convert <task>  # Show detailed help and examples for a specific task, i.e., xlabel2yolo
 ```
 
 > [!IMPORTANT]
@@ -273,20 +262,18 @@ set PYTHONPATH=C:\path\to\X-AnyLabeling
 > [!NOTE]
 > **Special Note for Fedora KDE Users**: If you encounter slow mouse movement or response lag, try using the `--qt-platform xcb` parameter to improve performance:
 > ```bash
-> xanylabeling --qt-platform xcb
+> jllabelingandtrain --qt-platform xcb
 > ```
 
-#### 1.2.3 GUI Installer Package
+#### 1.2.3 Prebuilt Installer Package
 
-> **Download Link**: [GitHub Releases](https://github.com/CVHub520/X-AnyLabeling/releases)
+This fork publishes **no** prebuilt installers. If you need a distributable
+executable, build it following section 3; the artifact comes out as
+`JLLabelingAndTrain-v<version>-CPU` (or `-GPU`).
 
-Compared to running from source code, the GUI installer package provides a more convenient user experience. Users don't need to understand the underlying implementation and can use it directly after extraction. However, the GUI installer package also has some limitations:
+Upstream's [GitHub Releases](https://github.com/CVHub520/X-AnyLabeling/releases)
+are builds of a different program and are not a substitute for this fork.
 
-- **Difficult Troubleshooting**: If crashes or errors occur, it may be difficult to quickly identify the specific cause, increasing the difficulty of troubleshooting.
-- **Feature Lag**: The GUI version may lag behind the source code version in functionality, potentially leading to missing features and compatibility issues.
-- **GPU Runtime Requirements**: Select the package matching CUDA 11, 12, or 13 and install the corresponding CUDA and cuDNN runtime libraries. The application falls back to CPU when the required GPU libraries cannot be loaded.
-
-Therefore, it is recommended to choose between running from source code and using the GUI installer package based on your specific needs and usage scenarios to optimize the user experience.
 
 ## 2. Usage
 

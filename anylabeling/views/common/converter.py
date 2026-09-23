@@ -78,6 +78,7 @@ SUPPORTED_TASKS = {
     },
 }
 
+
 def get_image_files(image_dir):
     image_files = []
     for ext in IMAGE_EXTENSIONS:
@@ -128,11 +129,15 @@ def list_supported_tasks():
     print(colored("=" * 80 + "\n", "cyan"))
 
     print(colored("Usage:", "white", attrs=["bold"]))
-    print("  xanylabeling convert                          # Show all tasks")
     print(
-        "  xanylabeling convert --task <task>            # Show detailed help for a task"
+        "  jllabelingandtrain convert                          # Show all tasks"
     )
-    print("  xanylabeling convert --task <task> [options]  # Run conversion")
+    print(
+        "  jllabelingandtrain convert --task <task>            # Show detailed help for a task"
+    )
+    print(
+        "  jllabelingandtrain convert --task <task> [options]  # Run conversion"
+    )
     print()
 
 
@@ -142,7 +147,7 @@ def show_task_help(task_name):
         print(colored(f"\n✗ Unknown task: '{task_name}'", "red"))
         print(
             colored(
-                "Use 'xanylabeling convert' to see all available tasks.\n",
+                "Use 'jllabelingandtrain convert' to see all available tasks.\n",
                 "yellow",
             )
         )
@@ -184,104 +189,105 @@ def show_task_help(task_name):
     if task_name == "yolo2xlabel":
         print(f"  # Detection")
         print(
-            f"  xanylabeling convert --task yolo2xlabel --mode detect --images ./images --labels ./labels \\"
+            f"  jllabelingandtrain convert --task yolo2xlabel --mode detect --images ./images --labels ./labels \\"
         )
         print(f"    --output ./output --classes classes.txt\n")
         print(f"  # Segmentation")
         print(
-            f"  xanylabeling convert --task yolo2xlabel --mode segment --images ./images --labels ./labels \\"
+            f"  jllabelingandtrain convert --task yolo2xlabel --mode segment --images ./images --labels ./labels \\"
         )
         print(f"    --output ./output --classes classes.txt\n")
         print(f"  # OBB (Oriented Bounding Box)")
         print(
-            f"  xanylabeling convert --task yolo2xlabel --mode obb --images ./images --labels ./labels \\"
+            f"  jllabelingandtrain convert --task yolo2xlabel --mode obb --images ./images --labels ./labels \\"
         )
         print(f"    --output ./output --classes classes.txt\n")
         print(f"  # Pose")
         print(
-            f"  xanylabeling convert --task yolo2xlabel --mode pose --images ./images --labels ./labels \\"
+            f"  jllabelingandtrain convert --task yolo2xlabel --mode pose --images ./images --labels ./labels \\"
         )
         print(f"    --output ./output --pose-cfg pose_config.yaml\n")
 
     elif task_name == "xlabel2yolo":
         print(f"  # Detection")
         print(
-            f"  xanylabeling convert --task xlabel2yolo --mode detect --images ./images --labels ./labels \\"
+            f"  jllabelingandtrain convert --task xlabel2yolo --mode detect --images ./images --labels ./labels \\"
         )
         print(f"    --output ./output --classes classes.txt\n")
         print(f"  # Segmentation (skip empty files)")
         print(
-            f"  xanylabeling convert --task xlabel2yolo --mode segment --images ./images --labels ./labels \\"
+            f"  jllabelingandtrain convert --task xlabel2yolo --mode segment --images ./images --labels ./labels \\"
         )
         print(
             f"    --output ./output --classes classes.txt --skip-empty-files\n"
         )
         print(f"  # OBB")
         print(
-            f"  xanylabeling convert --task xlabel2yolo --mode obb --images ./images --labels ./labels \\"
+            f"  jllabelingandtrain convert --task xlabel2yolo --mode obb --images ./images --labels ./labels \\"
         )
         print(f"    --output ./output --classes classes.txt\n")
         print(f"  # Pose")
         print(
-            f"  xanylabeling convert --task xlabel2yolo --mode pose --images ./images --labels ./labels \\"
+            f"  jllabelingandtrain convert --task xlabel2yolo --mode pose --images ./images --labels ./labels \\"
         )
         print(f"    --output ./output --pose-cfg pose_config.yaml\n")
 
     elif task_name == "voc2xlabel":
         print(f"  # Detection")
         print(
-            f"  xanylabeling convert --task voc2xlabel --mode detect --labels ./Annotations --output ./output\n"
+            f"  jllabelingandtrain convert --task voc2xlabel --mode detect --labels ./Annotations --output ./output\n"
         )
         print(f"  # Segmentation")
         print(
-            f"  xanylabeling convert --task voc2xlabel --mode segment --labels ./Annotations --output ./output\n"
+            f"  jllabelingandtrain convert --task voc2xlabel --mode segment --labels ./Annotations --output ./output\n"
         )
 
     elif task_name == "xlabel2voc":
         print(f"  # Detection")
         print(
-            f"  xanylabeling convert --task xlabel2voc --mode detect --images ./images --labels ./labels \\"
+            f"  jllabelingandtrain convert --task xlabel2voc --mode detect --images ./images --labels ./labels \\"
         )
         print(f"    --output ./output\n")
         print(f"  # Segmentation (skip empty files)")
         print(
-            f"  xanylabeling convert --task xlabel2voc --mode segment --images ./images --labels ./labels \\"
+            f"  jllabelingandtrain convert --task xlabel2voc --mode segment --images ./images --labels ./labels \\"
         )
         print(f"    --output ./output --skip-empty-files\n")
 
     elif task_name == "coco2xlabel":
         print(f"  # Detection")
         print(
-            f"  xanylabeling convert --task coco2xlabel --mode detect --labels annotations.json \\"
+            f"  jllabelingandtrain convert --task coco2xlabel --mode detect --labels annotations.json \\"
         )
         print(f"    --output ./output --classes classes.txt\n")
         print(f"  # Segmentation")
         print(
-            f"  xanylabeling convert --task coco2xlabel --mode segment --labels annotations.json \\"
+            f"  jllabelingandtrain convert --task coco2xlabel --mode segment --labels annotations.json \\"
         )
         print(f"    --output ./output --classes classes.txt\n")
         print(f"  # Pose")
         print(
-            f"  xanylabeling convert --task coco2xlabel --mode pose --labels annotations.json \\"
+            f"  jllabelingandtrain convert --task coco2xlabel --mode pose --labels annotations.json \\"
         )
         print(f"    --output ./output --pose-cfg pose_config.yaml\n")
 
     elif task_name == "xlabel2coco":
         print(f"  # Detection")
         print(
-            f"  xanylabeling convert --task xlabel2coco --mode detect --images ./images --labels ./labels \\"
+            f"  jllabelingandtrain convert --task xlabel2coco --mode detect --images ./images --labels ./labels \\"
         )
         print(f"    --output ./output --classes classes.txt\n")
         print(f"  # Segmentation")
         print(
-            f"  xanylabeling convert --task xlabel2coco --mode segment --images ./images --labels ./labels \\"
+            f"  jllabelingandtrain convert --task xlabel2coco --mode segment --images ./images --labels ./labels \\"
         )
         print(f"    --output ./output --classes classes.txt\n")
         print(f"  # Pose")
         print(
-            f"  xanylabeling convert --task xlabel2coco --mode pose --images ./images --labels ./labels \\"
+            f"  jllabelingandtrain convert --task xlabel2coco --mode pose --images ./images --labels ./labels \\"
         )
         print(f"    --output ./output --pose-cfg pose_config.yaml\n")
+
 
 def validate_task(task_name):
     """Validate if a task is supported"""
@@ -290,7 +296,7 @@ def validate_task(task_name):
         raise ValueError(
             f"Unknown task: '{task_name}'\n"
             f"Available tasks: {available_tasks}\n"
-            f"Use 'xanylabeling convert' to see all supported tasks."
+            f"Use 'jllabelingandtrain convert' to see all supported tasks."
         )
     return True
 

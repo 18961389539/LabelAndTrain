@@ -55,6 +55,13 @@ Ultralytics training panel, and a one-click path that feeds the freshly trained
 weights back into auto labeling - then reports what the previous round's model
 left behind.
 
+The command is `jllabelingandtrain`, and nothing else: there is no
+`xanylabeling` alias, and the docs say so. The names that still read
+"anylabeling" are the ones where a rename would cost you data or mergeability —
+`~/.xanylabelingrc`, `<work_dir>/xanylabeling_data/` (weights, datasets,
+training runs), `xanylabeling_logs/`, the Qt settings domain, and the Python
+package `anylabeling` itself.
+
 ## Fork scope
 
 This is a trimmed build. Compared with upstream it does **not** include:

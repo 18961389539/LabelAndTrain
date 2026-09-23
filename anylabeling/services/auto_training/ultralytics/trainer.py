@@ -267,7 +267,7 @@ def create_training_payload(train_args: Dict) -> str:
         payload_train_args["model"]
     )
     fd, payload_path = tempfile.mkstemp(
-        prefix="xanylabeling-train-", suffix=".json"
+        prefix="jllabeling-train-", suffix=".json"
     )
     with os.fdopen(fd, "w", encoding="utf-8") as f:
         json.dump(payload_train_args, f, ensure_ascii=False)
@@ -405,7 +405,7 @@ def _download_file(url: str, dest: str) -> bool:
     tmp_dest = f"{dest}.part"
     try:
         request = urllib.request.Request(
-            url, headers={"User-Agent": "Mozilla/5.0 (X-AnyLabeling)"}
+            url, headers={"User-Agent": "Mozilla/5.0 (JLLabelingAndTrain)"}
         )
         with urllib.request.urlopen(request, timeout=60) as response:
             total = int(response.headers.get("Content-Length") or 0)

@@ -146,7 +146,7 @@ def get_default_config():
                 f"Failed to migrate legacy config: {old_cfg_file}: {e}"
             )
 
-    config_file = "xanylabeling_config.yaml"
+    config_file = "jllabeling_config.yaml"
     with pkg_resources.open_text(anylabeling_configs, config_file) as f:
         config = yaml.safe_load(f)
 

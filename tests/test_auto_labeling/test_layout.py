@@ -220,7 +220,7 @@ class TestAutoLabelingLayout(unittest.TestCase):
 
     def test_initial_show_reflows_model_selection_row(self):
         config.current_config_file = (
-            "anylabeling/configs/xanylabeling_config.yaml"
+            "anylabeling/configs/jllabeling_config.yaml"
         )
         parent = type(
             "Parent",
@@ -287,7 +287,7 @@ class TestAutoLabelingLayout(unittest.TestCase):
         then appended the labels onto the outer toolbar.
         """
         config.current_config_file = (
-            "anylabeling/configs/xanylabeling_config.yaml"
+            "anylabeling/configs/jllabeling_config.yaml"
         )
         parent = type(
             "Parent",
@@ -404,7 +404,7 @@ class TestAutoLabelingLayout(unittest.TestCase):
         )
 
         config.current_config_file = (
-            "anylabeling/configs/xanylabeling_config.yaml"
+            "anylabeling/configs/jllabeling_config.yaml"
         )
 
         tmp = tempfile.mkdtemp()

@@ -185,7 +185,7 @@ qt_image_allocation_limit: 1024
 ```
 
 ```bash
-xanylabeling --qt-image-allocation-limit 1024
+jllabelingandtrain --qt-image-allocation-limit 1024
 ```
 
 说明：

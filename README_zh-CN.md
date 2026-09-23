@@ -44,6 +44,7 @@
 
 ## 分支更新
 
+- `2026-09-23`: 命名收口：删掉 `xanylabeling` 命令别名（只留 `jllabelingandtrain`），converter 用法示例与全部文档命令随之统一；包内默认配置改名 `jllabeling_config.yaml`，`x-anylabeling.desktop` → `jllabelingandtrain.desktop`，训练临时文件前缀与下载 UA 改用分支名。快速入门不再让读者 `pip install x-anylabeling-cvhub` 或克隆上游仓库 —— 本分支只能源码安装，也不提供预编译包。数据位置（`~/.xanylabelingrc`、`xanylabeling_data/`、日志与 Qt 设置域）与 Python 包名保持原样，改名需要迁移。
 - `2026-09-23`: 对象来源补上 `model_version`（加载模型权重文件的内容摘要，按 路径+大小+修改时间 缓存一次）。「旧轮模型框盘点」和删除判定因此能区分同名但已重训的权重；旧文件里没有该字段的框一律不视为陈旧，不会一夜之间变成清理对象。
 - `2026-09-23`: 批量删除旧轮模型框不再丢失撤销机会：当前打开的图片改为在画布上删除（一次 Ctrl+Z 撤销整批），并新增「智能工具 → 11. 从备份恢复标注」，可把 `.label_backups` 里的任意一次快照写回（写回前另存当前版本）。
 - `2026-09-23`: 界面语言的说法与代码对齐：本构建只有 `zh_CN` 一份翻译目录且总是加载它，README 不再声称可切换英文；两个翻译脚本改为处理实际存在的目录（以前会因为找不到其它语言的 `.ts` 而直接失败）；`language` 配成非 `zh_CN` 时给出明确警告；三处漏掉 `tr()` 的中文文案补上，并新增防复发测试。
@@ -64,6 +65,8 @@
 **JLLabelingAndTrain** 是 [X-AnyLabeling](https://github.com/CVHub520/X-AnyLabeling) 的下游分支，保留其标注引擎、画布交互与模型插件结构，是**单机、单用户**工具：一个图片目录加一个标签 JSON 目录，没有服务端、账号与任务分配。
 
 分支新增的是标注之外的那条闭环：每张图的复核状态、每个对象的来源记录、阈值校准、主动学习样本排序、Ultralytics 训练面板，以及一键把刚训好的权重回灌为自动标注模型 —— 并能报告上一轮模型留在数据里的结果。
+
+命令只有 `jllabelingandtrain`，没有 `xanylabeling` 别名。仍然带 "anylabeling" 字样的，都是改名会丢数据或丢掉上游可合并性的那几处：`~/.xanylabelingrc`、`<work_dir>/xanylabeling_data/`（权重、数据集、训练产物）、`xanylabeling_logs/`、Qt 设置域，以及 Python 包名 `anylabeling` 本身。
 
 ## 分支范围
 

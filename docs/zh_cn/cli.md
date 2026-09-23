@@ -24,28 +24,28 @@ X-AnyLabeling 提供命令行界面，用于启动图形界面、查询系统信
 
 ```bash
 # 常规启动
-xanylabeling
+jllabelingandtrain
 
 # 打开指定的图像文件
-xanylabeling --filename /path/to/image.jpg
+jllabelingandtrain --filename /path/to/image.jpg
 
 # 打开指定的图像文件夹
-xanylabeling --filename /path/to/folder
+jllabelingandtrain --filename /path/to/folder
 
 # 设置输出目录
-xanylabeling --output /path/to/output
+jllabelingandtrain --output /path/to/output
 
 # 使用自定义配置文件
-xanylabeling --config /path/to/config.yaml
+jllabelingandtrain --config /path/to/config.yaml
 
 # 设置日志级别
-xanylabeling --logger-level debug
+jllabelingandtrain --logger-level debug
 
 # 禁用自动更新检查
-xanylabeling --no-auto-update-check
+jllabelingandtrain --no-auto-update-check
 
 # 将 Qt 图像分配上限提高到 1024 MB
-xanylabeling --qt-image-allocation-limit 1024
+jllabelingandtrain --qt-image-allocation-limit 1024
 ```
 
 ## 2. 系统命令
@@ -55,13 +55,13 @@ xanylabeling --qt-image-allocation-limit 1024
 - 输入
 
 ```bash
-xanylabeling --help
+jllabelingandtrain --help
 ```
 
 - 输出
 
 ```bash
-usage: xanylabeling [-h] [--reset-config] [--logger-level {debug,info,warning,fatal,error}] [--no-auto-update-check] [--qt-platform QT_PLATFORM]
+usage: jllabelingandtrain [-h] [--reset-config] [--logger-level {debug,info,warning,fatal,error}] [--no-auto-update-check] [--qt-platform QT_PLATFORM]
                     [--qt-image-allocation-limit QT_IMAGE_ALLOCATION_LIMIT] [--filename [FILENAME]] [--output OUTPUT]
                     [--config CONFIG] [--nodata] [--autosave] [--nosortlabels] [--flags FLAGS] [--labelflags LABEL_FLAGS] [--labels LABELS] [--validatelabel {exact}] [--keep-prev]
                     {help,checks,version,config,convert} ...
@@ -109,7 +109,7 @@ options:
 - 输入
 
 ```bash
-xanylabeling checks
+jllabelingandtrain checks
 ```
 
 - 输出
@@ -147,7 +147,7 @@ Packages
 - 输入
 
 ```bash
-xanylabeling version
+jllabelingandtrain version
 ```
 
 - 输出
@@ -161,7 +161,7 @@ xanylabeling version
 - 输入
 
 ```bash
-xanylabeling config
+jllabelingandtrain config
 ```
 
 - 输出
@@ -177,7 +177,7 @@ xanylabeling config
 - 输入
 
 ```bash
-xanylabeling convert
+jllabelingandtrain convert
 ```
 
 - 输出
@@ -217,9 +217,9 @@ Total: 19 conversion tasks
 ================================================================================
 
 Usage:
-  xanylabeling convert                          # Show all tasks
-  xanylabeling convert --task <task>            # Show detailed help for a task
-  xanylabeling convert --task <task> [options]  # Run conversion
+  jllabelingandtrain convert                          # Show all tasks
+  jllabelingandtrain convert --task <task>            # Show detailed help for a task
+  jllabelingandtrain convert --task <task> [options]  # Run conversion
 ```
 
 ### 3.2 显示特定任务的详细帮助
@@ -227,7 +227,7 @@ Usage:
 - 输入（以 `yolo2xlabel` 为例）
 
 ```bash
-xanylabeling convert --task yolo2xlabel
+jllabelingandtrain convert --task yolo2xlabel
 ```
 
 - 输出
@@ -256,19 +256,19 @@ Mode-Specific Arguments:
 
 Examples:
   # Detection
-  xanylabeling convert --task yolo2xlabel --mode detect --images ./images --labels ./labels \
+  jllabelingandtrain convert --task yolo2xlabel --mode detect --images ./images --labels ./labels \
     --output ./output --classes classes.txt
 
   # Segmentation
-  xanylabeling convert --task yolo2xlabel --mode segment --images ./images --labels ./labels \
+  jllabelingandtrain convert --task yolo2xlabel --mode segment --images ./images --labels ./labels \
     --output ./output --classes classes.txt
 
   # OBB (Oriented Bounding Box)
-  xanylabeling convert --task yolo2xlabel --mode obb --images ./images --labels ./labels \
+  jllabelingandtrain convert --task yolo2xlabel --mode obb --images ./images --labels ./labels \
     --output ./output --classes classes.txt
 
   # Pose
-  xanylabeling convert --task yolo2xlabel --mode pose --images ./images --labels ./labels \
+  jllabelingandtrain convert --task yolo2xlabel --mode pose --images ./images --labels ./labels \
     --output ./output --pose-cfg pose_config.yaml
 
 ================================================================================
@@ -279,7 +279,7 @@ Examples:
 - 输入（以 `yolo2xlabel:detect` 为例）
 
 ```bash
-xanylabeling convert --task yolo2xlabel --mode detect --images ./images --labels ./labels \
+jllabelingandtrain convert --task yolo2xlabel --mode detect --images ./images --labels ./labels \
     --output ./output --classes classes.txt
 ```
 

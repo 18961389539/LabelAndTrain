@@ -142,7 +142,6 @@ gpu-cu13 = [
 
 [project.scripts]
 jllabelingandtrain = "anylabeling.app:main"
-xanylabeling = "anylabeling.app:main"
 
 [tool.uv]
 conflicts = [

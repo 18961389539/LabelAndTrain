@@ -573,7 +573,7 @@ imext = .jpg          # 图片文件扩展名
 此外，针对 [MOTS](https://motchallenge.net/data/MOTS/) 数据集格式，X-AnyLabeling 支持通过 CLI 导出。请提供包含 XLABEL JSON 文件的目录、输出目录以及 `classes.txt` 文件：
 
 ```bash
-xanylabeling convert --task xlabel2mots --labels /path/to/xlabel/labels --output /path/to/output --classes classes.txt
+jllabelingandtrain convert --task xlabel2mots --labels /path/to/xlabel/labels --output /path/to/output --classes classes.txt
 ```
 
 > [!NOTE]

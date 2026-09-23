@@ -25,7 +25,7 @@ REPO_ROOT = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..")
 )
 TEMPLATE_CONFIG = os.path.join(
-    REPO_ROOT, "anylabeling", "configs", "xanylabeling_config.yaml"
+    REPO_ROOT, "anylabeling", "configs", "jllabeling_config.yaml"
 )
 
 

@@ -25,6 +25,7 @@ X-AnyLabeling's own history, kept for provenance.
 - Dataset build directories no longer collide within the same second; the app offers to reclaim old dataset copies. Label backups got the same treatment, so two snapshots taken in one second stay two runs.
 - Deleting stale boxes from the image open in the canvas is a real undo step now: the batch is applied through the canvas snapshot history instead of reloading the file, so one Ctrl+Z brings every deleted box back.
 - Translation scripts walk the catalogs that actually exist instead of a fixed four-language list, `language` other than `zh_CN` warns instead of being ignored, and both get-started pages now state that this build ships one catalog.
+- One command name: the `xanylabeling` console-script alias is removed, and the converter's usage text plus every documentation example follow `jllabelingandtrain`. The packaged default config is `jllabeling_config.yaml`, `x-anylabeling.desktop` became `jllabelingandtrain.desktop` (nothing referenced it), and the training payload's temp-file prefix and model-download User-Agent carry the fork's name. On-disk data locations — `~/.xanylabelingrc`, `xanylabeling_data/`, `xanylabeling_logs/`, the Qt settings domain — and the Python package name stay, because renaming those costs either your existing weights/runs/config or upstream mergeability.
 
 ### 🐛 Bug Fixes
 
@@ -34,6 +35,7 @@ X-AnyLabeling's own history, kept for provenance.
 - Two review-navigation loops rebuilt the whole file list per scanned row.
 - 数据体检 ranked the review queue and then kept only its first 50 entries, and 智能复核 navigated that truncated list: a folder with hundreds of uncertain images reported `1/50` and then "end of queue" while candidates were still waiting. The queue is now complete and the cap lives in the dialog, which states each category's real total and no longer counts review priorities among the problems found.
 - Three strings reached a widget without `tr()` (a recommended-model chip's tooltip and both "Skip empty labels" help texts), so nothing could translate them. Wrapping them changes no visible text: `zh_CN.ts` has no Chinese `<source>` entries, which is also why writing fork text in Chinese and passing it through `tr()` is safe here.
+- Both get-started pages told readers to `pip install --pre "x-anylabeling-cvhub"`, to clone `CVHub520/X-AnyLabeling`, or to download the GUI installer from upstream's Releases. All three get you **upstream's** program, which has none of this fork's loop features; the pages now state that this build is source-install only, publishes nothing, and its executable comes from building it yourself.
 - Both translation scripts listed four languages while this checkout ships one catalog, so the documented `compile_languages.py` command died on the missing `.ts` files; the get-started pages advertised an interface language that cannot be selected. `language` in the config was read by the model and the trainer but silently ignored by the translator, which always loaded `zh_CN`.
 - Packaging: `.desktop` `Exec` pointed at a non-existent script; linux/macos specs still bundled deleted `configs/bert` and `configs/ram`.
 - CI: `tests/test_settings` crashed the process when run on its own (a test created a non-GUI `QCoreApplication` that later widget tests reused).
@@ -42,6 +44,7 @@ X-AnyLabeling's own history, kept for provenance.
 
 - `.github/workflows/ci.yml` runs the full suite on pushes to `main` and pull requests.
 - README and both doc sets now describe only what this build can do, guarded by `tests/test_utils/test_readme_claims.py` (phantom model families, pruned capability claims, local link resolution, upstream credit).
+- `tests/test_utils/test_fork_naming.py` scans every text file in the tree for the bare upstream command name and asserts one console script, so docs and help text cannot drift back to a command this install does not provide. The names it deliberately ignores are written down in the file.
 - `tests/test_labeling/test_widget_wiring.py` constructs the real `LabelingWidget` for the first time, so advertised shortcuts, menu entries and action enablement are verified rather than assumed.
 - That fixture's parent stub is a `QMainWindow` now, and it stops the debounced auto-save timer on teardown: the timer used to survive the test and raise inside whichever test happened to pump events next (a 1 s model-check timeout took the blame).
 

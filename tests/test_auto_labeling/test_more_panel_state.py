@@ -31,7 +31,7 @@ class TestMorePanelState(unittest.TestCase):
         if self.app is None:
             self.app = QtWidgets.QApplication([])
         app_config.current_config_file = (
-            "anylabeling/configs/xanylabeling_config.yaml"
+            "anylabeling/configs/jllabeling_config.yaml"
         )
         self._widgets = []
 

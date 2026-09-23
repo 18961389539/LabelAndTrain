@@ -24,28 +24,28 @@ X-AnyLabeling provides a powerful command-line interface for label format conver
 
 ```bash
 # Standard launch
-xanylabeling
+jllabelingandtrain
 
 # Open a specific image file
-xanylabeling --filename /path/to/image.jpg
+jllabelingandtrain --filename /path/to/image.jpg
 
 # Open an image directory
-xanylabeling --filename /path/to/folder
+jllabelingandtrain --filename /path/to/folder
 
 # Set output directory
-xanylabeling --output /path/to/output
+jllabelingandtrain --output /path/to/output
 
 # Use a custom configuration file
-xanylabeling --config /path/to/config.yaml
+jllabelingandtrain --config /path/to/config.yaml
 
 # Set logging level
-xanylabeling --logger-level debug
+jllabelingandtrain --logger-level debug
 
 # Disable automatic update check
-xanylabeling --no-auto-update-check
+jllabelingandtrain --no-auto-update-check
 
 # Raise Qt image allocation limit to 1024 MB
-xanylabeling --qt-image-allocation-limit 1024
+jllabelingandtrain --qt-image-allocation-limit 1024
 ```
 
 ## 2. System Commands
@@ -55,13 +55,13 @@ xanylabeling --qt-image-allocation-limit 1024
 - Input
 
 ```bash
-xanylabeling --help
+jllabelingandtrain --help
 ```
 
 - Output
 
 ```bash
-usage: xanylabeling [-h] [--reset-config] [--logger-level {debug,info,warning,fatal,error}] [--no-auto-update-check] [--qt-platform QT_PLATFORM]
+usage: jllabelingandtrain [-h] [--reset-config] [--logger-level {debug,info,warning,fatal,error}] [--no-auto-update-check] [--qt-platform QT_PLATFORM]
                     [--qt-image-allocation-limit QT_IMAGE_ALLOCATION_LIMIT] [--filename [FILENAME]] [--output OUTPUT]
                     [--config CONFIG] [--nodata] [--autosave] [--nosortlabels] [--flags FLAGS] [--labelflags LABEL_FLAGS] [--labels LABELS] [--validatelabel {exact}] [--keep-prev]
                     {help,checks,version,config,convert} ...
@@ -109,7 +109,7 @@ options:
 - Input
 
 ```bash
-xanylabeling checks
+jllabelingandtrain checks
 ```
 
 - Output
@@ -147,7 +147,7 @@ Packages
 - Input
 
 ```bash
-xanylabeling version
+jllabelingandtrain version
 ```
 
 - Output
@@ -161,7 +161,7 @@ xanylabeling version
 - Input
 
 ```bash
-xanylabeling config
+jllabelingandtrain config
 ```
 
 - Output
@@ -177,7 +177,7 @@ xanylabeling config
 - Input
 
 ```bash
-xanylabeling convert
+jllabelingandtrain convert
 ```
 
 - Output
@@ -217,9 +217,9 @@ Total: 19 conversion tasks
 ================================================================================
 
 Usage:
-  xanylabeling convert                          # Show all tasks
-  xanylabeling convert --task <task>            # Show detailed help for a task
-  xanylabeling convert --task <task> [options]  # Run conversion
+  jllabelingandtrain convert                          # Show all tasks
+  jllabelingandtrain convert --task <task>            # Show detailed help for a task
+  jllabelingandtrain convert --task <task> [options]  # Run conversion
 ```
 
 ### 3.2 Show Detailed Help for a Specific Task
@@ -227,7 +227,7 @@ Usage:
 - Input (using `yolo2xlabel` as an example)
 
 ```bash
-xanylabeling convert --task yolo2xlabel
+jllabelingandtrain convert --task yolo2xlabel
 ```
 
 - Output
@@ -256,19 +256,19 @@ Mode-Specific Arguments:
 
 Examples:
   # Detection
-  xanylabeling convert --task yolo2xlabel --mode detect --images ./images --labels ./labels \
+  jllabelingandtrain convert --task yolo2xlabel --mode detect --images ./images --labels ./labels \
     --output ./output --classes classes.txt
 
   # Segmentation
-  xanylabeling convert --task yolo2xlabel --mode segment --images ./images --labels ./labels \
+  jllabelingandtrain convert --task yolo2xlabel --mode segment --images ./images --labels ./labels \
     --output ./output --classes classes.txt
 
   # OBB (Oriented Bounding Box)
-  xanylabeling convert --task yolo2xlabel --mode obb --images ./images --labels ./labels \
+  jllabelingandtrain convert --task yolo2xlabel --mode obb --images ./images --labels ./labels \
     --output ./output --classes classes.txt
 
   # Pose
-  xanylabeling convert --task yolo2xlabel --mode pose --images ./images --labels ./labels \
+  jllabelingandtrain convert --task yolo2xlabel --mode pose --images ./images --labels ./labels \
     --output ./output --pose-cfg pose_config.yaml
 
 ================================================================================
@@ -279,7 +279,7 @@ Examples:
 - Input (using `yolo2xlabel:detect` as an example)
 
 ```bash
-xanylabeling convert --task yolo2xlabel --mode detect --images ./images --labels ./labels \
+jllabelingandtrain convert --task yolo2xlabel --mode detect --images ./images --labels ./labels \
     --output ./output --classes classes.txt
 ```
 

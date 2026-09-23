@@ -531,7 +531,7 @@ X-AnyLabeling supports exporting polygon annotations in a MOTS-compatible format
 > Run the following command with the directory containing the XLABEL JSON files, an output directory, and a `classes.txt` file:
 > ```bash
 > # Requires pycocotools: pip install pycocotools
-> xanylabeling convert --task xlabel2mots --labels /path/to/xlabel/labels --output /path/to/output --classes classes.txt
+> jllabelingandtrain convert --task xlabel2mots --labels /path/to/xlabel/labels --output /path/to/output --classes classes.txt
 > ```
 
 ### 4.7 PPOCR Format

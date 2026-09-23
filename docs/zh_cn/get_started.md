@@ -2,7 +2,7 @@
 
 ## 1. 安装部署
 
-X-AnyLabeling 提供了多种安装方法，您可以通过 `pip` 直接安装官方软件包获取最新的稳定版本，或通过克隆官方 GitHub 仓库进行源码安装，GUI 安装包也是一种便捷的选择。
+本分支（JLLabelingAndTrain）只有一种安装方式：**克隆本仓库源码安装**。它没有发布到 PyPI，也没有预编译安装包——`pip` 上的 `x-anylabeling-cvhub` 与上游 GitHub Releases 里的安装包都是**上游 X-AnyLabeling 的产物**，装上后没有本仓库 README 所写的这些功能。
 
 > [!NOTE]
 > **高级功能说明**：以下高级功能仅适用于 Git 克隆方式，如需使用，请先参考对应的文档进行配置。
@@ -110,36 +110,16 @@ source .venv-cu13/bin/activate     # Linux
 
 ### 1.2 安装
 
-#### 1.2.1 Pip 安装（Beta 预发布版本）
+本分支未发布到 PyPI，请从源码安装（推荐 `uv pip`，用 `pip` 亦可）。
 
-您可以通过以下命令轻松安装 X-AnyLabeling 的最新 Beta 预发布版本（推荐使用 `uv pip`）：
-
-```bash
-pip install -U uv
-
-# CPU [Windows/Linux/macOS]
-uv pip install --pre "x-anylabeling-cvhub[cpu]"
-
-# CUDA 12.x 是 GPU 版本的默认选项 [Windows/Linux]
-uv pip install --pre "x-anylabeling-cvhub[gpu]"
-
-# CUDA 11.x [Windows/Linux]
-uv pip install --pre "x-anylabeling-cvhub[gpu-cu11]"
-
-# CUDA 13.x [Windows/Linux]
-uv pip install --pre "x-anylabeling-cvhub[gpu-cu13]"
-```
-
-#### 1.2.2 Git 克隆（推荐）
-
-**步骤 a.** 克隆代码仓库。
+**步骤 a.** 克隆本仓库。
 
 ```bash
-git clone https://github.com/CVHub520/X-AnyLabeling.git
-cd X-AnyLabeling
+git clone https://github.com/18961389539/LabelAndTrain.git
+cd LabelAndTrain
 ```
 
-**步骤 b.** 安装依赖。
+**步骤 b.** 按硬件选择 extra 安装依赖。
 
 ```bash
 pip install -U uv
@@ -157,7 +137,7 @@ uv pip install -e ".[gpu-cu11]"
 uv pip install -e ".[gpu-cu13]"
 ```
 
-如果您需要进行二次开发或打包编译，可同步安装 `dev` 依赖，例如：
+如需二次开发或打包编译，可同步加上 `dev`，例如：
 
 ```bash
 uv pip install -e ".[cpu,dev]"
@@ -169,25 +149,25 @@ uv pip install -e ".[cpu,dev]"
 安装完成后，可执行以下命令进行验证：
 
 ```bash
-xanylabeling checks   # 显示系统及版本信息
+jllabelingandtrain checks   # 显示系统及版本信息
 ```
 
 您也可以运行以下命令获取其他信息：
 
 ```bash
-xanylabeling help     # 显示帮助信息
-xanylabeling version  # 显示版本号
-xanylabeling config   # 显示配置文件路径
+jllabelingandtrain help     # 显示帮助信息
+jllabelingandtrain version  # 显示版本号
+jllabelingandtrain config   # 显示配置文件路径
 ```
 
 验证无误后，可直接运行应用程序：
 
 ```bash
-xanylabeling
+jllabelingandtrain
 ```
 
 > [!TIP]
-> 您可以通过 `xanylabeling --help` 查看所有可用的命令行选项。完整的参数说明请参考下方的**命令行参数**表格。
+> 您可以通过 `jllabelingandtrain --help` 查看所有可用的命令行选项。完整的参数说明请参考下方的**命令行参数**表格。
 
 | 选项                       | 描述                                                           |
 |----------------------------|---------------------------------------------------------------|
@@ -215,8 +195,8 @@ xanylabeling
 此外，还支持多种标签格式之间的批量转换功能：
 
 ```bash
-xanylabeling convert         # 列出所有支持的转换任务
-xanylabeling convert <task>  # 查看特定转换任务的详细帮助和使用示例，例如：xlabel2yolo
+jllabelingandtrain convert         # 列出所有支持的转换任务
+jllabelingandtrain convert <task>  # 查看特定转换任务的详细帮助和使用示例，例如：xlabel2yolo
 ```
 
 > [!IMPORTANT]
@@ -268,20 +248,17 @@ set PYTHONPATH=C:\path\to\X-AnyLabeling
 > [!NOTE]
 > **Fedora KDE 用户特别说明**：如果遇到鼠标移动缓慢或响应延迟的问题，可以尝试使用 `--qt-platform xcb` 参数来提升性能：
 > ```bash
-> xanylabeling --qt-platform xcb
+> jllabelingandtrain --qt-platform xcb
 > ```
 
-#### 1.2.3 GUI 安装包
+#### 1.2.3 预编译安装包
 
-> **下载链接**: [GitHub Releases](https://github.com/CVHub520/X-AnyLabeling/releases)
+本分支**不提供**预编译安装包。需要分发的可执行文件请按第 3 节自行打包，产物名为
+`JLLabelingAndTrain-v<版本>-CPU`（或 `-GPU`）。
 
-相比于从源代码运行，GUI 安装包提供了更便捷的使用体验，用户无需深入了解底层实现，只需解压即可直接使用。然而，GUI 安装包也存在一些局限性：
+上游 X-AnyLabeling 的 [GitHub Releases](https://github.com/CVHub520/X-AnyLabeling/releases)
+是另一个程序的构建，不要用它来代替本分支。
 
-- **故障排除困难**：如果发生崩溃或错误，可能难以快速定位具体原因，从而增加了故障排除的难度。
-- **功能滞后**：GUI 版本在功能上可能落后于源代码版本，可能会导致功能缺失和兼容性问题。
-- **GPU 运行库要求**：请根据 CUDA 11、12 或 13 选择对应安装包，并安装匹配的 CUDA 和 cuDNN 运行库。无法加载所需 GPU 库时，应用会回退到 CPU。
-
-因此，建议根据具体需求和使用场景，在从源代码运行和使用 GUI 安装包之间做出选择，以优化使用体验。
 
 ## 2. 使用方法
 
