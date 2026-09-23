@@ -1,3 +1,43 @@
+# JLLabelingAndTrain Changelog
+
+Fork entries are listed first; everything below the upstream marker is
+X-AnyLabeling's own history, kept for provenance.
+
+## `v1.0.0-beta.1` (Sep 22, 2026)
+
+### ✨ New Features
+
+- Review state per image: `review_state` (`unchecked` / `confirmed` / `rejected`) plus `reviewed_at`; `checked` is kept in sync for existing consumers. New "需返工" filter, progress count, and `mark_rejected_and_next` (Ctrl+Shift+K).
+- Provenance per shape: `source` (`human` / `model` / `unknown`) and the producing model name, stamped at all three places predictions are applied.
+- "旧轮模型框盘点" smart-tool: groups stale model boxes by producing model, offers per-row deletion; locked, unattributed and since-edited boxes are never deleted, and affected label files are snapshotted to `.label_backups/<stamp>/` first.
+- Reproducibility: dataset `manifest.json` (per-file content hashes, split assignment, classes, seed) and `run_meta.json` per finished run (weights hash, exact arguments, manifest hash, metrics).
+- Split seed pinned per dataset in `.jllabel/project.json`, so consecutive rounds are comparable.
+- Pose and classification loop-back: `yolo26_pose` reuses the training pose config; new `yolov8_cls` adapter returns confirmable whole-image suggestions instead of shapes.
+- Active-learning set: threshold calibration, dataset analysis, missed-label scan, iteration dashboard, review-jump queue, label propagation, duplicate archiving, training advice, template pre-labeling.
+
+### 🛠 Improvements
+
+- Custom model limit raised from 5 to 30; models produced by the loop are pinned and never evicted.
+- Fork-owned version reported in the window title, status bar, `version` and `checks`, while keeping the upstream name and source visible as required by its GPL terms.
+- Dataset build directories no longer collide within the same second; the app offers to reclaim old dataset copies.
+
+### 🐛 Bug Fixes
+
+- `import_image_folder` cleared the file list but not `fn_to_index`, and `_apply_file_sort` reordered rows without rebuilding it, so a path could resolve to the wrong row and review state could be read or written against a different image.
+- Every smart-tool result dialog raised `NameError` (undefined `QtGui`), and the stale-model audit had an unimported name; both were unreachable for tests because nothing constructed the widget or ran an action.
+- `save_config` swallowed the traceback; the training dialog reported "saved successfully" after a failed write; custom-model add/remove ignored persistence failures; `app.log` never rotated and the faulthandler handle could be collected.
+- Two review-navigation loops rebuilt the whole file list per scanned row.
+- Packaging: `.desktop` `Exec` pointed at a non-existent script; linux/macos specs still bundled deleted `configs/bert` and `configs/ram`.
+- CI: `tests/test_settings` crashed the process when run on its own (a test created a non-GUI `QCoreApplication` that later widget tests reused).
+
+### 🔗 CI / Tooling
+
+- `.github/workflows/ci.yml` runs the full suite on pushes to `main` and pull requests.
+- README and both doc sets now describe only what this build can do, guarded by `tests/test_utils/test_readme_claims.py` (phantom model families, pruned capability claims, local link resolution, upstream credit).
+- `tests/test_labeling/test_widget_wiring.py` constructs the real `LabelingWidget` for the first time, so advertised shortcuts, menu entries and action enablement are verified rather than assumed.
+
+---
+
 # X-AnyLabeling Changelog
 
 ## `v4.0.0-beta.13` (Jul 12, 2026)
