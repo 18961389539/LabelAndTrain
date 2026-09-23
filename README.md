@@ -117,6 +117,7 @@ annotate → review (confirmed / rejected) → train on checked files
 - Split seed is pinned per dataset in `.jllabel/project.json`, so round N and round N+1 are comparable.
 - `用于自动标注` covers detection, segmentation, pose (needs the same pose config as training) and classification; a classifier returns confirmable suggestions rather than shapes.
 - Runs live under `<work_dir>/xanylabeling_data/trainer/ultralytics/runs/<task>/`; after a run the app offers to reclaim old dataset copies.
+- `Training → 实验历史` (run history) tables every run that wrote `run_meta.json`, newest first, with the iteration round that produced it, and exports to CSV. Runs trained into a custom `Project` path are not listed, and the dialog says which folder it scanned.
 
 ## Docs
 

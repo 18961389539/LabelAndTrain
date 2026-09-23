@@ -11,6 +11,7 @@ X-AnyLabeling's own history, kept for provenance.
 - Provenance per shape: `source` (`human` / `model` / `unknown`) and the producing model name, stamped at all three places predictions are applied.
 - "旧轮模型框盘点" smart-tool: groups stale model boxes by producing model, offers per-row deletion; locked, unattributed and since-edited boxes are never deleted, and affected label files are snapshotted to `.label_backups/<stamp>/` first.
 - Reproducibility: dataset `manifest.json` (per-file content hashes, split assignment, classes, seed) and `run_meta.json` per finished run (weights hash, exact arguments, manifest hash, metrics).
+- Run history table (`训练 → 实验历史`): every recorded run with its metrics, seed, dataset sizes and hash prefixes, newest first, joined to the iteration round that produced it; CSV export. Runs older than `run_meta.json` are reported as a count instead of blank rows.
 - Split seed pinned per dataset in `.jllabel/project.json`, so consecutive rounds are comparable.
 - Pose and classification loop-back: `yolo26_pose` reuses the training pose config; new `yolov8_cls` adapter returns confirmable whole-image suggestions instead of shapes.
 - Active-learning set: threshold calibration, dataset analysis, missed-label scan, iteration dashboard, review-jump queue, label propagation, duplicate archiving, training advice, template pre-labeling.

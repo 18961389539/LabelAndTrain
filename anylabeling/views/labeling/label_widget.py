@@ -885,7 +885,6 @@ class LabelingWidget(LabelDialog):
             enabled=False,
         )
 
-
         change_output_dir = action(
             self.tr("Change Output Dir"),
             slot=self.change_output_dir_dialog,
@@ -1362,6 +1361,10 @@ class LabelingWidget(LabelDialog):
             "Ultralytics",
             lambda: self.start_training("ultralytics"),
             icon="ultralytics",
+        )
+        run_history = action(
+            self.tr("实验历史"),
+            self.show_run_history,
         )
 
         zoom = QtWidgets.QWidgetAction(self)
@@ -1976,7 +1979,9 @@ class LabelingWidget(LabelDialog):
                 smart_stale_audit,
             ),
         )
-        utils.add_actions(self.menus.train, (ultralytics_train,))
+        utils.add_actions(
+            self.menus.train, (ultralytics_train, run_history)
+        )
         utils.add_actions(
             self.menus.tool,
             (
@@ -3908,6 +3913,20 @@ class LabelingWidget(LabelDialog):
                     widget.setCurrentRow(row)
                     widget.scrollToItem(widget.item(row))
                     break
+
+    def show_run_history(self, _value=False):
+        """Compare what each recorded training round produced.
+
+        Imported lazily: the training dialogs are not needed at startup, and
+        this keeps the run-history module out of the app's import graph until
+        the menu entry is actually used.
+        """
+        from anylabeling.views.training.run_history_dialog import (
+            RunHistoryDialog,
+        )
+
+        dialog = RunHistoryDialog(self, label_dir=self._active_label_dir())
+        dialog.exec()
 
     def show_shortcuts_help(self):
         """Dialog listing every configured shortcut with a search box."""

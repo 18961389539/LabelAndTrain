@@ -11,7 +11,9 @@ try:
 except Exception:
     PYQT_AVAILABLE = False
 
-REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+REPO_ROOT = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "..")
+)
 TEMPLATE_CONFIG = os.path.join(
     REPO_ROOT, "anylabeling", "configs", "xanylabeling_config.yaml"
 )
@@ -62,6 +64,42 @@ class TestWidgetWiring(unittest.TestCase):
             titles,
         )
 
+    def test_train_menu_offers_run_history(self):
+        # Like the smart-tools entries, this action is menu-only and is not
+        # part of the actions Struct; what must not drift is the menu item and
+        # its handler on the widget.
+        self.assertTrue(callable(self.widget.show_run_history))
+        texts = [
+            menu.text()
+            for menu in self.widget.menus.train.actions()
+            if menu.text()
+        ]
+        self.assertIn("实验历史", texts)
+        self.assertIn("Ultralytics", texts)
+
+    def test_run_history_handler_opens_the_dialog_with_the_label_dir(self):
+        # exec() blocks, so the handler is verified by capturing the dialog
+        # instance it builds rather than showing it.
+        import shutil
+        import tempfile
+
+        import anylabeling.views.training.run_history_dialog as module
+
+        original_root = module.get_default_project_dir
+        original_exec = module.RunHistoryDialog.exec
+        opened = []
+        runs_root = tempfile.mkdtemp()
+        module.get_default_project_dir = lambda: runs_root
+        module.RunHistoryDialog.exec = lambda self, *a: opened.append(self)
+        try:
+            self.widget.show_run_history()
+        finally:
+            module.get_default_project_dir = original_root
+            module.RunHistoryDialog.exec = original_exec
+            shutil.rmtree(runs_root, ignore_errors=True)
+        self.assertEqual(len(opened), 1)
+        self.assertEqual(opened[0].label_dir, self.widget._active_label_dir())
+
     def test_model_identity_is_safe_without_a_loaded_model(self):
         self.assertIsNone(self.widget._current_model_identity())
 
@@ -85,7 +123,9 @@ class TestWidgetWiring(unittest.TestCase):
         self.widget.other_data = {}
         self.assertEqual(self.widget._classification_suggestions(), ([], None))
         self.widget._update_classification_action()
-        self.assertFalse(self.widget.actions.confirm_classification.isEnabled())
+        self.assertFalse(
+            self.widget.actions.confirm_classification.isEnabled()
+        )
 
         self.widget.other_data = {
             "predictions": {
@@ -201,7 +241,9 @@ class TestStaleCleanupOnOpenFile(unittest.TestCase):
     def test_open_clean_file_deletes_on_disk_and_canvas(self):
         remaining = self._run_delete(dirty=False)
         self.assertEqual(remaining, [])
-        self.assertEqual([shape.label for shape in self.widget.canvas.shapes], [])
+        self.assertEqual(
+            [shape.label for shape in self.widget.canvas.shapes], []
+        )
 
     def test_open_dirty_file_is_left_alone(self):
         remaining = self._run_delete(dirty=True)
