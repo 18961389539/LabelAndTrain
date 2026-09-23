@@ -245,7 +245,7 @@ class TestStaleAuditDialog(unittest.TestCase):
         with open(self.label, "w", encoding="utf-8") as handle:
             json.dump({"shapes": shapes, "checked": False}, handle)
 
-    def _run(self, shapes, current_model="run_07"):
+    def _run(self, shapes, current_model="run_07", current_version=None):
         from unittest import mock
 
         from PyQt6 import QtWidgets
@@ -255,6 +255,7 @@ class TestStaleAuditDialog(unittest.TestCase):
         self.parent.filename = self.image
         self.parent.image_list = [self.image]
         self.parent._current_model_identity = lambda: current_model
+        self.parent._current_model_version = lambda: current_version
 
         captured = []
 
@@ -305,6 +306,44 @@ class TestStaleAuditDialog(unittest.TestCase):
             "model": "run_07",
         }
         dialog = self._run([current], current_model="run_07")
+        self.assertEqual(
+            [row for row in dialog.all_rows() if row["shape_ref"]], []
+        )
+
+    def test_retrained_weights_under_the_same_name_are_still_stale(self):
+        # The loop overwrites best.onnx, so the name never changes: only the
+        # weight digest tells the previous round's boxes apart from this one's.
+        recorded = {
+            "label": "cat",
+            "points": [[0, 0], [10, 10]],
+            "source": "model",
+            "model": "run_07",
+            "model_version": "a1b2c3d4e5f6",
+        }
+        dialog = self._run(
+            [recorded], current_model="run_07", current_version="ffeeccaa1122"
+        )
+        rows = [row for row in dialog.all_rows() if row["shape_ref"]]
+        self.assertEqual(len(rows), 1)
+        titles = [
+            dialog.tree.topLevelItem(row).text(0)
+            for row in range(dialog.tree.topLevelItemCount())
+        ]
+        self.assertTrue(
+            any("a1b2c3d4e5f6" in title for title in titles), titles
+        )
+
+    def test_same_name_and_same_weights_is_not_stale(self):
+        current = {
+            "label": "cat",
+            "points": [[0, 0], [10, 10]],
+            "source": "model",
+            "model": "run_07",
+            "model_version": "a1b2c3d4e5f6",
+        }
+        dialog = self._run(
+            [current], current_model="run_07", current_version="a1b2c3d4e5f6"
+        )
         self.assertEqual(
             [row for row in dialog.all_rows() if row["shape_ref"]], []
         )

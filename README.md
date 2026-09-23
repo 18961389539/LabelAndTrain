@@ -76,7 +76,7 @@ Docs and examples for pruned features are still in the tree (`docs/en/chatbot.md
 - Backends: ONNX Runtime (CPU / CUDA), TensorRT, OpenCV DNN.
 - Annotation shapes: `rectangle`, `polygon` (with brush painting), `rotation` (OBB), `cuboid`, `quadrilateral`, `circle`, `line`, `linestrip`, `point`; per-shape lock, group id, description, difficulty, flags.
 - Review workflow: every image carries `review_state` (`unchecked` / `confirmed` / `rejected`) plus a timestamp; filter and progress counts follow.
-- Provenance: every shape records whether a human or a model drew it, and which model — so "send back for rework" and "clear the old round's boxes" are answerable questions rather than guesses.
+- Provenance: every shape records whether a human or a model drew it, and which model — plus a content digest of that model's weights, so retraining over `best.onnx` under the same name does not hide the previous round's boxes. "Send back for rework" and "clear the old round's boxes" stay answerable questions rather than guesses.
 - Training: Ultralytics only, four tasks (Detect / Segment / Pose / Classify), ~40 tunable parameters, runs in a separate process that can be stopped or resumed, 14 export formats.
 - Reproducibility: each build writes a dataset `manifest.json` (every label file with its content hash, split assignment, class list, seed) and each finished run writes `run_meta.json` (weights hash, exact arguments, manifest hash, metrics).
 - Recovery: deleting boxes on the image currently open is an ordinary Ctrl+Z (one press undoes the whole batch). Files the canvas is not holding are snapshotted to `.label_backups/<stamp>/` before the write, and 智能工具 → 11. 从备份恢复标注 writes a chosen snapshot back after snapshotting what it replaces.

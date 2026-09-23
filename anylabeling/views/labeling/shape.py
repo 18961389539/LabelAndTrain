@@ -6,6 +6,7 @@ from PyQt6 import QtCore, QtGui
 from . import utils
 from ..labeling.logger import logger
 from .provenance import (
+    MODEL_VERSION_FIELD,
     SOURCE_HUMAN,
     SOURCE_MODEL,
     SOURCE_UNKNOWN,
@@ -53,6 +54,7 @@ class Shape:
         "locked",
         "source",
         "model",
+        MODEL_VERSION_FIELD,
     ]
 
     # The following class variables influence the drawing of all shape objects.
@@ -88,6 +90,7 @@ class Shape:
         kie_linking=None,
         source=None,
         model=None,
+        model_version=None,
     ):
         if attributes is None:
             attributes = {}
@@ -103,6 +106,7 @@ class Shape:
         # this from the file (absent means "unknown", never "human").
         self.source = source if source in SOURCES else SOURCE_HUMAN
         self.model = model
+        self.model_version = model_version
         self.points = []
         self.fill = False
         self.hovered = False
@@ -167,6 +171,8 @@ class Shape:
         dictData["source"] = self.source
         if self.source == SOURCE_MODEL and self.model:
             dictData["model"] = self.model
+            if self.model_version:
+                dictData[MODEL_VERSION_FIELD] = self.model_version
         dictData = {
             **self.other_data,
             **dictData,
@@ -179,6 +185,7 @@ class Shape:
         source = data.get("source")
         self.source = source if source in SOURCES else SOURCE_UNKNOWN
         self.model = data.get("model")
+        self.model_version = data.get(MODEL_VERSION_FIELD)
         self.points = [QtCore.QPointF(p[0], p[1]) for p in data["points"]]
         self.group_id = data.get("group_id")
         self.description = data.get("description", "")

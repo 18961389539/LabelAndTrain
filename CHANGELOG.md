@@ -9,6 +9,7 @@ X-AnyLabeling's own history, kept for provenance.
 
 - Review state per image: `review_state` (`unchecked` / `confirmed` / `rejected`) plus `reviewed_at`; `checked` is kept in sync for existing consumers. New "需返工" filter, progress count, and `mark_rejected_and_next` (Ctrl+Shift+K).
 - Provenance per shape: `source` (`human` / `model` / `unknown`) and the producing model name, stamped at all three places predictions are applied.
+- `model_version` alongside it: a SHA-1 prefix of the loaded weights file, so boxes drawn before a retrain are still recognisable as older when the loop reuses one YAML and one `best.onnx` path. Only compared when both sides have one — shapes recorded before this field exists are never made stale by it.
 - "旧轮模型框盘点" smart-tool: groups stale model boxes by producing model, offers per-row deletion; locked, unattributed and since-edited boxes are never deleted, and affected label files are snapshotted to `.label_backups/<stamp>/` first.
 - Reproducibility: dataset `manifest.json` (per-file content hashes, split assignment, classes, seed) and `run_meta.json` per finished run (weights hash, exact arguments, manifest hash, metrics).
 - Run history table (`训练 → 实验历史`): every recorded run with its metrics, seed, dataset sizes and hash prefixes, newest first, joined to the iteration round that produced it; CSV export. Runs older than `run_meta.json` are reported as a count instead of blank rows.

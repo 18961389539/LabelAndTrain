@@ -450,7 +450,9 @@ def save_auto_labeling_result(self, image_file, auto_labeling_result):
                 shape.to_dict() for shape in auto_labeling_result.shapes
             ]
             stamp_model_shapes(
-                new_shapes, self._current_model_identity()
+                new_shapes,
+                self._current_model_identity(),
+                self._current_model_version(),
             )
             new_description = auto_labeling_result.description
             replace = auto_labeling_result.replace

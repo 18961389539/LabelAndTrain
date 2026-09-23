@@ -41,7 +41,9 @@ from anylabeling.views.labeling.provenance import (
     get_source,
     is_deletable_stale_shape,
     is_from_other_model,
+    model_identity_label,
     model_of,
+    model_version_of,
     shape_marker,
     stamp_model_shapes,
 )
@@ -849,7 +851,11 @@ def _write_missing(parent, results):
         data = _read_label(label_file)
         if data is None:
             continue
-        stamp_model_shapes(payloads, parent._current_model_identity())
+        stamp_model_shapes(
+            payloads,
+            parent._current_model_identity(),
+            parent._current_model_version(),
+        )
         shapes = data.setdefault("shapes", [])
         existing = {shape_marker(shape) for shape in shapes}
         for payload in payloads:
@@ -1009,14 +1015,22 @@ def restore_label_backup(backup_dir, label_dir, skip_files=None):
     return result
 
 
-def apply_stale_deletions(targets, current_model, skip_files=None, label_dir=None):
+def apply_stale_deletions(
+    targets,
+    current_model,
+    skip_files=None,
+    label_dir=None,
+    current_version=None,
+):
     """Delete the stale model boxes a reviewed report pointed at.
 
     ``targets`` maps a label file to the shape references the report showed.
     A reference is honoured only while the shape at that index is still the
     same box and still attributable to another model, so anything the user
     moved, relabelled or locked between reporting and deleting is skipped
-    rather than removed.
+    rather than removed. ``current_version`` is the loaded model's weight
+    digest: without it a retrained model looks identical to the one whose boxes
+    are being cleaned up, because both carry the same name.
 
     When ``label_dir`` is given the files that are about to change are copied
     into ``<label_dir>/.label_backups/<stamp>/`` first, and the whole batch is
@@ -1060,7 +1074,9 @@ def apply_stale_deletions(targets, current_model, skip_files=None, label_dir=Non
             if shape.get("locked"):
                 counts["skipped_locked"] += 1
                 continue
-            if not is_deletable_stale_shape(shape, current_model):
+            if not is_deletable_stale_shape(
+                shape, current_model, current_version
+            ):
                 counts["skipped_changed"] += 1
                 continue
             doomed.add(index)
@@ -1351,16 +1367,21 @@ def run_stale_model_audit(parent):
         return
 
     current_model = parent._current_model_identity()
+    current_version = parent._current_model_version()
     by_producer = {}
     counts = {SOURCE_HUMAN: 0, SOURCE_UNKNOWN: 0}
     current_model_boxes = 0
     for image_path, data in entries:
         if not data:
             continue
-        for index, shape in collect_other_model_shapes(data, current_model):
+        for index, shape in collect_other_model_shapes(
+            data, current_model, current_version
+        ):
             if shape.get("locked"):
                 continue
-            producer = model_of(shape) or parent.tr("未记录来源")
+            producer = model_identity_label(
+                model_of(shape), model_version_of(shape)
+            ) or parent.tr("未记录来源")
             label_name, detail = describe_shape(shape)
             ref = {
                 "index": index,
@@ -1380,7 +1401,7 @@ def run_stale_model_audit(parent):
             if source in counts:
                 counts[source] += 1
             elif source == SOURCE_MODEL and not is_from_other_model(
-                shape, current_model
+                shape, current_model, current_version
             ):
                 current_model_boxes += 1
 
@@ -1398,7 +1419,9 @@ def run_stale_model_audit(parent):
         [
             (
                 parent.tr("当前模型：%1").replace(
-                    "%1", current_model or parent.tr("未加载")
+                    "%1",
+                    model_identity_label(current_model, current_version)
+                    or parent.tr("未加载"),
                 ),
                 "",
                 "",
@@ -1510,6 +1533,7 @@ def _delete_reported_stale(parent, dialog):
         current_model,
         skip_files=skip,
         label_dir=label_dir_for(parent),
+        current_version=parent._current_model_version(),
     )
 
     open_deleted = (counts.get("deleted_refs") or {}).get(open_label) or []

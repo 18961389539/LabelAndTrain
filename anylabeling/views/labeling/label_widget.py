@@ -65,7 +65,9 @@ from .label_file import LabelFile, LabelFileError
 from .provenance import (
     is_deletable_stale_shape,
     model_display_name,
+    resolve_model_path,
     stamp_model_shapes,
+    weight_digest,
 )
 from .schema import (
     REVIEW_CONFIRMED,
@@ -8262,6 +8264,35 @@ class LabelingWidget(LabelDialog):
         manager = getattr(self.auto_labeling_widget, "model_manager", None)
         return model_display_name(getattr(manager, "loaded_model_config", None))
 
+    def _current_model_version(self):
+        """Digest of the loaded model's weights file, or None if unidentified.
+
+        The name alone cannot tell a retrained model from the one it replaced at
+        the same path, which is the common case for the loop's ``best.onnx``.
+        Memoised on (path, size, mtime) so rewriting the file yields a new
+        digest instead of a cached one.
+        """
+        manager = getattr(self.auto_labeling_widget, "model_manager", None)
+        config = getattr(manager, "loaded_model_config", None)
+        path = resolve_model_path(config)
+        if not path:
+            return None
+        try:
+            stat = os.stat(path)
+            token = (path, stat.st_size, stat.st_mtime_ns)
+        except OSError:
+            return None
+        cached = getattr(self, "_model_version_cache", None)
+        if cached and cached[0] == token:
+            return cached[1]
+        digest = weight_digest(path)
+        self._model_version_cache = (token, digest)
+        if digest:
+            logger.info(
+                f"Model weights digest for {osp.basename(path)}: {digest}"
+            )
+        return digest
+
     def delete_reported_shapes(self, indices):
         """Mirror a bulk cleanup on the image that is currently open.
 
@@ -8272,6 +8303,7 @@ class LabelingWidget(LabelDialog):
         claimed in between stays.
         """
         current_model = self._current_model_identity()
+        current_version = self._current_model_version()
         shapes = self.canvas.shapes
         doomed = []
         for index in sorted(set(indices or [])):
@@ -8279,7 +8311,7 @@ class LabelingWidget(LabelDialog):
                 continue
             shape = shapes[index]
             if shape in doomed or not is_deletable_stale_shape(
-                shape, current_model
+                shape, current_model, current_version
             ):
                 continue
             doomed.append(shape)
@@ -8336,7 +8368,11 @@ class LabelingWidget(LabelDialog):
             # which would otherwise clear the canvas on an empty shape list.
             self._apply_model_predictions(predictions)
             return
-        stamp_model_shapes(new_shapes, self._current_model_identity())
+        stamp_model_shapes(
+            new_shapes,
+            self._current_model_identity(),
+            self._current_model_version(),
+        )
         # YOLO-consistent guard: a prediction that found *nothing* must not
         # silently erase human ground truth. When the model outputs no
         # shapes (empty/background or missed detection) and the current

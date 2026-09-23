@@ -114,3 +114,128 @@ class TestShapeRoundTrip(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestModelVersion(unittest.TestCase):
+    """A name cannot tell a retrained model from the weights it replaced."""
+
+    def _weights(self, tmp, name="best.onnx", body=b"v1"):
+        path = os.path.join(tmp, name)
+        with open(path, "wb") as handle:
+            handle.write(body)
+        return path
+
+    def test_digest_tracks_content_and_survives_reopen(self):
+        import tempfile
+
+        from anylabeling.views.labeling.provenance import weight_digest
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = self._weights(tmp)
+            first = weight_digest(path)
+            self.assertEqual(first, weight_digest(path))
+            self.assertEqual(len(first), 12)
+
+            with open(path, "wb") as handle:
+                handle.write(b"v2")
+            self.assertNotEqual(first, weight_digest(path))
+
+            self.assertIsNone(weight_digest(os.path.join(tmp, "gone.onnx")))
+
+    def test_digest_covers_a_tail_only_rewrite(self):
+        # Why the whole file is hashed: fine-tuning can rewrite just the head
+        # layer at the end and leave both the leading bytes and the size equal.
+        import tempfile
+
+        from anylabeling.views.labeling.provenance import weight_digest
+
+        with tempfile.TemporaryDirectory() as tmp:
+            head = b"x" * (1024 * 1024)
+            one = self._weights(tmp, "a.onnx", head + b"AAAA")
+            two = self._weights(tmp, "b.onnx", head + b"BBBB")
+            self.assertNotEqual(weight_digest(one), weight_digest(two))
+
+    def test_resolve_model_path_handles_urls_and_yaml_relative_paths(self):
+        import tempfile
+
+        from anylabeling.views.labeling.provenance import resolve_model_path
+
+        self.assertIsNone(resolve_model_path(None))
+        self.assertIsNone(
+            resolve_model_path({"model_path": "https://host/best.onnx"})
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            weights_dir = os.path.join(tmp, "weights")
+            os.makedirs(weights_dir)
+            path = self._weights(weights_dir)
+            config = {
+                "model_path": "weights/best.onnx",
+                "config_file": os.path.join(tmp, "m.yaml"),
+            }
+            cwd = os.getcwd()
+            try:
+                os.chdir(tmp)
+                self.assertEqual(resolve_model_path(config), path)
+            finally:
+                os.chdir(cwd)
+
+    def test_stamp_records_the_version_only_when_there_is_one(self):
+        with_version = [{"label": "cat"}]
+        stamp_model_shapes(with_version, "run_07", "a1b2c3d4e5f6")
+        self.assertEqual(with_version[0]["model_version"], "a1b2c3d4e5f6")
+
+        without = [{"label": "cat"}]
+        stamp_model_shapes(without, "run_07")
+        self.assertNotIn("model_version", without[0])
+
+    def _shape(self, version=None, name="run_07"):
+        payload = {"label": "cat", "source": SOURCE_MODEL, "model": name}
+        if version:
+            payload["model_version"] = version
+        return payload
+
+    def test_same_name_different_weights_counts_as_stale(self):
+        shape = self._shape("a1b2c3d4e5f6")
+        self.assertTrue(
+            is_from_other_model(shape, "run_07", "ffeeccaa1122")
+        )
+        self.assertFalse(is_from_other_model(shape, "run_07", "a1b2c3d4e5f6"))
+
+    def test_shape_without_a_version_is_not_made_stale_by_one(self):
+        # Every box annotated before this field existed has no version. Treating
+        # that as a mismatch would flood the cleanup report with false work.
+        shape = self._shape()
+        self.assertFalse(is_from_other_model(shape, "run_07", "a1b2c3d4e5f6"))
+        self.assertFalse(is_from_other_model(shape, "run_07", None))
+        self.assertTrue(is_from_other_model(shape, "run_06", None))
+
+    def test_stale_collection_honours_the_version(self):
+        data = {
+            "shapes": [
+                self._shape("old"),
+                self._shape("new"),
+                self._shape(),
+                {"label": "human", "source": SOURCE_HUMAN},
+            ]
+        }
+        found = collect_other_model_shapes(data, "run_07", "new")
+        self.assertEqual([index for index, _ in found], [0])
+
+    def test_round_trip_keeps_the_version(self):
+        from anylabeling.views.labeling.shape import Shape
+
+        shape = Shape(label="cat")
+        stamp_model_shapes([shape], "run_07", "a1b2c3d4e5f6")
+        payload = shape.to_dict()
+        self.assertEqual(payload["model_version"], "a1b2c3d4e5f6")
+
+        loaded = Shape()
+        loaded.load_from_dict(payload)
+        self.assertEqual(loaded.model_version, "a1b2c3d4e5f6")
+
+        legacy = dict(payload)
+        legacy.pop("model_version")
+        reloaded = Shape()
+        reloaded.load_from_dict(legacy)
+        self.assertIsNone(reloaded.model_version)
+        self.assertNotIn("model_version", reloaded.to_dict())
