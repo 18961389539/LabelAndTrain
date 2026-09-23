@@ -176,8 +176,8 @@ class ModelItem(QFrame):
 
         _t = get_theme()
         if model_data.get("recommended"):
-            rec_chip = QLabel("推荐")
-            rec_chip.setToolTip("该任务类型的推荐模型")
+            rec_chip = QLabel(self.tr("推荐"))
+            rec_chip.setToolTip(self.tr("该任务类型的推荐模型"))
             rec_chip.setStyleSheet(
                 "font-size: 10px; color: #F5A524; "
                 "background: transparent; border: none; padding-right: 4px;"

@@ -63,7 +63,7 @@ This is a trimmed build. Compared with upstream it does **not** include:
 - The ~90-model upstream zoo. This build ships **8 loadable model types** and **two** built-in config files (SAM2 tiny/base); everything else is registered by you as a custom model YAML.
 - Pruned task panels: OCR / PPOCR / KIE, VQA, chatbot, document parsing (PaddleOCR-VL), tagging & captioning, face estimation, depth, counting, grounding, matting, lane detection, multi-object tracking, interactive video segmentation.
 - Most exchange formats: `DOTA`, `MOT`, `MASK`, `PPOCR`, `MMGD`, `VLM-R1`, `ShareGPT` are gone. See [Formats](#formats).
-- Japanese / Korean UI. Only a `zh_CN` catalogue exists; English is the source language, and parts of the fork's own UI text are Chinese.
+- Japanese / Korean UI, and no English interface either: the only catalog is `zh_CN` and it is always the one loaded. Upstream text is English source translated by that catalog, while text this fork adds is written in Chinese directly - so Chinese is the source language for everything the fork owns.
 
 Docs and examples for pruned features are still in the tree (`docs/en/chatbot.md`,
 `examples/grounding/`, …). They describe **upstream**, not this build.
@@ -79,6 +79,7 @@ Docs and examples for pruned features are still in the tree (`docs/en/chatbot.md
 - Provenance: every shape records whether a human or a model drew it, and which model — so "send back for rework" and "clear the old round's boxes" are answerable questions rather than guesses.
 - Training: Ultralytics only, four tasks (Detect / Segment / Pose / Classify), ~40 tunable parameters, runs in a separate process that can be stopped or resumed, 14 export formats.
 - Reproducibility: each build writes a dataset `manifest.json` (every label file with its content hash, split assignment, class list, seed) and each finished run writes `run_meta.json` (weights hash, exact arguments, manifest hash, metrics).
+- Recovery: deleting boxes on the image currently open is an ordinary Ctrl+Z (one press undoes the whole batch). Files the canvas is not holding are snapshotted to `.label_backups/<stamp>/` before the write, and 智能工具 → 11. 从备份恢复标注 writes a chosen snapshot back after snapshotting what it replaces.
 - Smart-tools set (Chinese-labelled menu 智能工具): threshold calibration, dataset analysis, missed-label scan, iteration dashboard, review-jump queue, label propagation, duplicate archiving, training advice, template pre-labeling, stale model-box audit. The review-jump queue holds every uncertain image; only the audit dialog limits what it lists (100 per category, with the real total in the heading).
 - Settings survive restarts through a `Settings` dialog; per-dataset choices live in `.jllabel/project.json`.
 

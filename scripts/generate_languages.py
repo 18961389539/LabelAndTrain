@@ -66,8 +66,22 @@ def compile_resources(output: str, qrc: str) -> None:
     )
 
 
-supported_languages = ["en_US", "zh_CN", "ja_JP", "ko_KR"]
-translations_path = "anylabeling/resources/translations"
+TRANSLATIONS_DIR = "anylabeling/resources/translations"
+
+
+def existing_catalogs():
+    """Languages this checkout already ships a ``.ts`` catalog for."""
+    return sorted(
+        os.path.splitext(name)[0]
+        for name in os.listdir(TRANSLATIONS_DIR)
+        if name.endswith(".ts")
+    )
+
+
+# Refresh what is there by default; name a language explicitly to start one
+# that does not exist yet, e.g. ``generate_languages.py zh_CN en_US``.
+supported_languages = sys.argv[1:] or existing_catalogs() or ["zh_CN"]
+translations_path = TRANSLATIONS_DIR
 lrelease = find_lrelease()
 
 for language in supported_languages:

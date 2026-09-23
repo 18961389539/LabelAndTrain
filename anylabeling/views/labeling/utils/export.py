@@ -184,13 +184,15 @@ def export_yolo_annotation(self, mode):
     )
     skip_empty_files_checkbox.setChecked(False)
     skip_empty_files_checkbox.setToolTip(
-        "Skip empty labels / 跳过空标注\n"
-        "\n"
-        "默认关闭：空标注（确认无目标的负样本图）会导出为空文件，"
-        "作为背景样本参与 YOLO 训练。\n"
-        "\n"
-        "勾选后：空标注的图片不会导出对应标签文件，这些负样本将从"
-        "训练数据中排除（通常不建议，除非你确实不要背景样本）。"
+        self.tr(
+            "Skip empty labels / 跳过空标注\n"
+            "\n"
+            "默认关闭：空标注（确认无目标的负样本图）会导出为空文件，"
+            "作为背景样本参与 YOLO 训练。\n"
+            "\n"
+            "勾选后：空标注的图片不会导出对应标签文件，这些负样本将从"
+            "训练数据中排除（通常不建议，除非你确实不要背景样本）。"
+        )
     )
     layout.addWidget(skip_empty_files_checkbox)
 
@@ -402,13 +404,15 @@ def export_voc_annotation(self, mode):
     )
     skip_empty_files_checkbox.setChecked(False)
     skip_empty_files_checkbox.setToolTip(
-        "Skip empty labels / 跳过空标注\n"
-        "\n"
-        "默认关闭：空标注（确认无目标的负样本图）会导出为空文件，"
-        "作为背景样本参与 YOLO 训练。\n"
-        "\n"
-        "勾选后：空标注的图片不会导出对应标签文件，这些负样本将从"
-        "训练数据中排除（通常不建议，除非你确实不要背景样本）。"
+        self.tr(
+            "Skip empty labels / 跳过空标注\n"
+            "\n"
+            "默认关闭：空标注（确认无目标的负样本图）会导出为空文件，"
+            "作为背景样本参与 YOLO 训练。\n"
+            "\n"
+            "勾选后：空标注的图片不会导出对应标签文件，这些负样本将从"
+            "训练数据中排除（通常不建议，除非你确实不要背景样本）。"
+        )
     )
     layout.addWidget(skip_empty_files_checkbox)
 
@@ -725,5 +729,7 @@ def export_coco_annotation(self, mode):
     self.export_thread.start()
 
     progress_dialog.canceled.connect(self.export_thread.terminate)
+
+
 
 

@@ -64,15 +64,30 @@ def compile_resources(output: str, qrc: str) -> None:
     )
 
 
-supported_languages = ["en_US", "zh_CN", "ja_JP", "ko_KR"]
+TRANSLATIONS_DIR = "anylabeling/resources/translations"
+
+
+def existing_catalogs():
+    """Languages this checkout actually ships a ``.ts`` catalog for."""
+    return sorted(
+        os.path.splitext(name)[0]
+        for name in os.listdir(TRANSLATIONS_DIR)
+        if name.endswith(".ts")
+    )
+
+
+catalogs = existing_catalogs()
+if not catalogs:
+    raise RuntimeError(
+        f"No .ts catalog found under {TRANSLATIONS_DIR}. This fork ships "
+        "Simplified Chinese only; add a catalog before compiling one."
+    )
 lrelease = find_lrelease()
 
-for language in supported_languages:
+for language in catalogs:
+    print(f"Compiling {language}.qm")
     subprocess.run(
-        [
-            lrelease,
-            f"anylabeling/resources/translations/{language}.ts",
-        ],
+        [lrelease, f"{TRANSLATIONS_DIR}/{language}.ts"],
         check=True,
     )
 

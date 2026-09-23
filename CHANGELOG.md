@@ -12,6 +12,7 @@ X-AnyLabeling's own history, kept for provenance.
 - "旧轮模型框盘点" smart-tool: groups stale model boxes by producing model, offers per-row deletion; locked, unattributed and since-edited boxes are never deleted, and affected label files are snapshotted to `.label_backups/<stamp>/` first.
 - Reproducibility: dataset `manifest.json` (per-file content hashes, split assignment, classes, seed) and `run_meta.json` per finished run (weights hash, exact arguments, manifest hash, metrics).
 - Run history table (`训练 → 实验历史`): every recorded run with its metrics, seed, dataset sizes and hash prefixes, newest first, joined to the iteration round that produced it; CSV export. Runs older than `run_meta.json` are reported as a count instead of blank rows.
+- Snapshot restore (`智能工具 → 11. 从备份恢复标注`): lists the runs under `.label_backups`, writes the chosen one back over the labels it came from, and snapshots what it replaces first — so picking the wrong run is itself reversible. The image open in the canvas is skipped while unsaved work is pending.
 - Split seed pinned per dataset in `.jllabel/project.json`, so consecutive rounds are comparable.
 - Pose and classification loop-back: `yolo26_pose` reuses the training pose config; new `yolov8_cls` adapter returns confirmable whole-image suggestions instead of shapes.
 - Active-learning set: threshold calibration, dataset analysis, missed-label scan, iteration dashboard, review-jump queue, label propagation, duplicate archiving, training advice, template pre-labeling.
@@ -20,7 +21,9 @@ X-AnyLabeling's own history, kept for provenance.
 
 - Custom model limit raised from 5 to 30; models produced by the loop are pinned and never evicted.
 - Fork-owned version reported in the window title, status bar, `version` and `checks`, while keeping the upstream name and source visible as required by its GPL terms.
-- Dataset build directories no longer collide within the same second; the app offers to reclaim old dataset copies.
+- Dataset build directories no longer collide within the same second; the app offers to reclaim old dataset copies. Label backups got the same treatment, so two snapshots taken in one second stay two runs.
+- Deleting stale boxes from the image open in the canvas is a real undo step now: the batch is applied through the canvas snapshot history instead of reloading the file, so one Ctrl+Z brings every deleted box back.
+- Translation scripts walk the catalogs that actually exist instead of a fixed four-language list, `language` other than `zh_CN` warns instead of being ignored, and both get-started pages now state that this build ships one catalog.
 
 ### 🐛 Bug Fixes
 
@@ -29,6 +32,8 @@ X-AnyLabeling's own history, kept for provenance.
 - `save_config` swallowed the traceback; the training dialog reported "saved successfully" after a failed write; custom-model add/remove ignored persistence failures; `app.log` never rotated and the faulthandler handle could be collected.
 - Two review-navigation loops rebuilt the whole file list per scanned row.
 - 数据体检 ranked the review queue and then kept only its first 50 entries, and 智能复核 navigated that truncated list: a folder with hundreds of uncertain images reported `1/50` and then "end of queue" while candidates were still waiting. The queue is now complete and the cap lives in the dialog, which states each category's real total and no longer counts review priorities among the problems found.
+- Three strings reached a widget without `tr()` (a recommended-model chip's tooltip and both "Skip empty labels" help texts), so nothing could translate them. Wrapping them changes no visible text: `zh_CN.ts` has no Chinese `<source>` entries, which is also why writing fork text in Chinese and passing it through `tr()` is safe here.
+- Both translation scripts listed four languages while this checkout ships one catalog, so the documented `compile_languages.py` command died on the missing `.ts` files; the get-started pages advertised an interface language that cannot be selected. `language` in the config was read by the model and the trainer but silently ignored by the translator, which always loaded `zh_CN`.
 - Packaging: `.desktop` `Exec` pointed at a non-existent script; linux/macos specs still bundled deleted `configs/bert` and `configs/ram`.
 - CI: `tests/test_settings` crashed the process when run on its own (a test created a non-GUI `QCoreApplication` that later widget tests reused).
 
@@ -37,6 +42,7 @@ X-AnyLabeling's own history, kept for provenance.
 - `.github/workflows/ci.yml` runs the full suite on pushes to `main` and pull requests.
 - README and both doc sets now describe only what this build can do, guarded by `tests/test_utils/test_readme_claims.py` (phantom model families, pruned capability claims, local link resolution, upstream credit).
 - `tests/test_labeling/test_widget_wiring.py` constructs the real `LabelingWidget` for the first time, so advertised shortcuts, menu entries and action enablement are verified rather than assumed.
+- That fixture's parent stub is a `QMainWindow` now, and it stops the debounced auto-save timer on teardown: the timer used to survive the test and raise inside whichever test happened to pump events next (a 1 s model-check timeout took the blame).
 
 ---
 

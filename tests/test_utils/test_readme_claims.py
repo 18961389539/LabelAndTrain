@@ -193,6 +193,53 @@ class TestDocsInventory(unittest.TestCase):
                     unlisted.append(f"docs/{language}/{filename}")
         self.assertEqual(unlisted, [])
 
+    def test_docs_advertise_only_the_catalog_that_ships(self):
+        """The translation docs must match what is on disk.
+
+        Both get-started pages used to promise four interface languages while
+        ``zh_CN.ts`` was the only catalog, which also made the documented
+        ``compile_languages.py`` command fail on the missing files.
+        """
+        catalog_dir = os.path.join(
+            REPO_ROOT, "anylabeling", "resources", "translations"
+        )
+        shipped = {
+            os.path.splitext(name)[0]
+            for name in os.listdir(catalog_dir)
+            if name.endswith(".ts")
+        }
+        self.assertEqual(
+            shipped,
+            {"zh_CN"},
+            "a new catalog means the interface is no longer Chinese-only; "
+            "update README and both get_started pages with it",
+        )
+        markdown = list(READMES)
+        for language in ("en", "zh_cn"):
+            folder = os.path.join(REPO_ROOT, "docs", language)
+            markdown += [
+                os.path.join("docs", language, name)
+                for name in sorted(os.listdir(folder))
+                if name.endswith(".md")
+            ]
+        for name in markdown:
+            with open(
+                os.path.join(REPO_ROOT, name), "r", encoding="utf-8"
+            ) as handle:
+                text = handle.read()
+            for absent in ("ja_JP", "ko_KR"):
+                self.assertNotIn(
+                    absent,
+                    text,
+                    f"{name} advertises {absent}, which has no catalog here",
+                )
+            for code in re.findall(r"\b([a-z]{2}_[A-Z]{2})\.ts\b", text):
+                self.assertIn(
+                    code,
+                    shipped,
+                    f"{name} refers to {code}.ts, which does not exist",
+                )
+
 
 if __name__ == "__main__":
     unittest.main()

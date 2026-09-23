@@ -239,13 +239,18 @@ xanylabeling convert <task>  # Show detailed help and examples for a specific ta
 
 **Optional Step**: Refresh Translation and Resource Files
 
-If you update UI text or maintain localization files, refresh the translation artifacts for all supported interface languages (`en_US`, `zh_CN`, `ja_JP`, `ko_KR`) with:
+If you update UI text or maintain localization files, note that **this build ships
+one catalog only: `zh_CN`**, so the interface language is Simplified Chinese in
+practice. The scripts below refresh every catalog that exists in
+`anylabeling/resources/translations/`, and they need Qt's `lrelease` and `rcc`
+(the PyQt6 wheel does not include them):
 
 ```bash
-# Regenerate .ts catalogs from source strings
+# Refresh the catalogs already present; name a language to start a new one
 python scripts/generate_languages.py
+python scripts/generate_languages.py zh_CN en_US
 
-# Compile .qm files and rebuild Qt resources
+# Compile the .qm files of the catalogs present and rebuild Qt resources
 python scripts/compile_languages.py
 ```
 

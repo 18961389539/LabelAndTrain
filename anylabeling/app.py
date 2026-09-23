@@ -511,6 +511,14 @@ def _main():
             output_dir = output
 
     translator = QtCore.QTranslator()
+    configured_language = config.get("language") or "zh_CN"
+    if configured_language != "zh_CN":
+        # The setting is not in the UI (EXCLUDED_KEYS), so this is the only
+        # place a hand-edited value can be answered instead of ignored.
+        logger.warning(
+            f"Config asks for language '{configured_language}', but this build "
+            "ships only the Simplified Chinese catalog; staying in zh_CN."
+        )
     loaded_language = translator.load(":/languages/translations/zh_CN.qm")
     QtCore.QCoreApplication.setAttribute(
         QtCore.Qt.ApplicationAttribute.AA_ShareOpenGLContexts

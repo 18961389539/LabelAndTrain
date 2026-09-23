@@ -237,13 +237,15 @@ xanylabeling convert <task>  # 查看特定转换任务的详细帮助和使用�
 
 **可选步骤**：刷新翻译与资源文件
 
-如果修改了界面文案或维护多语言文件，可使用以下命令刷新当前支持的界面语言（`en_US`、`zh_CN`、`ja_JP`、`ko_KR`）对应的翻译产物：
+本构建只带一份翻译目录（`anylabeling/resources/translations/zh_CN.ts`），因此界面语言实际只有简体中文。
+如果修改了界面文案或要维护翻译，下面的命令会处理**已存在**的全部目录，并且需要 Qt 的 `lrelease` 与 `rcc`（PyQt6 的 pip 包不含这两个工具）：
 
 ```bash
-# 从源码字符串重新生成 .ts 目录
+# 按源码字符串刷新已有目录；也可以显式指定要新建的语言
 python scripts/generate_languages.py
+python scripts/generate_languages.py zh_CN en_US
 
-# 编译 .qm 文件并重建 Qt 资源
+# 编译现存目录的 .qm 并重建 Qt 资源
 python scripts/compile_languages.py
 ```
 
