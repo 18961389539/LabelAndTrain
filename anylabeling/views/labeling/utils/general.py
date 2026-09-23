@@ -5,6 +5,7 @@ import math
 import textwrap
 import platform
 import subprocess
+import importlib
 from difflib import SequenceMatcher
 from importlib_metadata import version as get_package_version
 from pathlib import Path
@@ -125,12 +126,14 @@ def collect_system_info():
     gpu_info = get_gpu_info()
     cuda_info = get_cuda_version()
     python_info = platform.python_version()
-    pyqt6_info = get_installed_package_version("PyQt6")
-    onnx_info = get_installed_package_version("onnx")
-    ort_info = get_installed_package_version("onnxruntime")
+    pyqt6_info = get_pyqt_version()
+    onnx_info = get_runtime_package_version("onnx", "onnx")
+    ort_info = get_runtime_package_version("onnxruntime", "onnxruntime")
+    # Both distributions import as `onnxruntime`, so the GPU one can only be
+    # told apart by its packaging metadata.
     ort_gpu_info = get_installed_package_version("onnxruntime-gpu")
-    opencv_contrib_info = get_installed_package_version(
-        "opencv-contrib-python-headless"
+    opencv_contrib_info = get_runtime_package_version(
+        "cv2", "opencv-contrib-python-headless"
     )
 
     system_info = {
@@ -172,6 +175,32 @@ def get_installed_package_version(package_name):
         return get_package_version(package_name)
     except Exception:
         return None
+
+
+def get_runtime_package_version(module_name, dist_name):
+    """Version of the module that actually gets imported.
+
+    A PyInstaller bundle carries the modules but almost never their
+    ``*.dist-info``, so a metadata-only lookup reported ``None`` for exactly the
+    packages that were present and running inside the executable. The import is
+    the truth; metadata is the fallback for a source install.
+    """
+    try:
+        module = importlib.import_module(module_name)
+    except ImportError:
+        module = None
+    value = getattr(module, "__version__", None) if module else None
+    return str(value) if value else get_installed_package_version(dist_name)
+
+
+def get_pyqt_version():
+    """PyQt and Qt versions, which the package metadata does not carry."""
+    try:
+        from PyQt6.QtCore import PYQT_VERSION_STR, QT_VERSION_STR
+
+        return f"{PYQT_VERSION_STR} (Qt {QT_VERSION_STR})"
+    except ImportError:
+        return get_installed_package_version("PyQt6")
 
 
 def _subprocess_kwargs():

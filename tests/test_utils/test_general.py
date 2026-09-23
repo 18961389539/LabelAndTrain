@@ -112,3 +112,63 @@ def test_batch_crop_rejects_label_path_traversal(tmp_path):
 
     assert not result
     assert not (tmp_path / "outside").exists()
+
+
+class TestRuntimeVersions(unittest.TestCase):
+    """`checks` must report what the app is actually running.
+
+    A PyInstaller bundle carries the modules but almost never their
+    ``*.dist-info``, so the metadata-only lookup printed None for PyQt6,
+    onnxruntime and cv2 inside the executable -- the one place those numbers
+    matter for a bug report.
+    """
+
+    def test_live_module_wins_over_metadata(self):
+        from unittest import mock
+
+        import onnxruntime
+
+        from anylabeling.views.labeling.utils import general
+
+        with mock.patch.object(
+            general, "get_installed_package_version", return_value=None
+        ):
+            self.assertEqual(
+                general.get_runtime_package_version(
+                    "onnxruntime", "onnxruntime"
+                ),
+                str(onnxruntime.__version__),
+            )
+
+    def test_missing_module_falls_back_to_metadata(self):
+        from unittest import mock
+
+        from anylabeling.views.labeling.utils import general
+
+        with mock.patch.object(
+            general, "get_installed_package_version", return_value="9.9.9"
+        ):
+            self.assertEqual(
+                general.get_runtime_package_version(
+                    "no_such_module_here", "no-such-module-here"
+                ),
+                "9.9.9",
+            )
+
+    def test_collect_system_info_has_no_none_for_bundled_packages(self):
+        from anylabeling.views.labeling.utils.general import (
+            collect_system_info,
+        )
+
+        _, pkg_info = collect_system_info()
+        self.assertIn("6", str(pkg_info["PyQt6 Version"]))
+        self.assertNotIn("None", str(pkg_info["ONNX Runtime Version"]))
+        self.assertTrue(str(pkg_info["PyQt6 Version"]).startswith("6."))
+
+    def test_pyqt_version_reports_both_halves(self):
+        from anylabeling.views.labeling.utils.general import get_pyqt_version
+
+        value = get_pyqt_version()
+        # The Qt runtime behind PyQt is the number that explains plugin
+        # mismatches, so it belongs in the same line.
+        self.assertIn("(Qt ", value)
