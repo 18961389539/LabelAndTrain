@@ -526,6 +526,13 @@ class AutoLabelingWidget(QWidget):
         current_dir = os.path.dirname(__file__)
         uic.loadUi(os.path.join(current_dir, "auto_labeling.ui"), self)
         self.button_close.setIcon(new_icon("cancel"))
+        self.button_close.setToolTip(self.tr("收起自动标注面板"))
+        self.output_select_combobox.setToolTip(
+            self.tr(
+                "选择模型的输出方式（如检测框 / 掩码）；"
+                "只有提供多种输出的模型才可切换"
+            )
+        )
         self._apply_compact_layout()
         self.model_selection_scroll_area.setStyleSheet(
             get_model_selection_scroll_area_style(compact=_TOOLBAR_COMPACT)
@@ -654,6 +661,12 @@ class AutoLabelingWidget(QWidget):
         # --- Configuration for: button_run ---
         self.button_run.setStyleSheet(_toolbar_highlight_btn())
         self.button_run.setText(self.tr("Run (i)"))
+        self.button_run.setToolTip(
+            self.tr(
+                "用当前选中的模型标注这张图片\n"
+                "产出的框会记录来源模型与权重摘要，之后可按模型清理"
+            )
+        )
         self.button_run.clicked.connect(self.run_prediction)
 
         # --- Configuration for: input_box_thres ---
@@ -662,6 +675,9 @@ class AutoLabelingWidget(QWidget):
         # --- Configuration for: button_send ---
         self.button_send.setStyleSheet(_toolbar_highlight_btn())
         self.button_send.setText(self.tr("Send"))
+        self.button_send.setToolTip(
+            self.tr("把这张图片和输入的问题一起发给视觉语言模型")
+        )
         self.button_send.clicked.connect(self.run_vl_prediction)
 
         # --- Configuration for: input_conf ---

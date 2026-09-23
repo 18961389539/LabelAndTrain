@@ -45,7 +45,10 @@ from ...app_info import (
     __preferred_device__,
 )
 from . import utils
-from .utils.async_label_check import _label_file_review_state
+from .utils.async_label_check import (
+    _label_file_review_state,
+    label_file_review_info,
+)
 from .utils.theme import get_theme
 from .utils.style import (
     get_cancel_btn_style,
@@ -63,8 +66,13 @@ from .utils.style import (
 from ...config import get_config, save_config
 from .label_file import LabelFile, LabelFileError
 from .provenance import (
+    SOURCE_HUMAN,
+    SOURCE_MODEL,
+    get_source,
     is_deletable_stale_shape,
     model_display_name,
+    model_of,
+    model_version_of,
     resolve_model_path,
     stamp_model_shapes,
     weight_digest,
@@ -170,6 +178,9 @@ FILE_NEGATIVE_ROLE = Qt.ItemDataRole.UserRole + 2
 FILE_LOW_CONF_ROLE = Qt.ItemDataRole.UserRole + 3
 # Review state of the row: unchecked / confirmed / rejected.
 FILE_REVIEW_ROLE = Qt.ItemDataRole.UserRole + 4
+# When that state was last set, carried in from the label JSON for the row
+# tooltip only -- nothing branches on it.
+FILE_REVIEWED_AT_ROLE = Qt.ItemDataRole.UserRole + 5
 FILE_SEARCH_COMPLETIONS = (
     "label::",
     "checked::0",
@@ -412,6 +423,12 @@ class LabelingWidget(LabelDialog):
         )
         self.label_search = SearchBar(
             placeholder_text=self.tr("搜索标签...")
+        )
+        self.label_search.setToolTip(
+            self.tr(
+                "按名称过滤下方类别列表；不匹配的类别只是隐藏，"
+                "已画的框不受影响"
+            )
         )
         self.label_search.setClearButtonEnabled(True)
         self.label_search.textChanged.connect(self._refresh_label_panel)
@@ -2720,11 +2737,20 @@ class LabelingWidget(LabelDialog):
         t = get_theme()
         if not self.filename:
             state, color = self.tr("就绪"), t["text_secondary"]
+            hint = self.tr("打开图片文件夹后即可开始标注")
         elif self.dirty:
             state, color = self.tr("未保存"), t["warning"]
+            hint = self.tr("当前图片有未写入的改动")
+            hint += (
+                self.tr("（自动保存已开启，稍候即写入）")
+                if self._config.get("auto_save")
+                else self.tr("，按 Ctrl+S 保存")
+            )
         else:
             state, color = self.tr("已保存"), t["success"]
+            hint = self.tr("当前图片的改动已写入标签 JSON")
         label.setText(state)
+        label.setToolTip(hint)
         label.setStyleSheet(f"padding: 0 10px; color: {color};")
 
     def _sync_empty_canvas_state(self):
@@ -3038,6 +3064,9 @@ class LabelingWidget(LabelDialog):
         self.update_progress_title()
         self._update_save_state_label()
         self._refresh_status_context()
+        # Both load and save end here, so the open row's hover text stays
+        # truthful about shape counts and the review timestamp.
+        self._update_current_file_tooltip()
 
         if self.has_label_file():
             self.actions.delete_file.setEnabled(True)
@@ -4067,6 +4096,158 @@ class LabelingWidget(LabelDialog):
             return REVIEW_UNCHECKED
         return _label_file_review_state(label_file)
 
+    def _review_state_name(self, state):
+        return {
+            REVIEW_UNCHECKED: self.tr("未检查"),
+            REVIEW_CONFIRMED: self.tr("已检查"),
+            REVIEW_REJECTED: self.tr("需返工"),
+        }.get(state, self.tr("未知"))
+
+    def _file_item_tooltip(
+        self, file, label_file, state, reviewed_at=None, counts=None,
+        negative=False, low_conf=False,
+    ):
+        """Hover text for one file row: what it is, and where it stands.
+
+        Only data the row already has goes in here. Counting shapes for every
+        row would mean parsing every JSON, which is the exact cost the
+        background checker was introduced to avoid -- the open row gets counts
+        because the canvas already holds them.
+        """
+        annotated = QtCore.QFile.exists(label_file)
+        lines = [osp.basename(str(file)), str(file)]
+        lines.append(
+            self.tr("标注文件：%1").replace(
+                "%1", osp.basename(label_file)
+            )
+            if annotated
+            else self.tr("尚无标注文件（保存后创建）")
+        )
+        status = self.tr("复核状态：%1").replace(
+            "%1", self._review_state_name(state)
+        )
+        if reviewed_at:
+            status += self.tr("（%1）").replace("%1", reviewed_at)
+        lines.append(status)
+        if counts:
+            lines.append(
+                self.tr("对象 %1 个：模型 %2 / 人工 %3 / 未记录 %4")
+                .replace("%1", str(counts["total"]))
+                .replace("%2", str(counts["model"]))
+                .replace("%3", str(counts["human"]))
+                .replace("%4", str(counts["unknown"]))
+            )
+        if state == REVIEW_REJECTED:
+            lines.append(self.tr("图标含义：已打回，待人工返工"))
+        elif negative:
+            lines.append(
+                self.tr("图标含义：负样本（确认无目标，空标注）")
+            )
+        elif state == REVIEW_UNCHECKED and annotated:
+            lines.append(self.tr("图标含义：已标注，尚未复核"))
+        if low_conf:
+            lines.append(self.tr("含低置信度对象（建议复核）"))
+        return "\n".join(lines)
+
+    def _shape_tooltip(self, shape):
+        """Hover text for one object row: everything the label JSON knows.
+
+        The row itself shows only a name, so provenance -- which model drew this
+        box, from which weights -- is otherwise invisible until a cleanup pass
+        deletes something it should not have.
+        """
+        source = get_source(shape)
+        if source == SOURCE_MODEL:
+            origin = self.tr("模型产出：%1").replace(
+                "%1", model_of(shape) or self.tr("未记录")
+            )
+            version = model_version_of(shape)
+            if version:
+                origin += self.tr(" · 权重 %1").replace("%1", version)
+        elif source == SOURCE_HUMAN:
+            origin = self.tr("人工绘制")
+        else:
+            origin = self.tr("来源未记录（早于来源记录功能）")
+
+        lines = [
+            self.tr("类别：%1").replace(
+                "%1", shape.label or self.tr("（空）")
+            )
+        ]
+        if shape.group_id is not None:
+            lines.append(
+                self.tr("群组编号：%1").replace("%1", str(shape.group_id))
+            )
+        lines.append(
+            self.tr("形状：%1").replace("%1", shape.shape_type or "")
+        )
+        lines.append(origin)
+        if shape.score is not None:
+            lines.append(
+                self.tr("置信度：%1").replace("%1", f"{shape.score:.3f}")
+            )
+        points = shape.points or []
+        detail = self.tr("顶点数：%1").replace("%1", str(len(points)))
+        if len(points) >= 2:
+            xs = [point.x() for point in points]
+            ys = [point.y() for point in points]
+            detail += self.tr("，外接框 %1x%2").replace(
+                "%1", str(int(round(max(xs) - min(xs))))
+            ).replace("%2", str(int(round(max(ys) - min(ys)))))
+        lines.append(detail)
+        for key, value in sorted((shape.attributes or {}).items()):
+            lines.append(
+                self.tr("属性 %1：%2")
+                .replace("%1", str(key))
+                .replace("%2", str(value))
+            )
+        if shape.description:
+            lines.append(
+                self.tr("描述：%1").replace("%1", shape.description)
+            )
+        protected = []
+        if shape.locked:
+            protected.append(self.tr("已锁定"))
+        if shape.difficult:
+            protected.append(self.tr("困难样本"))
+        if not getattr(shape, "visible", True):
+            protected.append(self.tr("已隐藏"))
+        if protected:
+            lines.append(" · ".join(protected))
+        lines.append(self.tr("双击行可改标签；删除后可用 Ctrl+Z 撤销"))
+        return "\n".join(lines)
+
+    def _update_current_file_tooltip(self):
+        """Give the open row the counts that only the canvas knows."""
+        item = self._current_file_item()
+        if item is None or not self.filename:
+            return
+        shapes = self.canvas.shapes or []
+        counts = {
+            "total": len(shapes),
+            "model": 0,
+            "human": 0,
+            "unknown": 0,
+        }
+        for shape in shapes:
+            source = get_source(shape)
+            if source == SOURCE_MODEL:
+                counts["model"] += 1
+            elif source == SOURCE_HUMAN:
+                counts["human"] += 1
+            else:
+                counts["unknown"] += 1
+        state = self._current_review_state()
+        item.setToolTip(
+            self._file_item_tooltip(
+                self.filename,
+                self._label_path_for_image(self.filename),
+                state,
+                self.other_data.get("reviewed_at"),
+                counts=counts,
+            )
+        )
+
     def _label_file_checked(self, label_file):
         state = self._review_state_for_label_file(label_file)
         return state == REVIEW_CONFIRMED
@@ -4075,7 +4256,7 @@ class LabelingWidget(LabelDialog):
         state = REVIEW_CONFIRMED if checked else REVIEW_UNCHECKED
         return self._set_file_item_review_state(item, state)
 
-    def _set_file_item_review_state(self, item, state):
+    def _set_file_item_review_state(self, item, state, reviewed_at=None):
         changed = (
             item.data(Qt.ItemDataRole.UserRole) is not self._is_confirmed(state)
             or item.data(FILE_REVIEW_ROLE) != state
@@ -4084,7 +4265,96 @@ class LabelingWidget(LabelDialog):
             item.setData(Qt.ItemDataRole.UserRole, self._is_confirmed(state))
             item.setData(FILE_REVIEW_ROLE, state)
         self._refresh_file_item_status_icon(item)
+        if reviewed_at is not None:
+            item.setData(FILE_REVIEWED_AT_ROLE, reviewed_at)
+        self._refresh_file_item_tooltip(item)
         return changed
+
+    def _refresh_file_item_tooltip(self, item, counts=None):
+        """Rebuild a row's hover text from what the row already knows."""
+        if item is None:
+            return
+        file = item.text()
+        item.setToolTip(
+            self._file_item_tooltip(
+                file,
+                self._label_path_for_image(file),
+                item.data(FILE_REVIEW_ROLE) or REVIEW_UNCHECKED,
+                item.data(FILE_REVIEWED_AT_ROLE),
+                counts=counts,
+                negative=bool(item.data(FILE_NEGATIVE_ROLE)),
+                low_conf=bool(item.data(FILE_LOW_CONF_ROLE)),
+            )
+        )
+
+    def _update_current_file_tooltip(self):
+        """Give the open row the counts that only the canvas knows."""
+        item = self._current_file_item()
+        if item is None or not self.filename:
+            return
+        shapes = self.canvas.shapes or []
+        counts = {
+            "total": len(shapes),
+            "model": 0,
+            "human": 0,
+            "unknown": 0,
+        }
+        for shape in shapes:
+            source = get_source(shape)
+            if source == SOURCE_MODEL:
+                counts["model"] += 1
+            elif source == SOURCE_HUMAN:
+                counts["human"] += 1
+            else:
+                counts["unknown"] += 1
+        state = self._current_review_state()
+        item.setToolTip(
+            self._file_item_tooltip(
+                self.filename,
+                self._label_path_for_image(self.filename),
+                state,
+                self.other_data.get("reviewed_at"),
+                counts=counts,
+            )
+        )
+
+    def _label_file_checked(self, label_file):
+        state = self._review_state_for_label_file(label_file)
+        return state == REVIEW_CONFIRMED
+
+    def _set_file_item_checked(self, item, checked):
+        state = REVIEW_CONFIRMED if checked else REVIEW_UNCHECKED
+        return self._set_file_item_review_state(item, state)
+
+    def _set_file_item_review_state(self, item, state, reviewed_at=None):
+        changed = (
+            item.data(Qt.ItemDataRole.UserRole) is not self._is_confirmed(state)
+            or item.data(FILE_REVIEW_ROLE) != state
+        )
+        if changed:
+            item.setData(Qt.ItemDataRole.UserRole, self._is_confirmed(state))
+            item.setData(FILE_REVIEW_ROLE, state)
+        self._refresh_file_item_status_icon(item)
+        if reviewed_at is not None:
+            item.setData(FILE_REVIEWED_AT_ROLE, reviewed_at)
+        self._refresh_file_item_tooltip(item)
+        return changed
+
+    def _refresh_file_item_tooltip(self, item, counts=None):
+        """Rebuild a row's hover text from what the row already knows."""
+        if item is None:
+            return
+        file = item.text()
+        label_file = self._label_path_for_image(file)
+        item.setToolTip(
+            self._file_item_tooltip(
+                file,
+                label_file,
+                item.data(FILE_REVIEW_ROLE) or REVIEW_UNCHECKED,
+                item.data(FILE_REVIEWED_AT_ROLE),
+                counts=counts,
+            )
+        )
 
     @staticmethod
     def _is_confirmed(state):
@@ -4109,23 +4379,20 @@ class LabelingWidget(LabelDialog):
             if item.data(Qt.ItemDataRole.UserRole) is True
             else REVIEW_UNCHECKED
         )
+        # Only the icon: what it means belongs to the row tooltip, which also
+        # carries the path, the review timestamp and the shape counts.
         if state == REVIEW_REJECTED:
             # Sent back for rework: still untrained, but needs eyes on it.
             item.setIcon(self.file_status_icons["rejected"])
-            item.setToolTip(self.tr("已打回（需返工）"))
         elif state == REVIEW_CONFIRMED:
             item.setIcon(self.file_status_icons["checked"])
-            item.setToolTip(self.tr("已检查"))
         elif annotated and negative:
             # Negative sample: confirmed empty (json with zero shapes).
             item.setIcon(self.file_status_icons["negative"])
-            item.setToolTip(self.tr("负样本（确认无目标，空标注）"))
         elif annotated:
             item.setIcon(self.file_status_icons["annotated"])
-            item.setToolTip(self.tr("已标注"))
         else:
             item.setIcon(self.file_status_icons["unannotated"])
-            item.setToolTip(self.tr("未标注"))
 
     def _file_item_annotation_checked(self, item):
         return item.data(Qt.ItemDataRole.UserRole) is True
@@ -4351,7 +4618,6 @@ class LabelingWidget(LabelDialog):
 
     def _create_file_list_item(self, file, label_file, read_checked=True):
         item = QtWidgets.QListWidgetItem(file)
-        item.setToolTip(file)
         flags = Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
         if self._config.get("file_list_checkbox_editable", False):
             flags |= Qt.ItemFlag.ItemIsUserCheckable
@@ -4367,14 +4633,17 @@ class LabelingWidget(LabelDialog):
                 item.setCheckState(Qt.CheckState.Unchecked)
         # Reading the JSON is slow on large folders; batch callers pass
         # read_checked=False and let the background checker fill the dot.
-        state = (
-            self._review_state_for_label_file(label_file)
-            if read_checked
-            else REVIEW_UNCHECKED
-        )
+        if read_checked:
+            state, reviewed_at = label_file_review_info(label_file)
+        else:
+            state, reviewed_at = REVIEW_UNCHECKED, None
         item.setData(Qt.ItemDataRole.UserRole, state == REVIEW_CONFIRMED)
         item.setData(FILE_REVIEW_ROLE, state)
+        item.setData(FILE_REVIEWED_AT_ROLE, reviewed_at)
         self._refresh_file_item_status_icon(item)
+        item.setToolTip(
+            self._file_item_tooltip(file, label_file, state, reviewed_at)
+        )
         return item
 
     def _current_file_item(self):
@@ -5593,6 +5862,7 @@ class LabelingWidget(LabelDialog):
         else:
             text = f"{shape.label} ({shape.group_id})"
         label_list_item = LabelListWidgetItem(text, shape)
+        label_list_item.set_tooltip_provider(self._shape_tooltip)
         self.label_list.add_iem(label_list_item)
         if not self.unique_label_list.find_items_by_label(shape.label):
             item = self.unique_label_list.create_item_from_label(shape.label)
@@ -8130,14 +8400,15 @@ class LabelingWidget(LabelDialog):
                 label_files, on_batch=self._apply_checked_batch
             )
 
-    def _apply_checked_batch(self, start_index, state_list):
+    def _apply_checked_batch(self, start_index, info_list):
         """Apply a batch of review-state results to file rows by index."""
         try:
-            for offset, state in enumerate(state_list):
+            for offset, info in enumerate(info_list):
                 row = start_index + offset
                 item = self.file_list_widget.item(row)
                 if item is not None:
-                    self._set_file_item_review_state(item, state)
+                    state, reviewed_at = info
+                    self._set_file_item_review_state(item, state, reviewed_at)
             self._refresh_file_progress()
         except Exception as e:  # noqa: BLE001
             logger.warning(f"Failed to apply checked batch: {e}")

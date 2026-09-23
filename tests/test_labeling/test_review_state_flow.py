@@ -103,6 +103,7 @@ def make_widget(modes=("img_1.png", "img_2.png"), filter_mode="all"):
                 "unannotated": "unannotated-icon",
             }
             self.progress_calls = 0
+            self.output_dir = None
             self.tr = lambda text: text
 
         def _refresh_file_progress(self):
@@ -118,6 +119,10 @@ def make_widget(modes=("img_1.png", "img_2.png"), filter_mode="all"):
         "_set_file_item_review_state",
         "_set_file_item_checked",
         "_refresh_file_item_status_icon",
+        "_refresh_file_item_tooltip",
+        "_file_item_tooltip",
+        "_label_path_for_image",
+        "_review_state_name",
         "_file_item_annotation_checked",
         "_apply_file_filter",
     )
@@ -136,7 +141,12 @@ class TestReviewStateRows(unittest.TestCase):
         self.assertIs(items[0].data(REVIEW_ROLE), False)
         self.assertIsNone(items[0].data(NEGATIVE_ROLE))
         self.assertEqual(items[0].icon, "rejected-icon")
-        self.assertEqual(items[0].tooltip, "已打回（需返工）")
+        # The row tooltip subsumes what used to be the icon's one-liner: state,
+        # meaning of the dot, and the file itself. Asserted on content so the
+        # wording can change without breaking a guard that is about coverage.
+        self.assertIn("img_1.png", items[0].tooltip)
+        self.assertIn("需返工", items[0].tooltip)
+        self.assertIn("图标含义", items[0].tooltip)
         self.assertFalse(widget._file_item_annotation_checked(items[0]))
 
     def test_confirmed_row_keeps_legacy_checked_semantics(self):

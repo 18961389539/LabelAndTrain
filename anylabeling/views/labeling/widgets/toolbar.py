@@ -42,6 +42,12 @@ class FloatingToolPanel(QtWidgets.QFrame):
         grip.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         grip.setObjectName("FloatingToolPanelGrip")
         grip.setCursor(QtCore.Qt.CursorShape.OpenHandCursor)
+        grip.setToolTip(
+            self.tr(
+                "按住这里拖动可移动工具面板；"
+                "双击把手回到默认位置（左上角）。面板位置会记住。"
+            )
+        )
         grip.installEventFilter(self)
         handle_layout.addWidget(grip)
 
@@ -99,10 +105,14 @@ class FloatingToolPanel(QtWidgets.QFrame):
     def _update_collapse_button(self):
         if self._collapsed:
             self._collapse_btn.setIcon(new_icon("caret-up", "svg"))
-            self._collapse_btn.setToolTip(self.tr("展开工具栏"))
+            self._collapse_btn.setToolTip(
+                self.tr("展开工具栏，显示全部标注工具（折叠状态会记住）")
+            )
         else:
             self._collapse_btn.setIcon(new_icon("caret-down", "svg"))
-            self._collapse_btn.setToolTip(self.tr("收起工具栏"))
+            self._collapse_btn.setToolTip(
+                self.tr("收起工具栏，只留这条把手，给画布腾出空间")
+            )
 
     def toggle_collapse(self):
         self.set_collapsed(not self._collapsed)

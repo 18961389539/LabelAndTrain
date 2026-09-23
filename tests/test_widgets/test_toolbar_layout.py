@@ -239,7 +239,10 @@ class TestToolBarLayout(unittest.TestCase):
         self.assertTrue(content.isVisible())
         expanded_icon = panel._collapse_btn.icon()
         self.assertFalse(expanded_icon.isNull())
-        self.assertEqual(panel._collapse_btn.toolTip(), "收起工具栏")
+        self.assertTrue(
+            panel._collapse_btn.toolTip().startswith("收起工具栏"),
+            panel._collapse_btn.toolTip(),
+        )
 
         panel.set_collapsed(True)
         self.assertTrue(panel.is_collapsed())
@@ -252,7 +255,10 @@ class TestToolBarLayout(unittest.TestCase):
             self._icon_pixels(collapsed_icon),
             self._icon_pixels(expanded_icon),
         )
-        self.assertEqual(panel._collapse_btn.toolTip(), "展开工具栏")
+        self.assertTrue(
+            panel._collapse_btn.toolTip().startswith("展开工具栏"),
+            panel._collapse_btn.toolTip(),
+        )
 
         # Idempotent: collapsing again emits nothing.
         panel.set_collapsed(True)
@@ -261,7 +267,10 @@ class TestToolBarLayout(unittest.TestCase):
         panel.set_collapsed(False)
         self.assertFalse(panel.is_collapsed())
         self.assertTrue(content.isVisible())
-        self.assertEqual(panel._collapse_btn.toolTip(), "收起工具栏")
+        self.assertTrue(
+            panel._collapse_btn.toolTip().startswith("收起工具栏"),
+            panel._collapse_btn.toolTip(),
+        )
         self.assertEqual(
             self._icon_pixels(panel._collapse_btn.icon()),
             self._icon_pixels(expanded_icon),

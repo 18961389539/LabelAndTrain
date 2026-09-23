@@ -36,6 +36,18 @@ class BrightnessContrastDialog(QtWidgets.QDialog):
 
         self.slider_brightness = self._create_slider()
         self.slider_contrast = self._create_slider()
+        self.slider_brightness.setToolTip(
+            self.tr(
+                "预览亮度：中点为 1.00，只改变屏幕显示，"
+                "不写入图片文件，也不影响标注与导出"
+            )
+        )
+        self.slider_contrast.setToolTip(
+            self.tr(
+                "预览对比度：中点为 1.00，便于看清暗部或反光区域的边界；"
+                "同样只影响显示"
+            )
+        )
 
         self.brightness_label = QtWidgets.QLabel(
             f"{self.slider_brightness.value() / 50:.2f}"

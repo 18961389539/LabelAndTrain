@@ -14,7 +14,12 @@ class ZoomWidget(QtWidgets.QSpinBox):
         self.setSuffix("%")
         self.setValue(value)
         self.setKeyboardTracking(False)
-        self.setToolTip(self.tr("Zoom Level"))
+        self.setToolTip(
+            self.tr(
+                "画布缩放比例，点击可选择档位\n"
+                "Ctrl+F 适应窗口 · Ctrl+Shift+F 适应宽度 · Ctrl+= 原始大小"
+            )
+        )
         self.setStatusTip(self.toolTip())
         self.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self.setFixedSize(30, 24)

@@ -25,6 +25,51 @@ CHECKED_FIELD_PATTERN = re.compile(r'"checked"\s*:\s*(true|false)')
 REVIEW_STATE_PATTERN = re.compile(
     r'"review_state"\s*:\s*"(unchecked|confirmed|rejected)"'
 )
+REVIEWED_AT_PATTERN = re.compile(r'"reviewed_at"\s*:\s*"([^"]*)"')
+
+
+def label_file_review_info(label_file):
+    """``(review_state, reviewed_at)`` from one cheap scan of the JSON head.
+
+    The row tooltip needs the timestamp as well as the state, and ``reviewed_at``
+    is written next to ``review_state`` in the template -- so a few extra bytes
+    of the same stream is all it costs. A full parse per row is what the
+    background checker exists to avoid.
+    """
+    if not osp.exists(label_file):
+        return REVIEW_UNCHECKED, None
+    try:
+        buffer = ""
+        state = None
+        reviewed_at = None
+        with open(label_file, "r", encoding="utf-8") as f:
+            while True:
+                chunk = f.read(8192)
+                if not chunk:
+                    break
+                buffer = buffer[-32:] + chunk
+                if state is None:
+                    match = REVIEW_STATE_PATTERN.search(buffer)
+                    if match:
+                        state = match.group(1)
+                    else:
+                        match = CHECKED_FIELD_PATTERN.search(buffer)
+                        if match:
+                            state = (
+                                REVIEW_CONFIRMED
+                                if match.group(1) == "true"
+                                else REVIEW_UNCHECKED
+                            )
+                if state is not None:
+                    match = REVIEWED_AT_PATTERN.search(buffer)
+                    if match:
+                        reviewed_at = match.group(1) or None
+                        break
+                if state is not None and len(buffer) > 24576:
+                    break
+    except Exception:  # noqa: BLE001
+        return REVIEW_UNCHECKED, None
+    return state or REVIEW_UNCHECKED, reviewed_at
 
 
 def _label_file_review_state(label_file: str) -> str:
@@ -34,27 +79,7 @@ def _label_file_review_state(label_file: str) -> str:
     always in the first few bytes; files written before that field existed
     fall back on the legacy ``checked`` flag.
     """
-    if not osp.exists(label_file):
-        return REVIEW_UNCHECKED
-    try:
-        buffer = ""
-        with open(label_file, "r", encoding="utf-8") as f:
-            while True:
-                chunk = f.read(8192)
-                if not chunk:
-                    break
-                buffer = buffer[-32:] + chunk
-                match = REVIEW_STATE_PATTERN.search(buffer)
-                if match:
-                    return match.group(1)
-                match = CHECKED_FIELD_PATTERN.search(buffer)
-                if match:
-                    if match.group(1) == "true":
-                        return REVIEW_CONFIRMED
-                    return REVIEW_UNCHECKED
-    except Exception:  # noqa: BLE001
-        return REVIEW_UNCHECKED
-    return REVIEW_UNCHECKED
+    return label_file_review_info(label_file)[0]
 
 
 def _label_file_checked(label_file: str) -> bool:
@@ -65,7 +90,7 @@ def _label_file_checked(label_file: str) -> bool:
 class LabelCheckWorker(QObject):
     """Checks label files on a background thread, in batches."""
 
-    batch_ready = pyqtSignal(int, list)  # (start_index, [bool, ...])
+    batch_ready = pyqtSignal(int, list)  # (start_index, [(state, ts), ...])
     finished = pyqtSignal()
 
     def __init__(
@@ -87,7 +112,7 @@ class LabelCheckWorker(QObject):
         for i, label_file in enumerate(self.label_files):
             if self._should_stop:
                 break
-            results.append(_label_file_review_state(label_file))
+            results.append(label_file_review_info(label_file))
             if len(results) >= self.batch_size:
                 self.batch_ready.emit(i + 1 - len(results), results)
                 results = []

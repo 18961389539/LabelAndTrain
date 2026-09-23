@@ -129,6 +129,7 @@ class LabelListWidgetItem(QtGui.QStandardItem):
         super(LabelListWidgetItem, self).__init__()
         self.setText(text or "")
         self.set_shape(shape)
+        self._tooltip_provider = None
 
         self.setCheckable(True)
         self.setCheckState(Qt.CheckState.Checked)
@@ -136,7 +137,27 @@ class LabelListWidgetItem(QtGui.QStandardItem):
         self.setTextAlignment(Qt.AlignmentFlag.AlignBottom)
 
     def clone(self):
-        return LabelListWidgetItem(self.text(), self.shape())
+        item = LabelListWidgetItem(self.text(), self.shape())
+        item.set_tooltip_provider(self._tooltip_provider)
+        return item
+
+    def set_tooltip_provider(self, provider):
+        """Hover text computed on demand.
+
+        A string set once would go stale the moment the label, lock state or
+        score changed, and those are written from more than a dozen places.
+        """
+        self._tooltip_provider = provider
+
+    def data(self, role):
+        if role == Qt.ItemDataRole.ToolTipRole:
+            shape = self.shape()
+            if self._tooltip_provider is not None and shape is not None:
+                try:
+                    return self._tooltip_provider(shape)
+                except (RuntimeError, TypeError, AttributeError):
+                    return None  # shape released together with its canvas
+        return super().data(role)
 
     def set_shape(self, shape):
         self.setData(shape, Qt.ItemDataRole.UserRole)
