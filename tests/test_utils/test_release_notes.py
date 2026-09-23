@@ -43,7 +43,8 @@ class TestReleaseNotes(unittest.TestCase):
         # Anything below the fork marker is X-AnyLabeling's own history, and it
         # must not be pasted into this fork's release.
         self.assertIn("Review state per image", notes)
-        self.assertNotIn("X-AnyLabeling's own history", notes)
+        self.assertNotIn("# X-AnyLabeling Changelog", notes)
+        self.assertNotIn("v4.0.0-beta", notes)
 
     def test_first_release_works_without_an_older_tag(self):
         # git describe fails when nothing older is reachable; that must not

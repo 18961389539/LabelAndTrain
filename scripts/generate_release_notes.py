@@ -36,6 +36,12 @@ def read_changelog_section(tag: str) -> str:
             f"Latest changelog version is {matches[0].group(1)}, expected {tag}"
         )
     end = matches[1].start() if len(matches) > 1 else len(changelog)
+    # The fork's entries sit under their own level-1 heading, and upstream's
+    # history starts another one below them. The next `## \`vX\`` boundary alone
+    # would carry that heading into this release's notes.
+    section_heading = re.search(r"(?m)^# ", changelog[matches[0].end() : end])
+    if section_heading:
+        end = matches[0].end() + section_heading.start()
     section = changelog[matches[0].end() : end].strip()
     if not section:
         raise ValueError(f"Changelog entry for {tag} is empty")
