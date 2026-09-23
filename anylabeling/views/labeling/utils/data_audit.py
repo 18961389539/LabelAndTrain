@@ -8,7 +8,9 @@ One-click scan of the currently opened folder for:
 - images worth reviewing, ranked by model uncertainty
 - class / scale balancing advice
 
-Results are shown in a dialog; double-clicking an image row jumps to it.
+Results are shown in a dialog; double-clicking an image row jumps to it. Each
+category lists at most ``DISPLAY_LIMIT`` entries and says the real total in its
+title, while ``review`` stays complete because the smart-review jump walks it.
 """
 
 import json
@@ -70,8 +72,19 @@ CATEGORY_TITLES = {
     "json_txt": "JSON 与 YOLO txt 不一致",
 }
 
-# How many "most uncertain" images the audit surfaces.
-REVIEW_LIMIT = 50
+# How many entries one category lists in the result tree. This is a display
+# limit only: the audit returns the full ranked review queue, because the
+# smart-review jump walks that queue and a cut-off list would report "end of
+# queue" while uncertain images were still waiting.
+DISPLAY_LIMIT = 100
+
+
+def format_category_title(key, total, shown):
+    """Category label with the real count, flagged when the list is capped."""
+    title = CATEGORY_TITLES[key]
+    if shown < total:
+        return f"{title}（共 {total}，显示前 {shown}）"
+    return f"{title}（{total}）"
 
 
 def audit_dataset(image_list, image_dir):
@@ -82,8 +95,9 @@ def audit_dataset(image_list, image_dir):
         image_dir: Folder that holds the label json files.
 
     Returns:
-        dict with keys in ``CATEGORY_ORDER``. ``imbalance`` holds
-        human-readable class-count lines; other keys are file paths.
+        dict with keys in ``CATEGORY_ORDER``. ``review`` is the complete queue
+        ranked by uncertainty; ``imbalance`` holds human-readable class-count
+        lines; other keys are file paths.
     """
     results = {key: [] for key in CATEGORY_ORDER}
     if not image_dir or not osp.isdir(image_dir):
@@ -142,7 +156,7 @@ def audit_dataset(image_list, image_dir):
             results["corrupted"].append(image_path)
 
     review_scores.sort(key=lambda item: (-item[1], item[0]))
-    results["review"] = [path for path, _ in review_scores[:REVIEW_LIMIT]]
+    results["review"] = [path for path, _ in review_scores]
 
     if distribution_entries:
         advice = suggest_balancing(analyze_distribution(distribution_entries))
@@ -189,22 +203,30 @@ def run_data_audit(parent):
 
     image_dir = parent.output_dir or osp.dirname(parent.filename)
     results = audit_dataset(parent.image_list, image_dir)
-    total_issues = sum(len(v) for v in results.values())
+    review_total = len(results.get("review") or [])
+    # A review candidate is a priority, not a defect, and an uncertain folder
+    # can hold hundreds of them - counting both together would turn the headline
+    # number into noise.
+    issue_total = sum(
+        len(items) for key, items in results.items() if key != "review"
+    )
 
     dialog = QDialog(parent)
     dialog.setWindowTitle(parent.tr("数据体检"))
     dialog.setMinimumSize(560, 480)
     layout = QVBoxLayout(dialog)
 
-    if total_issues == 0:
+    if issue_total == 0 and review_total == 0:
         summary = parent.tr("体检通过：未发现问题。")
         label = QLabel(summary)
         label.setStyleSheet("padding: 24px; font-size: 14px;")
         layout.addWidget(label)
     else:
-        summary = parent.tr("发现 %1 个问题：").replace(
-            "%1", str(total_issues)
-        )
+        summary = parent.tr("发现 %1 个问题：").replace("%1", str(issue_total))
+        if review_total:
+            summary += parent.tr("（另有 %1 张建议优先复核）").replace(
+                "%1", str(review_total)
+            )
         label = QLabel(summary)
         label.setStyleSheet("padding: 6px 2px; font-weight: 600;")
         layout.addWidget(label)
@@ -213,14 +235,17 @@ def run_data_audit(parent):
         tree.setHeaderLabels(["类别", "文件"])
         tree.setColumnWidth(0, 240)
         tree.setRootIsDecorated(True)
+        capped = False
         for key in CATEGORY_ORDER:
             items = results[key]
             if not items:
                 continue
+            shown = items[:DISPLAY_LIMIT]
+            capped = capped or len(items) > len(shown)
             root = QTreeWidgetItem(
-                [f"{CATEGORY_TITLES[key]}（{len(items)}）", ""]
+                [format_category_title(key, len(items), len(shown)), ""]
             )
-            for path in items:
+            for path in shown:
                 if key in ("imbalance", "balance"):
                     child = QTreeWidgetItem([path, ""])
                     image_path = ""
@@ -243,7 +268,13 @@ def run_data_audit(parent):
         tree.itemDoubleClicked.connect(on_double_click)
         layout.addWidget(tree)
 
-    hint = QLabel(parent.tr("双击条目可跳转到对应图片。"))
+    hint_text = parent.tr("双击条目可跳转到对应图片。")
+    if capped:
+        hint_text += parent.tr(
+            "列表按排序截断显示，总数见类别标题；完整复核队列可用"
+            "「智能工具 → 5. 智能复核」按序浏览。"
+        )
+    hint = QLabel(hint_text)
     hint.setStyleSheet("color: #86868b; padding: 4px 2px;")
     layout.addWidget(hint)
 

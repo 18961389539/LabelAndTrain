@@ -28,6 +28,7 @@ X-AnyLabeling's own history, kept for provenance.
 - Every smart-tool result dialog raised `NameError` (undefined `QtGui`), and the stale-model audit had an unimported name; both were unreachable for tests because nothing constructed the widget or ran an action.
 - `save_config` swallowed the traceback; the training dialog reported "saved successfully" after a failed write; custom-model add/remove ignored persistence failures; `app.log` never rotated and the faulthandler handle could be collected.
 - Two review-navigation loops rebuilt the whole file list per scanned row.
+- 数据体检 ranked the review queue and then kept only its first 50 entries, and 智能复核 navigated that truncated list: a folder with hundreds of uncertain images reported `1/50` and then "end of queue" while candidates were still waiting. The queue is now complete and the cap lives in the dialog, which states each category's real total and no longer counts review priorities among the problems found.
 - Packaging: `.desktop` `Exec` pointed at a non-existent script; linux/macos specs still bundled deleted `configs/bert` and `configs/ram`.
 - CI: `tests/test_settings` crashed the process when run on its own (a test created a non-GUI `QCoreApplication` that later widget tests reused).
 

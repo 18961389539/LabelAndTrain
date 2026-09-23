@@ -79,7 +79,7 @@ Docs and examples for pruned features are still in the tree (`docs/en/chatbot.md
 - Provenance: every shape records whether a human or a model drew it, and which model — so "send back for rework" and "clear the old round's boxes" are answerable questions rather than guesses.
 - Training: Ultralytics only, four tasks (Detect / Segment / Pose / Classify), ~40 tunable parameters, runs in a separate process that can be stopped or resumed, 14 export formats.
 - Reproducibility: each build writes a dataset `manifest.json` (every label file with its content hash, split assignment, class list, seed) and each finished run writes `run_meta.json` (weights hash, exact arguments, manifest hash, metrics).
-- Smart-tools set (Chinese-labelled menu 智能工具): threshold calibration, dataset analysis, missed-label scan, iteration dashboard, review-jump queue, label propagation, duplicate archiving, training advice, template pre-labeling, stale model-box audit.
+- Smart-tools set (Chinese-labelled menu 智能工具): threshold calibration, dataset analysis, missed-label scan, iteration dashboard, review-jump queue, label propagation, duplicate archiving, training advice, template pre-labeling, stale model-box audit. The review-jump queue holds every uncertain image; only the audit dialog limits what it lists (100 per category, with the real total in the heading).
 - Settings survive restarts through a `Settings` dialog; per-dataset choices live in `.jllabel/project.json`.
 
 ## Auto-labeling model types
