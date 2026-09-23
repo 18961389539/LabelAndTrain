@@ -6,18 +6,23 @@ import subprocess
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
-VERSION_PATTERN = re.compile(
-    r'^__version__\s*=\s*["\']([^"\']+)["\']', re.MULTILINE
-)
 CHANGELOG_PATTERN = re.compile(r"^## `([^`]+)`[^\n]*$", re.MULTILINE)
 
 
-def read_version() -> str:
+def read_app_info_field(name: str) -> str:
     app_info = ROOT_DIR / "anylabeling" / "app_info.py"
-    match = VERSION_PATTERN.search(app_info.read_text(encoding="utf-8"))
+    match = re.search(
+        rf'^__{name}__\s*=\s*["\']([^"\']+)["\']',
+        app_info.read_text(encoding="utf-8"),
+        re.MULTILINE,
+    )
     if not match:
-        raise ValueError(f"Failed to read version from {app_info}")
+        raise ValueError(f"Failed to read __{name}__ from {app_info}")
     return match.group(1)
+
+
+def read_version() -> str:
+    return read_app_info_field("version")
 
 
 def read_changelog_section(tag: str) -> str:
@@ -37,15 +42,19 @@ def read_changelog_section(tag: str) -> str:
     return section
 
 
-def find_previous_tag(tag: str) -> str:
+def find_previous_tag(tag: str):
+    """The tag this one follows, or ``None`` for the first release.
+
+    ``git describe`` exits non-zero when no older tag is reachable, which is
+    exactly the state of the very first tag on a fork checkout.
+    """
     result = subprocess.run(
         ["git", "describe", "--tags", "--abbrev=0", f"{tag}^"],
         cwd=ROOT_DIR,
-        check=True,
         capture_output=True,
         text=True,
     )
-    return result.stdout.strip()
+    return result.stdout.strip() or None
 
 
 def generate_notes(tag: str, repository: str) -> str:
@@ -56,21 +65,24 @@ def generate_notes(tag: str, repository: str) -> str:
 
     changelog = read_changelog_section(tag)
     previous_tag = find_previous_tag(tag)
-    compare_url = (
-        f"https://github.com/{repository}/compare/{previous_tag}...{tag}"
-    )
-    return (
-        "> PyPI: https://pypi.org/project/x-anylabeling-cvhub/\n"
-        "> Baidu Cloud: "
-        "https://pan.baidu.com/s/1pgaw02inCvbEgOme9ajDJA?pwd=e528\n\n"
+    lines = [
         "> [!NOTE]\n"
-        "> Due to compatibility issues across different systems, if the "
-        "precompiled version doesn’t work properly on your machine, you can "
-        "try building and running it from source instead. For details, check "
-        "out the official installation guide and user documentation.\n\n"
-        f"{changelog}\n\n"
-        f"**Full Changelog**: {compare_url}\n"
-    )
+        "> Fork build of "
+        f"[{read_app_info_field('upstream_name')}]({read_app_info_field('url')})"
+        f" at upstream {read_app_info_field('upstream_version')}; the "
+        "interface is Simplified Chinese only, and the binaries here are not "
+        "the upstream PyPI releases.\n"
+        "> If a prebuilt package does not run on your machine, build from "
+        "source following the installation guide.\n\n"
+        f"{changelog}\n"
+    ]
+    if previous_tag:
+        lines.append(
+            f"\n**Full Changelog**: "
+            f"https://github.com/{repository}/compare/"
+            f"{previous_tag}...{tag}\n"
+        )
+    return "".join(lines)
 
 
 def main() -> None:
