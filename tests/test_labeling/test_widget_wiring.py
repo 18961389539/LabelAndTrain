@@ -5,7 +5,7 @@ from types import SimpleNamespace
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 try:
-    from PyQt6 import QtWidgets
+    from PyQt6 import QtCore, QtWidgets
 
     PYQT_AVAILABLE = True
 except Exception:
@@ -19,7 +19,7 @@ TEMPLATE_CONFIG = os.path.join(
 )
 
 
-def build_labeling_widget():
+def build_labeling_widget(filename=None):
     """Construct the real widget headlessly.
 
     Needs two hooks: it reaches for ``self.parent.parent.menuBar()`` through
@@ -32,7 +32,7 @@ def build_labeling_widget():
     app_config.current_config_file = TEMPLATE_CONFIG
     LabelingWidget.menu = lambda self, title: QtWidgets.QMenu(title)
     parent = QtWidgets.QWidget()
-    return LabelingWidget(parent), parent
+    return LabelingWidget(parent, filename=filename), parent
 
 
 @unittest.skipUnless(PYQT_AVAILABLE, "PyQt6 is required")
@@ -295,6 +295,70 @@ class TestStaleCleanupOnOpenFile(unittest.TestCase):
     def test_open_dirty_file_is_left_alone(self):
         remaining = self._run_delete(dirty=True)
         self.assertEqual([shape["label"] for shape in remaining], ["cat"])
+
+
+@unittest.skipUnless(PYQT_AVAILABLE, "PyQt6 is required")
+class TestWidgetLaunchedWithFolder(unittest.TestCase):
+    """``--filename <folder>`` is a documented entry point, so it must boot.
+
+    Opening a folder records it as a recent directory through ``self.settings``,
+    which used to be created *after* the import ran: every folder launch died
+    with AttributeError, and only in a built executable -- the packaged crash log
+    was how it surfaced.
+    """
+
+    def setUp(self):
+        import tempfile
+
+        self.app = QtWidgets.QApplication.instance()
+        if self.app is None:
+            self.app = QtWidgets.QApplication([])
+        from PIL import Image
+
+        self.tmp = tempfile.TemporaryDirectory()
+        for index in range(2):
+            Image.new("RGB", (16, 16), "white").save(
+                os.path.join(self.tmp.name, f"a{index}.png")
+            )
+        # Keep QSettings writes out of the real registry for the duration.
+        QtCore.QSettings.setPath(
+            QtCore.QSettings.Format.IniFormat,
+            QtCore.QSettings.Scope.UserScope,
+            self.tmp.name,
+        )
+        # Loading an image from inside a queued signal corrupts the heap under
+        # offscreen Qt (its error path opens a modal QMessageBox), and the
+        # invariant here is startup order, not decoding pixels.
+        from anylabeling.views.labeling.label_widget import LabelingWidget
+
+        self._real_load_file = LabelingWidget.load_file
+        LabelingWidget.load_file = lambda self, *a, **k: False
+        self.widget, self.parent = build_labeling_widget(self.tmp.name)
+
+    def tearDown(self):
+        from anylabeling.views.labeling.label_widget import LabelingWidget
+
+        LabelingWidget.load_file = self._real_load_file
+        QtCore.QSettings.setPath(
+            QtCore.QSettings.Format.IniFormat,
+            QtCore.QSettings.Scope.UserScope,
+            None,
+        )
+        self.widget.deleteLater()
+        self.tmp.cleanup()
+
+    def test_folder_contents_are_loaded(self):
+        self.assertEqual(self.widget.file_list_widget.count(), 2)
+        self.assertEqual(
+            sorted(os.path.basename(p) for p in self.widget.image_list),
+            ["a0.png", "a1.png"],
+        )
+
+    def test_folder_is_recorded_as_recent(self):
+        recorded = [
+            os.path.normcase(path) for path in self.widget._recent_dir_list()
+        ]
+        self.assertIn(os.path.normcase(self.tmp.name), recorded)
 
 
 if __name__ == "__main__":

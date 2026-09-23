@@ -2413,6 +2413,14 @@ class LabelingWidget(LabelDialog):
             Qt.Orientation.Vertical: {},
         }  # key=filename, value=scroll_value
 
+        # XXX: Could be completely declarative.
+        # Restore application settings. This happens before any folder is
+        # imported, because opening a folder records it as a recent directory
+        # through self.settings.
+        self.settings = QtCore.QSettings("anylabeling", "anylabeling")
+        self.recent_files = self.settings.value("recent_files", []) or []
+        self.last_open_dir = self.settings.value("last_open_dir", None) or None
+
         if filename is not None and osp.isdir(filename):
             self.import_image_folder(filename, load=False)
         else:
@@ -2421,12 +2429,6 @@ class LabelingWidget(LabelDialog):
         if config["file_search"]:
             self.file_search.setText(config["file_search"])
             self.file_search_changed()
-
-        # XXX: Could be completely declarative.
-        # Restore application settings.
-        self.settings = QtCore.QSettings("anylabeling", "anylabeling")
-        self.recent_files = self.settings.value("recent_files", []) or []
-        self.last_open_dir = self.settings.value("last_open_dir", None) or None
 
         # Populate the File menu dynamically.
         self.update_file_menu()
