@@ -155,6 +155,26 @@ class FloatingToolPanel(QtWidgets.QFrame):
         self.move(self.default_position())
         self.raise_()
 
+    def _content_height_hint(self):
+        """How tall the content actually wants to be.
+
+        A QScrollArea reports its own small default hint rather than the
+        toolbar inside it, so sizing the panel from ``sizeHint()`` collapsed it
+        to a single button with everything else behind a scrollbar. A plain
+        fixed-size frame goes the other way: its ``sizeHint()`` is invalid and
+        only ``minimumHeight()`` carries the number. Every source is consulted
+        and the largest wins.
+        """
+        content = self._content_widget
+        candidates = [content.sizeHint().height(), content.minimumHeight()]
+        inner = getattr(content, "widget", None)
+        widget = inner() if callable(inner) else None
+        if widget is not None:
+            candidates.append(widget.sizeHint().height())
+            candidates.append(widget.minimumHeight())
+        usable = [value for value in candidates if value > 0]
+        return max(usable) if usable else 0
+
     def sync_to_parent(self):
         parent = self.parentWidget()
         if parent is None:
@@ -172,7 +192,16 @@ class FloatingToolPanel(QtWidgets.QFrame):
                 - margins.bottom()
                 - spacing,
             )
-            self._content_widget.setMaximumHeight(content_max_height)
+            needed = self._content_height_hint()
+            content_height = (
+                content_max_height
+                if needed <= 0
+                else min(content_max_height, needed)
+            )
+            # A maximum alone leaves the panel at its sizeHint, which for a
+            # scroll area is the small default above.
+            self._content_widget.setMinimumHeight(content_height)
+            self._content_widget.setMaximumHeight(content_height)
             self.setMaximumHeight(available_height)
         self.adjustSize()
         if not self._user_moved:

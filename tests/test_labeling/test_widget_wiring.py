@@ -345,6 +345,10 @@ class TestWidgetLaunchedWithFolder(unittest.TestCase):
             None,
         )
         self.widget.deleteLater()
+        self.app.processEvents()
+        # QSettings keeps its ini file open on Windows, so the folder it lives
+        # in cannot always be removed the moment the widget is released.
+        self.tmp.ignore_cleanup_errors = True
         self.tmp.cleanup()
 
     def test_folder_contents_are_loaded(self):

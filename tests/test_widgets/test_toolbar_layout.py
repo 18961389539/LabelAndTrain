@@ -309,3 +309,81 @@ class TestToolBarLayout(unittest.TestCase):
         finally:
             cfg_module.current_config_file = old_config_file
             cfg_module.set_work_directory(old_work_dir)
+
+
+@unittest.skipUnless(PYQT_AVAILABLE, "PyQt6 is required for toolbar tests")
+class TestPanelWithScrollAreaContent(unittest.TestCase):
+    """The real panel content is a QScrollArea, not a fixed-size frame.
+
+    ``QScrollArea.sizeHint()`` reports its own small default instead of the
+    toolbar inside it, so a panel sized from that hint showed one of 26 tools
+    and hid the rest behind a scrollbar. Every earlier test handed the panel a
+    fixed-size frame, which is why none of them caught it.
+    """
+
+    def setUp(self):
+        self.app = QtWidgets.QApplication.instance()
+        if self.app is None:
+            self.app = QtWidgets.QApplication([])
+        self._widgets = []
+
+    def tearDown(self):
+        for widget in self._widgets:
+            widget.close()
+        self.app.processEvents()
+
+    def _panel(self, parent_height, tools=10):
+        parent = QtWidgets.QWidget()
+        parent.resize(400, parent_height)
+        parent.show()
+        self._widgets.append(parent)
+
+        toolbar = ToolBar("Tools")
+        toolbar.setOrientation(QtCore.Qt.Orientation.Vertical)
+        for index in range(tools):
+            action = QtGui.QAction(f"tool_{index}", toolbar)
+            action.setIcon(new_icon("ok", "svg"))
+            toolbar.addAction(action)
+        toolbar.setMinimumHeight(toolbar.sizeHint().height())
+        self._widgets.append(toolbar)
+
+        scroll = QtWidgets.QScrollArea()
+        scroll.setFrameShape(QtWidgets.QFrame.Shape.NoFrame)
+        scroll.setWidgetResizable(True)
+        scroll.setSizePolicy(
+            QtWidgets.QSizePolicy.Policy.Fixed,
+            QtWidgets.QSizePolicy.Policy.Expanding,
+        )
+        scroll.setFixedWidth(toolbar.maximumWidth() + 4)
+        scroll.setWidget(toolbar)
+
+        panel = FloatingToolPanel(parent)
+        panel.set_content_widget(scroll)
+        panel.show()
+        self._widgets.append(panel)
+        self.app.processEvents()
+        return panel, scroll, toolbar
+
+    def test_tall_parent_shows_every_tool(self):
+        panel, scroll, toolbar = self._panel(700)
+        needed = toolbar.sizeHint().height()
+        self.assertGreaterEqual(panel.height(), needed)
+        self.assertGreaterEqual(scroll.height(), needed)
+
+    def test_short_parent_clamps_and_keeps_scrolling(self):
+        panel, scroll, toolbar = self._panel(240)
+        needed = toolbar.sizeHint().height()
+        self.assertLessEqual(panel.height(), 240 - 8)
+        self.assertLess(scroll.maximumHeight(), needed)
+        self.assertGreaterEqual(scroll.maximumHeight(), 72)
+
+    def test_panel_resyncs_when_the_parent_grows(self):
+        panel, scroll, toolbar = self._panel(240)
+        short = panel.height()
+        parent = panel.parentWidget()
+        parent.resize(400, 700)
+        panel.sync_to_parent()
+        self.app.processEvents()
+        needed = toolbar.sizeHint().height()
+        self.assertGreater(panel.height(), short)
+        self.assertGreaterEqual(scroll.height(), needed)
