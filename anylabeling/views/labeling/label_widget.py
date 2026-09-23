@@ -62,7 +62,11 @@ from .utils.style import (
 )
 from ...config import get_config, save_config
 from .label_file import LabelFile, LabelFileError
-from .provenance import model_display_name, stamp_model_shapes
+from .provenance import (
+    is_deletable_stale_shape,
+    model_display_name,
+    stamp_model_shapes,
+)
 from .schema import (
     REVIEW_CONFIRMED,
     REVIEW_REJECTED,
@@ -89,6 +93,7 @@ from .utils.quality import (
     shapes_have_low_confidence,
 )
 from .utils.smart_tools import (
+    run_backup_restore,
     run_duplicate_archive,
     run_missing_scan,
     run_review_jump,
@@ -847,6 +852,17 @@ class LabelingWidget(LabelDialog):
             None,
             "layers",
             self.tr("列出由其它模型留下、可考虑清理的框（只报告，不删除）"),
+            enabled=True,
+        )
+        smart_restore_backup = action(
+            self.tr("11. 从备份恢复标注（撤销批量删除）"),
+            lambda: run_backup_restore(self),
+            None,
+            "undo",
+            self.tr(
+                "把 .label_backups 里的某一次快照写回标注目录；"
+                "被覆盖的文件会先生成一个新快照"
+            ),
             enabled=True,
         )
         toggle_annotation_checked = action(
@@ -1977,6 +1993,7 @@ class LabelingWidget(LabelDialog):
                 smart_advice,
                 smart_template,
                 smart_stale_audit,
+                smart_restore_backup,
             ),
         )
         utils.add_actions(
@@ -8244,6 +8261,56 @@ class LabelingWidget(LabelDialog):
         """Name of the loaded auto-labeling model, used for shape provenance."""
         manager = getattr(self.auto_labeling_widget, "model_manager", None)
         return model_display_name(getattr(manager, "loaded_model_config", None))
+
+    def delete_reported_shapes(self, indices):
+        """Mirror a bulk cleanup on the image that is currently open.
+
+        The deletion is applied to the canvas rather than by reloading the file,
+        because ``load_file`` resets the shape history: this way one Ctrl+Z
+        brings the whole batch back. Only shapes that are still unlocked and
+        still attributable to another model are removed, so a box the user
+        claimed in between stays.
+        """
+        current_model = self._current_model_identity()
+        shapes = self.canvas.shapes
+        doomed = []
+        for index in sorted(set(indices or [])):
+            if not 0 <= index < len(shapes):
+                continue
+            shape = shapes[index]
+            if shape in doomed or not is_deletable_stale_shape(
+                shape, current_model
+            ):
+                continue
+            doomed.append(shape)
+        if not doomed:
+            return 0
+
+        # Pre-state first: undo restores the newest-but-one snapshot, so the
+        # batch has to be in the stack before it disappears from the canvas.
+        self.canvas.store_shapes()
+        remaining = [shape for shape in shapes if shape not in doomed]
+        # Dropping the list items re-syncs the canvas through
+        # label_order_changed(), which pushes the resulting snapshot itself.
+        # Only correct the canvas here when that did not happen: a second
+        # identical snapshot would cost the user two presses of Ctrl+Z.
+        self.remove_labels(doomed)
+        if self.canvas.shapes != remaining:
+            self.canvas.load_shapes(remaining)
+        self.canvas.selected_shapes = [
+            shape
+            for shape in self.canvas.selected_shapes
+            if shape not in doomed
+        ]
+        self.canvas.update()
+        self.shape_selection_changed(self.canvas.selected_shapes)
+        self.set_dirty()
+        self.actions.undo.setEnabled(self.canvas.is_shape_restorable)
+        self.actions.redo.setEnabled(self.canvas.is_shape_redoable)
+        if self.no_shape():
+            for action in self.actions.on_shapes_present:
+                action.setEnabled(False)
+        return len(doomed)
 
     def new_shapes_from_auto_labeling(self, auto_labeling_result):
         """Apply auto labeling results to the current image."""

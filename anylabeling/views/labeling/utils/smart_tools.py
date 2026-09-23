@@ -21,6 +21,7 @@ from PyQt6.QtWidgets import (
     QAbstractItemView,
     QDialog,
     QHBoxLayout,
+    QInputDialog,
     QLabel,
     QMessageBox,
     QProgressDialog,
@@ -41,6 +42,7 @@ from anylabeling.views.labeling.provenance import (
     is_deletable_stale_shape,
     is_from_other_model,
     model_of,
+    shape_marker,
     stamp_model_shapes,
 )
 from anylabeling.views.labeling.utils._io import save_json
@@ -84,6 +86,7 @@ from anylabeling.views.labeling.widgets import Popup
 
 __all__ = [
     "label_dir_for",
+    "run_backup_restore",
     "run_duplicate_archive",
     "run_missing_scan",
     "run_review_jump",
@@ -835,23 +838,6 @@ def run_missing_scan(parent, iou_threshold=0.5, min_score=DEFAULT_ACCEPT):
     thread.start()
 
 
-def _shape_marker(shape):
-    """Stable identity for a box so re-runs never duplicate an annotation."""
-    if not isinstance(shape, dict):
-        return None
-    points = shape.get("points") or []
-    if not points:
-        return None
-    rounded = tuple(
-        (round(float(point[0]), 2), round(float(point[1]), 2))
-        for point in points
-        if isinstance(point, (list, tuple)) and len(point) >= 2
-    )
-    if not rounded:
-        return None
-    return (str(shape.get("label") or ""), rounded)
-
-
 def _write_missing(parent, results):
     """Append accepted predictions to their label files."""
     directory = label_dir_for(parent)
@@ -865,9 +851,9 @@ def _write_missing(parent, results):
             continue
         stamp_model_shapes(payloads, parent._current_model_identity())
         shapes = data.setdefault("shapes", [])
-        existing = {_shape_marker(shape) for shape in shapes}
+        existing = {shape_marker(shape) for shape in shapes}
         for payload in payloads:
-            marker = _shape_marker(payload)
+            marker = shape_marker(payload)
             if marker is not None and marker in existing:
                 continue
             if marker is not None:
@@ -886,8 +872,10 @@ def _write_missing(parent, results):
 # stale model-box cleanup (used by action 10)
 # --------------------------------------------------------------------------
 BACKUP_ROOT_NAME = ".label_backups"
-BACKUP_STAMP_PATTERN = re.compile(r"\d{8}_\d{6}$")
-# Bulk deletions bypass the undo stack, so every run keeps its own snapshot.
+# ``20260923_101112``, with a ``_1`` suffix when two snapshots land in the same
+# second -- both stay prunable, and neither merges into the other.
+BACKUP_STAMP_PATTERN = re.compile(r"\d{8}_\d{6}(_\d+)?$")
+# Files outside the canvas undo stack can only come back from these snapshots.
 BACKUP_KEEP_RUNS = 20
 
 
@@ -909,16 +897,27 @@ def _prune_backup_runs(backup_root):
             logger.warning(f"Could not prune label backup run {name}: {exc}")
 
 
+def _new_backup_dir(backup_root, stamp):
+    """Reserve an empty run directory, so same-second runs do not overwrite."""
+    candidate = stamp
+    suffix = 1
+    while osp.isdir(osp.join(backup_root, candidate)):
+        candidate = f"{stamp}_{suffix}"
+        suffix += 1
+    return osp.join(backup_root, candidate)
+
+
 def backup_label_files(label_files, label_dir, stamp):
     """Copy the label files that are about to change into a backup run.
 
     Returns ``None`` when the backup could not be completed, which the caller
-    must treat as "do not delete anything".
+    must treat as "do not change anything".
     """
     backup_root = osp.join(label_dir, BACKUP_ROOT_NAME)
-    destination = osp.join(backup_root, stamp)
     try:
-        os.makedirs(destination, exist_ok=True)
+        os.makedirs(backup_root, exist_ok=True)
+        destination = _new_backup_dir(backup_root, stamp)
+        os.makedirs(destination)
         for label_file in label_files:
             shutil.copy2(
                 label_file, osp.join(destination, osp.basename(label_file))
@@ -928,6 +927,86 @@ def backup_label_files(label_files, label_dir, stamp):
         return None
     _prune_backup_runs(backup_root)
     return destination
+
+
+def list_label_backups(label_dir):
+    """Snapshot runs under ``.label_backups``, newest first.
+
+    Entries are ``(name, path, file_count)``: the picker needs to say what a
+    run would put back before the user commits to overwriting labels.
+    """
+    backup_root = osp.join(label_dir or "", BACKUP_ROOT_NAME)
+    try:
+        names = os.listdir(backup_root)
+    except OSError:
+        return []
+    runs = []
+    for name in names:
+        path = osp.join(backup_root, name)
+        if not BACKUP_STAMP_PATTERN.fullmatch(name) or not osp.isdir(path):
+            continue
+        try:
+            count = len([f for f in os.listdir(path) if f.endswith(".json")])
+        except OSError:
+            continue
+        runs.append((name, path, count))
+    runs.sort(key=lambda run: run[0], reverse=True)
+    return runs
+
+
+def plan_backup_restore(backup_dir, label_dir, skip_files=None):
+    """Map a snapshot's jsons onto the label files they came from."""
+    skipped = {
+        osp.normpath(osp.abspath(path)) for path in (skip_files or ())
+    }
+    plan = {}
+    try:
+        names = sorted(os.listdir(backup_dir))
+    except OSError:
+        return plan
+    for name in names:
+        if not name.endswith(".json"):
+            continue
+        target = osp.join(label_dir, name)
+        if osp.normpath(osp.abspath(target)) in skipped:
+            continue
+        plan[target] = osp.join(backup_dir, name)
+    return plan
+
+
+def restore_label_backup(backup_dir, label_dir, skip_files=None):
+    """Copy a bulk-deletion snapshot back over the labels it came from.
+
+    What gets overwritten is snapshotted first, so choosing the wrong run is
+    itself reversible: the newer run in the same list is the pre-restore state.
+    """
+    result = {
+        "restored": 0,
+        "skipped": 0,
+        "undo_dir": None,
+        "backup_failed": False,
+    }
+    plan = plan_backup_restore(backup_dir, label_dir, skip_files)
+    result["skipped"] += len(skip_files or ())
+    if not plan:
+        return result
+    present = [target for target in plan if osp.isfile(target)]
+    result["undo_dir"] = backup_label_files(
+        present, label_dir, time.strftime("%Y%m%d_%H%M%S")
+    )
+    if result["undo_dir"] is None:
+        result["backup_failed"] = True
+        result["skipped"] += len(plan)
+        return result
+    for target, source in plan.items():
+        try:
+            shutil.copy2(source, target)
+        except OSError as exc:
+            logger.warning(f"Label restore failed for {target}: {exc}")
+            result["skipped"] += 1
+            continue
+        result["restored"] += 1
+    return result
 
 
 def apply_stale_deletions(targets, current_model, skip_files=None, label_dir=None):
@@ -941,8 +1020,9 @@ def apply_stale_deletions(targets, current_model, skip_files=None, label_dir=Non
 
     When ``label_dir`` is given the files that are about to change are copied
     into ``<label_dir>/.label_backups/<stamp>/`` first, and the whole batch is
-    abandoned if that backup cannot be completed -- this deletion does not go
-    through the undo stack, so the snapshot is the only way back.
+    abandoned if that backup cannot be completed. Files other than the one open
+    in the canvas have no undo history to fall back on, so that snapshot is the
+    only way back.
     """
     skipped_files = set(skip_files or ())
     counts = {
@@ -953,6 +1033,10 @@ def apply_stale_deletions(targets, current_model, skip_files=None, label_dir=Non
         "skipped_unavailable": 0,
         "backup_dir": None,
         "backup_failed": False,
+        # Which shape indexes were actually removed from each file, so the
+        # caller can mirror the same decision on the canvas instead of
+        # re-deriving it and possibly disagreeing.
+        "deleted_refs": {},
     }
     pending = {}
     for label_file, refs in (targets or {}).items():
@@ -970,7 +1054,7 @@ def apply_stale_deletions(targets, current_model, skip_files=None, label_dir=Non
                 counts["skipped_unavailable"] += 1
                 continue
             shape = shapes[index]
-            if _shape_marker(shape) != ref.get("marker"):
+            if shape_marker(shape) != ref.get("marker"):
                 counts["skipped_changed"] += 1
                 continue
             if shape.get("locked"):
@@ -1014,6 +1098,7 @@ def apply_stale_deletions(targets, current_model, skip_files=None, label_dir=Non
             continue
         counts["deleted"] += len(doomed)
         counts["files"] += 1
+        counts["deleted_refs"][label_file] = sorted(doomed)
     return counts
 
 
@@ -1279,7 +1364,7 @@ def run_stale_model_audit(parent):
             label_name, detail = describe_shape(shape)
             ref = {
                 "index": index,
-                "marker": _shape_marker(shape),
+                "marker": shape_marker(shape),
                 "label_file": _label_file_for_image(image_path, directory),
             }
             by_producer.setdefault(producer, []).append(
@@ -1398,8 +1483,8 @@ def _delete_reported_stale(parent, dialog):
         parent.tr(
             "将从 %1 个文件中删除选中的 %2 个框。\n"
             "锁定、来源不明以及报告之后被改动过的框会自动跳过。\n"
-            "此操作不进入撤销栈，删除前会把涉及的标注文件备份到 "
-            ".label_backups。"
+            "当前打开的图片删除后可用 Ctrl+Z 撤销；其余文件删除前会先备份到 "
+            ".label_backups，之后可用「从备份恢复标注」取回。"
         )
         .replace("%1", str(len(targets)))
         .replace("%2", str(total)),
@@ -1427,8 +1512,19 @@ def _delete_reported_stale(parent, dialog):
         label_dir=label_dir_for(parent),
     )
 
-    if open_label and open_label not in skip and osp.isfile(open_label):
-        parent.load_file(filename)
+    open_deleted = (counts.get("deleted_refs") or {}).get(open_label) or []
+    if open_deleted:
+        mirror = getattr(parent, "delete_reported_shapes", None)
+        applied = mirror(open_deleted) if callable(mirror) else 0
+        if applied != len(open_deleted):
+            # Canvas and file disagree about which boxes were live. Reloading
+            # loses the undo step, but showing a canvas that no longer matches
+            # the file on disk is worse.
+            logger.warning(
+                "Stale cleanup: canvas mirror applied %d of %d, "
+                "reloading %s" % (applied, len(open_deleted), open_label)
+            )
+            parent.load_file(filename)
     refresh = getattr(parent, "_refresh_file_panel", None)
     if callable(refresh):
         refresh()
@@ -1451,6 +1547,8 @@ def _delete_reported_stale(parent, dialog):
                 or parent.tr("未备份"),
             )
         )
+        if open_deleted:
+            message += parent.tr("；当前图片可直接 Ctrl+Z 撤销")
         _notify(parent, message, "copy-green")
     else:
         _notify(parent, parent.tr("没有框被删除。"), "warning")
@@ -1471,6 +1569,93 @@ def _delete_reported_stale(parent, dialog):
             )
         )
     dialog.reject()
+
+
+def run_backup_restore(parent):
+    """Put back the label files a bulk deletion overwrote.
+
+    Only the image open in the canvas has a real undo; every other file a
+    deletion touched comes back from its snapshot, which is what this lists.
+    """
+    directory = label_dir_for(parent)
+    if not directory:
+        _notify(parent, parent.tr("请先打开一个图片文件夹。"), "warning")
+        return
+    runs = list_label_backups(directory)
+    if not runs:
+        _notify(
+            parent,
+            parent.tr("没有找到标注备份（%1 下没有快照）。").replace(
+                "%1", BACKUP_ROOT_NAME
+            ),
+            "warning",
+        )
+        return
+    entries = [
+        parent.tr("%1（%2 个文件）")
+        .replace("%1", name)
+        .replace("%2", str(count))
+        for name, _path, count in runs
+    ]
+    choice, ok = QInputDialog.getItem(
+        parent,
+        parent.tr("从备份恢复标注"),
+        parent.tr("选择要恢复的备份（最新在前）："),
+        entries,
+        0,
+        False,
+    )
+    if not ok or choice not in entries:
+        return
+    name, path, count = runs[entries.index(choice)]
+
+    open_label = None
+    filename = getattr(parent, "filename", None)
+    if filename:
+        open_label = _label_file_for_image(filename, directory)
+    # Copying over a file the canvas still holds unsaved work for would
+    # flatten that work, so the open image is left alone when it is dirty.
+    skip = {open_label} if getattr(parent, "dirty", False) else set()
+
+    answer = QMessageBox.question(
+        parent,
+        parent.tr("从备份恢复标注"),
+        parent.tr(
+            "将用备份 %1 中的 %2 个文件覆盖当前标注。\n"
+            "被覆盖的文件会先写入一个新的备份；选错了就在列表里再选更新的那一项。\n"
+            "当前打开且有未保存改动的图片不会被覆盖。"
+        )
+        .replace("%1", name)
+        .replace("%2", str(count)),
+        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        QMessageBox.StandardButton.No,
+    )
+    if answer != QMessageBox.StandardButton.Yes:
+        return
+
+    result = restore_label_backup(path, directory, skip_files=skip)
+    if result["backup_failed"]:
+        _notify(
+            parent,
+            parent.tr("备份当前标注失败，已放弃恢复，文件未作修改。"),
+            "warning",
+        )
+        return
+    if open_label and open_label not in skip and osp.isfile(open_label):
+        parent.load_file(filename)
+    refresh = getattr(parent, "_refresh_file_panel", None)
+    if callable(refresh):
+        refresh()
+    if result["restored"]:
+        _notify(
+            parent,
+            parent.tr("已恢复 %1 个标注文件，被覆盖的版本备份在 %2")
+            .replace("%1", str(result["restored"]))
+            .replace("%2", osp.basename(result["undo_dir"] or "") or "?"),
+            "copy-green",
+        )
+    else:
+        _notify(parent, parent.tr("没有文件被恢复。"), "warning")
 
 
 # --------------------------------------------------------------------------

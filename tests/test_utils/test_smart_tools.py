@@ -106,7 +106,7 @@ class TestApplyStaleDeletions(unittest.TestCase):
         }
 
     def _ref(self, shape, index):
-        return {"index": index, "marker": self.smart_tools._shape_marker(shape)}
+        return {"index": index, "marker": self.smart_tools.shape_marker(shape)}
 
     def test_removes_only_the_referenced_stale_box(self):
         stale = self._model_box()
@@ -349,7 +349,7 @@ class TestStaleDeleteBackup(unittest.TestCase):
             json.dump({"shapes": [self.stale, keep], "checked": False}, handle)
         self.ref = {
             "index": 0,
-            "marker": smart_tools._shape_marker(self.stale),
+            "marker": smart_tools.shape_marker(self.stale),
         }
 
     def tearDown(self):
@@ -403,7 +403,7 @@ class TestStaleDeleteBackup(unittest.TestCase):
         human_only = {"label": "dog", "points": [[1, 1], [2, 2]], "source": "human"}
         with open(self.label, "w", encoding="utf-8") as handle:
             self.json.dump({"shapes": [human_only], "checked": False}, handle)
-        ref = {"index": 0, "marker": self.smart_tools._shape_marker(human_only)}
+        ref = {"index": 0, "marker": self.smart_tools.shape_marker(human_only)}
         counts = self.smart_tools.apply_stale_deletions(
             {self.label: [ref]}, "run_07", label_dir=self.tmp.name
         )
@@ -438,3 +438,160 @@ class TestStaleDeleteBackup(unittest.TestCase):
                 self.os.path.join(root, stamped[0], "a.json")
             )
         )
+
+
+@unittest.skipUnless(
+    SMART_TOOLS_AVAILABLE, "PyQt6 is required for smart tools tests"
+)
+class TestBackupRestore(unittest.TestCase):
+    """Files the canvas cannot undo come back from their snapshot."""
+
+    def setUp(self):
+        import json
+        import tempfile
+
+        from anylabeling.views.labeling.utils import smart_tools
+
+        self.json = json
+        self.smart_tools = smart_tools
+        self.tmp = tempfile.TemporaryDirectory()
+        self.label = os.path.join(self.tmp.name, "a.json")
+        self._write([("cat", "model", "run_01"), ("dog", "human", None)])
+        self.ref = {
+            "index": 0,
+            "marker": smart_tools.shape_marker(
+                {"label": "cat", "points": [[0, 0], [10, 10]]}
+            ),
+        }
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def _write(self, shapes):
+        payload = []
+        for index, (label, source, model) in enumerate(shapes):
+            shape = {
+                "label": label,
+                "points": [[index, index], [index + 10, index + 10]],
+                "source": source,
+            }
+            if model:
+                shape["model"] = model
+            payload.append(shape)
+        with open(self.label, "w", encoding="utf-8") as handle:
+            self.json.dump({"shapes": payload, "checked": False}, handle)
+        return payload
+
+    def _live_labels(self):
+        with open(self.label, "r", encoding="utf-8") as handle:
+            return [
+                shape["label"] for shape in self.json.load(handle)["shapes"]
+            ]
+
+    def _delete(self):
+        return self.smart_tools.apply_stale_deletions(
+            {self.label: [self.ref]}, "run_07", label_dir=self.tmp.name
+        )
+
+    def test_restore_brings_the_deleted_box_back(self):
+        self._delete()
+        self.assertEqual(self._live_labels(), ["dog"])
+
+        runs = self.smart_tools.list_label_backups(self.tmp.name)
+        self.assertEqual(len(runs), 1)
+        result = self.smart_tools.restore_label_backup(
+            runs[0][1], self.tmp.name
+        )
+
+        self.assertEqual(result["restored"], 1)
+        self.assertFalse(result["backup_failed"])
+        self.assertEqual(self._live_labels(), ["cat", "dog"])
+        # Choosing the wrong run must be reversible: the state the restore
+        # overwrote got its own snapshot.
+        self.assertEqual(
+            len(self.smart_tools.list_label_backups(self.tmp.name)), 2
+        )
+
+    def test_restore_leaves_the_dirty_open_file_alone(self):
+        self._delete()
+        runs = self.smart_tools.list_label_backups(self.tmp.name)
+
+        result = self.smart_tools.restore_label_backup(
+            runs[0][1], self.tmp.name, skip_files={self.label}
+        )
+
+        self.assertEqual(result["restored"], 0)
+        self.assertEqual(result["skipped"], 1)
+        self.assertEqual(self._live_labels(), ["dog"])
+
+    def test_two_snapshots_in_one_second_stay_separate(self):
+        stamp = "20260923_101112"
+        first = self.smart_tools.backup_label_files(
+            [self.label], self.tmp.name, stamp
+        )
+        self._write([("only", "human", None)])
+        second = self.smart_tools.backup_label_files(
+            [self.label], self.tmp.name, stamp
+        )
+
+        self.assertNotEqual(first, second)
+        self.assertEqual(
+            len(self.smart_tools.list_label_backups(self.tmp.name)), 2
+        )
+        inner = os.path.join(second, "a.json")
+        with open(inner, "r", encoding="utf-8") as handle:
+            self.assertEqual(
+                [shape["label"] for shape in self.json.load(handle)["shapes"]],
+                ["only"],
+            )
+
+    def test_failed_undo_snapshot_aborts_the_restore(self):
+        from unittest import mock
+
+        self._delete()
+        runs = self.smart_tools.list_label_backups(self.tmp.name)
+        with mock.patch.object(
+            self.smart_tools.shutil, "copy2", side_effect=OSError("locked")
+        ):
+            result = self.smart_tools.restore_label_backup(
+                runs[0][1], self.tmp.name
+            )
+
+        self.assertTrue(result["backup_failed"])
+        self.assertEqual(result["restored"], 0)
+        self.assertEqual(self._live_labels(), ["dog"])
+
+    def test_menu_action_restores_the_chosen_run(self):
+        from unittest import mock
+
+        self._delete()
+        runs = self.smart_tools.list_label_backups(self.tmp.name)
+        entries = [f"{name}（{count} 个文件）" for name, _p, count in runs]
+
+        class _Parent:
+            """Only the parts run_backup_restore touches."""
+
+            def __init__(self, directory):
+                self.output_dir = directory
+                self.filename = None
+
+            def tr(self, text):
+                return text
+
+        parent = _Parent(self.tmp.name)
+        with (
+            mock.patch.object(
+                self.smart_tools.QInputDialog,
+                "getItem",
+                return_value=(entries[0], True),
+            ),
+            mock.patch.object(
+                self.smart_tools.QMessageBox,
+                "question",
+                return_value=self.smart_tools.QMessageBox.StandardButton.Yes,
+            ),
+            mock.patch.object(self.smart_tools, "_notify"),
+        ):
+            self.smart_tools.run_backup_restore(parent)
+
+        self.assertEqual(self._live_labels(), ["cat", "dog"])

@@ -58,9 +58,13 @@ class TestWidgetWiring(unittest.TestCase):
             for menu in self.widget.menus.smart_tools.actions()
             if menu.text()
         ]
-        self.assertEqual(len(titles), 11, titles)
+        self.assertEqual(len(titles), 12, titles)
         self.assertTrue(
             any(title.startswith("10.") for title in titles),
+            titles,
+        )
+        self.assertTrue(
+            any(title.startswith("11.") for title in titles),
             titles,
         )
 
@@ -166,14 +170,23 @@ class TestStaleCleanupOnOpenFile(unittest.TestCase):
         Image.new("RGB", (20, 20), "white").save(self.image)
         self.label = os.path.join(self.tmp.name, "a.json")
         self.widget, self.parent = build_labeling_widget()
-        main = QtWidgets.QWidget()
-        main.setWindowTitle = lambda _title: None
+        # The real parent chain is LabelingWidget -> central widget ->
+        # QMainWindow, and status() walks it. A QMainWindow supplies statusBar()
+        # and menuBar() like the app does; a bare QWidget does not.
+        main = QtWidgets.QMainWindow()
         self.widget.parent = SimpleNamespace(parent=main)
+        self.main = main
         self.widget.output_dir = self.tmp.name
         self.widget.image_dir = self.tmp.name
         self.widget._current_model_identity = lambda: "run_07"
 
     def tearDown(self):
+        # The auto-save feedback is debounced by a timer: left running, it
+        # fires inside a later test's event loop against a widget whose parent
+        # chain has already been dropped here.
+        timer = getattr(self.widget, "_auto_save_feedback_timer", None)
+        if timer is not None:
+            timer.stop()
         self.widget.parent = None
         self.tmp.cleanup()
 
@@ -220,7 +233,7 @@ class TestStaleCleanupOnOpenFile(unittest.TestCase):
         self.widget.dirty = dirty
         ref = {
             "index": 0,
-            "marker": self.smart_tools._shape_marker(shapes[0]),
+            "marker": self.smart_tools.shape_marker(shapes[0]),
             "label_file": self.label,
         }
         dialog = SimpleNamespace(
@@ -244,6 +257,40 @@ class TestStaleCleanupOnOpenFile(unittest.TestCase):
         self.assertEqual(
             [shape.label for shape in self.widget.canvas.shapes], []
         )
+
+    def test_bulk_delete_on_the_open_image_is_undoable(self):
+        # The point of mirroring the deletion on the canvas instead of
+        # reloading: load_file() resets the shape history, so Ctrl+Z after a
+        # batch delete used to be a dead key.
+        self._run_delete(dirty=False)
+        self.assertTrue(self.widget.actions.undo.isEnabled())
+
+        self.widget.undo_shape_edit()
+
+        self.assertEqual(
+            [shape.label for shape in self.widget.canvas.shapes], ["cat"]
+        )
+        self.assertEqual(len(self.widget.label_list), 1)
+        # set_dirty() saves at once under this build's auto_save: true default,
+        # so the undone box is back on disk too, not just on the canvas.
+        import json
+
+        with open(self.label, "r", encoding="utf-8") as handle:
+            restored = [s["label"] for s in json.load(handle)["shapes"]]
+        self.assertEqual(restored, ["cat"])
+
+        self.widget.redo_shape_edit()
+        self.assertEqual(self.widget.canvas.shapes, [])
+
+    def test_undo_is_not_offered_when_nothing_was_deleted(self):
+        self._write_label([self._stale_box()])
+        self.widget.load_file(self.image)
+        before = self.widget.actions.undo.isEnabled()
+
+        self.assertEqual(self.widget.delete_reported_shapes([9]), 0)
+
+        self.assertEqual(self.widget.actions.undo.isEnabled(), before)
+        self.assertEqual(len(self.widget.canvas.shapes), 1)
 
     def test_open_dirty_file_is_left_alone(self):
         remaining = self._run_delete(dirty=True)

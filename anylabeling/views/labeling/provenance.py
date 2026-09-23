@@ -81,25 +81,55 @@ def collect_other_model_shapes(label_data, current_model_name):
     return stale
 
 
+def shape_points(shape):
+    """Points of a ``Shape`` or a dict payload, as ``(x, y)`` tuples."""
+    if isinstance(shape, dict):
+        return [
+            (point[0], point[1])
+            for point in shape.get("points") or []
+            if isinstance(point, (list, tuple)) and len(point) >= 2
+        ]
+    return [
+        (point.x(), point.y())
+        for point in getattr(shape, "points", [])
+        if hasattr(point, "x")
+    ]
+
+
+def shape_marker(shape):
+    """Identity of a box: its label plus rounded geometry.
+
+    Report rows carry this so a later deletion can honour it: a box that was
+    moved or relabelled between reporting and deleting no longer matches, and is
+    skipped rather than removed. Works on both the dict payloads read from disk
+    and the ``Shape`` objects held by the canvas.
+    """
+    points = shape_points(shape)
+    if not points:
+        return None
+    if isinstance(shape, dict):
+        label = shape.get("label")
+    else:
+        label = getattr(shape, "label", None)
+    return (
+        str(label or ""),
+        tuple((round(float(x), 2), round(float(y), 2)) for x, y in points),
+    )
+
+
 def describe_shape(shape):
     """Short human-readable summary used by the stale-shape report rows."""
     label = ""
-    points = None
     score = None
     if isinstance(shape, dict):
         label = shape.get("label") or ""
-        points = shape.get("points")
         score = shape.get("score")
     else:
         label = getattr(shape, "label", "") or ""
-        points = [
-            (point.x(), point.y())
-            for point in getattr(shape, "points", [])
-            if hasattr(point, "x")
-        ]
         score = getattr(shape, "score", None)
+    points = shape_points(shape)
     width = height = None
-    if points and len(points) >= 2:
+    if len(points) >= 2:
         xs = [p[0] for p in points]
         ys = [p[1] for p in points]
         width = max(xs) - min(xs)
