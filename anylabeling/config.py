@@ -1,3 +1,4 @@
+import functools
 import os
 import os.path as osp
 import shutil
@@ -140,6 +141,19 @@ def save_config(config):
         return False
 
 
+@functools.lru_cache(maxsize=1)
+def _load_template_config():
+    """Parse the bundled template yaml once per process.
+
+    get_config() is called from ~34 places, every one of which used to
+    re-read and re-parse the static template. Callers get a deep copy,
+    so the cached dict is never mutated.
+    """
+    config_file = "jllabeling_config.yaml"
+    with pkg_resources.open_text(anylabeling_configs, config_file) as f:
+        return yaml.safe_load(f)
+
+
 def get_default_config():
     work_dir = get_work_directory()
     old_cfg_file = osp.join(work_dir, ".anylabelingrc")
@@ -152,9 +166,7 @@ def get_default_config():
                 f"Failed to migrate legacy config: {old_cfg_file}: {e}"
             )
 
-    config_file = "jllabeling_config.yaml"
-    with pkg_resources.open_text(anylabeling_configs, config_file) as f:
-        config = yaml.safe_load(f)
+    config = copy.deepcopy(_load_template_config())
 
     if not osp.exists(osp.join(work_dir, ".xanylabelingrc")):
         save_config(config)
