@@ -37,7 +37,7 @@ from PyQt6.QtWidgets import (
 
 from anylabeling.services.auto_labeling.types import AutoLabelingMode
 from anylabeling.services.auto_labeling import _THUMBNAIL_RENDER_MODELS
-from anylabeling.views.training import UltralyticsDialog
+from anylabeling.views.training import launcher as training_launcher
 
 from ...app_info import (
     __appname__,
@@ -3489,33 +3489,8 @@ class LabelingWidget(LabelDialog):
 
     # Trainer
     def start_training(self, mode):
-        if mode == "ultralytics":
-            from anylabeling.services.auto_training.ultralytics.utils import (
-                check_package_installed,
-            )
-
-            if not check_package_installed("ultralytics"):
-                self.error_message(
-                    self.tr("缺少 Ultralytics"),
-                    self.tr(
-                        "尚未安装 ultralytics，无法打开训练窗口。<br>"
-                        "请先安装：<br>"
-                        "<code>pip install ultralytics</code><br>"
-                        "或<br>"
-                        "<code>uv pip install ultralytics --torch-backend=auto</code>"
-                    ),
-                )
-                return
-            dialog = UltralyticsDialog(self)
-        else:
-            return
-
-        try:
-            _ = dialog.exec()
-        except Exception as e:
-            self.error_message(
-                "Start Error", f"Failed to start training dialog: {str(e)}"
-            )
+        """Delegates to training.launcher (menu wiring stays here)."""
+        training_launcher.start_training(self, mode)
 
     # Tools
     def overview(self):
@@ -4035,18 +4010,8 @@ class LabelingWidget(LabelDialog):
                     break
 
     def show_run_history(self, _value=False):
-        """Compare what each recorded training round produced.
-
-        Imported lazily: the training dialogs are not needed at startup, and
-        this keeps the run-history module out of the app's import graph until
-        the menu entry is actually used.
-        """
-        from anylabeling.views.training.run_history_dialog import (
-            RunHistoryDialog,
-        )
-
-        dialog = RunHistoryDialog(self, label_dir=self._active_label_dir())
-        dialog.exec()
+        """Delegates to training.launcher (menu wiring stays here)."""
+        training_launcher.show_run_history(self, _value)
 
     def show_shortcuts_help(self):
         """Dialog listing every configured shortcut with a search box."""
