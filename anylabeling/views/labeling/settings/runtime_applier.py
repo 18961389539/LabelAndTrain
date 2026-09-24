@@ -65,6 +65,8 @@ class SettingsRuntimeApplier:
             "shortcuts.open_next_unchecked": self._widget.actions.open_next_unchecked_image,
             "shortcuts.open_prev_unchecked": self._widget.actions.open_prev_unchecked_image,
             "shortcuts.toggle_annotation_checked": self._widget.actions.toggle_annotation_checked,
+            "shortcuts.mark_checked_and_next": self._widget.actions.mark_checked_and_next,
+            "shortcuts.mark_rejected_and_next": self._widget.actions.mark_rejected_and_next,
             "shortcuts.zoom_in": self._widget.actions.zoom_in,
             "shortcuts.zoom_out": self._widget.actions.zoom_out,
             "shortcuts.zoom_to_original": self._widget.actions.zoom_org,
@@ -75,12 +77,20 @@ class SettingsRuntimeApplier:
             "shortcuts.create_brush_polygon": self._widget.actions.create_brush_polygon_mode,
             "shortcuts.create_rectangle": self._widget.actions.create_rectangle_mode,
             "shortcuts.create_point": self._widget.actions.create_point_mode,
+            "shortcuts.create_cuboid": self._widget.actions.create_cuboid_mode,
+            "shortcuts.create_rotation": self._widget.actions.create_rotation_mode,
+            "shortcuts.create_quadrilateral": self._widget.actions.create_quadrilateral_mode,
+            "shortcuts.create_circle": self._widget.actions.create_circle_mode,
+            "shortcuts.create_line": self._widget.actions.create_line_mode,
+            "shortcuts.create_linestrip": self._widget.actions.create_linestrip_mode,
             "shortcuts.edit_polygon": self._widget.actions.edit_mode,
+            "shortcuts.edit_brush_mode": self._widget.actions.edit_brush_mode,
             "shortcuts.delete_polygon": self._widget.actions.delete,
             "shortcuts.duplicate_polygon": self._widget.actions.duplicate,
             "shortcuts.copy_polygon": self._widget.actions.copy,
             "shortcuts.paste_polygon": self._widget.actions.paste,
             "shortcuts.undo": self._widget.actions.undo,
+            "shortcuts.redo": self._widget.actions.redo,
             "shortcuts.undo_last_point": self._widget.actions.undo_last_point,
             "shortcuts.edit_label": self._widget.actions.edit,
             "shortcuts.edit_digit_shortcut": self._widget.actions.digit_shortcut_manager,
@@ -117,6 +127,13 @@ class SettingsRuntimeApplier:
                 "open_settings",
                 self._widget.tr("Open Settings"),
                 self._widget.open_settings_dialog,
+            )
+        )
+        shortcut_map["shortcuts.show_shortcuts_help"] = (
+            self._ensure_hidden_shortcut_action(
+                "show_shortcuts_help",
+                self._widget.tr("Show Shortcuts Help"),
+                self._widget.show_shortcuts_help,
             )
         )
         shortcut_map["shortcuts.add_point_to_edge"] = (
