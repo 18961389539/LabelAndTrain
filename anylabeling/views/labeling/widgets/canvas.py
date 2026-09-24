@@ -2867,6 +2867,39 @@ class Canvas(
 
         p.drawPixmap(0, 0, self.pixmap)
 
+        self._paint_compare_view(p)
+        Shape.scale = self.scale
+
+        self._paint_loading(p)
+
+        # Apply the global label/shape opacity to every annotation drawn
+        # below (masks, shapes, degrees, groups, brush overlays). Image text
+        # labels are restored to full opacity before being painted.
+        p.setOpacity(self.shape_opacity)
+
+        self._paint_linking(p)
+
+        self._paint_masks(p)
+
+        self._paint_degrees(p)
+
+        self._paint_current_shapes(p)
+
+        self._paint_texts(p)
+
+        self._paint_labels(p)
+
+        self._paint_cross_coordinates(p)
+
+        self._paint_attributes(p)
+
+        self._paint_compare_split_line(p)
+
+        self._paint_brush_cursor(p)
+
+        p.end()
+
+    def _paint_compare_view(self, p):
         # Draw compare view: left side shows compare image, right side shows original
         # split_position: 0 = all original, 1 = all compare
         if (
@@ -2887,6 +2920,7 @@ class Canvas(
 
         Shape.scale = self.scale
 
+    def _paint_loading(self, p):
         # Draw loading/waiting screen
         if self.is_loading:
             # Draw a semi-transparent rectangle
@@ -2919,11 +2953,7 @@ class Canvas(
             self.update()
             return
 
-        # Apply the global label/shape opacity to every annotation drawn
-        # below (masks, shapes, degrees, groups, brush overlays). Image text
-        # labels are restored to full opacity before being painted.
-        p.setOpacity(self.shape_opacity)
-
+    def _paint_linking(self, p):
         # Draw KIE linking
         if self.show_linking:
             pen = QtGui.QPen(QtGui.QColor("#AAAAAA"), 2, Qt.PenStyle.SolidLine)
@@ -2990,6 +3020,7 @@ class Canvas(
                 ]
                 p.drawPolygon(arrow_points)
 
+    def _paint_masks(self, p):  # noqa: C901
         # Draw shape masks
         if self.show_masks:
             for shape in self.shapes:
@@ -3093,6 +3124,7 @@ class Canvas(
                 p.setBrush(Qt.BrushStyle.NoBrush)
                 p.drawPath(mask_path)
 
+    def _paint_degrees(self, p):
         # Draw degrees
         for shape in self.shapes:
             if (
@@ -3170,6 +3202,7 @@ class Canvas(
 
         self._paint_groups(p)
 
+    def _paint_current_shapes(self, p):
         # Draw live brush-edit overlays on top of the regular shapes.
         self._paint_brush_overlays(p)
 
@@ -3227,6 +3260,8 @@ class Canvas(
         p.setOpacity(1.0)
 
         # Draw texts
+
+    def _paint_texts(self, p):
         if self.show_texts:
             text_color = "#FFFFFF"
             background_color = "#007BFF"
@@ -3288,6 +3323,7 @@ class Canvas(
                         description,
                     )
 
+    def _paint_labels(self, p):
         # Draw labels
         if self.show_labels:
             label_transform = p.transform()
@@ -3414,6 +3450,7 @@ class Canvas(
                 p.drawText(text_pos, label_text)
             p.restore()
 
+    def _paint_cross_coordinates(self, p):
         # Draw mouse coordinates
         if self.cross_line_show:
             pen = QtGui.QPen(
@@ -3432,6 +3469,7 @@ class Canvas(
                 QtCore.QPointF(self.pixmap.width(), self.prev_move_point.y()),
             )
 
+    def _paint_attributes(self, p):  # noqa: C901
         # Draw attributes
         if self.show_attributes:
             font_size = int(max(8.0, int(round(10.0 / Shape.scale))))
@@ -3581,6 +3619,7 @@ class Canvas(
                 ):
                     p.drawText(text_pos, line_text)
 
+    def _paint_compare_split_line(self, p):
         # Draw compare view split line
         if (
             self.compare_pixmap is not None
@@ -3649,9 +3688,6 @@ class Canvas(
                 p.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing, False)
 
         # Brush-size preview circle follows the cursor in brush mode.
-        self._paint_brush_cursor(p)
-
-        p.end()
 
     def render_visualization(
         self,
