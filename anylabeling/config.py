@@ -75,6 +75,44 @@ def _has_nested_key(target_dict, key_path):
     return True
 
 
+def _get_nested_value(target_dict, key_path):
+    current = target_dict
+    for part in key_path.split("."):
+        if not isinstance(current, dict) or part not in current:
+            return None
+        current = current[part]
+    return current
+
+
+# Shipped-default changes, keyed by the template config_version they
+# belong to. Each entry is (dotted key, old default, new default) and is
+# only applied when the user's rc still carries the old default -- a
+# value the user deliberately changed is never overwritten. Bump
+# config_version in jllabeling_config.yaml when adding a rule.
+_MIGRATIONS = {
+    1: [
+        ("canvas.num_backups", 10, 100),
+    ],
+}
+
+
+def _apply_config_migrations(user_config):
+    """Bring an rc dict up to the template's config_version in place."""
+    target = _load_template_config().get("config_version", 1)
+    current = user_config.get("config_version", 0)
+    for version in sorted(_MIGRATIONS):
+        if version <= current or version > target:
+            continue
+        for key_path, old_value, new_value in _MIGRATIONS[version]:
+            if (
+                _has_nested_key(user_config, key_path)
+                and _get_nested_value(user_config, key_path) == old_value
+            ):
+                _set_nested_value(user_config, key_path, new_value)
+    user_config["config_version"] = target
+    return user_config
+
+
 def _normalize_shortcut_value(value):
     if value in (None, ""):
         return None
@@ -218,6 +256,7 @@ def get_config(
         with open(config_file_or_yaml, encoding="utf-8") as f:
             config_from_yaml = yaml.safe_load(f)
     config_from_yaml = normalize_user_config(config_from_yaml)
+    _apply_config_migrations(config_from_yaml)
     update_dict(config, config_from_yaml, validate_item=validate_config_item)
     if show_msg:
         logger.info(

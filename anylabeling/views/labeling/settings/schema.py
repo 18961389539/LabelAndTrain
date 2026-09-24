@@ -301,6 +301,7 @@ EXCLUDED_KEYS = frozenset(
         "file_dock.show",
         "custom_models",
         "digit_shortcuts",
+        "config_version",
     }
 )
 
