@@ -17,3 +17,8 @@ FILE_REVIEW_ROLE = Qt.ItemDataRole.UserRole + 4
 # When that state was last set, carried in from the label JSON for the row
 # tooltip only -- nothing branches on it.
 FILE_REVIEWED_AT_ROLE = Qt.ItemDataRole.UserRole + 5
+
+# Field names the label JSON records the review verdict under.
+CHECKED_FIELD = "checked"
+REVIEW_STATE_FIELD = "review_state"
+REVIEWED_AT_FIELD = "reviewed_at"

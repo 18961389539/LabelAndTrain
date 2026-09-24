@@ -123,14 +123,18 @@ from .settings import SettingsController, SettingsDialog
 from .settings.runtime_applier import SettingsRuntimeApplier
 from .shortcuts.digit_controller import DigitShortcutController
 from .filelist import items as filelist_items
+from .filelist.controller import FileReviewController
 # Re-exported: the rest of the widget and the async checkers read the
-# row roles from this module's namespace.
+# row roles and label-JSON field names from this module's namespace.
 from .filelist.roles import (  # noqa: F401
+    CHECKED_FIELD,
     FILE_ANNOTATION_ROLE,
     FILE_LOW_CONF_ROLE,
     FILE_NEGATIVE_ROLE,
     FILE_REVIEW_ROLE,
     FILE_REVIEWED_AT_ROLE,
+    REVIEW_STATE_FIELD,
+    REVIEWED_AT_FIELD,
 )
 from .shape import Shape
 from .utils.data_audit import run_data_audit
@@ -170,9 +174,6 @@ from anylabeling.views.common.toaster import QToaster
 
 LABEL_COLORMAP = utils.label_colormap()
 LABEL_OPACITY = 128
-CHECKED_FIELD = "checked"
-REVIEW_STATE_FIELD = "review_state"
-REVIEWED_AT_FIELD = "reviewed_at"
 # Whole-image class suggestions from a classification model. Deliberately not
 # shapes: a suggestion becomes an annotation only when a human confirms it.
 PREDICTIONS_FIELD = "predictions"
@@ -4561,8 +4562,10 @@ class LabelingWidget(LabelDialog):
         self._update_classification_action()
 
     def set_annotation_checked(self, checked):
-        state = REVIEW_CONFIRMED if checked else REVIEW_UNCHECKED
-        self._apply_review_state(state)
+        """Delegates to filelist.controller (action wiring stays)."""
+        # Built on demand: the controller is stateless, and light test
+        # stubs never carry an instance.
+        FileReviewController(self).set_annotation_checked(checked)
 
     def _classification_suggestions(self):
         """``(suggestions, model_name)`` recorded for the open file."""
@@ -4659,52 +4662,22 @@ class LabelingWidget(LabelDialog):
         action.setStatusTip(tip)
 
     def _apply_review_state(self, state):
-        """Record a review verdict on the current file and save it."""
-        if self.filename is None or self.image.isNull():
-            return
-        self.other_data[REVIEW_STATE_FIELD] = state
-        # `checked` stays written for every consumer that has always read it,
-        # including the "train on checked files only" dataset filter.
-        self.other_data[CHECKED_FIELD] = state == REVIEW_CONFIRMED
-        if state == REVIEW_UNCHECKED:
-            self.other_data.pop(REVIEWED_AT_FIELD, None)
-        else:
-            self.other_data[REVIEWED_AT_FIELD] = (
-                QtCore.QDateTime.currentDateTime().toString(
-                    QtCore.Qt.DateFormat.ISODate
-                )
-            )
-        self._sync_annotation_checked_state()
-        label_file = self.get_label_file()
-        if self.save_labels(label_file):
-            self.set_clean()
-            self._show_save_feedback(True)
-        else:
-            self._show_save_feedback(False)
+        """Delegates to filelist.controller (tests call this directly)."""
+        # Built on demand: the controller is stateless, and light test
+        # stubs never carry an instance.
+        FileReviewController(self).apply_review_state(state)
 
     def mark_checked_and_next(self, _value=False):
-        """Single-step review flow: check the file and keep moving."""
-        if self.filename is None or self.image.isNull():
-            return
-        current_filename = str(self.filename)
-        self.set_annotation_checked(True)
-        if self.filename is None:
-            return
-        self.open_next_unchecked_image()
-        if str(self.filename) == current_filename:
-            self.open_next_image()
+        """Delegates to filelist.controller (action wiring stays)."""
+        # Built on demand: the controller is stateless, and light test
+        # stubs never carry an instance.
+        FileReviewController(self).mark_checked_and_next(_value)
 
     def mark_rejected_and_next(self, _value=False):
-        """Send the current image back for rework and keep moving."""
-        if self.filename is None or self.image.isNull():
-            return
-        current_filename = str(self.filename)
-        self._apply_review_state(REVIEW_REJECTED)
-        if self.filename is None:
-            return
-        self.open_next_unchecked_image()
-        if str(self.filename) == current_filename:
-            self.open_next_image()
+        """Delegates to filelist.controller (action wiring stays)."""
+        # Built on demand: the controller is stateless, and light test
+        # stubs never carry an instance.
+        FileReviewController(self).mark_rejected_and_next(_value)
 
     def _append_filter_submenus(
         self, parent_menu, prepend=False, after_filter_actions=None
@@ -7317,85 +7290,20 @@ class LabelingWidget(LabelDialog):
         return rows[0] if rows else -1
 
     def _next_visible_row(self, row, delta):
-        """Nearest visible row after ``row`` stepping by ``delta`` (±1).
-
-        ``row`` itself is treated as the origin: when it is visible the
-        scan starts one step away, when it is hidden (filter switched while
-        the image was open) any visible row is accepted, starting from the
-        far end and wrapping so the page always lands somewhere visible.
-        Returns ``-1`` when no visible row exists.
-        """
-        count = self.file_list_widget.count()
-        if count <= 0:
-            return -1
-        visible = self._visible_rows()
-        if not visible:
-            return -1
-        if not (0 <= row < count):
-            return visible[0]
-        if not self.file_list_widget.item(row).isHidden():
-            for _ in range(len(visible)):
-                row = (row + delta) % count
-                if not self.file_list_widget.item(row).isHidden():
-                    return row
-            # No other visible row in this direction (row was the only /
-            # last one): keep the origin so navigation stops at the end.
-            return -1
-        # Current row hidden: scan the whole list for the nearest visible
-        # row in the requested direction, falling back to the other side.
-        visited = set()
-        probe = row
-        while len(visited) < count:
-            probe = (probe + delta) % count
-            if probe in visited:
-                break
-            visited.add(probe)
-            if not self.file_list_widget.item(probe).isHidden():
-                return probe
-        # Nothing in direction: pick the first visible anywhere.
-        return visible[0]
+        """Delegates to filelist.controller (paging actions call this)."""
+        return FileReviewController(self).next_visible_row(row, delta)
 
     def open_prev_unchecked_image(self):
-        if self._paging_blocked_by_drawing():
-            return
-        if (
-            not self.may_continue(silent=True)
-            or self.file_list_widget.count() <= 0
-            or self.filename is None
-        ):
-            return
-
-        current_index = self.fn_to_index[str(self.filename)]
-        for i in range(current_index - 1, -1, -1):
-            item = self.file_list_widget.item(i)
-            if item.isHidden():
-                continue
-            if not self._file_item_annotation_checked(item):
-                filename = item.text()
-                if filename:
-                    self.load_file(filename)
-                break
+        """Delegates to filelist.controller (action wiring stays)."""
+        # Built on demand: the controller is stateless, and light test
+        # stubs never carry an instance.
+        FileReviewController(self).open_prev_unchecked_image()
 
     def open_next_unchecked_image(self, _value=False):
-        if self._paging_blocked_by_drawing():
-            return
-        if (
-            not self.may_continue(silent=True)
-            or self.file_list_widget.count() <= 0
-            or self.filename is None
-        ):
-            return
-
-        current_index = self.fn_to_index[str(self.filename)]
-        for i in range(current_index + 1, self.file_list_widget.count()):
-            item = self.file_list_widget.item(i)
-            if item.isHidden():
-                continue
-            if not self._file_item_annotation_checked(item):
-                filename = item.text()
-                if filename:
-                    self.load_file(filename)
-                break
+        """Delegates to filelist.controller (action wiring stays)."""
+        # Built on demand: the controller is stateless, and light test
+        # stubs never carry an instance.
+        FileReviewController(self).open_next_unchecked_image(_value)
 
     def open_prev_image(self, _value=False):
         if self._paging_blocked_by_drawing():
@@ -8238,17 +8146,10 @@ class LabelingWidget(LabelDialog):
             )
 
     def _apply_checked_batch(self, start_index, info_list):
-        """Apply a batch of review-state results to file rows by index."""
-        try:
-            for offset, info in enumerate(info_list):
-                row = start_index + offset
-                item = self.file_list_widget.item(row)
-                if item is not None:
-                    state, reviewed_at = info
-                    self._set_file_item_review_state(item, state, reviewed_at)
-            self._refresh_file_progress()
-        except Exception as e:  # noqa: BLE001
-            logger.warning(f"Failed to apply checked batch: {e}")
+        """Delegates to filelist.controller (AsyncLabelChecker callback)."""
+        # Built on demand: the controller is stateless, and light test
+        # stubs never carry an instance.
+        FileReviewController(self).apply_checked_batch(start_index, info_list)
 
     def _load_classes_from_folder(self, image_dir):
         """Make the label panel follow ``classes.txt`` of the opened folder.
