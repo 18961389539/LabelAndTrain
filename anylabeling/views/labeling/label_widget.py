@@ -742,1740 +742,7 @@ class LabelingWidget(LabelDialog):
                 getattr(self, dock).setVisible(False)
 
         # Actions
-        action = functools.partial(utils.new_action, self)
-        shortcuts = self._config["shortcuts"]
-
-        open_ = action(
-            self.tr("Open File"),
-            self.open_file,
-            shortcuts["open"],
-            "file",
-            self.tr("Open image or label file"),
-        )
-        opendir = action(
-            self.tr("Open Dir"),
-            self.open_folder_dialog,
-            shortcuts["open_dir"],
-            "open",
-            self.tr("Open Dir"),
-        )
-        open_next_image = action(
-            self.tr("Next Image"),
-            self.open_next_image,
-            shortcuts["open_next"],
-            "next",
-            self.tr("Open next image"),
-            enabled=False,
-        )
-        open_prev_image = action(
-            self.tr("Prev Image"),
-            self.open_prev_image,
-            shortcuts["open_prev"],
-            "prev",
-            self.tr("Open prev image"),
-            enabled=False,
-        )
-        open_next_unchecked_image = action(
-            self.tr("Next Unchecked Image"),
-            self.open_next_unchecked_image,
-            shortcuts["open_next_unchecked"],
-            "next",
-            self.tr("Open next unchecked image"),
-            enabled=False,
-        )
-        open_prev_unchecked_image = action(
-            self.tr("Prev Unchecked Image"),
-            self.open_prev_unchecked_image,
-            shortcuts["open_prev_unchecked"],
-            "prev",
-            self.tr("Open previous unchecked image"),
-            enabled=False,
-        )
-        save = action(
-            self.tr("Save"),
-            self.save_file,
-            shortcuts["save"],
-            "save",
-            self.tr("Save labels to file"),
-            enabled=False,
-        )
-        save_as = action(
-            self.tr("Save As"),
-            self.save_file_as,
-            shortcuts["save_as"],
-            "save-as",
-            self.tr("Save labels to a different file"),
-            enabled=False,
-        )
-        run_all_images = action(
-            self.tr("Auto Run"),
-            lambda: utils.run_all_images(self),
-            shortcuts["auto_run"],
-            "auto-run",
-            self.tr("Auto run all images at once"),
-            enabled=False,
-        )
-        delete_file = action(
-            self.tr("Delete File"),
-            self.delete_file,
-            shortcuts["delete_file"],
-            "delete",
-            self.tr("Delete current label file"),
-            enabled=False,
-        )
-        delete_image_file = action(
-            self.tr("Delete Image File"),
-            self.delete_image_file,
-            shortcuts["delete_image_file"],
-            "delete",
-            self.tr("Delete current image file"),
-            enabled=True,
-        )
-        data_audit = action(
-            self.tr("数据体检"),
-            lambda: run_data_audit(self),
-            None,
-            "icon",
-            self.tr(
-                "Scan the folder for unlabeled images, empty/corrupted "
-                "labels and orphan label files"
-            ),
-            enabled=True,
-        )
-        smart_calibrate = action(
-            self.tr("1. 阈值校准"),
-            lambda: run_threshold_calibration(self),
-            None,
-            "settings",
-            self.tr("推荐先做：按各类置信度分布生成自动接受 / 建议复核阈值"),
-            enabled=True,
-        )
-        smart_analysis = action(
-            self.tr("2. 数据智能分析"),
-            lambda: run_smart_analysis(self),
-            None,
-            "overview",
-            self.tr("阈值校准后再做：难例排序、重复图片检测与配平建议"),
-            enabled=True,
-        )
-        smart_missing_scan = action(
-            self.tr("3. 漏标扫描"),
-            lambda: run_missing_scan(self),
-            None,
-            "search",
-            self.tr("智能分析后再做：用当前模型找出置信度高但没有标注的目标"),
-            enabled=True,
-        )
-        smart_iteration = action(
-            self.tr("4. 迭代收益看板"),
-            lambda: show_iteration_dashboard(self),
-            None,
-            "loop",
-            self.tr("最后查看：每轮训练→回灌的边际收益与下一步建议"),
-            enabled=True,
-        )
-        smart_review = action(
-            self.tr("5. 智能复核（下一张待复核）"),
-            lambda: run_review_jump(self),
-            None,
-            "check",
-            self.tr("按不确定性优先级跳到下一张待复核的图片（再次点击可继续跳）"),
-            enabled=True,
-        )
-        smart_propagate = action(
-            self.tr("6. 标注传播（上一张→当前图）"),
-            self._propagate_previous_labels,
-            None,
-            "copy",
-            self.tr("把上一张已标注图片的框按比例复制到当前图片，自动跳过重复框"),
-            enabled=True,
-        )
-        smart_archive = action(
-            self.tr("7. 一键去重归档"),
-            lambda: run_duplicate_archive(self),
-            None,
-            "trash",
-            self.tr("把近重复图片及其标注移动到「._duplicates_archive」文件夹"),
-            enabled=True,
-        )
-        smart_advice = action(
-            self.tr("8. 训练建议"),
-            lambda: run_training_advice(self),
-            None,
-            "brain",
-            self.tr("训练前预检 + 基于当前数据与历史轮次推荐 epochs/batch/imgsz 初值"),
-            enabled=True,
-        )
-        smart_template = action(
-            self.tr("9. 智能模板预标注（批量）"),
-            lambda: run_template_propagation(self),
-            None,
-            "labels",
-            self.tr("为未标注图片按相似度匹配已标注模板，批量生成预标注后再人工确认"),
-            enabled=True,
-        )
-        smart_stale_audit = action(
-            self.tr("10. 旧轮模型框盘点"),
-            lambda: run_stale_model_audit(self),
-            None,
-            "layers",
-            self.tr("列出由其它模型留下、可考虑清理的框（只报告，不删除）"),
-            enabled=True,
-        )
-        smart_restore_backup = action(
-            self.tr("11. 从备份恢复标注（撤销批量删除）"),
-            lambda: run_backup_restore(self),
-            None,
-            "undo",
-            self.tr(
-                "把 .label_backups 里的某一次快照写回标注目录；"
-                "被覆盖的文件会先生成一个新快照"
-            ),
-            enabled=True,
-        )
-        toggle_annotation_checked = action(
-            self.tr("Mark as Checked"),
-            self.set_annotation_checked,
-            shortcuts.get("toggle_annotation_checked"),
-            None,
-            self.tr("Mark current annotation as checked"),
-            checkable=True,
-            enabled=False,
-        )
-        mark_checked_and_next = action(
-            self.tr("检查完成并下一张"),
-            self.mark_checked_and_next,
-            shortcuts["mark_checked_and_next"],
-            None,
-            self.tr("将当前图片标为已检查，并跳到下一张未检查图片"),
-            enabled=False,
-        )
-        mark_rejected_and_next = action(
-            self.tr("打回并下一张"),
-            self.mark_rejected_and_next,
-            shortcuts.get("mark_rejected_and_next"),
-            None,
-            self.tr("将当前图片标为需返工，并跳到下一张未检查图片"),
-            enabled=False,
-        )
-        # Menu-only on purpose: no shortcut key is invented here, so there is no
-        # config entry that could drift from a real binding.
-        confirm_classification = action(
-            self.tr("确认分类建议"),
-            self.confirm_classification,
-            None,
-            None,
-            self.tr("把分类模型的整图建议写入图片类别（flags）"),
-            enabled=False,
-        )
-
-        change_output_dir = action(
-            self.tr("Change Output Dir"),
-            slot=self.change_output_dir_dialog,
-            shortcut=shortcuts["save_to"],
-            icon="open",
-            tip=self.tr("Change where annotations are loaded/saved"),
-        )
-
-        save_auto = action(
-            text=self.tr("Save Automatically"),
-            slot=lambda x: self._config.update({"auto_save": x}),
-            icon=None,
-            tip=self.tr("Save automatically"),
-            checkable=True,
-            enabled=True,
-            checked=self._config["auto_save"],
-        )
-
-        save_with_image_data = action(
-            text=self.tr("Save With Image Data"),
-            slot=lambda x: self._config.update({"store_data": x}),
-            icon=None,
-            tip=self.tr("Save image data in label file"),
-            checkable=True,
-            checked=self._config["store_data"],
-        )
-
-        close = action(
-            self.tr("Close"),
-            self.close_file,
-            shortcuts["close"],
-            "cancel",
-            self.tr("Close current file"),
-        )
-
-        keep_prev_mode = action(
-            self.tr("Keep Previous Annotation"),
-            lambda x: self._config.update({"keep_prev": x}),
-            shortcuts["toggle_keep_prev_mode"],
-            None,
-            self.tr('Toggle "Keep Previous Annotation" mode'),
-            checkable=True,
-            checked=self._config["keep_prev"],
-        )
-
-        auto_use_last_label_mode = action(
-            self.tr("Auto Use Last Label"),
-            lambda x: self._config.update({"auto_use_last_label": x}),
-            shortcuts["toggle_auto_use_last_label"],
-            None,
-            self.tr('Toggle "Auto Use Last Label" mode'),
-            checkable=True,
-            checked=self._config["auto_use_last_label"],
-        )
-
-        auto_use_last_gid_mode = action(
-            self.tr("Auto Use Last Group ID"),
-            lambda x: self._config.update({"auto_use_last_gid": x}),
-            shortcuts["toggle_auto_use_last_gid"],
-            None,
-            self.tr('Toggle "Auto Use Last Group ID" mode'),
-            checkable=True,
-            checked=self._config["auto_use_last_gid"],
-        )
-
-        use_system_clipboard = action(
-            self.tr("Use System Clipboard"),
-            self.toggle_system_clipboard,
-            tip=self.tr("Use system clipboard for copy and paste"),
-            checkable=True,
-            checked=self._config["system_clipboard"],
-            enabled=True,
-        )
-
-        visibility_shapes_mode = action(
-            self.tr("Visibility Shapes"),
-            self.toggle_visibility_shapes,
-            shortcuts["toggle_visibility_shapes"],
-            None,
-            self.tr('Toggle "Visibility Shapes" mode'),
-            checkable=True,
-            checked=self._config["show_shapes"],
-        )
-
-        create_mode = action(
-            self.tr("Create Polygons"),
-            lambda: self.toggle_draw_mode(False, create_mode="polygon"),
-            shortcuts["create_polygon"],
-            "polygon",
-            self.tr("Start drawing polygons"),
-            enabled=False,
-        )
-        create_brush_polygon_mode = action(
-            self.tr("Create Brush Polygons"),
-            self.toggle_brush_polygon_mode,
-            shortcuts["create_brush_polygon"],
-            "brush_polygon",
-            self.tr("Toggle brush mode for drawing polygons"),
-            enabled=False,
-        )
-        create_rectangle_mode = action(
-            self.tr("Create Rectangle"),
-            lambda: self.toggle_draw_mode(False, create_mode="rectangle"),
-            shortcuts["create_rectangle"],
-            "rectangle",
-            self.tr("Start drawing rectangles"),
-            enabled=False,
-        )
-        create_point_mode = action(
-            self.tr("Create Point"),
-            lambda: self.toggle_draw_mode(False, create_mode="point"),
-            shortcuts["create_point"],
-            "point",
-            self.tr("Start drawing points"),
-            enabled=False,
-        )
-        # These six existed only as config keys: the shortcuts-help dialog
-        # advertised them, but no QAction ever bound them, so the shapes were
-        # reachable through the digit-shortcut manager alone.
-        create_cuboid_mode = action(
-            self.tr("创建立方体"),
-            lambda: self.toggle_draw_mode(False, create_mode="cuboid"),
-            shortcuts["create_cuboid"],
-            None,
-            self.tr("开始画立方体"),
-            enabled=False,
-        )
-        create_rotation_mode = action(
-            self.tr("创建旋转框"),
-            lambda: self.toggle_draw_mode(False, create_mode="rotation"),
-            shortcuts["create_rotation"],
-            None,
-            self.tr("开始画旋转框"),
-            enabled=False,
-        )
-        create_quadrilateral_mode = action(
-            self.tr("创建四边形"),
-            lambda: self.toggle_draw_mode(False, create_mode="quadrilateral"),
-            shortcuts["create_quadrilateral"],
-            None,
-            self.tr("开始画四边形"),
-            enabled=False,
-        )
-        create_circle_mode = action(
-            self.tr("创建圆"),
-            lambda: self.toggle_draw_mode(False, create_mode="circle"),
-            shortcuts["create_circle"],
-            None,
-            self.tr("开始画圆"),
-            enabled=False,
-        )
-        create_line_mode = action(
-            self.tr("创建线段"),
-            lambda: self.toggle_draw_mode(False, create_mode="line"),
-            shortcuts["create_line"],
-            None,
-            self.tr("开始画线段"),
-            enabled=False,
-        )
-        create_linestrip_mode = action(
-            self.tr("创建折线"),
-            lambda: self.toggle_draw_mode(False, create_mode="linestrip"),
-            shortcuts["create_linestrip"],
-            None,
-            self.tr("开始画折线"),
-            enabled=False,
-        )
-        digit_shortcut_0 = action(
-            self.tr("Digit Shortcut 0"),
-            lambda: self.create_digit_mode(0),
-            "0",
-            "digit0",
-            enabled=False,
-        )
-        digit_shortcut_1 = action(
-            self.tr("Digit Shortcut 1"),
-            lambda: self.create_digit_mode(1),
-            "1",
-            "digit1",
-            enabled=False,
-        )
-        digit_shortcut_2 = action(
-            self.tr("Digit Shortcut 2"),
-            lambda: self.create_digit_mode(2),
-            "2",
-            "digit2",
-            enabled=False,
-        )
-        digit_shortcut_3 = action(
-            self.tr("Digit Shortcut 3"),
-            lambda: self.create_digit_mode(3),
-            "3",
-            "digit3",
-            enabled=False,
-        )
-        digit_shortcut_4 = action(
-            self.tr("Digit Shortcut 4"),
-            lambda: self.create_digit_mode(4),
-            "4",
-            "digit4",
-            enabled=False,
-        )
-        digit_shortcut_5 = action(
-            self.tr("Digit Shortcut 5"),
-            lambda: self.create_digit_mode(5),
-            "5",
-            "digit5",
-            enabled=False,
-        )
-        digit_shortcut_6 = action(
-            self.tr("Digit Shortcut 6"),
-            lambda: self.create_digit_mode(6),
-            "6",
-            "digit6",
-            enabled=False,
-        )
-        digit_shortcut_7 = action(
-            self.tr("Digit Shortcut 7"),
-            lambda: self.create_digit_mode(7),
-            "7",
-            "digit7",
-            enabled=False,
-        )
-        digit_shortcut_8 = action(
-            self.tr("Digit Shortcut 8"),
-            lambda: self.create_digit_mode(8),
-            "8",
-            "digit8",
-            enabled=False,
-        )
-        digit_shortcut_9 = action(
-            self.tr("Digit Shortcut 9"),
-            lambda: self.create_digit_mode(9),
-            "9",
-            "digit9",
-            enabled=False,
-        )
-        edit_mode = action(
-            self.tr("Edit Object"),
-            self.set_edit_mode,
-            shortcuts["edit_polygon"],
-            "edit",
-            self.tr("Move and edit the selected polygons"),
-            enabled=False,
-        )
-        edit_brush_mode = action(
-            self.tr("Edit Brush"),
-            lambda checked: self.toggle_brush_mode(checked),
-            shortcuts.get("edit_brush_mode", "Shift+B"),
-            "brush",
-            self.tr(
-                "Select one polygon, then paint to add, hold Ctrl to erase, "
-                "and scroll to resize the brush"
-            ),
-            enabled=False,
-            checkable=True,
-            checked=False,
-        )
-        group_selected_shapes = action(
-            self.tr("Group Selected Shapes"),
-            self.group_selected_shapes,
-            shortcuts["group_selected_shapes"],
-            None,
-            self.tr("Group shapes by assigning a same group_id"),
-            enabled=True,
-        )
-        ungroup_selected_shapes = action(
-            self.tr("Ungroup Selected Shapes"),
-            self.ungroup_selected_shapes,
-            shortcuts["ungroup_selected_shapes"],
-            None,
-            self.tr("Ungroup shapes"),
-            enabled=True,
-        )
-
-        delete = action(
-            self.tr("Delete"),
-            self.delete_selected_shape,
-            shortcuts["delete_polygon"],
-            "cancel",
-            self.tr("Delete the selected polygons"),
-            enabled=False,
-        )
-        duplicate = action(
-            self.tr("Duplicate Polygons"),
-            self.duplicate_selected_shape,
-            shortcuts["duplicate_polygon"],
-            "copy",
-            self.tr("Create a duplicate of the selected polygons"),
-            enabled=False,
-        )
-        copy = action(
-            self.tr("Copy Object"),
-            self.copy_selected_shape,
-            shortcuts["copy_polygon"],
-            "copy",
-            self.tr("Copy selected polygons to clipboard"),
-            enabled=False,
-        )
-        paste = action(
-            self.tr("Paste Object"),
-            self.paste_selected_shape,
-            shortcuts["paste_polygon"],
-            "paste",
-            self.tr("Paste copied polygons"),
-            enabled=self._config["system_clipboard"],
-        )
-        undo_last_point = action(
-            self.tr("Undo last point"),
-            self.canvas.undo_last_point,
-            shortcuts["undo_last_point"],
-            "undo",
-            self.tr("Undo last drawn point"),
-            enabled=False,
-        )
-        remove_point = action(
-            text=self.tr("Remove Selected Point"),
-            slot=self.remove_selected_point,
-            shortcut=shortcuts["remove_selected_point"],
-            icon="edit",
-            tip=self.tr("Remove selected point from polygon"),
-            enabled=False,
-        )
-
-        undo = action(
-            self.tr("Undo"),
-            self.undo_shape_edit,
-            shortcuts["undo"],
-            "undo",
-            self.tr("Undo last add and edit of shape"),
-            enabled=False,
-        )
-        redo = action(
-            self.tr("Redo"),
-            self.redo_shape_edit,
-            shortcuts.get("redo", "Ctrl+Shift+Z"),
-            "redo",
-            self.tr("Redo the last undone edit of shape"),
-            enabled=False,
-        )
-        hide_selected_polygons = action(
-            self.tr("Hide Selected Polygons"),
-            self.hide_selected_polygons,
-            shortcuts["hide_selected_polygons"],
-            None,
-            self.tr("Hide selected polygons"),
-            enabled=True,
-        )
-        show_hidden_polygons = action(
-            self.tr("Show Hidden Polygons"),
-            self.show_hidden_polygons,
-            shortcuts["show_hidden_polygons"],
-            None,
-            self.tr("Show hidden polygons"),
-            enabled=True,
-        )
-
-        overview = action(
-            self.tr("Overview"),
-            self.overview,
-            shortcuts["show_overview"],
-            icon="overview",
-            tip=self.tr("Show annotations statistics"),
-        )
-        save_crop = action(
-            self.tr("Save Cropped Image"),
-            lambda: utils.save_crop(self),
-            icon="crop",
-            tip=self.tr(
-                "Save cropped image. (Support rectangle/rotation/polygon shape_type)"
-            ),
-        )
-        save_visualization_image = action(
-            self.tr("Save Visualization Image"),
-            lambda: utils.save_visualization(self),
-            icon="file",
-            tip=self.tr("Save visualization image"),
-        )
-        digit_shortcut_manager = action(
-            self.tr("Digit Shortcut Manager"),
-            self.digit_shortcut_manager,
-            shortcuts["edit_digit_shortcut"],
-            icon="edit",
-            tip=self.tr(
-                "Manage Digit Shortcuts: Assign Drawing Modes and Labels to Number Keys"
-            ),
-        )
-        label_manager = action(
-            self.tr("Label Manager"),
-            self.label_manager,
-            shortcuts["edit_labels"],
-            icon="edit",
-            tip=self.tr(
-                "Manage Labels: Rename, Delete, Hide/Show, Adjust Color"
-            ),
-        )
-        shortcuts_help = action(
-            self.tr("快捷键速查"),
-            self.show_shortcuts_help,
-            shortcuts["show_shortcuts_help"],
-            icon="search",
-            tip=self.tr("查看所有可用快捷键，可按快捷键或功能搜索"),
-        )
-        gid_manager = action(
-            self.tr("Group ID Manager"),
-            self.gid_manager,
-            shortcuts["edit_group_id"],
-            icon="edit",
-            tip=self.tr("Manage Group ID"),
-        )
-        shape_manager = action(
-            self.tr("Shape Manager"),
-            self.shape_manager,
-            shortcuts["edit_shapes"],
-            icon="edit",
-            tip=self.tr("Manage Shapes: Add, Delete, Remove"),
-            enabled=False,
-        )
-        copy_coordinates = action(
-            self.tr("Copy Coordinates"),
-            self.copy_shape_coordinates,
-            icon="copy",
-            tip=self.tr("Copy shape coordinates to clipboard"),
-            enabled=False,
-        )
-        union_selection = action(
-            self.tr("Union Selection"),
-            self.union_selection,
-            shortcuts["union_selected_shapes"],
-            icon="union",
-            tip=self.tr("Union multiple selected rectangle shapes"),
-            enabled=False,
-        )
-        toggle_shape_lock = action(
-            self.tr("Lock Shape"),
-            self.toggle_selected_shapes_lock,
-            tip=self.tr("Prevent changes to the selected shapes' coordinates"),
-            checkable=True,
-            enabled=False,
-        )
-        shape_converter = action(
-            self.tr("Shape Converter"),
-            lambda: utils.open_shape_converter(self),
-            icon="convert",
-            tip=self.tr("Open shape converter"),
-        )
-
-        loop_thru_labels = action(
-            self.tr("Loop Through Labels"),
-            self.loop_thru_labels,
-            shortcut=shortcuts["loop_thru_labels"],
-            icon="loop",
-            tip=self.tr("Loop through labels"),
-            enabled=False,
-        )
-        loop_select_labels = action(
-            self.tr("Loop Select Labels"),
-            self.loop_select_labels,
-            shortcut=shortcuts["loop_select_labels"],
-            icon="circle-selection",
-            tip=self.tr("Loop select labels"),
-            enabled=False,
-        )
-        select_toggle_shapes = action(
-            self.tr("Toggle Shapes Visibility"),
-            self.toggle_select_all,
-            icon="eye",
-            tip=self.tr("Hide all shapes"),
-            enabled=False,
-        )
-        self.select_toggle_action = select_toggle_shapes
-
-        ultralytics_train = action(
-            "Ultralytics",
-            lambda: self.start_training("ultralytics"),
-            icon="ultralytics",
-        )
-        run_history = action(
-            self.tr("实验历史"),
-            self.show_run_history,
-        )
-
-        zoom = QtWidgets.QWidgetAction(self)
-        zoom.setDefaultWidget(self.zoom_widget)
-        self.zoom_widget.setWhatsThis(
-            str(
-                self.tr(
-                    "Zoom in or out of the image. Also accessible with "
-                    "{} and {} from the canvas."
-                )
-            ).format(
-                utils.fmt_shortcut(
-                    f"{shortcuts['zoom_in']},{shortcuts['zoom_out']}"
-                ),
-                utils.fmt_shortcut(self.tr("Ctrl+Wheel")),
-            )
-        )
-        self.zoom_widget.setEnabled(False)
-
-        zoom_in = action(
-            self.tr("Zoom In"),
-            functools.partial(self.add_zoom, 1.1),
-            shortcuts["zoom_in"],
-            "zoom-in",
-            self.tr("Increase zoom level"),
-            enabled=False,
-        )
-        zoom_out = action(
-            self.tr("Zoom Out"),
-            functools.partial(self.add_zoom, 0.9),
-            shortcuts["zoom_out"],
-            "zoom-out",
-            self.tr("Decrease zoom level"),
-            enabled=False,
-        )
-        zoom_org = action(
-            self.tr("Original Size"),
-            functools.partial(self.set_zoom, 100),
-            shortcuts["zoom_to_original"],
-            "zoom",
-            self.tr("Zoom to original size"),
-            enabled=False,
-        )
-        keep_prev_scale = action(
-            self.tr("Keep Previous Scale"),
-            lambda x: self._config.update({"keep_prev_scale": x}),
-            tip=self.tr("Keep previous zoom scale"),
-            checkable=True,
-            checked=self._config["keep_prev_scale"],
-            enabled=True,
-        )
-        keep_prev_brightness = action(
-            self.tr("Keep Previous Brightness"),
-            lambda x: self._config.update({"keep_prev_brightness": x}),
-            tip=self.tr("Keep previous brightness"),
-            checkable=True,
-            checked=self._config["keep_prev_brightness"],
-            enabled=True,
-        )
-        keep_prev_contrast = action(
-            self.tr("Keep Previous Contrast"),
-            lambda x: self._config.update({"keep_prev_contrast": x}),
-            tip=self.tr("Keep previous contrast"),
-            checkable=True,
-            checked=self._config["keep_prev_contrast"],
-            enabled=True,
-        )
-        fit_window = action(
-            self.tr("Fit Window"),
-            self.set_fit_window,
-            shortcuts["fit_window"],
-            "fit-window",
-            self.tr("Zoom follows window size"),
-            checkable=True,
-            enabled=False,
-        )
-        fit_width = action(
-            self.tr("Fit Width"),
-            self.set_fit_width,
-            shortcuts["fit_width"],
-            "fit-width",
-            self.tr("Zoom follows window width"),
-            checkable=True,
-            enabled=False,
-        )
-        brightness_contrast = action(
-            self.tr("Set Brightness Contrast"),
-            self.brightness_contrast,
-            None,
-            "color",
-            "Adjust brightness and contrast",
-            enabled=False,
-        )
-        set_cross_line = action(
-            self.tr("Set Cross Line"),
-            self.set_cross_line,
-            tip=self.tr("Adjust cross line for mouse position"),
-            icon="cartesian",
-        )
-        show_groups = action(
-            self.tr("Show Groups"),
-            lambda x: self.set_canvas_params("show_groups", x),
-            tip=self.tr("Show shape groups"),
-            icon=None,
-            checkable=True,
-            checked=self._config["show_groups"],
-            enabled=True,
-            auto_trigger=True,
-        )
-        show_masks = action(
-            self.tr("Show Masks"),
-            lambda x: self.set_canvas_params("show_masks", x),
-            shortcut=shortcuts["show_masks"],
-            tip=self.tr("Show semi-transparent masks for shapes"),
-            icon=None,
-            checkable=True,
-            checked=self._config["show_masks"],
-            enabled=True,
-            auto_trigger=True,
-        )
-        # Fire the shortcut even when a child widget (e.g. the text-prompt
-        # QLineEdit) has focus, so Ctrl+M reliably toggles the mask overlay.
-        show_masks.setShortcutContext(Qt.ShortcutContext.ApplicationShortcut)
-        show_texts = action(
-            self.tr("Show Texts"),
-            lambda x: self.set_canvas_params("show_texts", x),
-            shortcut=shortcuts["show_texts"],
-            tip=self.tr("Show text above shapes"),
-            icon=None,
-            checkable=True,
-            checked=self._config["show_texts"],
-            enabled=True,
-            auto_trigger=True,
-        )
-        show_labels = action(
-            self.tr("Show Labels"),
-            lambda x: self.set_canvas_params("show_labels", x),
-            shortcut=shortcuts["show_labels"],
-            tip=self.tr("Show label inside shapes"),
-            icon=None,
-            checkable=True,
-            checked=self._config["show_labels"],
-            enabled=True,
-            auto_trigger=True,
-        )
-        # Toggle the attribute text painted on the canvas. The canvas has
-        # supported ``show_attributes`` all along, but it was never exposed as
-        # an action, which left Ctrl+Shift+L advertised in the F1 cheat sheet
-        # while doing nothing.
-        show_attributes = action(
-            self.tr("Show Attributes"),
-            lambda x: self.set_canvas_params("show_attributes", x),
-            shortcut=shortcuts["show_attributes"],
-            tip=self.tr("Show attributes below shapes"),
-            icon=None,
-            checkable=True,
-            checked=self._config["show_attributes"],
-            enabled=True,
-            auto_trigger=True,
-        )
-        # Same reasoning as show_masks: the shortcut must win over a focused
-        # child widget (e.g. the text-prompt QLineEdit).
-        show_attributes.setShortcutContext(
-            Qt.ShortcutContext.ApplicationShortcut
-        )
-        show_scores = action(
-            self.tr("Show Scores"),
-            lambda x: self.set_canvas_params("show_scores", x),
-            tip=self.tr("Show score inside shapes"),
-            icon=None,
-            checkable=True,
-            checked=self._config["show_scores"],
-            enabled=True,
-            auto_trigger=True,
-        )
-        show_degrees = action(
-            self.tr("Show Degress"),
-            lambda x: self.set_canvas_params("show_degrees", x),
-            tip=self.tr("Show degrees above rotated shapes"),
-            icon=None,
-            checkable=True,
-            checked=self._config["show_degrees"],
-            enabled=True,
-            auto_trigger=True,
-        )
-
-        # Theme menu options (System / Light / Dark)
-        theme_mode_actions = []
-        theme_group = QtGui.QActionGroup(self)
-        theme_group.setExclusive(True)
-        self._theme_actions = {}
-        current_appearance = self._config.get("theme", "auto")
-        for _mode, _label in (
-            ("auto", self.tr("System")),
-            ("light", self.tr("Light")),
-            ("dark", self.tr("Dark")),
-        ):
-            _act = QtGui.QAction(_label, theme_group)
-            _act.setCheckable(True)
-            _act.setChecked(current_appearance == _mode)
-            _act.setData(_mode)
-            _act.triggered.connect(
-                functools.partial(self._on_theme_changed, _mode)
-            )
-            theme_mode_actions.append(_act)
-            self._theme_actions[_mode] = _act
-
-        # Upload
-        upload_export_icon = "label"
-        upload_image_flags_file = action(
-            self.tr("Image Flags"),
-            lambda: utils.upload_image_flags_file(self),
-            None,
-            icon=upload_export_icon,
-            tip=self.tr("Upload Custom Image Flags File"),
-        )
-        upload_label_flags_file = action(
-            self.tr("Label Flags"),
-            lambda: utils.upload_label_flags_file(self, LABEL_OPACITY),
-            None,
-            icon=upload_export_icon,
-            tip=self.tr("Upload Custom Label Flags File"),
-        )
-        upload_label_classes_file = action(
-            self.tr("Label Classes"),
-            lambda: utils.upload_label_classes_file(self),
-            None,
-            icon=upload_export_icon,
-            tip=self.tr("Upload Custom Label Classes File"),
-        )
-        upload_yolo_hbb_annotation = action(
-            self.tr("YOLO HBB"),
-            lambda: utils.upload_yolo_annotation(self, "hbb", LABEL_OPACITY),
-            None,
-            icon=upload_export_icon,
-            tip=self.tr(
-                "Upload Custom YOLO Horizontal Bounding Boxes Annotations"
-            ),
-        )
-        upload_yolo_seg_annotation = action(
-            self.tr("YOLO Seg"),
-            lambda: utils.upload_yolo_annotation(self, "seg", LABEL_OPACITY),
-            None,
-            icon=upload_export_icon,
-            tip=self.tr("Upload Custom YOLO Segmentation Annotations"),
-        )
-        upload_yolo_pose_annotation = action(
-            self.tr("YOLO Pose"),
-            lambda: utils.upload_yolo_annotation(self, "pose", LABEL_OPACITY),
-            None,
-            icon=upload_export_icon,
-            tip=self.tr("Upload Custom YOLO Pose Annotations"),
-        )
-
-        # Export
-        export_yolo_hbb_annotation = action(
-            self.tr("YOLO HBB"),
-            lambda: utils.export_yolo_annotation(self, "hbb"),
-            None,
-            icon=upload_export_icon,
-            tip=self.tr(
-                "Export Custom YOLO Horizontal Bounding Boxes Annotations"
-            ),
-        )
-        export_yolo_seg_annotation = action(
-            self.tr("YOLO Seg"),
-            lambda: utils.export_yolo_annotation(self, "seg"),
-            None,
-            icon=upload_export_icon,
-            tip=self.tr("Export Custom YOLO Segmentation Annotations"),
-        )
-        export_yolo_pose_annotation = action(
-            self.tr("YOLO Pose"),
-            lambda: utils.export_yolo_annotation(self, "pose"),
-            None,
-            icon=upload_export_icon,
-            tip=self.tr("Export Custom YOLO Pose Annotations"),
-        )
-
-        # Group zoom controls into a list for easier toggling.
-        zoom_actions = (
-            self.zoom_widget,
-            zoom_in,
-            zoom_out,
-            zoom_org,
-            fit_window,
-            fit_width,
-        )
-        self.zoom_mode = self.FIT_WINDOW
-        fit_window.setChecked(True)
-        self.scalers = {
-            self.FIT_WINDOW: self.scale_fit_window,
-            self.FIT_WIDTH: self.scale_fit_width,
-            # Set to one to scale to 100% when loading files.
-            self.MANUAL_ZOOM: lambda: 1,
-        }
-
-        edit = action(
-            self.tr("Edit Label"),
-            self.edit_label,
-            shortcuts["edit_label"],
-            "edit",
-            self.tr("Modify the label of the selected polygon"),
-            enabled=False,
-        )
-
-        fill_drawing = action(
-            self.tr("Fill Drawing Polygon"),
-            self.canvas.set_fill_drawing,
-            None,
-            "color",
-            self.tr("Fill polygon while drawing"),
-            checkable=True,
-            enabled=True,
-        )
-        fill_drawing.trigger()
-
-        show_navigator = action(
-            self.tr("Navigator"),
-            self.toggle_navigator,
-            shortcuts["show_navigator"],
-            "navigator",
-            self.tr("Show/hide the navigator window"),
-            checkable=True,
-            enabled=True,
-        )
-
-        # AI Actions
-        toggle_auto_labeling_widget = action(
-            self.tr("Auto Labeling"),
-            self.toggle_auto_labeling_widget,
-            shortcuts["auto_label"],
-            "brain",
-            self.tr("Auto Labeling"),
-        )
-
-        self.label_list.setContextMenuPolicy(
-            Qt.ContextMenuPolicy.NoContextMenu
-        )
-
-        # Store actions for further handling.
-        self.actions = utils.Struct(
-            save_auto=save_auto,
-            save_with_image_data=save_with_image_data,
-            change_output_dir=change_output_dir,
-            save=save,
-            save_as=save_as,
-            open=open_,
-            open_dir=opendir,
-            close=close,
-            delete_file=delete_file,
-            delete_image_file=delete_image_file,
-            toggle_annotation_checked=toggle_annotation_checked,
-            mark_checked_and_next=mark_checked_and_next,
-            mark_rejected_and_next=mark_rejected_and_next,
-            confirm_classification=confirm_classification,
-            keep_prev_mode=keep_prev_mode,
-            auto_use_last_label_mode=auto_use_last_label_mode,
-            auto_use_last_gid_mode=auto_use_last_gid_mode,
-            use_system_clipboard=use_system_clipboard,
-            visibility_shapes_mode=visibility_shapes_mode,
-            run_all_images=run_all_images,
-            union_selection=union_selection,
-            delete=delete,
-            edit=edit,
-            duplicate=duplicate,
-            copy=copy,
-            copy_coordinates=copy_coordinates,
-            paste=paste,
-            toggle_shape_lock=toggle_shape_lock,
-            overview=overview,
-            save_visualization_image=save_visualization_image,
-            undo_last_point=undo_last_point,
-            undo=undo,
-            redo=redo,
-            remove_point=remove_point,
-            create_mode=create_mode,
-            create_brush_polygon_mode=create_brush_polygon_mode,
-            edit_mode=edit_mode,
-            edit_brush_mode=edit_brush_mode,
-            create_rectangle_mode=create_rectangle_mode,
-            create_point_mode=create_point_mode,
-            create_cuboid_mode=create_cuboid_mode,
-            create_rotation_mode=create_rotation_mode,
-            create_quadrilateral_mode=create_quadrilateral_mode,
-            create_circle_mode=create_circle_mode,
-            create_line_mode=create_line_mode,
-            create_linestrip_mode=create_linestrip_mode,
-            digit_shortcut_0=digit_shortcut_0,
-            digit_shortcut_1=digit_shortcut_1,
-            digit_shortcut_2=digit_shortcut_2,
-            digit_shortcut_3=digit_shortcut_3,
-            digit_shortcut_4=digit_shortcut_4,
-            digit_shortcut_5=digit_shortcut_5,
-            digit_shortcut_6=digit_shortcut_6,
-            digit_shortcut_7=digit_shortcut_7,
-            digit_shortcut_8=digit_shortcut_8,
-            digit_shortcut_9=digit_shortcut_9,
-            digit_shortcut_actions=(
-                digit_shortcut_0,
-                digit_shortcut_1,
-                digit_shortcut_2,
-                digit_shortcut_3,
-                digit_shortcut_4,
-                digit_shortcut_5,
-                digit_shortcut_6,
-                digit_shortcut_7,
-                digit_shortcut_8,
-                digit_shortcut_9,
-            ),
-            upload_image_flags_file=upload_image_flags_file,
-            upload_label_flags_file=upload_label_flags_file,
-            upload_label_classes_file=upload_label_classes_file,
-            upload_yolo_hbb_annotation=upload_yolo_hbb_annotation,
-            upload_yolo_seg_annotation=upload_yolo_seg_annotation,
-            upload_yolo_pose_annotation=upload_yolo_pose_annotation,
-            export_yolo_hbb_annotation=export_yolo_hbb_annotation,
-            export_yolo_seg_annotation=export_yolo_seg_annotation,
-            export_yolo_pose_annotation=export_yolo_pose_annotation,
-            zoom=zoom,
-            zoom_in=zoom_in,
-            zoom_out=zoom_out,
-            zoom_org=zoom_org,
-            keep_prev_scale=keep_prev_scale,
-            keep_prev_brightness=keep_prev_brightness,
-            keep_prev_contrast=keep_prev_contrast,
-            fit_window=fit_window,
-            fit_width=fit_width,
-            brightness_contrast=brightness_contrast,
-            set_cross_line=set_cross_line,
-            show_groups=show_groups,
-            show_masks=show_masks,
-            show_texts=show_texts,
-            show_labels=show_labels,
-            show_attributes=show_attributes,
-            show_scores=show_scores,
-            show_degrees=show_degrees,
-            show_navigator=show_navigator,
-            zoom_actions=zoom_actions,
-            open_next_image=open_next_image,
-            open_prev_image=open_prev_image,
-            open_next_unchecked_image=open_next_unchecked_image,
-            open_prev_unchecked_image=open_prev_unchecked_image,
-            toggle_auto_labeling_widget=toggle_auto_labeling_widget,
-            digit_shortcut_manager=digit_shortcut_manager,
-            label_manager=label_manager,
-            gid_manager=gid_manager,
-            shape_manager=shape_manager,
-            loop_thru_labels=loop_thru_labels,
-            loop_select_labels=loop_select_labels,
-            select_toggle_shapes=select_toggle_shapes,
-            file_menu_actions=(
-                open_,
-                opendir,
-                save,
-                save_as,
-                close,
-            ),
-            tool=(),
-            # XXX: need to add some actions here to activate the shortcut
-            editMenu=(
-                edit,
-                duplicate,
-                delete,
-                copy,
-                paste,
-                None,
-                undo,
-                undo_last_point,
-                redo,
-                None,
-                copy_coordinates,
-                remove_point,
-                union_selection,
-                None,
-                keep_prev_mode,
-                auto_use_last_label_mode,
-                auto_use_last_gid_mode,
-                use_system_clipboard,
-                visibility_shapes_mode,
-            ),
-            # menu shown at right click
-            menu=(
-                create_mode,
-                create_brush_polygon_mode,
-                create_rectangle_mode,
-                create_point_mode,
-                create_rotation_mode,
-                create_quadrilateral_mode,
-                create_circle_mode,
-                create_line_mode,
-                create_linestrip_mode,
-                create_cuboid_mode,
-                None,
-                edit_mode,
-                edit_brush_mode,
-                edit,
-                toggle_shape_lock,
-                None,
-                copy_coordinates,
-                union_selection,
-                duplicate,
-                copy,
-                paste,
-                None,
-                delete,
-                undo,
-                undo_last_point,
-                redo,
-                remove_point,
-            ),
-            on_load_active=(
-                close,
-                create_mode,
-                create_brush_polygon_mode,
-                create_rectangle_mode,
-                create_point_mode,
-                create_cuboid_mode,
-                create_rotation_mode,
-                create_quadrilateral_mode,
-                create_circle_mode,
-                create_line_mode,
-                create_linestrip_mode,
-                digit_shortcut_0,
-                digit_shortcut_1,
-                digit_shortcut_2,
-                digit_shortcut_3,
-                digit_shortcut_4,
-                digit_shortcut_5,
-                digit_shortcut_6,
-                digit_shortcut_7,
-                digit_shortcut_8,
-                digit_shortcut_9,
-                edit_mode,
-                brightness_contrast,
-                toggle_annotation_checked,
-                mark_checked_and_next,
-                mark_rejected_and_next,
-                shape_manager,
-                loop_thru_labels,
-                loop_select_labels,
-                select_toggle_shapes,
-            ),
-            on_shapes_present=(save_as, delete),
-            hide_selected_polygons=hide_selected_polygons,
-            show_hidden_polygons=show_hidden_polygons,
-            group_selected_shapes=group_selected_shapes,
-            ungroup_selected_shapes=ungroup_selected_shapes,
-        )
-
-        for digit_action in (
-            self.actions.digit_shortcut_0,
-            self.actions.digit_shortcut_1,
-            self.actions.digit_shortcut_2,
-            self.actions.digit_shortcut_3,
-            self.actions.digit_shortcut_4,
-            self.actions.digit_shortcut_5,
-            self.actions.digit_shortcut_6,
-            self.actions.digit_shortcut_7,
-            self.actions.digit_shortcut_8,
-            self.actions.digit_shortcut_9,
-        ):
-            self.addAction(digit_action)
-        self.addAction(self.actions.toggle_annotation_checked)
-        self.addAction(self.actions.mark_checked_and_next)
-        self.addAction(self.actions.mark_rejected_and_next)
-
-        self.canvas.vertex_selected.connect(
-            self.actions.remove_point.setEnabled
-        )
-
-        self.menus = utils.Struct(
-            file=self.menu(self.tr("File")),
-            edit=self.menu(self.tr("Edit")),
-            view=self.menu(self.tr("View")),
-            theme=self.menu(self.tr("Theme")),
-            upload=self.menu(self.tr("Upload")),
-            export=self.menu(self.tr("Export")),
-            tool=self.menu(self.tr("Tool")),
-            train=self.menu(self.tr("Train")),
-            smart_tools=self.menu(self.tr("智能工具")),
-            recent_files=QtWidgets.QMenu(self.tr("Open Recent")),
-            recent_dirs=QtWidgets.QMenu(self.tr("打开最近文件夹")),
-        )
-        self.menus.recent_files.aboutToShow.connect(self.update_file_menu)
-        self.menus.recent_dirs.aboutToShow.connect(
-            self._update_recent_dirs_menu
-        )
-        self.canvas_label_filter_menu_0 = None
-        self.canvas_gid_filter_menu_0 = None
-        self.canvas_label_filter_menu_1 = None
-        self.canvas_gid_filter_menu_1 = None
-
-        utils.add_actions(
-            self.menus.file,
-            (
-                open_,
-                open_next_image,
-                open_prev_image,
-                open_next_unchecked_image,
-                open_prev_unchecked_image,
-                opendir,
-                self.menus.recent_dirs,
-                self.menus.recent_files,
-                save,
-                save_as,
-                save_auto,
-                change_output_dir,
-                save_with_image_data,
-                close,
-                delete_file,
-                delete_image_file,
-                None,
-                mark_checked_and_next,
-                mark_rejected_and_next,
-                confirm_classification,
-                None,
-            ),
-        )
-        utils.add_actions(
-            self.menus.smart_tools,
-            (
-                data_audit,
-                smart_calibrate,
-                smart_analysis,
-                smart_missing_scan,
-                smart_iteration,
-                smart_review,
-                smart_propagate,
-                smart_archive,
-                smart_advice,
-                smart_template,
-                smart_stale_audit,
-                smart_restore_backup,
-            ),
-        )
-        utils.add_actions(
-            self.menus.train, (ultralytics_train, run_history)
-        )
-        utils.add_actions(
-            self.menus.tool,
-            (
-                overview,
-                None,
-                save_crop,
-                save_visualization_image,
-                None,
-                digit_shortcut_manager,
-                label_manager,
-                gid_manager,
-                shape_manager,
-                None,
-                shape_converter,
-                None,
-                shortcuts_help,
-            ),
-        )
-        utils.add_actions(self.menus.theme, theme_mode_actions)
-        utils.add_actions(
-            self.menus.upload,
-            (
-                upload_image_flags_file,
-                upload_label_flags_file,
-                upload_label_classes_file,
-                None,
-                upload_yolo_hbb_annotation,
-                upload_yolo_seg_annotation,
-                upload_yolo_pose_annotation,
-                None,
-                None,
-                None,
-                None,
-            ),
-        )
-        utils.add_actions(
-            self.menus.export,
-            (
-                export_yolo_hbb_annotation,
-                export_yolo_seg_annotation,
-                export_yolo_pose_annotation,
-                None,
-                None,
-                None,
-                None,
-                None,
-            ),
-        )
-        utils.add_actions(
-            self.menus.view,
-            (
-                show_navigator,
-                fill_drawing,
-                loop_thru_labels,
-                loop_select_labels,
-                None,
-                zoom_in,
-                zoom_out,
-                zoom_org,
-                None,
-                keep_prev_scale,
-                keep_prev_brightness,
-                keep_prev_contrast,
-                None,
-                fit_window,
-                fit_width,
-                None,
-                brightness_contrast,
-                set_cross_line,
-                None,
-                show_masks,
-                show_texts,
-                show_labels,
-                show_attributes,
-                show_scores,
-                show_degrees,
-                show_groups,
-                hide_selected_polygons,
-                show_hidden_polygons,
-                group_selected_shapes,
-                ungroup_selected_shapes,
-            ),
-        )
-
-        self._view_menu_filter = utils.StayOpenMenuFilter(self.menus.view)
-        self.menus.view.installEventFilter(self._view_menu_filter)
-
-        self.menus.file.aboutToShow.connect(self.update_file_menu)
-
-        # Custom context menu for the canvas widget:
-        utils.add_actions(self.canvas.menus[0], self.actions.menu)
-        utils.add_actions(
-            self.canvas.menus[1],
-            (
-                action("&Copy here", self.copy_shape),
-                action("&Move here", self.move_shape),
-            ),
-        )
-        (
-            self.canvas_label_filter_menu_0,
-            self.canvas_gid_filter_menu_0,
-        ) = self._append_filter_submenus(
-            self.canvas.menus[0],
-            prepend=True,
-            after_filter_actions=(self.actions.toggle_annotation_checked,),
-        )
-        self.canvas.menus[0].aboutToShow.connect(self.refresh_filter_menus)
-        self.canvas.menus[0].aboutToShow.connect(
-            self.refresh_shape_lock_action
-        )
-
-        self.tools = self.toolbar("Tools")
-        # Menu buttons on Left
-        self.actions.tool = (
-            opendir,
-            open_prev_image,
-            open_next_image,
-            save,
-            delete_file,
-            None,
-            create_mode,
-            self.actions.create_rectangle_mode,
-            self.actions.create_point_mode,
-            self.actions.create_brush_polygon_mode,
-            None,
-            edit_mode,
-            edit_brush_mode,
-            delete,
-            undo,
-            redo,
-            None,
-            loop_thru_labels,
-            loop_select_labels,
-            select_toggle_shapes,
-            None,
-            run_all_images,
-            toggle_auto_labeling_widget,
-            None,
-            fit_width,
-            zoom,
-        )
-
-        layout = QHBoxLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
-
-        self.tools_scroll_area = self.toolbar_scroll_area(self.tools)
-        self.tools_panel = FloatingToolPanel(scroll_area.viewport())
-        self.tools_panel.setObjectName("ToolsFloatingPanel")
-        self.tools_panel.set_content_widget(self.tools_scroll_area)
-        self.tools_panel.positionCommitted.connect(
-            self._on_tools_panel_position_committed
-        )
-        self.tools_panel.collapseToggled.connect(
-            self._on_tools_panel_collapse_toggled
-        )
-        central_layout = QVBoxLayout()
-        central_layout.setContentsMargins(0, 0, 0, 0)
-        central_layout.setSpacing(2)
-        self.label_instruction = QLabel(self.get_labeling_instruction())
-        self.label_instruction.setObjectName("LabelInstructionBar")
-        self.label_instruction.setContentsMargins(0, 0, 0, 0)
-        self.label_instruction.setStyleSheet(get_instruction_bar_style())
-        self.label_instruction.setWordWrap(True)
-        self.label_instruction.setTextFormat(Qt.TextFormat.RichText)
-        self.auto_labeling_widget = AutoLabelingWidget(self)
-        self.auto_labeling_widget.auto_segmentation_requested.connect(
-            self.on_auto_segmentation_requested
-        )
-        self.auto_labeling_widget.auto_segmentation_disabled.connect(
-            self.on_auto_segmentation_disabled
-        )
-        self.canvas.auto_labeling_marks_updated.connect(
-            self.auto_labeling_widget.on_new_marks
-        )
-        self.auto_labeling_widget.auto_labeling_mode_changed.connect(
-            self.canvas.set_auto_labeling_mode
-        )
-        self.auto_labeling_widget.auto_decode_mode_changed.connect(
-            self.canvas.set_auto_decode_mode
-        )
-        self.auto_labeling_widget.cropping_mode_changed.connect(
-            self.auto_labeling_widget.model_manager.set_cropping_mode
-        )
-        self.auto_labeling_widget.clear_auto_decode_requested.connect(
-            self.canvas.reset_auto_decode_state
-        )
-        self.canvas.auto_decode_requested.connect(
-            self.on_auto_decode_requested
-        )
-        self.canvas.auto_decode_finish_requested.connect(
-            self.auto_labeling_widget.on_finish_clicked
-        )
-        self.canvas.shape_hover_changed.connect(
-            lambda: (
-                self.update_navigator_shapes()
-                if (
-                    hasattr(self, "navigator_dialog")
-                    and self.navigator_dialog.isVisible()
-                )
-                else None
-            )
-        )
-        self.auto_labeling_widget.clear_auto_labeling_action_requested.connect(
-            self.clear_auto_labeling_marks
-        )
-        self.auto_labeling_widget.finish_auto_labeling_object_action_requested.connect(
-            self.finish_auto_labeling_object
-        )
-        self.auto_labeling_widget.cache_auto_label_changed.connect(
-            self.set_cache_auto_label
-        )
-        self.auto_labeling_widget.model_manager.prediction_started.connect(
-            lambda: self.canvas.set_loading(True, self.tr("Please wait..."))
-        )
-        self.auto_labeling_widget.model_manager.prediction_finished.connect(
-            lambda: self.canvas.set_loading(False)
-        )
-        self.auto_labeling_widget.model_manager.prediction_finished.connect(
-            self.update_thumbnail_display
-        )
-        self.auto_labeling_widget.model_manager.model_loaded.connect(
-            self.update_thumbnail_display
-        )
-        self.next_files_changed.connect(
-            self.auto_labeling_widget.model_manager.on_next_files_changed
-        )
-        # NOTE(jack): this is not needed for now
-        # self.auto_labeling_widget.model_manager.request_next_files_requested.connect(
-        #     lambda: self.inform_next_files(self.filename)
-        # )
-        self.auto_labeling_widget.hide()  # Hide by default
-        central_layout.addWidget(self.label_instruction)
-        central_layout.addWidget(self.auto_labeling_widget)
-        central_layout.addWidget(scroll_area)
-        layout.addLayout(central_layout)
-
-        # Save central area for resize
-        self._central_widget = scroll_area
-
-        # Stretch central area (image view)
-        layout.setStretch(0, 1)
-
-        right_sidebar_layout = QVBoxLayout()
-        right_sidebar_layout.setContentsMargins(0, 0, 0, 0)
-        right_sidebar_layout.setSpacing(4)
-
-        # Thumbnail image display
-        self.thumbnail_pixmap = None
-        self.thumbnail_container = QWidget()
-        thumbnail_image_layout = QVBoxLayout()
-        thumbnail_image_layout.setContentsMargins(2, 2, 2, 2)
-        self.thumbnail_image_label = QLabel()
-        self.thumbnail_image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.thumbnail_image_label.mousePressEvent = utils.on_thumbnail_click(
-            self
-        )
-        thumbnail_image_layout.addWidget(self.thumbnail_image_label)
-        self.thumbnail_container.setLayout(thumbnail_image_layout)
-        self.thumbnail_container.hide()
-        right_sidebar_layout.addWidget(self.thumbnail_container)
-
-        # Shape attributes
-        self.shape_attributes = QLabel(self.tr("Attributes"))
-        self.grid_layout = QGridLayout()
-        self.scroll_area = QScrollArea()
-        # Show vertical scrollbar as needed
-        self.scroll_area.setVerticalScrollBarPolicy(
-            Qt.ScrollBarPolicy.ScrollBarAsNeeded
-        )
-        # Disable horizontal scrollbar
-        self.scroll_area.setHorizontalScrollBarPolicy(
-            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
-        )
-        self.scroll_area.setWidgetResizable(True)
-        # Create a container widget for the grid layout
-        self.grid_layout_container = QWidget()
-        self.grid_layout_container.setLayout(self.grid_layout)
-        self.scroll_area.setWidget(self.grid_layout_container)
-        if not self.attributes:
-            self.shape_attributes.hide()
-            self.scroll_area.hide()
-        right_sidebar_layout.addWidget(
-            self.shape_attributes, 0, Qt.AlignmentFlag.AlignCenter
-        )
-        right_sidebar_layout.addWidget(self.scroll_area)
-
-        right_sidebar_layout.addWidget(self.flag_dock)
-
-        # Labels with checkbox
-        self.labels_checkbox = QCheckBox()
-        self.labels_checkbox.setChecked(True)
-        self.labels_checkbox.setStyleSheet(get_checkbox_indicator_style())
-        self.labels_checkbox.toggled.connect(self.toggle_labels_visibility)
-
-        labels_header_layout = QHBoxLayout()
-        labels_header_layout.setContentsMargins(0, 2, 0, 2)
-        labels_header_layout.addStretch()
-        labels_title = QLabel(self.tr("Labels"))
-        labels_header_layout.addWidget(labels_title)
-        labels_header_layout.addStretch()
-        labels_header_layout.addWidget(self.labels_checkbox)
-        labels_header_widget = QWidget()
-        labels_header_widget.setLayout(labels_header_layout)
-
-        # Hide the original dock title bar
-        empty_widget = QWidget()
-        empty_widget.setFixedHeight(0)
-        self.label_dock.setTitleBarWidget(empty_widget)
-
-        labels_panel = QFrame()
-        labels_panel.setObjectName("sidebarPanel")
-        labels_panel.setStyleSheet(get_panel_style())
-        labels_panel_layout = QVBoxLayout(labels_panel)
-        labels_panel_layout.setContentsMargins(0, 0, 0, 0)
-        labels_panel_layout.setSpacing(0)
-        labels_panel_layout.addWidget(labels_header_widget)
-        labels_panel_layout.addWidget(self.label_dock)
-        right_sidebar_layout.addWidget(labels_panel)
-
-        self.shapes_checkbox = QCheckBox()
-        self.shapes_checkbox.setChecked(True)
-        self.shapes_checkbox.setStyleSheet(get_checkbox_indicator_style())
-        self.shapes_checkbox.toggled.connect(self.toggle_shapes_visibility)
-
-        shapes_header_layout = QHBoxLayout()
-        shapes_header_layout.setContentsMargins(0, 2, 0, 2)
-        shapes_header_layout.addStretch()
-        shapes_title = QLabel(self.tr("Shapes"))
-        shapes_header_layout.addWidget(shapes_title)
-        shapes_header_layout.addStretch()
-        shapes_header_layout.addWidget(self.shapes_checkbox)
-        shapes_header_widget = QWidget()
-        shapes_header_widget.setLayout(shapes_header_layout)
-
-        shape_empty_widget = QWidget()
-        shape_empty_widget.setFixedHeight(0)
-        self.shape_dock.setTitleBarWidget(shape_empty_widget)
-
-        objects_panel = QFrame()
-        objects_panel.setObjectName("sidebarPanel")
-        objects_panel.setStyleSheet(get_panel_style())
-        objects_panel_layout = QVBoxLayout(objects_panel)
-        objects_panel_layout.setContentsMargins(0, 0, 0, 0)
-        objects_panel_layout.setSpacing(0)
-        objects_panel_layout.addWidget(shapes_header_widget)
-        objects_panel_layout.addWidget(self.shape_dock)
-        right_sidebar_layout.addWidget(objects_panel)
-
-        file_search_row_layout = QHBoxLayout()
-        file_search_row_layout.setContentsMargins(0, 0, 0, 0)
-        file_search_row_layout.setSpacing(6)
-        file_search_row_layout.addWidget(self.file_search, 1)
-        file_search_row_layout.addWidget(self.settings_button, 0)
-        right_sidebar_layout.addLayout(file_search_row_layout)
-
-        files_panel = QFrame()
-        files_panel.setObjectName("sidebarPanel")
-        files_panel.setStyleSheet(get_panel_style())
-        files_panel_layout = QVBoxLayout(files_panel)
-        files_panel_layout.setContentsMargins(0, 0, 0, 0)
-        files_panel_layout.setSpacing(0)
-        files_panel_layout.addWidget(self.file_dock)
-        right_sidebar_layout.addWidget(files_panel)
-        self.file_dock.setFeatures(
-            QDockWidget.DockWidgetFeature.DockWidgetFloatable
-        )
-        dock_features = (
-            ~QDockWidget.DockWidgetFeature.DockWidgetMovable
-            | ~QDockWidget.DockWidgetFeature.DockWidgetFloatable
-            | ~QDockWidget.DockWidgetFeature.DockWidgetClosable
-        )
-        rev_dock_features = ~dock_features
-        self.label_dock.setFeatures(
-            self.label_dock.features() & rev_dock_features
-        )
-        self.file_dock.setFeatures(
-            self.file_dock.features() & rev_dock_features
-        )
-        self.flag_dock.setFeatures(
-            self.flag_dock.features() & rev_dock_features
-        )
-        self.shape_dock.setFeatures(
-            self.shape_dock.features() & rev_dock_features
-        )
-
-        layout.addLayout(right_sidebar_layout)
-        self.setLayout(layout)
-        QtCore.QTimer.singleShot(0, self._restore_tools_panel_state)
+        _build_actions(self)
 
         if output_file is not None and self._config["auto_save"]:
             logger.warning(
@@ -8711,3 +6978,1749 @@ class LabelingWidget(LabelDialog):
 
     def toggle_shapes_visibility(self, checked):
         self.shape_dock.setVisible(checked)
+
+
+def _build_actions(widget):
+    """Create every QAction and register them on widget.actions.
+
+    Moved out of LabelingWidget.__init__ (split batch 4): pure
+    assembly, everything is reached through the widget argument.
+    """
+    # Actions
+    action = functools.partial(utils.new_action, widget)
+    shortcuts = widget._config["shortcuts"]
+
+    open_ = action(
+        widget.tr("Open File"),
+        widget.open_file,
+        shortcuts["open"],
+        "file",
+        widget.tr("Open image or label file"),
+    )
+    opendir = action(
+        widget.tr("Open Dir"),
+        widget.open_folder_dialog,
+        shortcuts["open_dir"],
+        "open",
+        widget.tr("Open Dir"),
+    )
+    open_next_image = action(
+        widget.tr("Next Image"),
+        widget.open_next_image,
+        shortcuts["open_next"],
+        "next",
+        widget.tr("Open next image"),
+        enabled=False,
+    )
+    open_prev_image = action(
+        widget.tr("Prev Image"),
+        widget.open_prev_image,
+        shortcuts["open_prev"],
+        "prev",
+        widget.tr("Open prev image"),
+        enabled=False,
+    )
+    open_next_unchecked_image = action(
+        widget.tr("Next Unchecked Image"),
+        widget.open_next_unchecked_image,
+        shortcuts["open_next_unchecked"],
+        "next",
+        widget.tr("Open next unchecked image"),
+        enabled=False,
+    )
+    open_prev_unchecked_image = action(
+        widget.tr("Prev Unchecked Image"),
+        widget.open_prev_unchecked_image,
+        shortcuts["open_prev_unchecked"],
+        "prev",
+        widget.tr("Open previous unchecked image"),
+        enabled=False,
+    )
+    save = action(
+        widget.tr("Save"),
+        widget.save_file,
+        shortcuts["save"],
+        "save",
+        widget.tr("Save labels to file"),
+        enabled=False,
+    )
+    save_as = action(
+        widget.tr("Save As"),
+        widget.save_file_as,
+        shortcuts["save_as"],
+        "save-as",
+        widget.tr("Save labels to a different file"),
+        enabled=False,
+    )
+    run_all_images = action(
+        widget.tr("Auto Run"),
+        lambda: utils.run_all_images(widget),
+        shortcuts["auto_run"],
+        "auto-run",
+        widget.tr("Auto run all images at once"),
+        enabled=False,
+    )
+    delete_file = action(
+        widget.tr("Delete File"),
+        widget.delete_file,
+        shortcuts["delete_file"],
+        "delete",
+        widget.tr("Delete current label file"),
+        enabled=False,
+    )
+    delete_image_file = action(
+        widget.tr("Delete Image File"),
+        widget.delete_image_file,
+        shortcuts["delete_image_file"],
+        "delete",
+        widget.tr("Delete current image file"),
+        enabled=True,
+    )
+    data_audit = action(
+        widget.tr("数据体检"),
+        lambda: run_data_audit(widget),
+        None,
+        "icon",
+        widget.tr(
+            "Scan the folder for unlabeled images, empty/corrupted "
+            "labels and orphan label files"
+        ),
+        enabled=True,
+    )
+    smart_calibrate = action(
+        widget.tr("1. 阈值校准"),
+        lambda: run_threshold_calibration(widget),
+        None,
+        "settings",
+        widget.tr("推荐先做：按各类置信度分布生成自动接受 / 建议复核阈值"),
+        enabled=True,
+    )
+    smart_analysis = action(
+        widget.tr("2. 数据智能分析"),
+        lambda: run_smart_analysis(widget),
+        None,
+        "overview",
+        widget.tr("阈值校准后再做：难例排序、重复图片检测与配平建议"),
+        enabled=True,
+    )
+    smart_missing_scan = action(
+        widget.tr("3. 漏标扫描"),
+        lambda: run_missing_scan(widget),
+        None,
+        "search",
+        widget.tr("智能分析后再做：用当前模型找出置信度高但没有标注的目标"),
+        enabled=True,
+    )
+    smart_iteration = action(
+        widget.tr("4. 迭代收益看板"),
+        lambda: show_iteration_dashboard(widget),
+        None,
+        "loop",
+        widget.tr("最后查看：每轮训练→回灌的边际收益与下一步建议"),
+        enabled=True,
+    )
+    smart_review = action(
+        widget.tr("5. 智能复核（下一张待复核）"),
+        lambda: run_review_jump(widget),
+        None,
+        "check",
+        widget.tr("按不确定性优先级跳到下一张待复核的图片（再次点击可继续跳）"),
+        enabled=True,
+    )
+    smart_propagate = action(
+        widget.tr("6. 标注传播（上一张→当前图）"),
+        widget._propagate_previous_labels,
+        None,
+        "copy",
+        widget.tr("把上一张已标注图片的框按比例复制到当前图片，自动跳过重复框"),
+        enabled=True,
+    )
+    smart_archive = action(
+        widget.tr("7. 一键去重归档"),
+        lambda: run_duplicate_archive(widget),
+        None,
+        "trash",
+        widget.tr("把近重复图片及其标注移动到「._duplicates_archive」文件夹"),
+        enabled=True,
+    )
+    smart_advice = action(
+        widget.tr("8. 训练建议"),
+        lambda: run_training_advice(widget),
+        None,
+        "brain",
+        widget.tr("训练前预检 + 基于当前数据与历史轮次推荐 epochs/batch/imgsz 初值"),
+        enabled=True,
+    )
+    smart_template = action(
+        widget.tr("9. 智能模板预标注（批量）"),
+        lambda: run_template_propagation(widget),
+        None,
+        "labels",
+        widget.tr("为未标注图片按相似度匹配已标注模板，批量生成预标注后再人工确认"),
+        enabled=True,
+    )
+    smart_stale_audit = action(
+        widget.tr("10. 旧轮模型框盘点"),
+        lambda: run_stale_model_audit(widget),
+        None,
+        "layers",
+        widget.tr("列出由其它模型留下、可考虑清理的框（只报告，不删除）"),
+        enabled=True,
+    )
+    smart_restore_backup = action(
+        widget.tr("11. 从备份恢复标注（撤销批量删除）"),
+        lambda: run_backup_restore(widget),
+        None,
+        "undo",
+        widget.tr(
+            "把 .label_backups 里的某一次快照写回标注目录；"
+            "被覆盖的文件会先生成一个新快照"
+        ),
+        enabled=True,
+    )
+    toggle_annotation_checked = action(
+        widget.tr("Mark as Checked"),
+        widget.set_annotation_checked,
+        shortcuts.get("toggle_annotation_checked"),
+        None,
+        widget.tr("Mark current annotation as checked"),
+        checkable=True,
+        enabled=False,
+    )
+    mark_checked_and_next = action(
+        widget.tr("检查完成并下一张"),
+        widget.mark_checked_and_next,
+        shortcuts["mark_checked_and_next"],
+        None,
+        widget.tr("将当前图片标为已检查，并跳到下一张未检查图片"),
+        enabled=False,
+    )
+    mark_rejected_and_next = action(
+        widget.tr("打回并下一张"),
+        widget.mark_rejected_and_next,
+        shortcuts.get("mark_rejected_and_next"),
+        None,
+        widget.tr("将当前图片标为需返工，并跳到下一张未检查图片"),
+        enabled=False,
+    )
+    # Menu-only on purpose: no shortcut key is invented here, so there is no
+    # config entry that could drift from a real binding.
+    confirm_classification = action(
+        widget.tr("确认分类建议"),
+        widget.confirm_classification,
+        None,
+        None,
+        widget.tr("把分类模型的整图建议写入图片类别（flags）"),
+        enabled=False,
+    )
+
+    change_output_dir = action(
+        widget.tr("Change Output Dir"),
+        slot=widget.change_output_dir_dialog,
+        shortcut=shortcuts["save_to"],
+        icon="open",
+        tip=widget.tr("Change where annotations are loaded/saved"),
+    )
+
+    save_auto = action(
+        text=widget.tr("Save Automatically"),
+        slot=lambda x: widget._config.update({"auto_save": x}),
+        icon=None,
+        tip=widget.tr("Save automatically"),
+        checkable=True,
+        enabled=True,
+        checked=widget._config["auto_save"],
+    )
+
+    save_with_image_data = action(
+        text=widget.tr("Save With Image Data"),
+        slot=lambda x: widget._config.update({"store_data": x}),
+        icon=None,
+        tip=widget.tr("Save image data in label file"),
+        checkable=True,
+        checked=widget._config["store_data"],
+    )
+
+    close = action(
+        widget.tr("Close"),
+        widget.close_file,
+        shortcuts["close"],
+        "cancel",
+        widget.tr("Close current file"),
+    )
+
+    keep_prev_mode = action(
+        widget.tr("Keep Previous Annotation"),
+        lambda x: widget._config.update({"keep_prev": x}),
+        shortcuts["toggle_keep_prev_mode"],
+        None,
+        widget.tr('Toggle "Keep Previous Annotation" mode'),
+        checkable=True,
+        checked=widget._config["keep_prev"],
+    )
+
+    auto_use_last_label_mode = action(
+        widget.tr("Auto Use Last Label"),
+        lambda x: widget._config.update({"auto_use_last_label": x}),
+        shortcuts["toggle_auto_use_last_label"],
+        None,
+        widget.tr('Toggle "Auto Use Last Label" mode'),
+        checkable=True,
+        checked=widget._config["auto_use_last_label"],
+    )
+
+    auto_use_last_gid_mode = action(
+        widget.tr("Auto Use Last Group ID"),
+        lambda x: widget._config.update({"auto_use_last_gid": x}),
+        shortcuts["toggle_auto_use_last_gid"],
+        None,
+        widget.tr('Toggle "Auto Use Last Group ID" mode'),
+        checkable=True,
+        checked=widget._config["auto_use_last_gid"],
+    )
+
+    use_system_clipboard = action(
+        widget.tr("Use System Clipboard"),
+        widget.toggle_system_clipboard,
+        tip=widget.tr("Use system clipboard for copy and paste"),
+        checkable=True,
+        checked=widget._config["system_clipboard"],
+        enabled=True,
+    )
+
+    visibility_shapes_mode = action(
+        widget.tr("Visibility Shapes"),
+        widget.toggle_visibility_shapes,
+        shortcuts["toggle_visibility_shapes"],
+        None,
+        widget.tr('Toggle "Visibility Shapes" mode'),
+        checkable=True,
+        checked=widget._config["show_shapes"],
+    )
+
+    create_mode = action(
+        widget.tr("Create Polygons"),
+        lambda: widget.toggle_draw_mode(False, create_mode="polygon"),
+        shortcuts["create_polygon"],
+        "polygon",
+        widget.tr("Start drawing polygons"),
+        enabled=False,
+    )
+    create_brush_polygon_mode = action(
+        widget.tr("Create Brush Polygons"),
+        widget.toggle_brush_polygon_mode,
+        shortcuts["create_brush_polygon"],
+        "brush_polygon",
+        widget.tr("Toggle brush mode for drawing polygons"),
+        enabled=False,
+    )
+    create_rectangle_mode = action(
+        widget.tr("Create Rectangle"),
+        lambda: widget.toggle_draw_mode(False, create_mode="rectangle"),
+        shortcuts["create_rectangle"],
+        "rectangle",
+        widget.tr("Start drawing rectangles"),
+        enabled=False,
+    )
+    create_point_mode = action(
+        widget.tr("Create Point"),
+        lambda: widget.toggle_draw_mode(False, create_mode="point"),
+        shortcuts["create_point"],
+        "point",
+        widget.tr("Start drawing points"),
+        enabled=False,
+    )
+    # These six existed only as config keys: the shortcuts-help dialog
+    # advertised them, but no QAction ever bound them, so the shapes were
+    # reachable through the digit-shortcut manager alone.
+    create_cuboid_mode = action(
+        widget.tr("创建立方体"),
+        lambda: widget.toggle_draw_mode(False, create_mode="cuboid"),
+        shortcuts["create_cuboid"],
+        None,
+        widget.tr("开始画立方体"),
+        enabled=False,
+    )
+    create_rotation_mode = action(
+        widget.tr("创建旋转框"),
+        lambda: widget.toggle_draw_mode(False, create_mode="rotation"),
+        shortcuts["create_rotation"],
+        None,
+        widget.tr("开始画旋转框"),
+        enabled=False,
+    )
+    create_quadrilateral_mode = action(
+        widget.tr("创建四边形"),
+        lambda: widget.toggle_draw_mode(False, create_mode="quadrilateral"),
+        shortcuts["create_quadrilateral"],
+        None,
+        widget.tr("开始画四边形"),
+        enabled=False,
+    )
+    create_circle_mode = action(
+        widget.tr("创建圆"),
+        lambda: widget.toggle_draw_mode(False, create_mode="circle"),
+        shortcuts["create_circle"],
+        None,
+        widget.tr("开始画圆"),
+        enabled=False,
+    )
+    create_line_mode = action(
+        widget.tr("创建线段"),
+        lambda: widget.toggle_draw_mode(False, create_mode="line"),
+        shortcuts["create_line"],
+        None,
+        widget.tr("开始画线段"),
+        enabled=False,
+    )
+    create_linestrip_mode = action(
+        widget.tr("创建折线"),
+        lambda: widget.toggle_draw_mode(False, create_mode="linestrip"),
+        shortcuts["create_linestrip"],
+        None,
+        widget.tr("开始画折线"),
+        enabled=False,
+    )
+    digit_shortcut_0 = action(
+        widget.tr("Digit Shortcut 0"),
+        lambda: widget.create_digit_mode(0),
+        "0",
+        "digit0",
+        enabled=False,
+    )
+    digit_shortcut_1 = action(
+        widget.tr("Digit Shortcut 1"),
+        lambda: widget.create_digit_mode(1),
+        "1",
+        "digit1",
+        enabled=False,
+    )
+    digit_shortcut_2 = action(
+        widget.tr("Digit Shortcut 2"),
+        lambda: widget.create_digit_mode(2),
+        "2",
+        "digit2",
+        enabled=False,
+    )
+    digit_shortcut_3 = action(
+        widget.tr("Digit Shortcut 3"),
+        lambda: widget.create_digit_mode(3),
+        "3",
+        "digit3",
+        enabled=False,
+    )
+    digit_shortcut_4 = action(
+        widget.tr("Digit Shortcut 4"),
+        lambda: widget.create_digit_mode(4),
+        "4",
+        "digit4",
+        enabled=False,
+    )
+    digit_shortcut_5 = action(
+        widget.tr("Digit Shortcut 5"),
+        lambda: widget.create_digit_mode(5),
+        "5",
+        "digit5",
+        enabled=False,
+    )
+    digit_shortcut_6 = action(
+        widget.tr("Digit Shortcut 6"),
+        lambda: widget.create_digit_mode(6),
+        "6",
+        "digit6",
+        enabled=False,
+    )
+    digit_shortcut_7 = action(
+        widget.tr("Digit Shortcut 7"),
+        lambda: widget.create_digit_mode(7),
+        "7",
+        "digit7",
+        enabled=False,
+    )
+    digit_shortcut_8 = action(
+        widget.tr("Digit Shortcut 8"),
+        lambda: widget.create_digit_mode(8),
+        "8",
+        "digit8",
+        enabled=False,
+    )
+    digit_shortcut_9 = action(
+        widget.tr("Digit Shortcut 9"),
+        lambda: widget.create_digit_mode(9),
+        "9",
+        "digit9",
+        enabled=False,
+    )
+    edit_mode = action(
+        widget.tr("Edit Object"),
+        widget.set_edit_mode,
+        shortcuts["edit_polygon"],
+        "edit",
+        widget.tr("Move and edit the selected polygons"),
+        enabled=False,
+    )
+    edit_brush_mode = action(
+        widget.tr("Edit Brush"),
+        lambda checked: widget.toggle_brush_mode(checked),
+        shortcuts.get("edit_brush_mode", "Shift+B"),
+        "brush",
+        widget.tr(
+            "Select one polygon, then paint to add, hold Ctrl to erase, "
+            "and scroll to resize the brush"
+        ),
+        enabled=False,
+        checkable=True,
+        checked=False,
+    )
+    group_selected_shapes = action(
+        widget.tr("Group Selected Shapes"),
+        widget.group_selected_shapes,
+        shortcuts["group_selected_shapes"],
+        None,
+        widget.tr("Group shapes by assigning a same group_id"),
+        enabled=True,
+    )
+    ungroup_selected_shapes = action(
+        widget.tr("Ungroup Selected Shapes"),
+        widget.ungroup_selected_shapes,
+        shortcuts["ungroup_selected_shapes"],
+        None,
+        widget.tr("Ungroup shapes"),
+        enabled=True,
+    )
+
+    delete = action(
+        widget.tr("Delete"),
+        widget.delete_selected_shape,
+        shortcuts["delete_polygon"],
+        "cancel",
+        widget.tr("Delete the selected polygons"),
+        enabled=False,
+    )
+    duplicate = action(
+        widget.tr("Duplicate Polygons"),
+        widget.duplicate_selected_shape,
+        shortcuts["duplicate_polygon"],
+        "copy",
+        widget.tr("Create a duplicate of the selected polygons"),
+        enabled=False,
+    )
+    copy = action(
+        widget.tr("Copy Object"),
+        widget.copy_selected_shape,
+        shortcuts["copy_polygon"],
+        "copy",
+        widget.tr("Copy selected polygons to clipboard"),
+        enabled=False,
+    )
+    paste = action(
+        widget.tr("Paste Object"),
+        widget.paste_selected_shape,
+        shortcuts["paste_polygon"],
+        "paste",
+        widget.tr("Paste copied polygons"),
+        enabled=widget._config["system_clipboard"],
+    )
+    undo_last_point = action(
+        widget.tr("Undo last point"),
+        widget.canvas.undo_last_point,
+        shortcuts["undo_last_point"],
+        "undo",
+        widget.tr("Undo last drawn point"),
+        enabled=False,
+    )
+    remove_point = action(
+        text=widget.tr("Remove Selected Point"),
+        slot=widget.remove_selected_point,
+        shortcut=shortcuts["remove_selected_point"],
+        icon="edit",
+        tip=widget.tr("Remove selected point from polygon"),
+        enabled=False,
+    )
+
+    undo = action(
+        widget.tr("Undo"),
+        widget.undo_shape_edit,
+        shortcuts["undo"],
+        "undo",
+        widget.tr("Undo last add and edit of shape"),
+        enabled=False,
+    )
+    redo = action(
+        widget.tr("Redo"),
+        widget.redo_shape_edit,
+        shortcuts.get("redo", "Ctrl+Shift+Z"),
+        "redo",
+        widget.tr("Redo the last undone edit of shape"),
+        enabled=False,
+    )
+    hide_selected_polygons = action(
+        widget.tr("Hide Selected Polygons"),
+        widget.hide_selected_polygons,
+        shortcuts["hide_selected_polygons"],
+        None,
+        widget.tr("Hide selected polygons"),
+        enabled=True,
+    )
+    show_hidden_polygons = action(
+        widget.tr("Show Hidden Polygons"),
+        widget.show_hidden_polygons,
+        shortcuts["show_hidden_polygons"],
+        None,
+        widget.tr("Show hidden polygons"),
+        enabled=True,
+    )
+
+    overview = action(
+        widget.tr("Overview"),
+        widget.overview,
+        shortcuts["show_overview"],
+        icon="overview",
+        tip=widget.tr("Show annotations statistics"),
+    )
+    save_crop = action(
+        widget.tr("Save Cropped Image"),
+        lambda: utils.save_crop(widget),
+        icon="crop",
+        tip=widget.tr(
+            "Save cropped image. (Support rectangle/rotation/polygon shape_type)"
+        ),
+    )
+    save_visualization_image = action(
+        widget.tr("Save Visualization Image"),
+        lambda: utils.save_visualization(widget),
+        icon="file",
+        tip=widget.tr("Save visualization image"),
+    )
+    digit_shortcut_manager = action(
+        widget.tr("Digit Shortcut Manager"),
+        widget.digit_shortcut_manager,
+        shortcuts["edit_digit_shortcut"],
+        icon="edit",
+        tip=widget.tr(
+            "Manage Digit Shortcuts: Assign Drawing Modes and Labels to Number Keys"
+        ),
+    )
+    label_manager = action(
+        widget.tr("Label Manager"),
+        widget.label_manager,
+        shortcuts["edit_labels"],
+        icon="edit",
+        tip=widget.tr(
+            "Manage Labels: Rename, Delete, Hide/Show, Adjust Color"
+        ),
+    )
+    shortcuts_help = action(
+        widget.tr("快捷键速查"),
+        widget.show_shortcuts_help,
+        shortcuts["show_shortcuts_help"],
+        icon="search",
+        tip=widget.tr("查看所有可用快捷键，可按快捷键或功能搜索"),
+    )
+    gid_manager = action(
+        widget.tr("Group ID Manager"),
+        widget.gid_manager,
+        shortcuts["edit_group_id"],
+        icon="edit",
+        tip=widget.tr("Manage Group ID"),
+    )
+    shape_manager = action(
+        widget.tr("Shape Manager"),
+        widget.shape_manager,
+        shortcuts["edit_shapes"],
+        icon="edit",
+        tip=widget.tr("Manage Shapes: Add, Delete, Remove"),
+        enabled=False,
+    )
+    copy_coordinates = action(
+        widget.tr("Copy Coordinates"),
+        widget.copy_shape_coordinates,
+        icon="copy",
+        tip=widget.tr("Copy shape coordinates to clipboard"),
+        enabled=False,
+    )
+    union_selection = action(
+        widget.tr("Union Selection"),
+        widget.union_selection,
+        shortcuts["union_selected_shapes"],
+        icon="union",
+        tip=widget.tr("Union multiple selected rectangle shapes"),
+        enabled=False,
+    )
+    toggle_shape_lock = action(
+        widget.tr("Lock Shape"),
+        widget.toggle_selected_shapes_lock,
+        tip=widget.tr("Prevent changes to the selected shapes' coordinates"),
+        checkable=True,
+        enabled=False,
+    )
+    shape_converter = action(
+        widget.tr("Shape Converter"),
+        lambda: utils.open_shape_converter(widget),
+        icon="convert",
+        tip=widget.tr("Open shape converter"),
+    )
+
+    loop_thru_labels = action(
+        widget.tr("Loop Through Labels"),
+        widget.loop_thru_labels,
+        shortcut=shortcuts["loop_thru_labels"],
+        icon="loop",
+        tip=widget.tr("Loop through labels"),
+        enabled=False,
+    )
+    loop_select_labels = action(
+        widget.tr("Loop Select Labels"),
+        widget.loop_select_labels,
+        shortcut=shortcuts["loop_select_labels"],
+        icon="circle-selection",
+        tip=widget.tr("Loop select labels"),
+        enabled=False,
+    )
+    select_toggle_shapes = action(
+        widget.tr("Toggle Shapes Visibility"),
+        widget.toggle_select_all,
+        icon="eye",
+        tip=widget.tr("Hide all shapes"),
+        enabled=False,
+    )
+    widget.select_toggle_action = select_toggle_shapes
+
+    ultralytics_train = action(
+        "Ultralytics",
+        lambda: widget.start_training("ultralytics"),
+        icon="ultralytics",
+    )
+    run_history = action(
+        widget.tr("实验历史"),
+        widget.show_run_history,
+    )
+
+    zoom = QtWidgets.QWidgetAction(widget)
+    zoom.setDefaultWidget(widget.zoom_widget)
+    widget.zoom_widget.setWhatsThis(
+        str(
+            widget.tr(
+                "Zoom in or out of the image. Also accessible with "
+                "{} and {} from the canvas."
+            )
+        ).format(
+            utils.fmt_shortcut(
+                f"{shortcuts['zoom_in']},{shortcuts['zoom_out']}"
+            ),
+            utils.fmt_shortcut(widget.tr("Ctrl+Wheel")),
+        )
+    )
+    widget.zoom_widget.setEnabled(False)
+
+    zoom_in = action(
+        widget.tr("Zoom In"),
+        functools.partial(widget.add_zoom, 1.1),
+        shortcuts["zoom_in"],
+        "zoom-in",
+        widget.tr("Increase zoom level"),
+        enabled=False,
+    )
+    zoom_out = action(
+        widget.tr("Zoom Out"),
+        functools.partial(widget.add_zoom, 0.9),
+        shortcuts["zoom_out"],
+        "zoom-out",
+        widget.tr("Decrease zoom level"),
+        enabled=False,
+    )
+    zoom_org = action(
+        widget.tr("Original Size"),
+        functools.partial(widget.set_zoom, 100),
+        shortcuts["zoom_to_original"],
+        "zoom",
+        widget.tr("Zoom to original size"),
+        enabled=False,
+    )
+    keep_prev_scale = action(
+        widget.tr("Keep Previous Scale"),
+        lambda x: widget._config.update({"keep_prev_scale": x}),
+        tip=widget.tr("Keep previous zoom scale"),
+        checkable=True,
+        checked=widget._config["keep_prev_scale"],
+        enabled=True,
+    )
+    keep_prev_brightness = action(
+        widget.tr("Keep Previous Brightness"),
+        lambda x: widget._config.update({"keep_prev_brightness": x}),
+        tip=widget.tr("Keep previous brightness"),
+        checkable=True,
+        checked=widget._config["keep_prev_brightness"],
+        enabled=True,
+    )
+    keep_prev_contrast = action(
+        widget.tr("Keep Previous Contrast"),
+        lambda x: widget._config.update({"keep_prev_contrast": x}),
+        tip=widget.tr("Keep previous contrast"),
+        checkable=True,
+        checked=widget._config["keep_prev_contrast"],
+        enabled=True,
+    )
+    fit_window = action(
+        widget.tr("Fit Window"),
+        widget.set_fit_window,
+        shortcuts["fit_window"],
+        "fit-window",
+        widget.tr("Zoom follows window size"),
+        checkable=True,
+        enabled=False,
+    )
+    fit_width = action(
+        widget.tr("Fit Width"),
+        widget.set_fit_width,
+        shortcuts["fit_width"],
+        "fit-width",
+        widget.tr("Zoom follows window width"),
+        checkable=True,
+        enabled=False,
+    )
+    brightness_contrast = action(
+        widget.tr("Set Brightness Contrast"),
+        widget.brightness_contrast,
+        None,
+        "color",
+        "Adjust brightness and contrast",
+        enabled=False,
+    )
+    set_cross_line = action(
+        widget.tr("Set Cross Line"),
+        widget.set_cross_line,
+        tip=widget.tr("Adjust cross line for mouse position"),
+        icon="cartesian",
+    )
+    show_groups = action(
+        widget.tr("Show Groups"),
+        lambda x: widget.set_canvas_params("show_groups", x),
+        tip=widget.tr("Show shape groups"),
+        icon=None,
+        checkable=True,
+        checked=widget._config["show_groups"],
+        enabled=True,
+        auto_trigger=True,
+    )
+    show_masks = action(
+        widget.tr("Show Masks"),
+        lambda x: widget.set_canvas_params("show_masks", x),
+        shortcut=shortcuts["show_masks"],
+        tip=widget.tr("Show semi-transparent masks for shapes"),
+        icon=None,
+        checkable=True,
+        checked=widget._config["show_masks"],
+        enabled=True,
+        auto_trigger=True,
+    )
+    # Fire the shortcut even when a child widget (e.g. the text-prompt
+    # QLineEdit) has focus, so Ctrl+M reliably toggles the mask overlay.
+    show_masks.setShortcutContext(Qt.ShortcutContext.ApplicationShortcut)
+    show_texts = action(
+        widget.tr("Show Texts"),
+        lambda x: widget.set_canvas_params("show_texts", x),
+        shortcut=shortcuts["show_texts"],
+        tip=widget.tr("Show text above shapes"),
+        icon=None,
+        checkable=True,
+        checked=widget._config["show_texts"],
+        enabled=True,
+        auto_trigger=True,
+    )
+    show_labels = action(
+        widget.tr("Show Labels"),
+        lambda x: widget.set_canvas_params("show_labels", x),
+        shortcut=shortcuts["show_labels"],
+        tip=widget.tr("Show label inside shapes"),
+        icon=None,
+        checkable=True,
+        checked=widget._config["show_labels"],
+        enabled=True,
+        auto_trigger=True,
+    )
+    # Toggle the attribute text painted on the canvas. The canvas has
+    # supported ``show_attributes`` all along, but it was never exposed as
+    # an action, which left Ctrl+Shift+L advertised in the F1 cheat sheet
+    # while doing nothing.
+    show_attributes = action(
+        widget.tr("Show Attributes"),
+        lambda x: widget.set_canvas_params("show_attributes", x),
+        shortcut=shortcuts["show_attributes"],
+        tip=widget.tr("Show attributes below shapes"),
+        icon=None,
+        checkable=True,
+        checked=widget._config["show_attributes"],
+        enabled=True,
+        auto_trigger=True,
+    )
+    # Same reasoning as show_masks: the shortcut must win over a focused
+    # child widget (e.g. the text-prompt QLineEdit).
+    show_attributes.setShortcutContext(
+        Qt.ShortcutContext.ApplicationShortcut
+    )
+    show_scores = action(
+        widget.tr("Show Scores"),
+        lambda x: widget.set_canvas_params("show_scores", x),
+        tip=widget.tr("Show score inside shapes"),
+        icon=None,
+        checkable=True,
+        checked=widget._config["show_scores"],
+        enabled=True,
+        auto_trigger=True,
+    )
+    show_degrees = action(
+        widget.tr("Show Degress"),
+        lambda x: widget.set_canvas_params("show_degrees", x),
+        tip=widget.tr("Show degrees above rotated shapes"),
+        icon=None,
+        checkable=True,
+        checked=widget._config["show_degrees"],
+        enabled=True,
+        auto_trigger=True,
+    )
+
+    # Theme menu options (System / Light / Dark)
+    theme_mode_actions = []
+    theme_group = QtGui.QActionGroup(widget)
+    theme_group.setExclusive(True)
+    widget._theme_actions = {}
+    current_appearance = widget._config.get("theme", "auto")
+    for _mode, _label in (
+        ("auto", widget.tr("System")),
+        ("light", widget.tr("Light")),
+        ("dark", widget.tr("Dark")),
+    ):
+        _act = QtGui.QAction(_label, theme_group)
+        _act.setCheckable(True)
+        _act.setChecked(current_appearance == _mode)
+        _act.setData(_mode)
+        _act.triggered.connect(
+            functools.partial(widget._on_theme_changed, _mode)
+        )
+        theme_mode_actions.append(_act)
+        widget._theme_actions[_mode] = _act
+
+    # Upload
+    upload_export_icon = "label"
+    upload_image_flags_file = action(
+        widget.tr("Image Flags"),
+        lambda: utils.upload_image_flags_file(widget),
+        None,
+        icon=upload_export_icon,
+        tip=widget.tr("Upload Custom Image Flags File"),
+    )
+    upload_label_flags_file = action(
+        widget.tr("Label Flags"),
+        lambda: utils.upload_label_flags_file(widget, LABEL_OPACITY),
+        None,
+        icon=upload_export_icon,
+        tip=widget.tr("Upload Custom Label Flags File"),
+    )
+    upload_label_classes_file = action(
+        widget.tr("Label Classes"),
+        lambda: utils.upload_label_classes_file(widget),
+        None,
+        icon=upload_export_icon,
+        tip=widget.tr("Upload Custom Label Classes File"),
+    )
+    upload_yolo_hbb_annotation = action(
+        widget.tr("YOLO HBB"),
+        lambda: utils.upload_yolo_annotation(widget, "hbb", LABEL_OPACITY),
+        None,
+        icon=upload_export_icon,
+        tip=widget.tr(
+            "Upload Custom YOLO Horizontal Bounding Boxes Annotations"
+        ),
+    )
+    upload_yolo_seg_annotation = action(
+        widget.tr("YOLO Seg"),
+        lambda: utils.upload_yolo_annotation(widget, "seg", LABEL_OPACITY),
+        None,
+        icon=upload_export_icon,
+        tip=widget.tr("Upload Custom YOLO Segmentation Annotations"),
+    )
+    upload_yolo_pose_annotation = action(
+        widget.tr("YOLO Pose"),
+        lambda: utils.upload_yolo_annotation(widget, "pose", LABEL_OPACITY),
+        None,
+        icon=upload_export_icon,
+        tip=widget.tr("Upload Custom YOLO Pose Annotations"),
+    )
+
+    # Export
+    export_yolo_hbb_annotation = action(
+        widget.tr("YOLO HBB"),
+        lambda: utils.export_yolo_annotation(widget, "hbb"),
+        None,
+        icon=upload_export_icon,
+        tip=widget.tr(
+            "Export Custom YOLO Horizontal Bounding Boxes Annotations"
+        ),
+    )
+    export_yolo_seg_annotation = action(
+        widget.tr("YOLO Seg"),
+        lambda: utils.export_yolo_annotation(widget, "seg"),
+        None,
+        icon=upload_export_icon,
+        tip=widget.tr("Export Custom YOLO Segmentation Annotations"),
+    )
+    export_yolo_pose_annotation = action(
+        widget.tr("YOLO Pose"),
+        lambda: utils.export_yolo_annotation(widget, "pose"),
+        None,
+        icon=upload_export_icon,
+        tip=widget.tr("Export Custom YOLO Pose Annotations"),
+    )
+
+    # Group zoom controls into a list for easier toggling.
+    zoom_actions = (
+        widget.zoom_widget,
+        zoom_in,
+        zoom_out,
+        zoom_org,
+        fit_window,
+        fit_width,
+    )
+    widget.zoom_mode = widget.FIT_WINDOW
+    fit_window.setChecked(True)
+    widget.scalers = {
+        widget.FIT_WINDOW: widget.scale_fit_window,
+        widget.FIT_WIDTH: widget.scale_fit_width,
+        # Set to one to scale to 100% when loading files.
+        widget.MANUAL_ZOOM: lambda: 1,
+    }
+
+    edit = action(
+        widget.tr("Edit Label"),
+        widget.edit_label,
+        shortcuts["edit_label"],
+        "edit",
+        widget.tr("Modify the label of the selected polygon"),
+        enabled=False,
+    )
+
+    fill_drawing = action(
+        widget.tr("Fill Drawing Polygon"),
+        widget.canvas.set_fill_drawing,
+        None,
+        "color",
+        widget.tr("Fill polygon while drawing"),
+        checkable=True,
+        enabled=True,
+    )
+    fill_drawing.trigger()
+
+    show_navigator = action(
+        widget.tr("Navigator"),
+        widget.toggle_navigator,
+        shortcuts["show_navigator"],
+        "navigator",
+        widget.tr("Show/hide the navigator window"),
+        checkable=True,
+        enabled=True,
+    )
+
+    # AI Actions
+    toggle_auto_labeling_widget = action(
+        widget.tr("Auto Labeling"),
+        widget.toggle_auto_labeling_widget,
+        shortcuts["auto_label"],
+        "brain",
+        widget.tr("Auto Labeling"),
+    )
+
+    widget.label_list.setContextMenuPolicy(
+        Qt.ContextMenuPolicy.NoContextMenu
+    )
+
+    # Store actions for further handling.
+    widget.actions = utils.Struct(
+        save_auto=save_auto,
+        save_with_image_data=save_with_image_data,
+        change_output_dir=change_output_dir,
+        save=save,
+        save_as=save_as,
+        open=open_,
+        open_dir=opendir,
+        close=close,
+        delete_file=delete_file,
+        delete_image_file=delete_image_file,
+        toggle_annotation_checked=toggle_annotation_checked,
+        mark_checked_and_next=mark_checked_and_next,
+        mark_rejected_and_next=mark_rejected_and_next,
+        confirm_classification=confirm_classification,
+        keep_prev_mode=keep_prev_mode,
+        auto_use_last_label_mode=auto_use_last_label_mode,
+        auto_use_last_gid_mode=auto_use_last_gid_mode,
+        use_system_clipboard=use_system_clipboard,
+        visibility_shapes_mode=visibility_shapes_mode,
+        run_all_images=run_all_images,
+        union_selection=union_selection,
+        delete=delete,
+        edit=edit,
+        duplicate=duplicate,
+        copy=copy,
+        copy_coordinates=copy_coordinates,
+        paste=paste,
+        toggle_shape_lock=toggle_shape_lock,
+        overview=overview,
+        save_visualization_image=save_visualization_image,
+        undo_last_point=undo_last_point,
+        undo=undo,
+        redo=redo,
+        remove_point=remove_point,
+        create_mode=create_mode,
+        create_brush_polygon_mode=create_brush_polygon_mode,
+        edit_mode=edit_mode,
+        edit_brush_mode=edit_brush_mode,
+        create_rectangle_mode=create_rectangle_mode,
+        create_point_mode=create_point_mode,
+        create_cuboid_mode=create_cuboid_mode,
+        create_rotation_mode=create_rotation_mode,
+        create_quadrilateral_mode=create_quadrilateral_mode,
+        create_circle_mode=create_circle_mode,
+        create_line_mode=create_line_mode,
+        create_linestrip_mode=create_linestrip_mode,
+        digit_shortcut_0=digit_shortcut_0,
+        digit_shortcut_1=digit_shortcut_1,
+        digit_shortcut_2=digit_shortcut_2,
+        digit_shortcut_3=digit_shortcut_3,
+        digit_shortcut_4=digit_shortcut_4,
+        digit_shortcut_5=digit_shortcut_5,
+        digit_shortcut_6=digit_shortcut_6,
+        digit_shortcut_7=digit_shortcut_7,
+        digit_shortcut_8=digit_shortcut_8,
+        digit_shortcut_9=digit_shortcut_9,
+        digit_shortcut_actions=(
+            digit_shortcut_0,
+            digit_shortcut_1,
+            digit_shortcut_2,
+            digit_shortcut_3,
+            digit_shortcut_4,
+            digit_shortcut_5,
+            digit_shortcut_6,
+            digit_shortcut_7,
+            digit_shortcut_8,
+            digit_shortcut_9,
+        ),
+        upload_image_flags_file=upload_image_flags_file,
+        upload_label_flags_file=upload_label_flags_file,
+        upload_label_classes_file=upload_label_classes_file,
+        upload_yolo_hbb_annotation=upload_yolo_hbb_annotation,
+        upload_yolo_seg_annotation=upload_yolo_seg_annotation,
+        upload_yolo_pose_annotation=upload_yolo_pose_annotation,
+        export_yolo_hbb_annotation=export_yolo_hbb_annotation,
+        export_yolo_seg_annotation=export_yolo_seg_annotation,
+        export_yolo_pose_annotation=export_yolo_pose_annotation,
+        zoom=zoom,
+        zoom_in=zoom_in,
+        zoom_out=zoom_out,
+        zoom_org=zoom_org,
+        keep_prev_scale=keep_prev_scale,
+        keep_prev_brightness=keep_prev_brightness,
+        keep_prev_contrast=keep_prev_contrast,
+        fit_window=fit_window,
+        fit_width=fit_width,
+        brightness_contrast=brightness_contrast,
+        set_cross_line=set_cross_line,
+        show_groups=show_groups,
+        show_masks=show_masks,
+        show_texts=show_texts,
+        show_labels=show_labels,
+        show_attributes=show_attributes,
+        show_scores=show_scores,
+        show_degrees=show_degrees,
+        show_navigator=show_navigator,
+        zoom_actions=zoom_actions,
+        open_next_image=open_next_image,
+        open_prev_image=open_prev_image,
+        open_next_unchecked_image=open_next_unchecked_image,
+        open_prev_unchecked_image=open_prev_unchecked_image,
+        toggle_auto_labeling_widget=toggle_auto_labeling_widget,
+        digit_shortcut_manager=digit_shortcut_manager,
+        label_manager=label_manager,
+        gid_manager=gid_manager,
+        shape_manager=shape_manager,
+        loop_thru_labels=loop_thru_labels,
+        loop_select_labels=loop_select_labels,
+        select_toggle_shapes=select_toggle_shapes,
+        file_menu_actions=(
+            open_,
+            opendir,
+            save,
+            save_as,
+            close,
+        ),
+        tool=(),
+        # XXX: need to add some actions here to activate the shortcut
+        editMenu=(
+            edit,
+            duplicate,
+            delete,
+            copy,
+            paste,
+            None,
+            undo,
+            undo_last_point,
+            redo,
+            None,
+            copy_coordinates,
+            remove_point,
+            union_selection,
+            None,
+            keep_prev_mode,
+            auto_use_last_label_mode,
+            auto_use_last_gid_mode,
+            use_system_clipboard,
+            visibility_shapes_mode,
+        ),
+        # menu shown at right click
+        menu=(
+            create_mode,
+            create_brush_polygon_mode,
+            create_rectangle_mode,
+            create_point_mode,
+            create_rotation_mode,
+            create_quadrilateral_mode,
+            create_circle_mode,
+            create_line_mode,
+            create_linestrip_mode,
+            create_cuboid_mode,
+            None,
+            edit_mode,
+            edit_brush_mode,
+            edit,
+            toggle_shape_lock,
+            None,
+            copy_coordinates,
+            union_selection,
+            duplicate,
+            copy,
+            paste,
+            None,
+            delete,
+            undo,
+            undo_last_point,
+            redo,
+            remove_point,
+        ),
+        on_load_active=(
+            close,
+            create_mode,
+            create_brush_polygon_mode,
+            create_rectangle_mode,
+            create_point_mode,
+            create_cuboid_mode,
+            create_rotation_mode,
+            create_quadrilateral_mode,
+            create_circle_mode,
+            create_line_mode,
+            create_linestrip_mode,
+            digit_shortcut_0,
+            digit_shortcut_1,
+            digit_shortcut_2,
+            digit_shortcut_3,
+            digit_shortcut_4,
+            digit_shortcut_5,
+            digit_shortcut_6,
+            digit_shortcut_7,
+            digit_shortcut_8,
+            digit_shortcut_9,
+            edit_mode,
+            brightness_contrast,
+            toggle_annotation_checked,
+            mark_checked_and_next,
+            mark_rejected_and_next,
+            shape_manager,
+            loop_thru_labels,
+            loop_select_labels,
+            select_toggle_shapes,
+        ),
+        on_shapes_present=(save_as, delete),
+        hide_selected_polygons=hide_selected_polygons,
+        show_hidden_polygons=show_hidden_polygons,
+        group_selected_shapes=group_selected_shapes,
+        ungroup_selected_shapes=ungroup_selected_shapes,
+    )
+
+    for digit_action in (
+        widget.actions.digit_shortcut_0,
+        widget.actions.digit_shortcut_1,
+        widget.actions.digit_shortcut_2,
+        widget.actions.digit_shortcut_3,
+        widget.actions.digit_shortcut_4,
+        widget.actions.digit_shortcut_5,
+        widget.actions.digit_shortcut_6,
+        widget.actions.digit_shortcut_7,
+        widget.actions.digit_shortcut_8,
+        widget.actions.digit_shortcut_9,
+    ):
+        widget.addAction(digit_action)
+    widget.addAction(widget.actions.toggle_annotation_checked)
+    widget.addAction(widget.actions.mark_checked_and_next)
+    widget.addAction(widget.actions.mark_rejected_and_next)
+
+    widget.canvas.vertex_selected.connect(
+        widget.actions.remove_point.setEnabled
+    )
+
+    widget.menus = utils.Struct(
+        file=widget.menu(widget.tr("File")),
+        edit=widget.menu(widget.tr("Edit")),
+        view=widget.menu(widget.tr("View")),
+        theme=widget.menu(widget.tr("Theme")),
+        upload=widget.menu(widget.tr("Upload")),
+        export=widget.menu(widget.tr("Export")),
+        tool=widget.menu(widget.tr("Tool")),
+        train=widget.menu(widget.tr("Train")),
+        smart_tools=widget.menu(widget.tr("智能工具")),
+        recent_files=QtWidgets.QMenu(widget.tr("Open Recent")),
+        recent_dirs=QtWidgets.QMenu(widget.tr("打开最近文件夹")),
+    )
+    widget.menus.recent_files.aboutToShow.connect(widget.update_file_menu)
+    widget.menus.recent_dirs.aboutToShow.connect(
+        widget._update_recent_dirs_menu
+    )
+    widget.canvas_label_filter_menu_0 = None
+    widget.canvas_gid_filter_menu_0 = None
+    widget.canvas_label_filter_menu_1 = None
+    widget.canvas_gid_filter_menu_1 = None
+
+    utils.add_actions(
+        widget.menus.file,
+        (
+            open_,
+            open_next_image,
+            open_prev_image,
+            open_next_unchecked_image,
+            open_prev_unchecked_image,
+            opendir,
+            widget.menus.recent_dirs,
+            widget.menus.recent_files,
+            save,
+            save_as,
+            save_auto,
+            change_output_dir,
+            save_with_image_data,
+            close,
+            delete_file,
+            delete_image_file,
+            None,
+            mark_checked_and_next,
+            mark_rejected_and_next,
+            confirm_classification,
+            None,
+        ),
+    )
+    utils.add_actions(
+        widget.menus.smart_tools,
+        (
+            data_audit,
+            smart_calibrate,
+            smart_analysis,
+            smart_missing_scan,
+            smart_iteration,
+            smart_review,
+            smart_propagate,
+            smart_archive,
+            smart_advice,
+            smart_template,
+            smart_stale_audit,
+            smart_restore_backup,
+        ),
+    )
+    utils.add_actions(
+        widget.menus.train, (ultralytics_train, run_history)
+    )
+    utils.add_actions(
+        widget.menus.tool,
+        (
+            overview,
+            None,
+            save_crop,
+            save_visualization_image,
+            None,
+            digit_shortcut_manager,
+            label_manager,
+            gid_manager,
+            shape_manager,
+            None,
+            shape_converter,
+            None,
+            shortcuts_help,
+        ),
+    )
+    utils.add_actions(widget.menus.theme, theme_mode_actions)
+    utils.add_actions(
+        widget.menus.upload,
+        (
+            upload_image_flags_file,
+            upload_label_flags_file,
+            upload_label_classes_file,
+            None,
+            upload_yolo_hbb_annotation,
+            upload_yolo_seg_annotation,
+            upload_yolo_pose_annotation,
+            None,
+            None,
+            None,
+            None,
+        ),
+    )
+    utils.add_actions(
+        widget.menus.export,
+        (
+            export_yolo_hbb_annotation,
+            export_yolo_seg_annotation,
+            export_yolo_pose_annotation,
+            None,
+            None,
+            None,
+            None,
+            None,
+        ),
+    )
+    utils.add_actions(
+        widget.menus.view,
+        (
+            show_navigator,
+            fill_drawing,
+            loop_thru_labels,
+            loop_select_labels,
+            None,
+            zoom_in,
+            zoom_out,
+            zoom_org,
+            None,
+            keep_prev_scale,
+            keep_prev_brightness,
+            keep_prev_contrast,
+            None,
+            fit_window,
+            fit_width,
+            None,
+            brightness_contrast,
+            set_cross_line,
+            None,
+            show_masks,
+            show_texts,
+            show_labels,
+            show_attributes,
+            show_scores,
+            show_degrees,
+            show_groups,
+            hide_selected_polygons,
+            show_hidden_polygons,
+            group_selected_shapes,
+            ungroup_selected_shapes,
+        ),
+    )
+
+    widget._view_menu_filter = utils.StayOpenMenuFilter(widget.menus.view)
+    widget.menus.view.installEventFilter(widget._view_menu_filter)
+
+    widget.menus.file.aboutToShow.connect(widget.update_file_menu)
+
+    # Custom context menu for the canvas widget:
+    utils.add_actions(widget.canvas.menus[0], widget.actions.menu)
+    utils.add_actions(
+        widget.canvas.menus[1],
+        (
+            action("&Copy here", widget.copy_shape),
+            action("&Move here", widget.move_shape),
+        ),
+    )
+    (
+        widget.canvas_label_filter_menu_0,
+        widget.canvas_gid_filter_menu_0,
+    ) = widget._append_filter_submenus(
+        widget.canvas.menus[0],
+        prepend=True,
+        after_filter_actions=(widget.actions.toggle_annotation_checked,),
+    )
+    widget.canvas.menus[0].aboutToShow.connect(widget.refresh_filter_menus)
+    widget.canvas.menus[0].aboutToShow.connect(
+        widget.refresh_shape_lock_action
+    )
+
+    widget.tools = widget.toolbar("Tools")
+    # Menu buttons on Left
+    widget.actions.tool = (
+        opendir,
+        open_prev_image,
+        open_next_image,
+        save,
+        delete_file,
+        None,
+        create_mode,
+        widget.actions.create_rectangle_mode,
+        widget.actions.create_point_mode,
+        widget.actions.create_brush_polygon_mode,
+        None,
+        edit_mode,
+        edit_brush_mode,
+        delete,
+        undo,
+        redo,
+        None,
+        loop_thru_labels,
+        loop_select_labels,
+        select_toggle_shapes,
+        None,
+        run_all_images,
+        toggle_auto_labeling_widget,
+        None,
+        fit_width,
+        zoom,
+    )
+
+    layout = QHBoxLayout()
+    layout.setContentsMargins(0, 0, 0, 0)
+
+    widget.tools_scroll_area = widget.toolbar_scroll_area(widget.tools)
+    widget.tools_panel = FloatingToolPanel(
+        widget._canvas_scroll_area.viewport()
+    )
+    widget.tools_panel.setObjectName("ToolsFloatingPanel")
+    widget.tools_panel.set_content_widget(widget.tools_scroll_area)
+    widget.tools_panel.positionCommitted.connect(
+        widget._on_tools_panel_position_committed
+    )
+    widget.tools_panel.collapseToggled.connect(
+        widget._on_tools_panel_collapse_toggled
+    )
+
+    central_layout = QVBoxLayout()
+    central_layout.setContentsMargins(0, 0, 0, 0)
+    central_layout.setSpacing(2)
+    widget.label_instruction = QLabel(widget.get_labeling_instruction())
+    widget.label_instruction.setObjectName("LabelInstructionBar")
+    widget.label_instruction.setContentsMargins(0, 0, 0, 0)
+    widget.label_instruction.setStyleSheet(get_instruction_bar_style())
+    widget.label_instruction.setWordWrap(True)
+    widget.label_instruction.setTextFormat(Qt.TextFormat.RichText)
+    widget.auto_labeling_widget = AutoLabelingWidget(widget)
+    widget.auto_labeling_widget.auto_segmentation_requested.connect(
+        widget.on_auto_segmentation_requested
+    )
+    widget.auto_labeling_widget.auto_segmentation_disabled.connect(
+        widget.on_auto_segmentation_disabled
+    )
+    widget.canvas.auto_labeling_marks_updated.connect(
+        widget.auto_labeling_widget.on_new_marks
+    )
+    widget.auto_labeling_widget.auto_labeling_mode_changed.connect(
+        widget.canvas.set_auto_labeling_mode
+    )
+    widget.auto_labeling_widget.auto_decode_mode_changed.connect(
+        widget.canvas.set_auto_decode_mode
+    )
+    widget.auto_labeling_widget.cropping_mode_changed.connect(
+        widget.auto_labeling_widget.model_manager.set_cropping_mode
+    )
+    widget.auto_labeling_widget.clear_auto_decode_requested.connect(
+        widget.canvas.reset_auto_decode_state
+    )
+    widget.canvas.auto_decode_requested.connect(
+        widget.on_auto_decode_requested
+    )
+    widget.canvas.auto_decode_finish_requested.connect(
+        widget.auto_labeling_widget.on_finish_clicked
+    )
+    widget.canvas.shape_hover_changed.connect(
+        lambda: (
+            widget.update_navigator_shapes()
+            if (
+                hasattr(widget, "navigator_dialog")
+                and widget.navigator_dialog.isVisible()
+            )
+            else None
+        )
+    )
+    widget.auto_labeling_widget.clear_auto_labeling_action_requested.connect(
+        widget.clear_auto_labeling_marks
+    )
+    widget.auto_labeling_widget.finish_auto_labeling_object_action_requested.connect(
+        widget.finish_auto_labeling_object
+    )
+    widget.auto_labeling_widget.cache_auto_label_changed.connect(
+        widget.set_cache_auto_label
+    )
+    widget.auto_labeling_widget.model_manager.prediction_started.connect(
+        lambda: widget.canvas.set_loading(True, widget.tr("Please wait..."))
+    )
+    widget.auto_labeling_widget.model_manager.prediction_finished.connect(
+        lambda: widget.canvas.set_loading(False)
+    )
+    widget.auto_labeling_widget.model_manager.prediction_finished.connect(
+        widget.update_thumbnail_display
+    )
+    widget.auto_labeling_widget.model_manager.model_loaded.connect(
+        widget.update_thumbnail_display
+    )
+    widget.next_files_changed.connect(
+        widget.auto_labeling_widget.model_manager.on_next_files_changed
+    )
+    # NOTE(jack): this is not needed for now
+    # widget.auto_labeling_widget.model_manager.request_next_files_requested.connect(
+    #     lambda: widget.inform_next_files(widget.filename)
+    # )
+    widget.auto_labeling_widget.hide()  # Hide by default
+    central_layout.addWidget(widget.label_instruction)
+    central_layout.addWidget(widget.auto_labeling_widget)
+    central_layout.addWidget(widget._canvas_scroll_area)
+    layout.addLayout(central_layout)
+
+    # Save central area for resize
+    widget._central_widget = widget._canvas_scroll_area
+
+    # Stretch central area (image view)
+    layout.setStretch(0, 1)
+
+    right_sidebar_layout = QVBoxLayout()
+    right_sidebar_layout.setContentsMargins(0, 0, 0, 0)
+    right_sidebar_layout.setSpacing(4)
+
+    # Thumbnail image display
+    widget.thumbnail_pixmap = None
+    widget.thumbnail_container = QWidget()
+    thumbnail_image_layout = QVBoxLayout()
+    thumbnail_image_layout.setContentsMargins(2, 2, 2, 2)
+    widget.thumbnail_image_label = QLabel()
+    widget.thumbnail_image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    widget.thumbnail_image_label.mousePressEvent = utils.on_thumbnail_click(
+        widget
+    )
+    thumbnail_image_layout.addWidget(widget.thumbnail_image_label)
+    widget.thumbnail_container.setLayout(thumbnail_image_layout)
+    widget.thumbnail_container.hide()
+    right_sidebar_layout.addWidget(widget.thumbnail_container)
+
+    # Shape attributes
+    widget.shape_attributes = QLabel(widget.tr("Attributes"))
+    widget.grid_layout = QGridLayout()
+    widget.scroll_area = QScrollArea()
+    # Show vertical scrollbar as needed
+    widget.scroll_area.setVerticalScrollBarPolicy(
+        Qt.ScrollBarPolicy.ScrollBarAsNeeded
+    )
+    # Disable horizontal scrollbar
+    widget.scroll_area.setHorizontalScrollBarPolicy(
+        Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+    )
+    widget.scroll_area.setWidgetResizable(True)
+    # Create a container widget for the grid layout
+    widget.grid_layout_container = QWidget()
+    widget.grid_layout_container.setLayout(widget.grid_layout)
+    widget.scroll_area.setWidget(widget.grid_layout_container)
+    if not widget.attributes:
+        widget.shape_attributes.hide()
+        widget.scroll_area.hide()
+    right_sidebar_layout.addWidget(
+        widget.shape_attributes, 0, Qt.AlignmentFlag.AlignCenter
+    )
+    right_sidebar_layout.addWidget(widget.scroll_area)
+
+    right_sidebar_layout.addWidget(widget.flag_dock)
+
+    # Labels with checkbox
+    widget.labels_checkbox = QCheckBox()
+    widget.labels_checkbox.setChecked(True)
+    widget.labels_checkbox.setStyleSheet(get_checkbox_indicator_style())
+    widget.labels_checkbox.toggled.connect(widget.toggle_labels_visibility)
+
+    labels_header_layout = QHBoxLayout()
+    labels_header_layout.setContentsMargins(0, 2, 0, 2)
+    labels_header_layout.addStretch()
+    labels_title = QLabel(widget.tr("Labels"))
+    labels_header_layout.addWidget(labels_title)
+    labels_header_layout.addStretch()
+    labels_header_layout.addWidget(widget.labels_checkbox)
+    labels_header_widget = QWidget()
+    labels_header_widget.setLayout(labels_header_layout)
+
+    # Hide the original dock title bar
+    empty_widget = QWidget()
+    empty_widget.setFixedHeight(0)
+    widget.label_dock.setTitleBarWidget(empty_widget)
+
+    labels_panel = QFrame()
+    labels_panel.setObjectName("sidebarPanel")
+    labels_panel.setStyleSheet(get_panel_style())
+    labels_panel_layout = QVBoxLayout(labels_panel)
+    labels_panel_layout.setContentsMargins(0, 0, 0, 0)
+    labels_panel_layout.setSpacing(0)
+    labels_panel_layout.addWidget(labels_header_widget)
+    labels_panel_layout.addWidget(widget.label_dock)
+    right_sidebar_layout.addWidget(labels_panel)
+
+    widget.shapes_checkbox = QCheckBox()
+    widget.shapes_checkbox.setChecked(True)
+    widget.shapes_checkbox.setStyleSheet(get_checkbox_indicator_style())
+    widget.shapes_checkbox.toggled.connect(widget.toggle_shapes_visibility)
+
+    shapes_header_layout = QHBoxLayout()
+    shapes_header_layout.setContentsMargins(0, 2, 0, 2)
+    shapes_header_layout.addStretch()
+    shapes_title = QLabel(widget.tr("Shapes"))
+    shapes_header_layout.addWidget(shapes_title)
+    shapes_header_layout.addStretch()
+    shapes_header_layout.addWidget(widget.shapes_checkbox)
+    shapes_header_widget = QWidget()
+    shapes_header_widget.setLayout(shapes_header_layout)
+
+    shape_empty_widget = QWidget()
+    shape_empty_widget.setFixedHeight(0)
+    widget.shape_dock.setTitleBarWidget(shape_empty_widget)
+
+    objects_panel = QFrame()
+    objects_panel.setObjectName("sidebarPanel")
+    objects_panel.setStyleSheet(get_panel_style())
+    objects_panel_layout = QVBoxLayout(objects_panel)
+    objects_panel_layout.setContentsMargins(0, 0, 0, 0)
+    objects_panel_layout.setSpacing(0)
+    objects_panel_layout.addWidget(shapes_header_widget)
+    objects_panel_layout.addWidget(widget.shape_dock)
+    right_sidebar_layout.addWidget(objects_panel)
+
+    file_search_row_layout = QHBoxLayout()
+    file_search_row_layout.setContentsMargins(0, 0, 0, 0)
+    file_search_row_layout.setSpacing(6)
+    file_search_row_layout.addWidget(widget.file_search, 1)
+    file_search_row_layout.addWidget(widget.settings_button, 0)
+    right_sidebar_layout.addLayout(file_search_row_layout)
+
+    files_panel = QFrame()
+    files_panel.setObjectName("sidebarPanel")
+    files_panel.setStyleSheet(get_panel_style())
+    files_panel_layout = QVBoxLayout(files_panel)
+    files_panel_layout.setContentsMargins(0, 0, 0, 0)
+    files_panel_layout.setSpacing(0)
+    files_panel_layout.addWidget(widget.file_dock)
+    right_sidebar_layout.addWidget(files_panel)
+    widget.file_dock.setFeatures(
+        QDockWidget.DockWidgetFeature.DockWidgetFloatable
+    )
+    dock_features = (
+        ~QDockWidget.DockWidgetFeature.DockWidgetMovable
+        | ~QDockWidget.DockWidgetFeature.DockWidgetFloatable
+        | ~QDockWidget.DockWidgetFeature.DockWidgetClosable
+    )
+    rev_dock_features = ~dock_features
+    widget.label_dock.setFeatures(
+        widget.label_dock.features() & rev_dock_features
+    )
+    widget.file_dock.setFeatures(
+        widget.file_dock.features() & rev_dock_features
+    )
+    widget.flag_dock.setFeatures(
+        widget.flag_dock.features() & rev_dock_features
+    )
+    widget.shape_dock.setFeatures(
+        widget.shape_dock.features() & rev_dock_features
+    )
+
+    layout.addLayout(right_sidebar_layout)
+    widget.setLayout(layout)
+    QtCore.QTimer.singleShot(0, widget._restore_tools_panel_state)
