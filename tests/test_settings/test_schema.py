@@ -6,6 +6,7 @@ try:
     )
     from anylabeling.views.labeling.settings.schema import (
         EXCLUDED_KEYS,
+        SETTING_FIELD_MAP,
         SETTING_FIELDS,
         SETTINGS_KEYS,
         SETTINGS_GENERAL_KEYS,
@@ -27,7 +28,7 @@ except Exception:
 class TestSettingsSchema(unittest.TestCase):
 
     def test_field_count(self):
-        self.assertEqual(len(SETTING_FIELDS), 121)
+        self.assertEqual(len(SETTING_FIELDS), 119)
 
     def test_shortcut_and_non_shortcut_count(self):
         shortcut_fields = [
@@ -36,12 +37,18 @@ class TestSettingsSchema(unittest.TestCase):
         # +mark_checked_and_next, +show_shortcuts_help: both used to be
         # hard-coded literals on the QAction, so nothing could rebind them.
         # +mark_rejected_and_next: the "send back for rework" quick action.
-        self.assertEqual(len(shortcut_fields), 75)
+        # -show_linking, -toggle_compare_view: no action ever bound them
+        # (KIE linking is off in this YOLO-only fork and the compare view was
+        # never implemented), so they were dropped instead of advertised.
+        self.assertEqual(len(shortcut_fields), 73)
         self.assertEqual(len(SETTING_FIELDS) - len(shortcut_fields), 46)
         keys = {field.key for field in shortcut_fields}
         self.assertIn("shortcuts.mark_checked_and_next", keys)
         self.assertIn("shortcuts.mark_rejected_and_next", keys)
         self.assertIn("shortcuts.show_shortcuts_help", keys)
+        self.assertIn("shortcuts.show_attributes", keys)
+        self.assertNotIn("shortcuts.show_linking", keys)
+        self.assertNotIn("shortcuts.toggle_compare_view", keys)
         for shape_mode in (
             "create_cuboid",
             "create_rotation",
@@ -55,6 +62,14 @@ class TestSettingsSchema(unittest.TestCase):
     def test_defaults_cover_all_keys(self):
         defaults = defaults_map()
         self.assertEqual(set(defaults.keys()), set(SETTINGS_KEYS))
+
+    def test_undo_depth_default_is_deeper_than_the_old_ten(self):
+        defaults = defaults_map()
+        # 10 snapshots ran out after a handful of edits on one frame; 100 is
+        # the new shipped default and stays inside the field's 0..200 range.
+        self.assertEqual(defaults["canvas.num_backups"], 100)
+        field = SETTING_FIELD_MAP["canvas.num_backups"]
+        self.assertLessEqual(100, field.maximum)
 
     def test_included_and_excluded_keys(self):
         expected_keys = {
@@ -119,7 +134,7 @@ class TestSettingsSchema(unittest.TestCase):
         self.assertIn("shape.line_width", shape_keys)
         self.assertEqual(
             len(shortcut_fields),
-            75,
+            73,
         )
         for key in SETTINGS_SHORTCUT_KEYS_CORE:
             self.assertIn(key, [field.key for field in shortcut_fields])

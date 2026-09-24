@@ -17,6 +17,25 @@ except Exception:
     PYQT_AVAILABLE = False
 
 
+def _attribute_canvas(shape):
+    """Canvas stub carrying the members the attribute slots touch."""
+    return SimpleNamespace(
+        shapes=[shape],
+        update=Mock(),
+        store_shapes=Mock(),
+        is_shape_restorable=True,
+        is_shape_redoable=False,
+    )
+
+
+def _history_actions():
+    """Undo/redo action stubs, as ``widget.actions`` provides them."""
+    return SimpleNamespace(
+        undo=SimpleNamespace(setEnabled=Mock()),
+        redo=SimpleNamespace(setEnabled=Mock()),
+    )
+
+
 @unittest.skipUnless(
     PYQT_AVAILABLE, "PyQt6 is required for label widget attribute tests"
 )
@@ -143,6 +162,7 @@ class TestLabelWidgetAttributes(unittest.TestCase):
                 editing=Mock(return_value=True),
                 selected_shapes=[shape],
                 shapes=[shape],
+                store_shapes=Mock(),
             ),
             current_item=Mock(return_value=item),
             label_dialog=SimpleNamespace(
@@ -167,6 +187,8 @@ class TestLabelWidgetAttributes(unittest.TestCase):
         LabelingWidget.edit_label(widget)
 
         self.assertEqual(shape.attributes, {"color": "blue"})
+        # A real field changed (description), so the edit must be undoable.
+        widget.canvas.store_shapes.assert_called_once_with()
         widget.reset_attribute.assert_not_called()
 
     def test_batch_edit_resets_only_shapes_with_changed_labels(self):
@@ -213,6 +235,7 @@ class TestLabelWidgetAttributes(unittest.TestCase):
             ),
             set_dirty=Mock(),
             _refresh_shape_filters=Mock(),
+            canvas=SimpleNamespace(store_shapes=Mock()),
         )
 
         LabelingWidget.batch_edit_labels(
@@ -222,6 +245,8 @@ class TestLabelWidgetAttributes(unittest.TestCase):
         self.assertEqual(unchanged_shape.attributes, {"color": "blue"})
         self.assertEqual(changed_shape.attributes, {"color": "red"})
         widget.reset_attribute.assert_called_once_with("car", changed_shape)
+        # The dialog promises Ctrl+Z works, so the batch must be undoable.
+        widget.canvas.store_shapes.assert_called_once_with()
 
     def test_radio_buttons_remain_exclusive_across_rows(self):
         options = [f"long-option-{index}" for index in range(6)]
@@ -321,9 +346,11 @@ class TestLabelWidgetAttributes(unittest.TestCase):
         for widget_type, property_name, expected, change in cases:
             with self.subTest(widget_type=widget_type):
                 shape = SimpleNamespace(attributes={})
-                canvas = SimpleNamespace(shapes=[shape], update=Mock())
+                canvas = _attribute_canvas(shape)
                 widget = SimpleNamespace(
-                    canvas=canvas, save_attributes=Mock()
+                    canvas=canvas,
+                    save_attributes=Mock(),
+                    actions=_history_actions(),
                 )
 
                 change(widget)
@@ -331,10 +358,11 @@ class TestLabelWidgetAttributes(unittest.TestCase):
                 self.assertEqual(shape.attributes[property_name], expected)
                 widget.save_attributes.assert_called_once_with([shape])
                 canvas.update.assert_called_once_with()
+                canvas.store_shapes.assert_called_once_with()
 
     def test_unchecked_radio_button_does_not_refresh_canvas(self):
         shape = SimpleNamespace(attributes={"visibility": "low"})
-        canvas = SimpleNamespace(shapes=[shape], update=Mock())
+        canvas = _attribute_canvas(shape)
         widget = SimpleNamespace(canvas=canvas, save_attributes=Mock())
 
         LabelingWidget.attribute_radio_changed(
@@ -344,6 +372,33 @@ class TestLabelWidgetAttributes(unittest.TestCase):
         self.assertEqual(shape.attributes["visibility"], "low")
         widget.save_attributes.assert_not_called()
         canvas.update.assert_not_called()
+        canvas.store_shapes.assert_not_called()
+
+    def test_unchanged_attribute_does_not_consume_an_undo_slot(self):
+        """Qt emits change signals on repopulation; those must stay no-ops."""
+        shape = SimpleNamespace(attributes={"color": "blue"})
+        canvas = _attribute_canvas(shape)
+        widget = SimpleNamespace(
+            canvas=canvas,
+            save_attributes=Mock(),
+            actions=_history_actions(),
+        )
+
+        LabelingWidget.attribute_selection_changed(
+            widget,
+            0,
+            "color",
+            SimpleNamespace(
+                currentText=Mock(return_value="blue"),
+                currentData=Mock(return_value=None),
+                setToolTip=Mock(),
+            ),
+        )
+
+        self.assertEqual(shape.attributes, {"color": "blue"})
+        canvas.store_shapes.assert_not_called()
+        canvas.update.assert_not_called()
+        widget.save_attributes.assert_not_called()
 
     def test_unknown_values_are_shown_without_mutating_shape_or_config(self):
         cases = [
@@ -417,7 +472,7 @@ class TestLabelWidgetAttributes(unittest.TestCase):
             group_id=None,
             attributes={"color": "green"},
         )
-        canvas = SimpleNamespace(shapes=[shape], update=Mock())
+        canvas = _attribute_canvas(shape)
         widget = SimpleNamespace(
             tr=lambda text: text,
             canvas=canvas,
@@ -428,6 +483,7 @@ class TestLabelWidgetAttributes(unittest.TestCase):
             save_attributes=Mock(),
             show_attributes_panel=Mock(),
             hide_attributes_panel=Mock(),
+            actions=_history_actions(),
         )
         LabelingWidget.update_attributes(widget, 0)
         combo = widget.grid_layout_container.findChild(QtWidgets.QComboBox)
@@ -442,3 +498,4 @@ class TestLabelWidgetAttributes(unittest.TestCase):
         self.assertEqual(combo.toolTip(), "")
         widget.save_attributes.assert_called_once_with([shape])
         canvas.update.assert_called_once_with()
+        canvas.store_shapes.assert_called_once_with()

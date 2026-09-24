@@ -1115,6 +1115,7 @@ def _shortcut_category_map() -> dict[str, tuple[str, ...]]:
         "View": (
             "fit_width",
             "fit_window",
+            "show_attributes",
             "show_labels",
             "show_masks",
             "show_texts",

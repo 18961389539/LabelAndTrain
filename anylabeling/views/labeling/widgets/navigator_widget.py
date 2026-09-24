@@ -2,6 +2,7 @@
 
 from typing import List, Optional, Any
 
+from anylabeling.views.labeling.logger import logger
 from PyQt6 import QtWidgets
 from PyQt6.QtCore import (
     QPoint,
@@ -132,10 +133,18 @@ class NavigatorWidget(QWidget):
         elif isinstance(image_data, QPixmap):
             self.original_image = image_data
         else:
-            try:
-                self.original_image = QPixmap(str(image_data))
-            except:
+            # QPixmap(path) never raises -- it returns a null pixmap that
+            # used to leave the navigator blank with no explanation.
+            pixmap = QPixmap(str(image_data))
+            if pixmap.isNull():
+                logger.warning(
+                    f"Navigator could not load image: {image_data}"
+                )
+                self.original_image = None
+                self.thumbnail = None
+                self.update()
                 return
+            self.original_image = pixmap
 
         self._update_thumbnail()
         self.update()

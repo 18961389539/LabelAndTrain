@@ -21,7 +21,7 @@ from .searchable_model_dropdown import SearchBar
 from .navigator_widget import NavigatorDialog
 from .overview_dialog import OverviewDialog
 from .polygon_sides_dialog import PolygonSidesDialog
-from .popup import Popup
+from .popup import Popup, copy_text_to_system_clipboard
 from .toolbar import FloatingToolPanel, ToolBar
 from .unique_label_qlist_widget import UniqueLabelQListWidget
 

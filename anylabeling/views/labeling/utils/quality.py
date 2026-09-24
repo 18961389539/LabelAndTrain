@@ -6,6 +6,7 @@ import json
 import os.path as osp
 from collections import Counter
 
+from anylabeling.views.labeling.logger import logger
 from anylabeling.views.labeling.utils.yolo_detect import (
     BOX_SHAPE_TYPES,
     SKIP_LABELS,
@@ -115,7 +116,10 @@ def json_txt_mismatch(json_path, data=None, class_names=None):
         try:
             with open(json_path, "r", encoding="utf-8") as handle:
                 data = json.load(handle)
-        except Exception:
+        except Exception as exc:  # noqa: BLE001
+            # An unreadable label file used to be reported as "no mismatch",
+            # which hides a broken file from the audit.
+            logger.warning(f"Could not read label file {json_path}: {exc}")
             return False
     if not isinstance(data, dict):
         return False
@@ -159,7 +163,10 @@ def file_needs_re_autolabel(image_file, output_dir=None):
     try:
         with open(label_file, "r", encoding="utf-8") as handle:
             data = json.load(handle)
-    except Exception:
+    except Exception as exc:  # noqa: BLE001
+        # Unreadable file: report it as needing a rerun, but say why instead
+        # of making the file quietly look "already labelled".
+        logger.warning(f"Could not read label file {label_file}: {exc}")
         return True
     shapes = data.get("shapes") or []
     if not shapes:

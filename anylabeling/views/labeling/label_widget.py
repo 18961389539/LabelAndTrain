@@ -149,6 +149,7 @@ from .widgets import (
     GroupIDModifyDialog,
     OverviewDialog,
     Popup,
+    copy_text_to_system_clipboard,
     SearchBar,
     ToolBar,
     UniqueLabelQListWidget,
@@ -210,6 +211,53 @@ def _format_label_list_text(label, group_id):
 
 def _set_label_list_item_lock(item, locked):
     item.set_locked(locked)
+
+
+def _shape_editable_state(shape):
+    """Fields edited by the label dialog, as one comparable tuple.
+
+    Used to decide whether a label edit actually changed anything. Qt emits
+    change signals even when the value is identical, and an unchanged edit
+    must not consume an undo slot or invalidate the redo branch.
+    """
+    return (
+        shape.label,
+        shape.flags,
+        shape.group_id,
+        shape.description,
+        shape.difficult,
+        shape.kie_linking,
+    )
+
+
+def _apply_attribute_change(widget, shape_index, property_name, value):
+    """Write one attribute value and record it in the undo history.
+
+    Attribute edits used to be persisted straight to disk with no history
+    entry, so a mis-click could not be undone. The value is compared first
+    because Qt emits change signals even when nothing changed (the panel is
+    repopulated on every selection change), and an unchanged write must not
+    consume an undo slot or invalidate the redo branch.
+
+    Returns True when the value actually changed.
+    """
+    if shape_index >= len(widget.canvas.shapes):
+        return False
+    shape = widget.canvas.shapes[shape_index]
+    if not shape.attributes:
+        shape.attributes = {}
+    if shape.attributes.get(property_name) == value:
+        return False
+    shape.attributes[property_name] = value
+    # Snapshot after the edit: see Canvas.is_shape_restorable for why.
+    widget.canvas.store_shapes()
+    widget.canvas.update()
+    # Keep the history buttons in sync. set_dirty() is deliberately not used
+    # here -- save_attributes() already persists the change, so going through
+    # set_dirty() would write the file twice.
+    widget.actions.undo.setEnabled(widget.canvas.is_shape_restorable)
+    widget.actions.redo.setEnabled(widget.canvas.is_shape_redoable)
+    return True
 
 
 def _find_next_label_loop_shape(shapes, start_index, canvas_shapes):
@@ -1545,6 +1593,26 @@ class LabelingWidget(LabelDialog):
             enabled=True,
             auto_trigger=True,
         )
+        # Toggle the attribute text painted on the canvas. The canvas has
+        # supported ``show_attributes`` all along, but it was never exposed as
+        # an action, which left Ctrl+Shift+L advertised in the F1 cheat sheet
+        # while doing nothing.
+        show_attributes = action(
+            self.tr("Show Attributes"),
+            lambda x: self.set_canvas_params("show_attributes", x),
+            shortcut=shortcuts["show_attributes"],
+            tip=self.tr("Show attributes below shapes"),
+            icon=None,
+            checkable=True,
+            checked=self._config["show_attributes"],
+            enabled=True,
+            auto_trigger=True,
+        )
+        # Same reasoning as show_masks: the shortcut must win over a focused
+        # child widget (e.g. the text-prompt QLineEdit).
+        show_attributes.setShortcutContext(
+            Qt.ShortcutContext.ApplicationShortcut
+        )
         show_scores = action(
             self.tr("Show Scores"),
             lambda x: self.set_canvas_params("show_scores", x),
@@ -1814,6 +1882,7 @@ class LabelingWidget(LabelDialog):
             show_masks=show_masks,
             show_texts=show_texts,
             show_labels=show_labels,
+            show_attributes=show_attributes,
             show_scores=show_scores,
             show_degrees=show_degrees,
             show_navigator=show_navigator,
@@ -2091,6 +2160,7 @@ class LabelingWidget(LabelDialog):
                 show_masks,
                 show_texts,
                 show_labels,
+                show_attributes,
                 show_scores,
                 show_degrees,
                 show_groups,
@@ -4049,12 +4119,17 @@ class LabelingWidget(LabelDialog):
             self.delete_file()
 
     def copy_file_path(self, file_path):
-        popup = Popup(
-            self.tr("Copy Successful"),
-            parent=self,
-            icon=new_icon_path("copy-green", "svg"),
-        )
-        popup.show_popup(self, copy_msg=file_path, position="default")
+        # Report what actually happened. The popup used to say "Copy
+        # Successful" unconditionally, so a failed clipboard write looked
+        # like a success and the user only found out when pasting.
+        if copy_text_to_system_clipboard(file_path):
+            message = self.tr("Copy Successful")
+            icon = new_icon_path("copy-green", "svg")
+        else:
+            message = self.tr("复制失败：无法访问系统剪贴板")
+            icon = new_icon_path("error", "svg")
+        popup = Popup(message, parent=self, icon=icon)
+        popup.show_popup(self, position="default")
 
     def _recent_dir_list(self):
         """Recent folders persisted in QSettings, newest first."""
@@ -4996,6 +5071,7 @@ class LabelingWidget(LabelDialog):
             )
             return
 
+        states_before = [_shape_editable_state(shape) for shape in shapes]
         for shape in shapes:
             if self.attributes and text and text != shape.label:
                 text = self.reset_attribute(text, shape)
@@ -5034,6 +5110,14 @@ class LabelingWidget(LabelDialog):
                 unique_label_item, text, rgb, LABEL_OPACITY
             )
 
+        # The confirmation dialog promises "You can undo this with Ctrl+Z";
+        # keep that promise by snapshotting the new state (see
+        # Canvas.is_shape_restorable for why this happens after the edit).
+        if any(
+            before != _shape_editable_state(shape)
+            for before, shape in zip(states_before, shapes)
+        ):
+            self.canvas.store_shapes()
         self.set_dirty()
         self._refresh_shape_filters()
 
@@ -5086,6 +5170,7 @@ class LabelingWidget(LabelDialog):
             return
         if self.attributes and text and text != shape.label:
             text = self.reset_attribute(text, shape)
+        state_before = _shape_editable_state(shape)
         shape.label = text
         shape.flags = flags
         shape.group_id = group_id
@@ -5118,6 +5203,12 @@ class LabelingWidget(LabelDialog):
             item.setBackground(QtGui.QColor(*color, LABEL_OPACITY))
         else:
             item.setText(_format_label_list_text(shape.label, shape.group_id))
+        # The canvas saves the state AFTER each edit (see
+        # Canvas.is_shape_restorable), so the snapshot has to happen here --
+        # after the new values are in place. Without it a mistaken label was
+        # permanent: edit_label only marked the file dirty.
+        if state_before != _shape_editable_state(shape):
+            self.canvas.store_shapes()
         self.set_dirty()
         self._refresh_shape_filters()
 
@@ -5288,29 +5379,16 @@ class LabelingWidget(LabelDialog):
         selected_option = combo.currentText()
         tooltip = combo.currentData(Qt.ItemDataRole.ToolTipRole)
         combo.setToolTip(tooltip or "")
-        if i < len(self.canvas.shapes):
-            if not self.canvas.shapes[i].attributes:
-                self.canvas.shapes[i].attributes = {}
-            self.canvas.shapes[i].attributes[property] = selected_option
+        if _apply_attribute_change(self, i, property, selected_option):
             self.save_attributes(self.canvas.shapes)
-            self.canvas.update()
 
     def attribute_radio_changed(self, i, property, option, checked):
-        if checked and i < len(self.canvas.shapes):
-            if not self.canvas.shapes[i].attributes:
-                self.canvas.shapes[i].attributes = {}
-            self.canvas.shapes[i].attributes[property] = option
+        if checked and _apply_attribute_change(self, i, property, option):
             self.save_attributes(self.canvas.shapes)
-            self.canvas.update()
 
     def attribute_line_changed(self, i, property, line: QLineEdit):
-        line_text = line.text()
-        if i < len(self.canvas.shapes):
-            if not self.canvas.shapes[i].attributes:
-                self.canvas.shapes[i].attributes = {}
-            self.canvas.shapes[i].attributes[property] = line_text
+        if _apply_attribute_change(self, i, property, line.text()):
             self.save_attributes(self.canvas.shapes)
-            self.canvas.update()
 
     def update_selected_options(self, selected_options):
         if not isinstance(selected_options, dict):
@@ -6835,13 +6913,21 @@ class LabelingWidget(LabelDialog):
         assert hasattr(self.canvas, key), f"Canvas has no attribute {key}"
         setattr(self.canvas, key, value)
         self.canvas.update()
-        if key == "show_masks":
-            # Give immediate, unambiguous feedback for Ctrl+M so toggling
-            # mask display is obvious (some shapes also draw outlines, which
-            # can make the change look subtle otherwise).
+        if key in ("show_masks", "show_attributes"):
+            # Give immediate, unambiguous feedback for Ctrl+M / Ctrl+Shift+L so
+            # toggling the overlay is obvious: the change is hard to spot when
+            # the affected shapes also draw outlines or carry no attributes.
+            labels = {
+                "show_masks": self.tr("掩膜显示"),
+                "show_attributes": self.tr("属性显示"),
+            }
             try:
                 self.status(
-                    self.tr("掩膜显示：%s") % (self.tr("开") if value else self.tr("关"))
+                    "%s：%s"
+                    % (
+                        labels[key],
+                        self.tr("开") if value else self.tr("关"),
+                    )
                 )
             except Exception:  # noqa: BLE001
                 pass

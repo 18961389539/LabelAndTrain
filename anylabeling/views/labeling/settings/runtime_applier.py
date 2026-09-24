@@ -97,6 +97,7 @@ class SettingsRuntimeApplier:
             "shortcuts.show_masks": self._widget.actions.show_masks,
             "shortcuts.show_texts": self._widget.actions.show_texts,
             "shortcuts.show_labels": self._widget.actions.show_labels,
+            "shortcuts.show_attributes": self._widget.actions.show_attributes,
             "shortcuts.union_selected_shapes": self._widget.actions.union_selection,
             "shortcuts.toggle_auto_use_last_label": self._widget.actions.auto_use_last_label_mode,
             "shortcuts.toggle_auto_use_last_gid": self._widget.actions.auto_use_last_gid_mode,

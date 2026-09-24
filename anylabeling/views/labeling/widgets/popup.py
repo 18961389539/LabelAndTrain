@@ -3,6 +3,7 @@ import shutil
 import subprocess
 import sys
 
+from anylabeling.views.labeling.logger import logger
 from anylabeling.views.labeling.utils.theme import get_theme
 from PyQt6.QtWidgets import (
     QWidget,
@@ -45,43 +46,55 @@ def _copy_via_command(command, text):
             stderr=subprocess.DEVNULL,
             check=False,
         )
-    except Exception:
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(f"Clipboard helper {executable} failed: {exc}")
         return False
+    if result.returncode != 0:
+        logger.warning(
+            f"Clipboard helper {executable} exited with {result.returncode}"
+        )
     return result.returncode == 0
 
 
 def copy_text_to_system_clipboard(text):
+    """Copy ``text`` to the system clipboard.
+
+    Returns True on success. Callers must surface a failure instead of
+    silently reporting success -- this used to return None either way, which
+    made "Copy Successful" a lie whenever the clipboard was unavailable.
+    """
     if not text:
-        return
+        return False
 
     clipboard = QApplication.clipboard()
     if clipboard is not None:
         try:
             clipboard.setText(text)
             if clipboard.text() == text:
-                return
-        except Exception:
-            pass
+                return True
+            logger.warning(
+                "Qt clipboard accepted the text but returned a different "
+                "value; falling back to a platform helper"
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(f"Qt clipboard write failed: {exc}")
 
     if is_wsl():
         if _copy_via_command(["clip.exe"], text):
-            return
-        _copy_via_command(["/mnt/c/Windows/System32/clip.exe"], text)
-        return
+            return True
+        return _copy_via_command(["/mnt/c/Windows/System32/clip.exe"], text)
 
     if sys.platform.startswith("win"):
-        _copy_via_command(["clip"], text)
-        return
+        return _copy_via_command(["clip"], text)
 
     if sys.platform == "darwin":
-        _copy_via_command(["pbcopy"], text)
-        return
+        return _copy_via_command(["pbcopy"], text)
 
     if _copy_via_command(["wl-copy"], text):
-        return
+        return True
     if _copy_via_command(["xclip", "-selection", "clipboard"], text):
-        return
-    _copy_via_command(["xsel", "--clipboard", "--input"], text)
+        return True
+    return _copy_via_command(["xsel", "--clipboard", "--input"], text)
 
 
 class Popup(QWidget):
@@ -176,8 +189,14 @@ class Popup(QWidget):
         position="default",
         top_offset=100,
     ):
+        """Show the popup, optionally copying ``copy_msg`` first.
+
+        Returns the clipboard result: True when the copy succeeded, False
+        when it was attempted and failed, None when no copy was requested.
+        """
+        copied = None
         if copy_msg:
-            copy_text_to_system_clipboard(copy_msg)
+            copied = copy_text_to_system_clipboard(copy_msg)
 
         # Calculate position based on preference
         parent_origin = parent_widget.mapToGlobal(QPoint(0, 0))
@@ -201,3 +220,4 @@ class Popup(QWidget):
         self.setGeometry(x, y, popup_width, popup_height)
         self.show()
         self.timer.start(self._msec)
+        return copied

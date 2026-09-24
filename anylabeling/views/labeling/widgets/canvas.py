@@ -10,6 +10,7 @@ from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QWheelEvent
 
 from anylabeling.services.auto_labeling.types import AutoLabelingMode
+from anylabeling.views.labeling.logger import logger
 from anylabeling.views.labeling.utils.colormap import label_colormap
 from anylabeling.views.labeling.utils.qt import new_icon_path
 from anylabeling.views.labeling.utils.theme import get_theme
@@ -97,7 +98,7 @@ class Canvas(
         self.double_click_edit_label = kwargs.pop(
             "double_click_edit_label", True
         )
-        self.num_backups = kwargs.pop("num_backups", 10)
+        self.num_backups = kwargs.pop("num_backups", 100)
         self.wheel_rectangle_editing = kwargs.pop(
             "wheel_rectangle_editing", {}
         )
@@ -3820,8 +3821,13 @@ class Canvas(
 
                 try:
                     linking_pairs += shape.kie_linking
-                except Exception:
-                    pass
+                except Exception as exc:  # noqa: BLE001
+                    # Debug level on purpose: this runs inside paintEvent, so
+                    # a warning would flood the log while the shape stays
+                    # broken. The linking line simply is not drawn.
+                    logger.debug(
+                        f"KIE linking skipped for label '{shape.label}': {exc}"
+                    )
 
                 if shape.group_id is None or shape.shape_type not in [
                     "rectangle",

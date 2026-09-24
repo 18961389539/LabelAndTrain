@@ -31,6 +31,24 @@ class TestBuildShortcutRows(unittest.TestCase):
         self.assertIn("auto_labeling_run", keys)
         self.assertIn("open_settings", keys)
 
+    def test_unbound_shortcuts_are_not_advertised(self):
+        """The cheat sheet must not list a key that no action handles.
+
+        ``show_linking`` is off in this YOLO-only fork and
+        ``toggle_compare_view`` was never implemented, yet F1 printed both
+        as if they worked.
+        """
+        keys = {
+            key
+            for _title, entries in SHORTCUT_GROUPS
+            for key, _desc in entries
+        }
+        self.assertNotIn("show_linking", keys)
+        self.assertNotIn("toggle_compare_view", keys)
+        # show_attributes kept its slot: canvas.show_attributes already
+        # existed, so a real action was added behind it instead.
+        self.assertIn("show_attributes", keys)
+
     def test_builds_rows_and_skips_empty(self):
         rows = build_shortcut_rows(SAMPLE)
         texts = {row[1] for row in rows}

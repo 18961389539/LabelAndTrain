@@ -22,7 +22,6 @@ show_labels: true
 show_scores: true
 show_degrees: false
 show_shapes: true
-show_linking: true
 show_attributes: true
 logger_level: info
 qt_image_allocation_limit: null  # null keeps Qt default (256 MB); 0 disables the limit
@@ -111,7 +110,7 @@ canvas:
   double_click_edit_label: true
   # change mode
   # The max number of edits we can undo
-  num_backups: 10
+  num_backups: 100
   wheel_rectangle_editing:
     # Hold Alt + wheel to fine-tune a selected rectangle; plain wheel always
     # scrolls the viewport so browsing never accidentally resizes a box.
@@ -204,13 +203,11 @@ shortcuts:
   show_masks: Ctrl+M
   show_texts: Ctrl+T
   show_labels: Ctrl+L
-  show_linking: Ctrl+K
   show_attributes: Ctrl+Shift+L
   union_selected_shapes: Ctrl+Shift+M
   toggle_auto_use_last_label: Ctrl+Y
   toggle_auto_use_last_gid: Ctrl+Shift+G
   toggle_visibility_shapes: Ctrl+H
-  toggle_compare_view: Ctrl+Alt+C
 
   auto_label: Ctrl+A
   auto_run: Ctrl+B
