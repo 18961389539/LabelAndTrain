@@ -4121,57 +4121,18 @@ class LabelingWidget(LabelDialog):
         return _label_file_review_state(label_file)
 
     def _review_state_name(self, state):
-        return {
-            REVIEW_UNCHECKED: self.tr("未检查"),
-            REVIEW_CONFIRMED: self.tr("已检查"),
-            REVIEW_REJECTED: self.tr("需返工"),
-        }.get(state, self.tr("未知"))
+        """Delegates to filelist.items."""
+        return filelist_items.review_state_name(self, state)
 
     def _file_item_tooltip(
         self, file, label_file, state, reviewed_at=None, counts=None,
         negative=False, low_conf=False,
     ):
-        """Hover text for one file row: what it is, and where it stands.
-
-        Only data the row already has goes in here. Counting shapes for every
-        row would mean parsing every JSON, which is the exact cost the
-        background checker was introduced to avoid -- the open row gets counts
-        because the canvas already holds them.
-        """
-        annotated = QtCore.QFile.exists(label_file)
-        lines = [osp.basename(str(file)), str(file)]
-        lines.append(
-            self.tr("标注文件：%1").replace(
-                "%1", osp.basename(label_file)
-            )
-            if annotated
-            else self.tr("尚无标注文件（保存后创建）")
+        """Delegates to filelist.items."""
+        return filelist_items.file_item_tooltip(
+            self, file, label_file, state, reviewed_at=reviewed_at,
+            counts=counts, negative=negative, low_conf=low_conf,
         )
-        status = self.tr("复核状态：%1").replace(
-            "%1", self._review_state_name(state)
-        )
-        if reviewed_at:
-            status += self.tr("（%1）").replace("%1", reviewed_at)
-        lines.append(status)
-        if counts:
-            lines.append(
-                self.tr("对象 %1 个：模型 %2 / 人工 %3 / 未记录 %4")
-                .replace("%1", str(counts["total"]))
-                .replace("%2", str(counts["model"]))
-                .replace("%3", str(counts["human"]))
-                .replace("%4", str(counts["unknown"]))
-            )
-        if state == REVIEW_REJECTED:
-            lines.append(self.tr("图标含义：已打回，待人工返工"))
-        elif negative:
-            lines.append(
-                self.tr("图标含义：负样本（确认无目标，空标注）")
-            )
-        elif state == REVIEW_UNCHECKED and annotated:
-            lines.append(self.tr("图标含义：已标注，尚未复核"))
-        if low_conf:
-            lines.append(self.tr("含低置信度对象（建议复核）"))
-        return "\n".join(lines)
 
     def _shape_tooltip(self, shape):
         """Hover text for one object row: everything the label JSON knows.
