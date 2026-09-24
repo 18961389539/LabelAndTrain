@@ -121,6 +121,7 @@ from .utils.shortcuts_help import (
 from .utils.recent_dirs import push_recent_dir
 from .settings import SettingsController, SettingsDialog
 from .settings.runtime_applier import SettingsRuntimeApplier
+from .shortcuts.digit_controller import DigitShortcutController
 from .shape import Shape
 from .utils.data_audit import run_data_audit
 from .utils.file_search import (
@@ -144,7 +145,6 @@ from .widgets import (
     LabelFilterComboBox,
     LabelListWidget,
     LabelListWidgetItem,
-    DigitShortcutDialog,
     LabelModifyDialog,
     GroupIDModifyDialog,
     OverviewDialog,
@@ -362,6 +362,7 @@ class LabelingWidget(LabelDialog):
         self.select_loop_count = -1
         self.digit_to_label = None
         self.drawing_digit_shortcuts = self._config.get("digit_shortcuts", {})
+        self.digit_shortcut_controller = DigitShortcutController(self)
         self._runtime_shape_color_shift = int(
             self._config.get("shift_auto_shape_color", 0)
         )
@@ -3498,11 +3499,8 @@ class LabelingWidget(LabelDialog):
             OverviewDialog(parent=self)
 
     def digit_shortcut_manager(self):
-        digit_shortcut_dialog = DigitShortcutDialog(parent=self)
-        result = digit_shortcut_dialog.exec()
-        if result == QtWidgets.QDialog.DialogCode.Accepted:
-            self._config["digit_shortcuts"] = self.drawing_digit_shortcuts
-            save_config(self._config)
+        """Delegates to shortcuts.digit_controller (menu wiring stays)."""
+        self.digit_shortcut_controller.digit_shortcut_manager()
 
     def label_manager(self):
         modify_label_dialog = LabelModifyDialog(
@@ -3687,21 +3685,8 @@ class LabelingWidget(LabelDialog):
         self.update_labeling_instruction()
 
     def create_digit_mode(self, digit_num):
-        if self.drawing_digit_shortcuts is None:
-            return
-
-        data = self.drawing_digit_shortcuts.get(digit_num, None)
-        if not data:
-            return
-
-        label = data.get("label", "object")
-        create_mode = data.get("mode", None)
-
-        if create_mode not in Shape.get_supported_shape():
-            return
-
-        self.digit_to_label = label
-        self.toggle_draw_mode(edit=False, create_mode=create_mode)
+        """Delegates to shortcuts.digit_controller (digit 0-9 actions)."""
+        self.digit_shortcut_controller.create_digit_mode(digit_num)
 
     def toggle_draw_mode(
         self,
@@ -5975,46 +5960,8 @@ class LabelingWidget(LabelDialog):
         self._auto_assign_digit_shortcuts(shapes)
 
     def _auto_assign_digit_shortcuts(self, shapes):
-        """Assign free digit shortcuts (1-9) to labels seen for the first
-        time, so multi-class annotation does not require manual setup via
-        Alt+D. The shortcut creates the label with the shape type it was
-        first seen as; users can still re-map via the digit shortcut
-        manager. ``None`` digit_shortcuts (feature disabled) is respected.
-        """
-        if self.drawing_digit_shortcuts is None:
-            return
-        assigned = False
-        used = {
-            int(k) for k in self.drawing_digit_shortcuts if str(k).isdigit()
-        }
-        for shape in shapes:
-            label = getattr(shape, "label", None)
-            if not label:
-                continue
-            if any(
-                v.get("label") == label
-                for v in self.drawing_digit_shortcuts.values()
-            ):
-                continue
-            for digit in range(1, 10):
-                if digit in used:
-                    continue
-                self.drawing_digit_shortcuts[digit] = {
-                    "label": label,
-                    "mode": shape.shape_type or "rectangle",
-                }
-                used.add(digit)
-                assigned = True
-                logger.info(
-                    f"Digit shortcut {digit} auto-assigned to "
-                    f"'{label}' ({shape.shape_type})"
-                )
-                break
-            if len(used) >= 9:
-                break
-        if assigned:
-            self._config["digit_shortcuts"] = self.drawing_digit_shortcuts
-            save_config(self._config)
+        """Delegates to shortcuts.digit_controller (load_shapes tail)."""
+        self.digit_shortcut_controller.auto_assign_digit_shortcuts(shapes)
 
     def load_flags(self, flags):
         self.flag_widget.clear()
