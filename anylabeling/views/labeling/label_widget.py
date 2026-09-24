@@ -744,6 +744,11 @@ class LabelingWidget(LabelDialog):
         # Actions
         _build_actions(self)
 
+        # Layout. Order matters twice over: the layout reads widget.actions
+        # and widget.tools, and everything below still expects it to have run
+        # by now, so it must stay right here.
+        _build_layout(self)
+
         if output_file is not None and self._config["auto_save"]:
             logger.warning(
                 "If `auto_save` argument is True, `output_file` argument "
@@ -1929,15 +1934,6 @@ class LabelingWidget(LabelDialog):
         shape = item.shape()
         self.canvas.select_shapes([shape])
 
-    def copy_to_clipboard(self, text):
-        clipboard = QtWidgets.QApplication.clipboard()
-        clipboard.setText(text)
-        QMessageBox.information(
-            self,
-            self.tr("Copied"),
-            self.tr("The information has been copied to the clipboard."),
-        )
-
     # General
     def toggle_drawing_sensitive(self, drawing=True):
         """Toggle drawing sensitive.
@@ -2377,12 +2373,6 @@ class LabelingWidget(LabelDialog):
                 functools.partial(self.load_recent_dir, path)
             )
 
-    def load_recent_dir(self, directory):
-        """Reopen a folder picked from the recent-folders menu."""
-        if not directory:
-            return
-        self.import_image_folder(directory, load=True)
-
     def _review_state_for_label_file(self, label_file):
         if not QtCore.QFile.exists(label_file):
             return REVIEW_UNCHECKED
@@ -2537,6 +2527,11 @@ class LabelingWidget(LabelDialog):
         return filelist_items.file_item_annotation_checked(item)
 
     def _label_path_for_image(self, image_file):
+        """Single source of truth for "image file -> label file".
+
+        The ``output_dir`` override lives here only; ``get_label_file()``
+        delegates to it instead of repeating the join.
+        """
         label_file = osp.splitext(image_file)[0] + ".json"
         if self.output_dir:
             label_file = osp.join(self.output_dir, osp.basename(label_file))
@@ -3418,40 +3413,6 @@ class LabelingWidget(LabelDialog):
     def attribute_line_changed(self, i, property, line: QLineEdit):
         if _apply_attribute_change(self, i, property, line.text()):
             self.save_attributes(self.canvas.shapes)
-
-    def update_selected_options(self, selected_options):
-        if not isinstance(selected_options, dict):
-            return
-
-        row_count = self.grid_layout.rowCount()
-        for row in range(row_count):
-            category_label = None
-            property_widget = None
-            if self.grid_layout.itemAtPosition(row, 0):
-                category_label = self.grid_layout.itemAtPosition(
-                    row, 0
-                ).widget()
-            if self.grid_layout.itemAtPosition(row, 1):
-                property_widget = self.grid_layout.itemAtPosition(
-                    row, 1
-                ).widget()
-            if category_label and property_widget:
-                category = category_label.text()
-                if category in selected_options:
-                    selected_option = selected_options[category]
-
-                    if isinstance(property_widget, QComboBox):
-                        index = property_widget.findText(selected_option)
-                        if index >= 0:
-                            property_widget.setCurrentIndex(index)
-                    elif isinstance(property_widget, QWidget):
-                        for child in property_widget.findChildren(
-                            QRadioButton
-                        ):
-                            if child.text() == selected_option:
-                                child.setChecked(True)
-                                break
-        return
 
     def update_attributes(self, shape_index):
         if shape_index >= len(self.canvas.shapes) or shape_index < 0:
@@ -5524,6 +5485,9 @@ class LabelingWidget(LabelDialog):
             self.load_file(filename)
 
     def load_recent_dir(self, dirpath):
+        """Reopen a folder picked from the recent-folders menu."""
+        if not dirpath:
+            return
         self.import_image_folder(dirpath)
 
     def _paging_blocked_by_drawing(self):
@@ -5955,10 +5919,7 @@ class LabelingWidget(LabelDialog):
         base = self.image_path if self.image_path else self.filename
         if base.lower().endswith(".json"):
             return base
-        lf = osp.splitext(base)[0] + ".json"
-        if self.output_dir:
-            lf = osp.join(self.output_dir, osp.basename(lf))
-        return lf
+        return self._label_path_for_image(base)
 
     def get_image_file(self):
         if not self.filename.lower().endswith(".json"):
@@ -6111,15 +6072,6 @@ class LabelingWidget(LabelDialog):
                 self.load_file(self.filename)
 
     # Message Dialogs. #
-    def has_labels(self):
-        if self.no_shape():
-            self.error_message(
-                "No objects labeled",
-                "You must label at least one object to save the file.",
-            )
-            return False
-        return True
-
     def has_label_file(self):
         if self.filename is None:
             return False
@@ -6981,10 +6933,14 @@ class LabelingWidget(LabelDialog):
 
 
 def _build_actions(widget):
-    """Create every QAction and register them on widget.actions.
+    """Create every QAction, then the menus and the tool list.
 
-    Moved out of LabelingWidget.__init__ (split batch 4): pure
-    assembly, everything is reached through the widget argument.
+    Moved out of LabelingWidget.__init__ (split batch 4): pure assembly,
+    everything is reached through the widget argument. The menus live here
+    rather than in their own function on purpose - they consume ~80 of the
+    action handles created above, so splitting them would mean threading a
+    namespace through the two halves for little gain. The layout half was
+    carved off instead, see ``_build_layout``.
     """
     # Actions
     action = functools.partial(utils.new_action, widget)
@@ -8475,6 +8431,16 @@ def _build_actions(widget):
         zoom,
     )
 
+
+def _build_layout(widget):
+    """Assemble the central area, the sidebars and the docks.
+
+    Split out of ``_build_actions`` (batch 9): that function had grown to
+    1744 lines and was building the actions, the menus, the tool list *and*
+    the whole layout. This half only touches ``widget`` attributes, so it
+    needs no hand-off of locals - the menus stayed behind on purpose, they
+    consume ~80 action handles.
+    """
     layout = QHBoxLayout()
     layout.setContentsMargins(0, 0, 0, 0)
 
