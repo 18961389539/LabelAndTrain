@@ -122,6 +122,16 @@ from .utils.recent_dirs import push_recent_dir
 from .settings import SettingsController, SettingsDialog
 from .settings.runtime_applier import SettingsRuntimeApplier
 from .shortcuts.digit_controller import DigitShortcutController
+from .filelist import items as filelist_items
+# Re-exported: the rest of the widget and the async checkers read the
+# row roles from this module's namespace.
+from .filelist.roles import (  # noqa: F401
+    FILE_ANNOTATION_ROLE,
+    FILE_LOW_CONF_ROLE,
+    FILE_NEGATIVE_ROLE,
+    FILE_REVIEW_ROLE,
+    FILE_REVIEWED_AT_ROLE,
+)
 from .shape import Shape
 from .utils.data_audit import run_data_audit
 from .utils.file_search import (
@@ -171,17 +181,6 @@ FILE_ANNOTATED_COLOR = "#3B82F6"
 FILE_UNCHECKED_COLOR = "#8C98A4"
 FILE_NEGATIVE_COLOR = "#F59E0B"
 FILE_REJECTED_COLOR = "#D9534F"
-FILE_ANNOTATION_ROLE = Qt.ItemDataRole.UserRole + 1
-# Distinguishes "confirmed empty (negative sample, no objects)" from
-# ordinary annotated files; negative samples are exported as empty .txt so
-# they participate in YOLO training as background samples.
-FILE_NEGATIVE_ROLE = Qt.ItemDataRole.UserRole + 2
-FILE_LOW_CONF_ROLE = Qt.ItemDataRole.UserRole + 3
-# Review state of the row: unchecked / confirmed / rejected.
-FILE_REVIEW_ROLE = Qt.ItemDataRole.UserRole + 4
-# When that state was last set, carried in from the label JSON for the row
-# tooltip only -- nothing branches on it.
-FILE_REVIEWED_AT_ROLE = Qt.ItemDataRole.UserRole + 5
 FILE_SEARCH_COMPLETIONS = (
     "label::",
     "checked::0",
@@ -4282,76 +4281,31 @@ class LabelingWidget(LabelDialog):
         return self._set_file_item_review_state(item, state)
 
     def _set_file_item_review_state(self, item, state, reviewed_at=None):
-        changed = (
-            item.data(Qt.ItemDataRole.UserRole) is not self._is_confirmed(state)
-            or item.data(FILE_REVIEW_ROLE) != state
+        """Delegates to filelist.items (async checker & tests call this)."""
+        return filelist_items.set_file_item_review_state(
+            self, item, state, reviewed_at
         )
-        if changed:
-            item.setData(Qt.ItemDataRole.UserRole, self._is_confirmed(state))
-            item.setData(FILE_REVIEW_ROLE, state)
-        self._refresh_file_item_status_icon(item)
-        if reviewed_at is not None:
-            item.setData(FILE_REVIEWED_AT_ROLE, reviewed_at)
-        self._refresh_file_item_tooltip(item)
-        return changed
 
     def _refresh_file_item_tooltip(self, item, counts=None):
-        """Rebuild a row's hover text from what the row already knows."""
-        if item is None:
-            return
-        file = item.text()
-        item.setToolTip(
-            self._file_item_tooltip(
-                file,
-                self._label_path_for_image(file),
-                item.data(FILE_REVIEW_ROLE) or REVIEW_UNCHECKED,
-                item.data(FILE_REVIEWED_AT_ROLE),
-                counts=counts,
-                negative=bool(item.data(FILE_NEGATIVE_ROLE)),
-                low_conf=bool(item.data(FILE_LOW_CONF_ROLE)),
-            )
-        )
+        """Delegates to filelist.items."""
+        filelist_items.refresh_file_item_tooltip(self, item, counts)
 
     @staticmethod
     def _is_confirmed(state):
-        return state == REVIEW_CONFIRMED
+        return filelist_items.is_confirmed(state)
 
     def _set_file_item_annotated(self, item, annotated, negative=False):
-        item.setData(FILE_ANNOTATION_ROLE, bool(annotated))
-        item.setData(FILE_NEGATIVE_ROLE, bool(annotated) and bool(negative))
-        if not annotated:
-            item.setData(FILE_LOW_CONF_ROLE, False)
-        if self._config.get("file_list_checkbox_editable", False):
-            item.setCheckState(
-                Qt.CheckState.Checked if annotated else Qt.CheckState.Unchecked
-            )
-        self._refresh_file_item_status_icon(item)
+        """Delegates to filelist.items."""
+        filelist_items.set_file_item_annotated(
+            self, item, annotated, negative
+        )
 
     def _refresh_file_item_status_icon(self, item):
-        annotated = bool(item.data(FILE_ANNOTATION_ROLE))
-        negative = bool(item.data(FILE_NEGATIVE_ROLE))
-        state = item.data(FILE_REVIEW_ROLE) or (
-            REVIEW_CONFIRMED
-            if item.data(Qt.ItemDataRole.UserRole) is True
-            else REVIEW_UNCHECKED
-        )
-        # Only the icon: what it means belongs to the row tooltip, which also
-        # carries the path, the review timestamp and the shape counts.
-        if state == REVIEW_REJECTED:
-            # Sent back for rework: still untrained, but needs eyes on it.
-            item.setIcon(self.file_status_icons["rejected"])
-        elif state == REVIEW_CONFIRMED:
-            item.setIcon(self.file_status_icons["checked"])
-        elif annotated and negative:
-            # Negative sample: confirmed empty (json with zero shapes).
-            item.setIcon(self.file_status_icons["negative"])
-        elif annotated:
-            item.setIcon(self.file_status_icons["annotated"])
-        else:
-            item.setIcon(self.file_status_icons["unannotated"])
+        """Delegates to filelist.items (tests call this directly)."""
+        filelist_items.refresh_file_item_status_icon(self, item)
 
     def _file_item_annotation_checked(self, item):
-        return item.data(Qt.ItemDataRole.UserRole) is True
+        return filelist_items.file_item_annotation_checked(item)
 
     def _label_path_for_image(self, image_file):
         label_file = osp.splitext(image_file)[0] + ".json"
@@ -4360,15 +4314,8 @@ class LabelingWidget(LabelDialog):
         return label_file
 
     def _set_file_item_low_conf(self, item, has_low_conf):
-        value = bool(has_low_conf)
-        if item.data(FILE_LOW_CONF_ROLE) is value:
-            return
-        syncing = getattr(self, "_syncing_file_item", False)
-        self._syncing_file_item = True
-        try:
-            item.setData(FILE_LOW_CONF_ROLE, value)
-        finally:
-            self._syncing_file_item = syncing
+        """Delegates to filelist.items."""
+        filelist_items.set_file_item_low_conf(self, item, has_low_conf)
 
     def _active_label_dir(self):
         directory = self.output_dir or None
