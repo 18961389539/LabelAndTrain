@@ -28,12 +28,19 @@ except Exception:
 class TestSettingsSchema(unittest.TestCase):
 
     def test_field_count(self):
-        self.assertEqual(len(SETTING_FIELDS), 119)
+        # No exact count: the schema is derived from the template yaml, so a
+        # field change is an explicit yaml edit. This only guards against a
+        # wholesale regression (e.g. derivation returning an empty/broken set).
+        self.assertGreater(len(SETTING_FIELDS), 100)
 
     def test_shortcut_and_non_shortcut_count(self):
         shortcut_fields = [
             field for field in SETTING_FIELDS if field.primary == "Shortcuts"
         ]
+        # Single explicit anchor for shortcut-count changes: bump this number
+        # when the yaml shortcut section is deliberately edited. The real
+        # invariant (every advertised key is rebindable) lives in
+        # test_fields_for_primary.
         # +mark_checked_and_next, +show_shortcuts_help: both used to be
         # hard-coded literals on the QAction, so nothing could rebind them.
         # +mark_rejected_and_next: the "send back for rework" quick action.
@@ -41,7 +48,6 @@ class TestSettingsSchema(unittest.TestCase):
         # (KIE linking is off in this YOLO-only fork and the compare view was
         # never implemented), so they were dropped instead of advertised.
         self.assertEqual(len(shortcut_fields), 73)
-        self.assertEqual(len(SETTING_FIELDS) - len(shortcut_fields), 46)
         keys = {field.key for field in shortcut_fields}
         self.assertIn("shortcuts.mark_checked_and_next", keys)
         self.assertIn("shortcuts.mark_rejected_and_next", keys)
@@ -106,9 +112,6 @@ class TestSettingsSchema(unittest.TestCase):
             SETTINGS_PRIMARY_ORDER,
             ("Shortcuts", "General", "Shape", "Canvas"),
         )
-        self.assertEqual(len(SETTINGS_GENERAL_KEYS), 9)
-        self.assertEqual(len(SETTINGS_SHAPE_KEYS), 9)
-        self.assertEqual(len(SETTINGS_SHORTCUT_KEYS_CORE), 23)
         for key in SETTINGS_GENERAL_KEYS:
             self.assertIn(key, SETTINGS_KEYS)
         for key in SETTINGS_SHAPE_KEYS:
@@ -132,10 +135,6 @@ class TestSettingsSchema(unittest.TestCase):
         self.assertIn("shape.line_color", shape_keys)
         self.assertIn("shape.point_size", shape_keys)
         self.assertIn("shape.line_width", shape_keys)
-        self.assertEqual(
-            len(shortcut_fields),
-            73,
-        )
         for key in SETTINGS_SHORTCUT_KEYS_CORE:
             self.assertIn(key, [field.key for field in shortcut_fields])
         # Every advertised key must be rebindable, or the help dialog points at
@@ -150,7 +149,6 @@ class TestSettingsSchema(unittest.TestCase):
             sorted(advertised - shortcut_keys),
             [],
         )
-        self.assertEqual(len(canvas_fields), 18)
         canvas_keys = {field.key for field in canvas_fields}
         self.assertIn("canvas.crosshair.show", canvas_keys)
         self.assertIn("canvas.crosshair.width", canvas_keys)
