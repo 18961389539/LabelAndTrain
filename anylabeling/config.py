@@ -123,7 +123,13 @@ def normalize_user_config(config):
 
 
 def save_config(config):
-    user_config_file = osp.join(get_work_directory(), ".xanylabelingrc")
+    # Write back to the file the session loaded from (a --config path) so
+    # reads and writes stay symmetric; inline YAML strings and the default
+    # startup path (None) fall through to the work-directory rc file.
+    if current_config_file and osp.isfile(current_config_file):
+        user_config_file = current_config_file
+    else:
+        user_config_file = osp.join(get_work_directory(), ".xanylabelingrc")
     try:
         os.makedirs(osp.dirname(user_config_file), exist_ok=True)
         with open(user_config_file, "w", encoding="utf-8") as f:
