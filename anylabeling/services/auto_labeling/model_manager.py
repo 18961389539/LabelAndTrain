@@ -481,8 +481,13 @@ class ModelManager(QObject):
 
         self._cancel_event.clear()
         self.model_download_thread = QThread()
-        template = "Loading model: {model_name}. Please wait..."
-        translated_template = self.tr(template)
+        # Pass the literal straight to the translation call rather than a
+        # variable: pylupdate6 only extracts literals, so translating a
+        # variable kept this string (and the two below) invisible to the
+        # catalog and therefore untranslatable.
+        translated_template = self.tr(
+            "Loading model: {model_name}. Please wait..."
+        )
         message = translated_template.format(
             model_name=self.model_configs[model_id]["display_name"]
         )
@@ -558,8 +563,9 @@ class ModelManager(QObject):
                     f"✅ Model loaded successfully: {model_config['type']}"
                 )
             except Exception as e:  # noqa
-                template = "Error in loading model: {error_message}"
-                translated_template = self.tr(template)
+                translated_template = self.tr(
+                    "Error in loading model: {error_message}"
+                )
                 error_text = translated_template.format(error_message=str(e))
                 self.new_model_status.emit(error_text)
                 self.model_load_failed.emit(error_text)
@@ -581,8 +587,9 @@ class ModelManager(QObject):
                     f"✅ Model loaded successfully: {model_config['type']}"
                 )
             except Exception as e:  # noqa
-                template = "Error in loading model: {error_message}"
-                translated_template = self.tr(template)
+                translated_template = self.tr(
+                    "Error in loading model: {error_message}"
+                )
                 error_text = translated_template.format(error_message=str(e))
                 self.new_model_status.emit(error_text)
                 self.model_load_failed.emit(error_text)
@@ -607,8 +614,9 @@ class ModelManager(QObject):
                 logger.error(
                     f"❌ Error in loading model: {model_config['type']} with error: {str(e)}"
                 )
-                template = "Error in loading model: {error_message}"
-                translated_template = self.tr(template)
+                translated_template = self.tr(
+                    "Error in loading model: {error_message}"
+                )
                 error_text = translated_template.format(error_message=str(e))
                 self.new_model_status.emit(error_text)
                 self.model_load_failed.emit(error_text)
@@ -641,8 +649,9 @@ class ModelManager(QObject):
                     f"❌ Error in loading model: {model_config['type']} "
                     f"with error: {str(e)}"
                 )
-                template = "Error in loading model: {error_message}"
-                translated_template = self.tr(template)
+                translated_template = self.tr(
+                    "Error in loading model: {error_message}"
+                )
                 error_text = translated_template.format(error_message=str(e))
                 self.new_model_status.emit(error_text)
                 self.model_load_failed.emit(error_text)
@@ -664,8 +673,9 @@ class ModelManager(QObject):
                     f"✅ Model loaded successfully: {model_config['type']}"
                 )
             except Exception as e:  # noqa
-                template = "Error in loading model: {error_message}"
-                translated_template = self.tr(template)
+                translated_template = self.tr(
+                    "Error in loading model: {error_message}"
+                )
                 error_text = translated_template.format(error_message=str(e))
                 self.new_model_status.emit(error_text)
                 self.model_load_failed.emit(error_text)
@@ -687,8 +697,9 @@ class ModelManager(QObject):
                     f"✅ Model loaded successfully: {model_config['type']}"
                 )
             except Exception as e:  # noqa
-                template = "Error in loading model: {error_message}"
-                translated_template = self.tr(template)
+                translated_template = self.tr(
+                    "Error in loading model: {error_message}"
+                )
                 error_text = translated_template.format(error_message=str(e))
                 self.new_model_status.emit(error_text)
                 self.model_load_failed.emit(error_text)
@@ -710,8 +721,9 @@ class ModelManager(QObject):
                     f"✅ Model loaded successfully: {model_config['type']}"
                 )
             except Exception as e:  # noqa
-                template = "Error in loading model: {error_message}"
-                translated_template = self.tr(template)
+                translated_template = self.tr(
+                    "Error in loading model: {error_message}"
+                )
                 error_text = translated_template.format(error_message=str(e))
                 self.new_model_status.emit(error_text)
                 self.model_load_failed.emit(error_text)
@@ -733,8 +745,9 @@ class ModelManager(QObject):
                     f"✅ Model loaded successfully: {model_config['type']}"
                 )
             except Exception as e:  # noqa
-                template = "Error in loading model: {error_message}"
-                translated_template = self.tr(template)
+                translated_template = self.tr(
+                    "Error in loading model: {error_message}"
+                )
                 error_text = translated_template.format(error_message=str(e))
                 self.new_model_status.emit(error_text)
                 self.model_load_failed.emit(error_text)
@@ -865,8 +878,9 @@ class ModelManager(QObject):
 
         except Exception as e:  # noqa
             logger.error(f"Error in predict_shapes: {e}")
-            template = "Error in model prediction: {error_message}"
-            translated_template = self.tr(template)
+            translated_template = self.tr(
+                "Error in model prediction: {error_message}"
+            )
             error_text = translated_template.format(error_message=str(e))
             self.new_model_status.emit(error_text)
 

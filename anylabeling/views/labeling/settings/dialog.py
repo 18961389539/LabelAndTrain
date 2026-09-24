@@ -14,6 +14,7 @@ from anylabeling.views.labeling.utils.style import (
 )
 from anylabeling.views.labeling.utils.theme import get_mode, get_theme
 
+from ..utils.shortcuts_help import SHORTCUT_GROUPS
 from .controller import SettingsController, SettingsValidationError
 from .editors import (
     ColorRgbaEditor,
@@ -24,6 +25,7 @@ from .editors import (
 from .schema import (
     SettingField,
     SETTINGS_PRIMARY_ORDER,
+    SETTING_FIELDS,
     fields_for_primary,
 )
 
@@ -33,6 +35,16 @@ class EditorBinding:
     field: SettingField
     setter: Callable[[Any], None]
     error_setter: Callable[[bool], None]
+
+
+#: Shortcut config key -> the Chinese description the F1 cheat sheet shows.
+#: Used as a search alias so ``撤销`` finds ``shortcuts.undo``, whose own
+#: label is English-only ("Undo").
+_SHORTCUT_SEARCH_ALIASES = {
+    key: description
+    for _title, entries in SHORTCUT_GROUPS
+    for key, description in entries
+}
 
 
 class ElidedLabel(QtWidgets.QLabel):
@@ -98,6 +110,7 @@ class SettingsDialog(QtWidgets.QDialog):
         self._did_show_once = False
         self._combo_animation_effect: Any | None = None
         self._combo_animation_prev_enabled: bool | None = None
+        self._search_active = False
 
         self.setModal(False)
         self.setWindowTitle(self.tr("Settings"))
@@ -143,6 +156,7 @@ class SettingsDialog(QtWidgets.QDialog):
                 "shortcut_group_hover": (34, 34, 36),
                 "outer_border": (183, 183, 183),
                 "close_hover": (58, 58, 60),
+                "input_bg": (58, 58, 60),
             }
         return {
             "left_bg": (225, 225, 225),
@@ -159,6 +173,7 @@ class SettingsDialog(QtWidgets.QDialog):
             "shortcut_group_hover": (246, 246, 248),
             "outer_border": (183, 183, 183),
             "close_hover": (217, 217, 220),
+            "input_bg": (255, 255, 255),
         }
 
     def _rgb(self, key: str) -> str:
@@ -548,8 +563,30 @@ class SettingsDialog(QtWidgets.QDialog):
             }}
             """)
 
+        self.search_input = QtWidgets.QLineEdit(self.header)
+        self.search_input.setObjectName("settingsSearch")
+        self.search_input.setClearButtonEnabled(True)
+        self.search_input.setFixedSize(230, 30)
+        self.search_input.setPlaceholderText(
+            self.tr("搜索设置项（如 撤销 / 字体 / 快捷键）")
+        )
+        self.search_input.setStyleSheet(
+            "QLineEdit#settingsSearch {"
+            f"background-color: {self._rgb('input_bg')};"
+            f"color: {self._rgb('title_text')};"
+            f"border: 1px solid {self._rgb('line')};"
+            "border-radius: 8px;"
+            "padding: 0 10px;"
+            "font-size: 12px;"
+            "}"
+            "QLineEdit#settingsSearch:focus {"
+            f"border: 1px solid {self._rgb('left_active_text')};"
+            "}"
+        )
+
         header_layout.addWidget(self.header_title)
         header_layout.addStretch(1)
+        header_layout.addWidget(self.search_input, 0)
         header_layout.addWidget(self.close_button, 0)
 
         self.header_line = QtWidgets.QFrame(right_panel)
@@ -707,6 +744,7 @@ class SettingsDialog(QtWidgets.QDialog):
         self.nav_list.installEventFilter(self)
         self.nav_list.viewport().installEventFilter(self)
         self.nav_list.currentRowChanged.connect(self._on_nav_changed)
+        self.search_input.textChanged.connect(self._on_search_text_changed)
         self.close_button.clicked.connect(self.close)
         self.shortcuts_reset_button.clicked.connect(self._on_reset_clicked)
         self.shortcuts_save_button.clicked.connect(self._on_save_clicked)
@@ -716,6 +754,11 @@ class SettingsDialog(QtWidgets.QDialog):
     def _on_nav_changed(self, row: int) -> None:
         if row < 0 or row >= len(self._nav_items):
             return
+        if self._search_active:
+            # Picking a page wins over the search box, otherwise the query
+            # would keep overriding whatever the user just clicked.
+            self._search_active = False
+            self._clear_search_box()
         primary = self._nav_items[row]
         self._update_nav_visuals(primary)
         self._render_primary(primary)
@@ -868,6 +911,203 @@ class SettingsDialog(QtWidgets.QDialog):
         )
         self._update_card_max_height()
         self.content_scroll.verticalScrollBar().setValue(0)
+
+    def _on_search_text_changed(self, text: str) -> None:
+        query = text.strip()
+        if not query:
+            self._exit_search()
+            return
+        self._render_search_results(query)
+
+    def _search_matches(self, query: str) -> list[SettingField]:
+        """Settings whose key, titles or description contain ``query``.
+
+        Translated titles/descriptions are searched too, so a zh_CN user can
+        type ``撤销`` and still find "Undo Backups". Shortcut fields also
+        answer to the Chinese name the F1 cheat sheet gives them.
+        """
+        needle = query.casefold()
+        matches = []
+        for field in SETTING_FIELDS:
+            parts = [
+                field.key,
+                field.label,
+                field.primary,
+                field.secondary,
+                field.group,
+                self.tr(field.primary),
+                self.tr(field.secondary),
+            ]
+            if field.description:
+                parts.append(field.description)
+                parts.append(self.tr(field.description))
+            if field.primary == "Shortcuts":
+                # Shortcut titles are shown in English on the Shortcuts page,
+                # so lean on the cheat-sheet description and the group name.
+                short_key = field.key.split(".", 1)[-1]
+                parts.append(_SHORTCUT_SEARCH_ALIASES.get(short_key, ""))
+            haystack = " ".join(part for part in parts if part).casefold()
+            if needle in haystack:
+                matches.append(field)
+        return matches
+
+    def _render_search_results(self, query: str) -> None:
+        """List every setting matching ``query``, grouped by page.
+
+        The rows carry their real editors, so a setting found here can be
+        changed without hunting for the page it lives on.
+        """
+        self._search_active = True
+        self._active_primary = ""
+        self._bindings.clear()
+        self._shortcut_editor_roots = []
+        matches = self._search_matches(query)
+
+        self.header_title.setText(
+            self.tr("搜索结果：%d 项") % len(matches)
+        )
+        self._clear_layout(self.content_body_layout)
+        self._content_height_hint = 0
+        self.content_scroll.setVerticalScrollBarPolicy(
+            QtCore.Qt.ScrollBarPolicy.ScrollBarAsNeeded
+        )
+        self.content_card_layout.setContentsMargins(0, 0, 0, 0)
+        self.content_scroll.setViewportMargins(0, 0, 0, 0)
+        if self._content_area_layout is not None:
+            self._content_area_layout.setContentsMargins(16, 16, 16, 0)
+            self._content_area_layout.setSpacing(0)
+        if self._content_bottom_spacer is not None:
+            self._content_bottom_spacer.setFixedHeight(0)
+        self.content_card.setStyleSheet(
+            f"background: {self._rgb('card_bg')}; border-radius: 12px;"
+        )
+
+        if not matches:
+            empty = QtWidgets.QLabel(
+                self.tr("没有匹配的设置项，换个关键词试试。"),
+                self.content_body,
+            )
+            empty.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+            empty.setStyleSheet(
+                f"color: {self._rgb('desc_text')}; font-size: 12px;"
+            )
+            self.content_body_layout.addStretch(1)
+            self.content_body_layout.addWidget(empty)
+            self.content_body_layout.addStretch(1)
+        else:
+            current_group = None
+            for field in matches:
+                group = (field.primary, field.secondary)
+                if group != current_group:
+                    current_group = group
+                    self.content_body_layout.addWidget(
+                        self._create_search_group_header(field)
+                    )
+                row = (
+                    self._create_shortcut_row(field, self.content_body)
+                    if field.primary == "Shortcuts"
+                    else self._create_form_row(field)
+                )
+                self.content_body_layout.addWidget(row)
+            self.content_body_layout.addStretch(1)
+
+        self._set_bottom_controls_visible(True)
+        self.shortcuts_save_button.setEnabled(bool(self._dirty_primaries))
+        if self._dirty_primaries:
+            self._set_status(
+                self.tr(
+                    "Pending changes exist in other pages. Click Save to persist."
+                ),
+                "info",
+            )
+        else:
+            self._set_status(
+                self.tr("在搜索结果里可以直接修改；点「打开此页」查看它所在的页面。"),
+                "info",
+            )
+        self._content_height_hint = max(
+            340, self.content_body.sizeHint().height()
+        )
+        self._update_card_max_height()
+        self.content_scroll.verticalScrollBar().setValue(0)
+
+    def _create_search_group_header(
+        self, field: SettingField
+    ) -> QtWidgets.QWidget:
+        """Breadcrumb row that jumps to the page a result lives on."""
+        header = QtWidgets.QWidget(self.content_body)
+        header.setFixedHeight(30)
+        layout = QtWidgets.QHBoxLayout(header)
+        layout.setContentsMargins(16, 8, 16, 0)
+        layout.setSpacing(8)
+
+        parts = [
+            self._display_primary_text(field.primary),
+            self.tr(field.secondary),
+        ]
+        breadcrumb = QtWidgets.QLabel(
+            "  ›  ".join(part for part in parts if part), header
+        )
+        breadcrumb.setStyleSheet(
+            f"color: {self._rgb('desc_text')}; font-size: 11px;"
+            "font-weight: 600;"
+        )
+        layout.addWidget(breadcrumb)
+        layout.addStretch(1)
+
+        jump = QtWidgets.QPushButton(self.tr("打开此页"), header)
+        jump.setFixedHeight(22)
+        jump.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
+        jump.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
+        jump.setStyleSheet(f"""
+            QPushButton {{
+                border: 1px solid {self._rgb('line')};
+                border-radius: 6px;
+                padding: 0 8px;
+                color: {self._rgb('title_text')};
+                background: {self._rgb('right_bg')};
+                font-size: 11px;
+            }}
+            QPushButton:hover {{
+                background: {self._rgb('left_hover')};
+            }}
+            """)
+        jump.clicked.connect(
+            lambda _checked=False, primary=field.primary: self._jump_to_primary(
+                primary
+            )
+        )
+        layout.addWidget(jump)
+        return header
+
+    def _jump_to_primary(self, primary: str) -> None:
+        """Leave search and show ``primary`` in the normal page layout."""
+        if primary not in self._nav_items:
+            return
+        self._search_active = False
+        self._clear_search_box()
+        row = self._nav_items.index(primary)
+        if self.nav_list.currentRow() == row:
+            self._on_nav_changed(row)
+        else:
+            self.nav_list.setCurrentRow(row)
+
+    def _exit_search(self) -> None:
+        if not self._search_active:
+            return
+        self._search_active = False
+        row = self.nav_list.currentRow()
+        if not 0 <= row < len(self._nav_items):
+            self.nav_list.setCurrentRow(0)
+            return
+        self._on_nav_changed(row)
+
+    def _clear_search_box(self) -> None:
+        if not self.search_input.text():
+            return
+        blocker = QtCore.QSignalBlocker(self.search_input)
+        self.search_input.clear()
+        del blocker
 
     def _update_card_max_height(self) -> None:
         card_parent = self.content_card.parentWidget()
@@ -1418,59 +1658,65 @@ class SettingsDialog(QtWidgets.QDialog):
         self, fields: list[SettingField], strip_prefix: str | None = None
     ) -> None:
         for index, field in enumerate(fields):
-            row = QtWidgets.QWidget(self.content_body)
-            row.setFixedHeight(45)
-            row_layout = QtWidgets.QHBoxLayout(row)
-            row_layout.setContentsMargins(16, 4, 16, 4)
-            row_layout.setSpacing(12)
-
-            left = QtWidgets.QWidget(row)
-            left_layout = QtWidgets.QVBoxLayout(left)
-            left_layout.setContentsMargins(0, 0, 0, 0)
-            left_layout.setSpacing(0)
-
-            title = QtWidgets.QLabel(
-                self._display_field_title(field, strip_prefix), left
-            )
-            title.setStyleSheet(
-                f"color: {self._rgb('title_text')}; font-size: 13px;"
-            )
-            title.setAlignment(
-                QtCore.Qt.AlignmentFlag.AlignLeft
-                | QtCore.Qt.AlignmentFlag.AlignVCenter
-            )
-            left_layout.addWidget(title)
-
-            if field.description:
-                desc = QtWidgets.QLabel(self.tr(field.description), left)
-                desc.setWordWrap(False)
-                desc.setStyleSheet(
-                    f"color: {self._rgb('desc_text')}; font-size: 10px;"
-                )
-                left_layout.addWidget(desc)
-
-            row_layout.addWidget(left, 1)
-
-            editor_widget, setter, error_setter = self._build_editor_for_field(
-                field
-            )
-
-            row_layout.addWidget(
-                editor_widget,
-                0,
-                QtCore.Qt.AlignmentFlag.AlignRight
-                | QtCore.Qt.AlignmentFlag.AlignVCenter,
-            )
-            self.content_body_layout.addWidget(row)
-            self._bindings[field.key] = EditorBinding(
-                field, setter, error_setter
-            )
-            setter(self._controller.get_value(field.key))
+            self.content_body_layout.addWidget(self._create_form_row(field))
 
             if index < len(fields) - 1:
                 self._add_row_separator()
 
         self.content_body_layout.addStretch(1)
+
+    def _create_form_row(self, field: SettingField) -> QtWidgets.QWidget:
+        """One title/description + editor row, bound to the controller.
+
+        Shared by the page renderer and the search results so a setting looks
+        and behaves the same wherever it is shown.
+        """
+        row = QtWidgets.QWidget(self.content_body)
+        row.setFixedHeight(45)
+        row_layout = QtWidgets.QHBoxLayout(row)
+        row_layout.setContentsMargins(16, 4, 16, 4)
+        row_layout.setSpacing(12)
+
+        left = QtWidgets.QWidget(row)
+        left_layout = QtWidgets.QVBoxLayout(left)
+        left_layout.setContentsMargins(0, 0, 0, 0)
+        left_layout.setSpacing(0)
+
+        title = QtWidgets.QLabel(self._display_field_title(field, None), left)
+        title.setStyleSheet(
+            f"color: {self._rgb('title_text')}; font-size: 13px;"
+        )
+        title.setAlignment(
+            QtCore.Qt.AlignmentFlag.AlignLeft
+            | QtCore.Qt.AlignmentFlag.AlignVCenter
+        )
+        left_layout.addWidget(title)
+
+        if field.description:
+            desc = QtWidgets.QLabel(self.tr(field.description), left)
+            desc.setWordWrap(False)
+            desc.setStyleSheet(
+                f"color: {self._rgb('desc_text')}; font-size: 10px;"
+            )
+            left_layout.addWidget(desc)
+
+        row_layout.addWidget(left, 1)
+
+        editor_widget, setter, error_setter = self._build_editor_for_field(
+            field
+        )
+
+        row_layout.addWidget(
+            editor_widget,
+            0,
+            QtCore.Qt.AlignmentFlag.AlignRight
+            | QtCore.Qt.AlignmentFlag.AlignVCenter,
+        )
+        self._bindings[field.key] = EditorBinding(
+            field, setter, error_setter
+        )
+        setter(self._controller.get_value(field.key))
+        return row
 
     def _render_shortcut_fields(self, fields: list[SettingField]) -> None:
         self._shortcut_fields_by_group = {}
@@ -1624,47 +1870,9 @@ class SettingsDialog(QtWidgets.QDialog):
             return
 
         for index, field in enumerate(visible_fields):
-            hint_text = self._shortcut_usage_hint(field.key)
-            row = QtWidgets.QWidget(self._shortcut_rows_parent)
-            row.setFixedHeight(56 if hint_text else 45)
-            row_layout = QtWidgets.QHBoxLayout(row)
-            row_layout.setContentsMargins(16, 4, 16, 4)
-            row_layout.setSpacing(12)
-
-            left = QtWidgets.QWidget(row)
-            left_layout = QtWidgets.QVBoxLayout(left)
-            left_layout.setContentsMargins(0, 0, 0, 0)
-            left_layout.setSpacing(0)
-
-            title = ElidedLabel(self.tr(field.label), left)
-            title.setStyleSheet(
-                f"color: {self._rgb('title_text')}; font-size: 12px;"
+            self._shortcut_rows_layout.addWidget(
+                self._create_shortcut_row(field, self._shortcut_rows_parent)
             )
-            left_layout.addWidget(title)
-            if hint_text:
-                hint = ElidedLabel(hint_text, left)
-                hint.setStyleSheet(
-                    f"color: {self._rgb('desc_text')}; font-size: 10px;"
-                )
-                left_layout.addWidget(hint)
-            row_layout.addWidget(left, 1)
-
-            editor_widget, setter, error_setter = self._build_shortcut_editor(
-                field
-            )
-            self._register_shortcut_editor(editor_widget)
-            row_layout.addWidget(
-                editor_widget,
-                0,
-                QtCore.Qt.AlignmentFlag.AlignRight
-                | QtCore.Qt.AlignmentFlag.AlignVCenter,
-            )
-
-            self._shortcut_rows_layout.addWidget(row)
-            self._bindings[field.key] = EditorBinding(
-                field, setter, error_setter
-            )
-            setter(self._controller.get_value(field.key))
 
             if index < len(visible_fields) - 1:
                 self._add_row_separator(
@@ -1675,6 +1883,55 @@ class SettingsDialog(QtWidgets.QDialog):
         self._shortcut_rows_layout.addStretch(1)
         if self._shortcut_rows_scroll is not None:
             self._shortcut_rows_scroll.verticalScrollBar().setValue(0)
+
+    def _create_shortcut_row(
+        self, field: SettingField, parent: QtWidgets.QWidget
+    ) -> QtWidgets.QWidget:
+        """One shortcut name/hint + key editor row.
+
+        Shared by the Shortcuts page and the search results.
+        """
+        hint_text = self._shortcut_usage_hint(field.key)
+        row = QtWidgets.QWidget(parent)
+        row.setFixedHeight(56 if hint_text else 45)
+        row_layout = QtWidgets.QHBoxLayout(row)
+        row_layout.setContentsMargins(16, 4, 16, 4)
+        row_layout.setSpacing(12)
+
+        left = QtWidgets.QWidget(row)
+        left_layout = QtWidgets.QVBoxLayout(left)
+        left_layout.setContentsMargins(0, 0, 0, 0)
+        left_layout.setSpacing(0)
+
+        title = ElidedLabel(self.tr(field.label), left)
+        title.setStyleSheet(
+            f"color: {self._rgb('title_text')}; font-size: 12px;"
+        )
+        left_layout.addWidget(title)
+        if hint_text:
+            hint = ElidedLabel(hint_text, left)
+            hint.setStyleSheet(
+                f"color: {self._rgb('desc_text')}; font-size: 10px;"
+            )
+            left_layout.addWidget(hint)
+        row_layout.addWidget(left, 1)
+
+        editor_widget, setter, error_setter = self._build_shortcut_editor(
+            field
+        )
+        self._register_shortcut_editor(editor_widget)
+        row_layout.addWidget(
+            editor_widget,
+            0,
+            QtCore.Qt.AlignmentFlag.AlignRight
+            | QtCore.Qt.AlignmentFlag.AlignVCenter,
+        )
+
+        self._bindings[field.key] = EditorBinding(
+            field, setter, error_setter
+        )
+        setter(self._controller.get_value(field.key))
+        return row
 
     def _register_shortcut_editor(self, editor: QtWidgets.QWidget) -> None:
         self._shortcut_editor_roots.append(editor)

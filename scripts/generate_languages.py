@@ -5,6 +5,64 @@ import shutil
 import subprocess
 from PyQt6 import QtCore
 
+#: Directories that never carry app strings. A bare ``**/*.py`` glob would
+#: also walk the virtualenv and every build artefact, burying the real
+#: strings under tens of thousands of dependency entries.
+SKIP_DIRS = {
+    ".git",
+    ".venv",
+    "venv",
+    "__pycache__",
+    ".pytest_cache",
+    ".ruff_cache",
+    "build",
+    "dist",
+    "node_modules",
+}
+
+#: Roots of the shipped application. Only this tree carries user-facing
+#: strings, so tests and build scripts are left out and the catalog stays
+#: free of assertion text.
+SOURCE_ROOTS = ("anylabeling",)
+
+#: Generated blobs: resources.py is a multi-megabyte byte literal, so there is
+#: nothing to translate and parsing it just slows the extraction down.
+SKIP_FILES = {"resources.py"}
+
+
+def source_files() -> list[str]:
+    """Python sources that can carry user-facing strings.
+
+    Paths are normalized to forward slashes: pylupdate6 rejects backslashed
+    arguments on Windows.
+    """
+    files = []
+    for root in SOURCE_ROOTS:
+        for path in glob.glob(
+            os.path.join(root, "**", "*.py"), recursive=True
+        ):
+            normalized = path.replace("\\", "/")
+            parts = normalized.split("/")
+            if any(part in SKIP_DIRS for part in parts):
+                continue
+            if os.path.basename(normalized) in SKIP_FILES:
+                continue
+            files.append(normalized)
+    return sorted(files)
+
+
+def find_lupdate() -> str:
+    """Return an available Qt string extractor."""
+    candidates = ("pylupdate6", "pyside6-lupdate", "lupdate")
+    for candidate in candidates:
+        executable = shutil.which(candidate)
+        if executable:
+            return executable
+    raise RuntimeError(
+        "No Qt string extractor found. 'pylupdate6' ships with PyQt6, so "
+        "activate the project virtualenv (or add it to PATH) first."
+    )
+
 
 def find_lrelease() -> str:
     """Return an available Qt Linguist release compiler."""
@@ -82,11 +140,17 @@ def existing_catalogs():
 # that does not exist yet, e.g. ``generate_languages.py zh_CN en_US``.
 supported_languages = sys.argv[1:] or existing_catalogs() or ["zh_CN"]
 translations_path = TRANSLATIONS_DIR
+lupdate = find_lupdate()
 lrelease = find_lrelease()
 
 for language in supported_languages:
-    # Scan all .py files in the project directory and its subdirectories
-    py_files = glob.glob(os.path.join("**", "*.py"), recursive=True)
+    # Scan the project's own Python sources (never the virtualenv).
+    py_files = source_files()
+    if not py_files:
+        raise RuntimeError(
+            "No Python sources found to extract strings from."
+        )
+    print(f"Extracting from {len(py_files)} source files")
 
     # Create a QTranslator object to generate the .ts file
     translator = QtCore.QTranslator()
@@ -98,9 +162,19 @@ for language in supported_languages:
         command = f"pyuic6 -x {ui_file} -o {py_file}"
         os.system(command)
 
-    # Extract translations from the .py file
-    command = f"pylupdate6 --no-obsolete {' '.join(py_files)} -ts {translations_path}/{language}.ts"
-    os.system(command)
+    # Extract translations from the .py file. Check the result: a missing
+    # extractor used to print a shell error and then silently recompile the
+    # stale .ts, which is how the catalog drifted out of date unnoticed.
+    command = (
+        f"{lupdate} --no-obsolete {' '.join(py_files)} "
+        f"-ts {translations_path}/{language}.ts"
+    )
+    result = subprocess.run(command, shell=True)
+    if result.returncode != 0:
+        raise RuntimeError(
+            f"String extraction failed (exit {result.returncode}). Is "
+            "'pylupdate6' on PATH? Activate the project virtualenv first."
+        )
 
     # Compile the .ts file into a .qm file
     translation_file = f"{translations_path}/{language}.ts"
