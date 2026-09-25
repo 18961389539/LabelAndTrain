@@ -85,6 +85,9 @@ def collect_run_history(runs_root, task=None):
                     "weights_sha1": _short(weights.get("sha1")),
                     "model": args.get("model") or "",
                     "dataset": _dir_name(dataset.get("label_dir")),
+                    "dataset_label_dir": str(
+                        dataset.get("label_dir") or ""
+                    ),
                 }
             )
 
@@ -128,6 +131,63 @@ def align_with_iterations(rows, history):
         if match:
             row["iteration"] = match
     return rows
+
+
+def project_training_stats(projects, runs_root):
+    """Runs per project for the project list: ``{root: {"runs", "last"}}``.
+
+    A run belongs to the project whose recorded ``label_dir`` (or the image
+    folder itself) is the closest ancestor of the dataset the run was trained
+    on, so nested datasets credit the inner one. Runs whose ``run_meta.json``
+    predates the dataset record cannot be attributed and are skipped -- the
+    project list would rather undercount than guess.
+    """
+    stats = {}
+    anchors = []
+    for entry in projects or []:
+        root = entry.get("root")
+        if not root:
+            continue
+        root_norm = _normalize(root)
+        label_dir_norm = _normalize(entry.get("label_dir"))
+        stats[str(root)] = {"runs": 0, "last": ""}
+        anchors.append((str(root), root_norm, label_dir_norm))
+    if not anchors:
+        return stats
+    for row in collect_run_history(runs_root)["rows"]:
+        dataset_dir = _normalize(row.get("dataset_label_dir"))
+        if not dataset_dir:
+            continue
+        best_key = None
+        best_depth = -1
+        for key, root_norm, label_dir_norm in anchors:
+            if label_dir_norm and _under(dataset_dir, label_dir_norm):
+                depth = len(label_dir_norm) + 1  # label_dir beats root
+            elif _under(dataset_dir, root_norm):
+                depth = len(root_norm)
+            else:
+                continue
+            if depth > best_depth:
+                best_key, best_depth = key, depth
+        if best_key is None:
+            continue
+        stat = stats[best_key]
+        stat["runs"] += 1
+        finished = str(row.get("finished_at") or "")
+        if finished > stat["last"]:
+            stat["last"] = finished
+    return stats
+
+
+def _normalize(path):
+    if not path:
+        return ""
+    return osp.normcase(osp.normpath(str(path)))
+
+
+def _under(path, anchor):
+    """True when ``path`` is ``anchor`` itself or lives inside it."""
+    return path == anchor or path.startswith(anchor + osp.sep)
 
 
 def summarize_history(rows):

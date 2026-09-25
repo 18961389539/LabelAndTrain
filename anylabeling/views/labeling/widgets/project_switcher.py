@@ -1,9 +1,12 @@
-"""Project switcher: pick a recorded dataset and jump to it.
+"""Project manager: pick a recorded dataset and jump to it.
 
 One dialog covers the project actions that have no natural home in the
 settings pages (they act on the open dataset, not on a preference):
 switching, revealing the per-project settings file, resetting that file
-(keeping the pinned split seed), and trimming the registry.
+(keeping the pinned split seed), trimming the registry, and the
+show-at-startup switch. Training counts per project come from the run
+history (``run_meta.json`` files), joined by path prefix -- a project the
+loop never trained shows dashes, which is information too.
 """
 
 import os
@@ -23,15 +26,44 @@ class ProjectSwitcherDialog(QtWidgets.QDialog):
         super().__init__(parent)
         self.widget = parent
         self.setWindowTitle(self.tr("切换项目"))
-        self.resize(520, 380)
+        self.resize(640, 400)
 
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(16, 16, 16, 16)
         layout.setSpacing(10)
 
-        self.list = QtWidgets.QListWidget(self)
-        self.list.itemDoubleClicked.connect(lambda _item: self.open_selected())
+        self.list = QtWidgets.QTreeWidget(self)
+        self.list.setColumnCount(4)
+        self.list.setHeaderLabels(
+            [
+                self.tr("项目"),
+                self.tr("上次打开"),
+                self.tr("训练"),
+                self.tr("最近训练"),
+            ]
+        )
+        self.list.setRootIsDecorated(False)
+        self.list.setAllColumnsShowFocus(True)
+        header = self.list.header()
+        header.setStretchLastSection(False)
+        header.setSectionResizeMode(
+            0, QtWidgets.QHeaderView.ResizeMode.Stretch
+        )
+        for column in (1, 2, 3):
+            header.setSectionResizeMode(
+                column, QtWidgets.QHeaderView.ResizeMode.ResizeToContents
+            )
+        self.list.itemDoubleClicked.connect(
+            lambda _item, _column: self.open_selected()
+        )
         layout.addWidget(self.list, 1)
+
+        self.startup_checkbox = QtWidgets.QCheckBox(
+            self.tr("启动时显示项目管理")
+        )
+        self.startup_checkbox.setChecked(self._startup_pref())
+        self.startup_checkbox.toggled.connect(self._on_startup_toggled)
+        layout.addWidget(self.startup_checkbox)
 
         buttons = QtWidgets.QHBoxLayout()
         open_button = QtWidgets.QPushButton(self.tr("打开"))
@@ -68,35 +100,62 @@ class ProjectSwitcherDialog(QtWidgets.QDialog):
 
     def _selected_root(self):
         item = self.list.currentItem()
-        return item.data(QtCore.Qt.ItemDataRole.UserRole) if item else None
+        return item.data(0, QtCore.Qt.ItemDataRole.UserRole) if item else None
 
     def _reload(self, keep_root=None):
         current = keep_root or self._selected_root() or self._current_root()
         self.list.clear()
         entries = project_registry.recent_projects()
         if not entries:
-            empty = QtWidgets.QListWidgetItem(self.tr("（还没有项目记录）"))
+            empty = QtWidgets.QTreeWidgetItem(
+                [self.tr("（还没有项目记录）"), "", "", ""]
+            )
             empty.setFlags(QtCore.Qt.ItemFlag.NoItemFlags)
-            self.list.addItem(empty)
+            self.list.addTopLevelItem(empty)
             return
+        stats = self._training_stats(entries)
         for entry in entries:
             root = entry["root"]
             name = osp.basename(osp.normpath(root)) or root
-            item = QtWidgets.QListWidgetItem(name)
-            item.setData(QtCore.Qt.ItemDataRole.UserRole, root)
+            stat = stats.get(root) or {}
+            runs = stat.get("runs") or 0
+            item = QtWidgets.QTreeWidgetItem(
+                [
+                    name,
+                    entry.get("last_opened") or "",
+                    str(runs) if runs else "—",
+                    stat.get("last") or "",
+                ]
+            )
+            item.setData(0, QtCore.Qt.ItemDataRole.UserRole, root)
             tooltip = root
             if entry.get("label_dir"):
                 tooltip += f"\n{self.tr('标注目录')}: {entry['label_dir']}"
-            if entry.get("last_opened"):
-                tooltip += (
-                    f"\n{self.tr('上次打开')}: {entry['last_opened']}"
-                )
-            item.setToolTip(tooltip)
-            self.list.addItem(item)
+            item.setToolTip(0, tooltip)
+            self.list.addTopLevelItem(item)
             if root == current:
                 self.list.setCurrentItem(item)
-        if self.list.currentRow() < 0:
-            self.list.setCurrentRow(0)
+        if self.list.currentItem() is None:
+            self.list.setCurrentItem(self.list.topLevelItem(0))
+
+    def _training_stats(self, entries):
+        """``{root: {"runs", "last"}}`` for the listed projects.
+
+        The training modules are imported lazily and any failure degrades
+        to dashes: the project list must never depend on the trainer.
+        """
+        try:
+            from anylabeling.services.auto_training.ultralytics.config import (
+                get_default_project_dir,
+            )
+            from anylabeling.views.training import run_history
+
+            return run_history.project_training_stats(
+                entries, get_default_project_dir()
+            )
+        except Exception as e:  # noqa: BLE001 - dashes beat a broken dialog
+            logger.warning(f"Training stats unavailable: {e}")
+            return {}
 
     # --- actions ----------------------------------------------------------
 
@@ -155,6 +214,26 @@ class ProjectSwitcherDialog(QtWidgets.QDialog):
             return
         if project_registry.forget_project(root):
             self._reload()
+
+    # --- startup switch ---------------------------------------------------
+
+    def _startup_pref(self):
+        """Current show-at-startup choice, defaulting to off."""
+        config = getattr(self.widget, "_config", None) or {}
+        return bool(config.get("startup_show_project_manager", False))
+
+    def _on_startup_toggled(self, checked):
+        """Persist the switch to the app config (rc), best-effort."""
+        config = getattr(self.widget, "_config", None)
+        if not isinstance(config, dict):
+            return
+        config["startup_show_project_manager"] = bool(checked)
+        try:
+            from anylabeling.config import save_config
+
+            save_config(config)
+        except Exception as e:  # noqa: BLE001 - a checkbox never blocks
+            logger.warning(f"Could not save startup preference: {e}")
 
 
 def project_settings_dirname():

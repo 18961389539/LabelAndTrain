@@ -118,3 +118,24 @@ def forget_project(root):
         return True
     registry["projects"] = remaining
     return save_registry(registry)
+
+
+def decide_startup_action(has_session, always_show_manager, has_registry):
+    """What the startup flow should do; one of ``restore``/``manager``/``none``.
+
+    ``restore``  - reopen the last session directly, no questions asked (the
+                   common "keep annotating" path must stay one launch long);
+    ``manager``  - open the project manager dialog so the user picks a dataset;
+    ``none``     - stay on the empty canvas, whose CTA already says to open a
+                   folder (a first run gains nothing from an empty dialog).
+
+    The always-show switch wins over everything: the manager dialog lists the
+    last project preselected, so nothing is hidden behind it.
+    """
+    if always_show_manager:
+        return "manager"
+    if has_session:
+        return "restore"
+    if has_registry:
+        return "manager"
+    return "none"

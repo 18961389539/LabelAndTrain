@@ -576,40 +576,26 @@ def _main():
     win.showMaximized()
     win.raise_()
 
-    # Resume last folder after the window is visible. First-run has no
-    # last directory, so the empty-canvas CTA stays unobstructed.
+    # Resume the last session or hand the choice to the project manager,
+    # after the window is visible. The decision is pure and lives in
+    # project_registry (tested); a first run ends up as "none", so the
+    # empty-canvas CTA stays unobstructed.
     def _offer_session_resume():
         try:
-            widget = win.labeling_widget.view
-            directory = widget.session_resume_path()
-            if not directory:
-                return
-            from PyQt6.QtWidgets import QMessageBox
+            from anylabeling.views.labeling import project_registry
 
-            box = QMessageBox(win)
-            box.setWindowTitle(widget.tr("继续上次标注"))
-            box.setIcon(QMessageBox.Icon.Question)
-            box.setText(
-                widget.tr("检测到上次打开的文件夹：\n%s\n\n是否继续上次标注？")
-                % directory
+            widget = win.labeling_widget.view
+            action = project_registry.decide_startup_action(
+                has_session=bool(widget.session_resume_path()),
+                always_show_manager=bool(
+                    config.get("startup_show_project_manager")
+                ),
+                has_registry=bool(project_registry.recent_projects()),
             )
-            continue_btn = box.addButton(
-                widget.tr("继续上次"), QMessageBox.ButtonRole.YesRole
-            )
-            open_btn = box.addButton(
-                widget.tr("打开别的文件夹"),
-                QMessageBox.ButtonRole.ActionRole,
-            )
-            box.addButton(
-                widget.tr("取消"), QMessageBox.ButtonRole.RejectRole
-            )
-            box.setDefaultButton(continue_btn)
-            box.exec()
-            clicked = box.clickedButton()
-            if clicked == continue_btn:
+            if action == "manager":
+                widget.open_project_switcher()
+            elif action == "restore":
                 widget.continue_last_session()
-            elif clicked == open_btn:
-                widget.open_folder_dialog()
         except Exception as e:  # noqa
             logger.warning(f"Session resume prompt skipped: {e}")
 

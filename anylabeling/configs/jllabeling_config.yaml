@@ -226,6 +226,7 @@ show_scores: true
 show_shapes: true
 show_texts: true
 sort_labels: true
+startup_show_project_manager: false
 store_data: false
 switch_to_checked: false
 system_clipboard: false

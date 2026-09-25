@@ -231,6 +231,7 @@ def test_run_history_rows_carry_the_dataset_name(tmp_path):
 
     data = run_history.collect_run_history(str(tmp_path))
     assert data["rows"][0]["dataset"] == "plates_dataset"
+    assert data["rows"][0]["dataset_label_dir"] == "/data/plates_dataset"
 
     table = run_history.format_history_rows(data["rows"])
     assert table[0][-1] == "数据集"
@@ -247,6 +248,121 @@ def test_run_history_rows_without_label_dir_stay_blank(tmp_path):
 
     data = run_history.collect_run_history(str(tmp_path))
     assert data["rows"][0]["dataset"] == ""
+    assert data["rows"][0]["dataset_label_dir"] == ""
+
+
+# --- per-project training stats -------------------------------------------
+
+
+def _write_run_meta(runs_root, task, name, label_dir, finished_at):
+    run_dir = runs_root / task / name
+    run_dir.mkdir(parents=True)
+    meta = {
+        "task": task,
+        "name": name,
+        "finished_at": finished_at,
+        "dataset": {"label_dir": label_dir},
+    }
+    (run_dir / "run_meta.json").write_text(
+        json.dumps(meta), encoding="utf-8"
+    )
+
+
+def test_project_training_stats_match_by_closest_anchor(tmp_path):
+    from anylabeling.views.training import run_history
+
+    runs = tmp_path / "runs"
+    _write_run_meta(
+        runs, "detect", "exp1", "/data/plates/labels", "2026-09-25 10:00:00"
+    )
+    _write_run_meta(
+        runs, "detect", "exp2", "/data/plates", "2026-09-25 11:00:00"
+    )
+    _write_run_meta(
+        runs, "detect", "exp3", "/elsewhere", "2026-09-25 12:00:00"
+    )
+
+    projects = [
+        {"root": "/data/plates", "label_dir": "/data/plates/labels"},
+        {"root": "/data/other", "label_dir": None},
+    ]
+    stats = run_history.project_training_stats(projects, str(runs))
+
+    # exp1 lands on the inner label_dir anchor, exp2 on the root itself,
+    # exp3 belongs to nobody.
+    assert stats["/data/plates"] == {
+        "runs": 2,
+        "last": "2026-09-25 11:00:00",
+    }
+    assert stats["/data/other"] == {"runs": 0, "last": ""}
+
+
+def test_project_training_stats_respect_prefix_boundaries(tmp_path):
+    from anylabeling.views.training import run_history
+
+    runs = tmp_path / "runs"
+    _write_run_meta(
+        runs,
+        "detect",
+        "exp1",
+        "/data/plates_extra/ds",
+        "2026-09-25 10:00:00",
+    )
+
+    projects = [
+        {"root": "/data/plates", "label_dir": None},
+        {"root": "/data/plates_extra", "label_dir": None},
+    ]
+    stats = run_history.project_training_stats(projects, str(runs))
+
+    # "plates_extra" is a sibling of "plates": a bare startswith would
+    # credit the run to the wrong project.
+    assert stats["/data/plates"] == {"runs": 0, "last": ""}
+    assert stats["/data/plates_extra"] == {
+        "runs": 1,
+        "last": "2026-09-25 10:00:00",
+    }
+
+
+def test_project_training_stats_without_runs_root_is_all_zero(tmp_path):
+    from anylabeling.views.training import run_history
+
+    projects = [{"root": str(tmp_path / "ds"), "label_dir": None}]
+    stats = run_history.project_training_stats(projects, "")
+    assert stats == {str(tmp_path / "ds"): {"runs": 0, "last": ""}}
+
+
+# --- startup flow ---------------------------------------------------------
+
+
+def test_startup_action_matrix():
+    decide = project_registry.decide_startup_action
+    # The always-show switch wins over everything.
+    assert (
+        decide(True, True, True) == "manager"
+        and decide(False, True, False) == "manager"
+    )
+    # A recorded session is restored directly, without asking.
+    assert decide(True, False, True) == "restore"
+    assert decide(True, False, False) == "restore"
+    # No session but the registry has entries: let the user pick.
+    assert decide(False, False, True) == "manager"
+    # First run: the empty-canvas CTA stays unobstructed.
+    assert decide(False, False, False) == "none"
+
+
+def test_startup_show_project_manager_defaults_off():
+    import importlib.resources as pkg_resources
+
+    import yaml
+
+    import anylabeling.configs as anylabeling_configs
+
+    with pkg_resources.open_text(
+        anylabeling_configs, "jllabeling_config.yaml"
+    ) as handle:
+        template = yaml.safe_load(handle)
+    assert template["startup_show_project_manager"] is False
 
 
 # --- training prefs whitelist ---------------------------------------------
