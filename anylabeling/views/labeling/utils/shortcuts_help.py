@@ -13,6 +13,7 @@ SHORTCUT_GROUPS = [
         [
             ("open", "打开图片"),
             ("open_dir", "打开文件夹"),
+            ("open_project", "切换项目"),
             ("open_next", "下一张图片"),
             ("open_prev", "上一张图片"),
             ("open_next_unchecked", "下一张未检查图片"),

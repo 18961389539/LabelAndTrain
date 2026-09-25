@@ -44,6 +44,7 @@ from anylabeling.config import (
     get_work_directory,
 )
 from anylabeling import config as anylabeling_config
+from anylabeling.app_instance import hint_second_instance
 
 # Holds file objects that must stay open for the whole process lifetime.
 _KEEP_OPEN_LOGS = []
@@ -537,6 +538,9 @@ def _main():
     app = QtWidgets.QApplication(sys.argv)
     apply_application_font(config.get("font_family"))
     init_theme(config.get("theme", "light"))
+    # Registers this instance so later ones can detect it; the returned
+    # server is kept alive inside the module (like _KEEP_OPEN_LOGS).
+    hint_second_instance(get_work_directory(), logger)
     _dark_palette = get_dark_palette()
     if _dark_palette is not None:
         app.setStyle("Fusion")

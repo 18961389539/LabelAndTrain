@@ -84,6 +84,7 @@ def collect_run_history(runs_root, task=None):
                     "manifest_sha1": _short(dataset.get("manifest_sha1")),
                     "weights_sha1": _short(weights.get("sha1")),
                     "model": args.get("model") or "",
+                    "dataset": _dir_name(dataset.get("label_dir")),
                 }
             )
 
@@ -96,6 +97,13 @@ def _listdir(path):
         return sorted(os.listdir(path))
     except OSError:
         return []
+
+
+def _dir_name(path):
+    """Basename of a recorded path, empty for None (old run_meta files)."""
+    if not path:
+        return ""
+    return osp.basename(osp.normpath(str(path)))
 
 
 def align_with_iterations(rows, history):
@@ -159,6 +167,7 @@ def format_history_rows(rows):
         "manifest",
         "权重",
         "基座",
+        "数据集",
     ]
     lines = [header]
     for row in rows:
@@ -185,6 +194,7 @@ def format_history_rows(rows):
                 str(row.get("manifest_sha1") or ""),
                 str(row.get("weights_sha1") or ""),
                 str(row.get("model") or ""),
+                str(row.get("dataset") or ""),
             ]
         )
     return lines

@@ -55,6 +55,7 @@ class SettingsRuntimeApplier:
             "shortcuts.close": self._widget.actions.close,
             "shortcuts.open": self._widget.actions.open,
             "shortcuts.open_dir": self._widget.actions.open_dir,
+            "shortcuts.open_project": self._widget.actions.open_project,
             "shortcuts.save": self._widget.actions.save,
             "shortcuts.save_as": self._widget.actions.save_as,
             "shortcuts.save_to": self._widget.actions.change_output_dir,

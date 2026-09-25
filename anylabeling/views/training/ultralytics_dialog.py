@@ -1925,6 +1925,12 @@ class UltralyticsDialog(QDialog):
         dataset_dir = (
             os.path.dirname(manifest.get("data_yaml") or "") or None
         )
+        from anylabeling.views.labeling.project import label_dir_for_dataset
+
+        label_dir = label_dir_for_dataset(
+            getattr(self, "output_dir", None),
+            getattr(self, "image_list", None),
+        )
         manifest_path = (
             os.path.join(dataset_dir, "manifest.json") if dataset_dir else None
         )
@@ -1951,6 +1957,7 @@ class UltralyticsDialog(QDialog):
             "train_args": dict(getattr(self, "_last_train_args", None) or {}),
             "dataset": {
                 "dir": dataset_dir,
+                "label_dir": label_dir,
                 "manifest": manifest_path,
                 "manifest_sha1": file_sha1(manifest_path)
                 if manifest_path

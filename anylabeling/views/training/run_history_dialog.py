@@ -19,7 +19,7 @@ from anylabeling.views.training.run_history import (
     summarize_history,
 )
 
-COLUMNS = 14
+COLUMNS = 15
 
 
 class RunHistoryDialog(QtWidgets.QDialog):

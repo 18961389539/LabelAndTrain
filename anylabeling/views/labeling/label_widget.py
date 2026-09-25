@@ -45,6 +45,7 @@ from ...app_info import (
     __preferred_device__,
 )
 from . import utils
+from . import project_settings
 from .utils.async_label_check import (
     _label_file_review_state,
     label_file_review_info,
@@ -5429,6 +5430,9 @@ class LabelingWidget(LabelDialog):
         if self.last_open_dir:
             self.settings.setValue("last_open_dir", self.last_open_dir)
 
+        # Persist the open project's label panel one last time.
+        project_settings.flush_open_project(self)
+
         if hasattr(self, "navigator_dialog"):
             navigator_visible = self.navigator_dialog.isVisible()
             self.settings.setValue("navigator/visible", navigator_visible)
@@ -5489,6 +5493,14 @@ class LabelingWidget(LabelDialog):
         if not dirpath:
             return
         self.import_image_folder(dirpath)
+
+    def open_project_switcher(self):
+        """Open the project switcher (recent datasets + project actions)."""
+        from anylabeling.views.labeling.widgets.project_switcher import (
+            ProjectSwitcherDialog,
+        )
+
+        ProjectSwitcherDialog(self).exec()
 
     def _paging_blocked_by_drawing(self):
         """Block prev/next paging while a shape is being drawn so the
@@ -5791,6 +5803,9 @@ class LabelingWidget(LabelDialog):
             return
 
         self.output_dir = output_dir
+        # Remember the override on this project, so reopening the dataset
+        # restores it (best effort: needs a dataset folder to anchor on).
+        project_settings.record_output_dir_change(self, output_dir)
 
         self.statusBar().showMessage(
             self.tr("%s . Annotations will be saved/loaded in %s")
@@ -6284,6 +6299,12 @@ class LabelingWidget(LabelDialog):
 
         self.last_open_dir = dirpath
         self._record_recent_dir(dirpath)
+        # Per-project settings: flush the previous dataset's state, then
+        # restore this one's output dir before the scan below routes label
+        # files (an explicit output_dir always wins over the stored one).
+        project_settings.begin_project_switch(
+            self, project_settings.dataset_dir_for(filename=dirpath)
+        )
         self.filename = None
         self.file_list_widget.clear()
         # Rows are renumbered below, so the old folder's entries must go too:
@@ -6354,6 +6375,11 @@ class LabelingWidget(LabelDialog):
         self._refresh_file_panel()
         if pattern is None and image_files:
             self._load_classes_from_folder(dirpath)
+            # classes.txt keeps precedence; the project record only fills
+            # the panel for folders whose labels were built interactively.
+            project_settings.end_project_switch(
+                self, project_settings.dataset_dir_for(filename=dirpath)
+            )
             self._maybe_prompt_missing_labels()
             self._maybe_show_smart_tools_guide(dirpath)
 
@@ -6959,6 +6985,13 @@ def _build_actions(widget):
         shortcuts["open_dir"],
         "open",
         widget.tr("Open Dir"),
+    )
+    open_project = action(
+        widget.tr("Switch Project"),
+        widget.open_project_switcher,
+        shortcuts["open_project"],
+        "open",
+        widget.tr("Switch between recently opened projects"),
     )
     open_next_image = action(
         widget.tr("Next Image"),
@@ -7999,6 +8032,7 @@ def _build_actions(widget):
         save_as=save_as,
         open=open_,
         open_dir=opendir,
+        open_project=open_project,
         close=close,
         delete_file=delete_file,
         delete_image_file=delete_image_file,
@@ -8254,6 +8288,7 @@ def _build_actions(widget):
             opendir,
             widget.menus.recent_dirs,
             widget.menus.recent_files,
+            open_project,
             save,
             save_as,
             save_auto,

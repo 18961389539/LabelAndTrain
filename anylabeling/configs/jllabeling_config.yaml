@@ -186,6 +186,7 @@ shortcuts:
   open_next_unchecked: Ctrl+Shift+D
   open_prev: A
   open_prev_unchecked: Ctrl+Shift+A
+  open_project: Ctrl+Shift+O
   open_settings: Ctrl+0
   paste_polygon: Ctrl+V
   quit: Ctrl+Q

@@ -44,11 +44,13 @@ class TestSettingsSchema(unittest.TestCase):
         # +mark_checked_and_next, +show_shortcuts_help: both used to be
         # hard-coded literals on the QAction, so nothing could rebind them.
         # +mark_rejected_and_next: the "send back for rework" quick action.
+        # +open_project: the project switcher (Ctrl+Shift+O).
         # -show_linking, -toggle_compare_view: no action ever bound them
         # (KIE linking is off in this YOLO-only fork and the compare view was
         # never implemented), so they were dropped instead of advertised.
-        self.assertEqual(len(shortcut_fields), 73)
+        self.assertEqual(len(shortcut_fields), 74)
         keys = {field.key for field in shortcut_fields}
+        self.assertIn("shortcuts.open_project", keys)
         self.assertIn("shortcuts.mark_checked_and_next", keys)
         self.assertIn("shortcuts.mark_rejected_and_next", keys)
         self.assertIn("shortcuts.show_shortcuts_help", keys)
