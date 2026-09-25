@@ -80,7 +80,9 @@ class TestLabelWidgetAttributes(unittest.TestCase):
             shape.attributes, {"vehicle_id": "", "occluded_by": []}
         )
 
-    @patch("anylabeling.views.labeling.label_widget.LabelFile")
+    @patch(
+        "anylabeling.views.labeling.widgets.attributes_controller.LabelFile"
+    )
     def test_save_attributes_uses_standard_shape_serialization(
         self, label_file_class
     ):

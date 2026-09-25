@@ -506,3 +506,9 @@ def on_thumbnail_click(widget):
             dialog.exec()
 
     return _on_click
+
+
+def measure_text_width(font_metrics, text):
+    if hasattr(font_metrics, "horizontalAdvance"):
+        return font_metrics.horizontalAdvance(text)
+    return font_metrics.width(text)
