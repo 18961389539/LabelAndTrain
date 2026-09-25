@@ -10,7 +10,7 @@ silently. This is a hint, not a lock: nothing is blocked.
 
 import hashlib
 
-from PyQt6 import QtCore
+from PyQt6.QtNetwork import QLocalServer, QLocalSocket
 
 # QLocalServer objects must outlive this call, or the name vanishes and the
 # next instance reads "first". Held like app.py's _KEEP_OPEN_LOGS.
@@ -30,10 +30,10 @@ def hint_second_instance(work_dir, logger):
     """
     name = _server_name(work_dir)
     try:
-        probe = QtCore.QLocalSocket()
+        probe = QLocalSocket()
         probe.connectToServer(name)
         already_running = probe.waitForConnected(150)
-        probe.abortConnection()
+        probe.disconnectFromServer()
 
         if already_running:
             logger.warning(
@@ -45,8 +45,8 @@ def hint_second_instance(work_dir, logger):
 
         # Leave a server behind so later instances can detect this one.
         # Remove a stale server first: after a crash the name may linger.
-        QtCore.QLocalServer.removeServer(name)
-        server = QtCore.QLocalServer()
+        QLocalServer.removeServer(name)
+        server = QLocalServer()
         server.listen(name)
         _KEEP_SERVERS.append(server)
         return server
