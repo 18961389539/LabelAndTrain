@@ -2,6 +2,10 @@
 
 import json
 import os
+import os.path as osp
+from types import SimpleNamespace
+
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pytest
 
@@ -243,3 +247,79 @@ def test_run_history_rows_without_label_dir_stay_blank(tmp_path):
 
     data = run_history.collect_run_history(str(tmp_path))
     assert data["rows"][0]["dataset"] == ""
+
+
+# --- training prefs whitelist ---------------------------------------------
+
+
+def _train_dialog_stub(dataset_dir):
+    from anylabeling.views.training.ultralytics_dialog import UltralyticsDialog
+
+    stub = SimpleNamespace(image_list=[osp.join(dataset_dir, "a.jpg")])
+    stub.save_prefs = UltralyticsDialog._save_project_train_prefs.__get__(stub)
+    stub.load_prefs = UltralyticsDialog._project_train_prefs.__get__(stub)
+    return stub
+
+
+def test_train_prefs_whitelist_round_trip(tmp_path):
+    stub = _train_dialog_stub(str(tmp_path))
+    config = {
+        "basic": {
+            "project": "/runs",
+            "name": "exp",
+            "model": "yolo11n.pt",
+            "data": "C:/temp/dataset.yaml",
+            "device": "0",
+            "dataset_ratio": 0.8,
+            "pose_config": "",
+        },
+        "train": {
+            "epochs": 100,
+            "batch": 16,
+            "imgsz": 640,
+            "workers": 8,
+            "single_cls": False,
+            "classes": [],
+        },
+        "learning_rate": {"lr0": 0.01, "lrf": 0.01},
+        "regularization": {"dropout": 0.0},
+    }
+
+    assert stub.save_prefs(config) is True
+
+    data = project.load_project(str(tmp_path))
+    prefs = data["train_prefs"]
+    # Global/run-specific/machine-specific keys never travel with the dataset.
+    assert prefs["basic"] == {"model": "yolo11n.pt", "pose_config": ""}
+    assert "project" not in prefs["basic"]
+    assert "data" not in prefs["basic"]
+    assert "device" not in prefs["basic"]
+    assert "dataset_ratio" not in prefs["basic"]
+    assert prefs["train"]["workers"] == 8
+    assert prefs["learning_rate"] == {"lr0": 0.01, "lrf": 0.01}
+    assert stub.load_prefs()["train"]["epochs"] == 100
+
+    # Re-saving with changed values overwrites, not merges stale keys.
+    config["train"]["epochs"] = 200
+    config.pop("learning_rate")
+    assert stub.save_prefs(config) is True
+    prefs = stub.load_prefs()
+    assert prefs["train"]["epochs"] == 200
+    assert "learning_rate" not in prefs
+
+
+def test_train_prefs_without_a_dataset_dir_is_a_no_op():
+    from anylabeling.views.training.ultralytics_dialog import UltralyticsDialog
+
+    stub = SimpleNamespace(image_list=[])
+    assert UltralyticsDialog._project_train_prefs.__get__(stub)() == {}
+    config = {"basic": {"model": "x.pt"}}
+    assert UltralyticsDialog._save_project_train_prefs.__get__(stub)(
+        config
+    ) is False
+
+
+def test_train_prefs_damaged_record_falls_back_to_empty(tmp_path):
+    project.save_project(str(tmp_path), {"train_prefs": "not a dict"})
+    stub = _train_dialog_stub(str(tmp_path))
+    assert stub.load_prefs() == {}

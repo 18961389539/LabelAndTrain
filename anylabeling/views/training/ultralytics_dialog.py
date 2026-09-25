@@ -68,6 +68,24 @@ from anylabeling.services.auto_training.ultralytics.validators import (
     validate_task_requirements,
 )
 
+#: What ``train_prefs`` may mirror into the dataset's ``.jllabel/project.json``.
+#: Deliberately excluded: ``basic.project`` (global runs root), ``basic.name``
+#: (run name), ``basic.data`` (temp dataset yaml rebuilt per run),
+#: ``basic.device`` and ``train.workers`` (machine-specific) and
+#: ``basic.dataset_ratio`` (data-tab split choice, not tuning). Everything
+#: else is the tuning a user actually iterates on per dataset.
+TRAIN_PREFS_BASIC_KEYS = ("model", "pose_config")
+TRAIN_PREFS_SECTIONS = (
+    "train",
+    "strategy",
+    "learning_rate",
+    "warmup",
+    "augment",
+    "regularization",
+    "loss_weights",
+    "checkpoint",
+)
+
 
 class UltralyticsDialog(QDialog):
     # Emitted from the background dataset-preparation thread when the YOLO
@@ -1654,6 +1672,10 @@ class UltralyticsDialog(QDialog):
             self.training_status = "idle"
 
         save_config(config)
+        # The run is committed: remember its tuning for this dataset so the
+        # next session on the same images restores it instead of inheriting
+        # whatever the previous dataset used.
+        self._save_project_train_prefs(config)
         self.go_to_specific_tab(2)
 
     def init_config_buttons(self, parent_layout):
@@ -1681,6 +1703,42 @@ class UltralyticsDialog(QDialog):
     def load_default_config(self):
         config = load_config()
         self.load_config_to_ui(config)
+        # Per-project tuning on top of the global defaults: reopening a
+        # dataset restores the hyperparameters it was last trained with
+        # (missing sections/keys simply keep the global value).
+        prefs = self._project_train_prefs()
+        if prefs:
+            self.load_config_to_ui(prefs)
+
+    def _project_train_prefs(self):
+        """``train_prefs`` recorded for the open dataset, ``{}`` when none."""
+        from anylabeling.views.labeling import project_settings
+
+        dataset_dir = project_settings.dataset_dir_for(
+            image_list=getattr(self, "image_list", None)
+        )
+        if not dataset_dir:
+            return {}
+        prefs = project_settings.get_value(dataset_dir, "train_prefs")
+        return prefs if isinstance(prefs, dict) else {}
+
+    def _save_project_train_prefs(self, config):
+        """Mirror the whitelisted tuning onto the open dataset's record."""
+        from anylabeling.views.labeling import project_settings
+
+        dataset_dir = project_settings.dataset_dir_for(
+            image_list=getattr(self, "image_list", None)
+        )
+        if not dataset_dir:
+            return False
+        basic = config.get("basic") or {}
+        prefs = {
+            "basic": {key: basic.get(key) for key in TRAIN_PREFS_BASIC_KEYS}
+        }
+        for section in TRAIN_PREFS_SECTIONS:
+            if section in config:
+                prefs[section] = dict(config[section])
+        return project_settings.update_values(dataset_dir, train_prefs=prefs)
 
     def init_config_tab(self):
         layout = QVBoxLayout(self.config_tab)
@@ -2468,6 +2526,9 @@ class UltralyticsDialog(QDialog):
                 self.tr("Dataset is still being prepared...")
             )
             return
+
+        # The run is committed: remember its tuning for this dataset.
+        self._save_project_train_prefs(config)
 
         # If the dataset already exists (classification on a folder),
         # take the fast path without any background preparation.
