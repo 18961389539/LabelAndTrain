@@ -16,7 +16,7 @@ Written by Wei Wang (CVHub)
         ```bash
         yolo export model=/path/to/yolov10n/s/m/b/l/x.pt format=onnx opset=13 simplify
         ```
-        7. Modified the paramters and run this script
+        7. Modified the parameters and run this script
         ```bash
         python ${export_yolov10_onnx.py}
         ```

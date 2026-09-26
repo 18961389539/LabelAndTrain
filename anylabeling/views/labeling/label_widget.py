@@ -94,17 +94,6 @@ from .utils.yolo_detect import (
     rename_label_across_folder,
     write_yolo_detect_sidecar,
 )
-from .utils.active_learning import (
-    load_thresholds,
-    needs_review,
-    shape_uncertainty,
-    thresholds_for,
-)
-from .utils.quality import (
-    format_save_quality_status,
-    inspect_shape_quality,
-    shapes_have_low_confidence,
-)
 from .utils.smart_tools import (
     run_backup_restore,
     run_duplicate_archive,
@@ -125,8 +114,11 @@ from .utils.recent_dirs import push_recent_dir
 from .settings import SettingsController, SettingsDialog
 from .settings.runtime_applier import SettingsRuntimeApplier
 from .shortcuts.digit_controller import DigitShortcutController
+from .widgets.mode_controller import ModeController
 from .filelist import items as filelist_items
 from .filelist.controller import FileReviewController
+from .filelist.propagate import LabelPropagateController
+from .filelist.quality import FileQualityController
 # Re-exported: the rest of the widget and the async checkers read the
 # row roles and label-JSON field names from this module's namespace.
 from .filelist.roles import (  # noqa: F401
@@ -366,6 +358,9 @@ class LabelingWidget(LabelDialog):
         self._settings_controller = None
         self._settings_dialog = None
         self._settings_runtime_applier = SettingsRuntimeApplier(self)
+        self.file_quality_controller = FileQualityController(self)
+        self.label_propagate_controller = LabelPropagateController(self)
+        self._mode_controller = ModeController(self)
         self._auto_switch_signal_connected = False
 
         # set default shape colors
@@ -1862,7 +1857,7 @@ class LabelingWidget(LabelDialog):
             ys.append(point.y())
 
         # Set minimum label width to 30px this should handle point
-        # lables and very tiny labels gracefully
+        # labels and very tiny labels gracefully
         label_width = max(int(max(xs) - min(xs)), 30)
         x = (max(xs) + min(xs)) / 2
         y = (max(ys) + min(ys)) / 2
@@ -1933,16 +1928,8 @@ class LabelingWidget(LabelDialog):
 
     # General
     def toggle_drawing_sensitive(self, drawing=True):
-        """Toggle drawing sensitive.
-
-        In the middle of drawing, toggling between modes should be disabled.
-        """
-        self.actions.edit_mode.setEnabled(not drawing)
-        self.actions.undo_last_point.setEnabled(drawing)
-        self.actions.undo.setEnabled(not drawing)
-        self.actions.delete.setEnabled(not drawing)
-        self.actions.union_selection.setEnabled(not drawing)
-        self.update_labeling_instruction()
+        """Delegates to widgets.mode_controller."""
+        self._mode_controller.toggle_drawing_sensitive(drawing)
 
     def create_digit_mode(self, digit_num):
         """Delegates to shortcuts.digit_controller (digit 0-9 actions)."""
@@ -1955,121 +1942,37 @@ class LabelingWidget(LabelDialog):
         disable_auto_labeling=True,
         preserve_brush_mode=False,
     ):
-        if not preserve_brush_mode:
-            if getattr(self.canvas, "is_brush_mode", False):
-                self.canvas.cancel_brush_mode()
-            elif self.actions.edit_brush_mode.isChecked():
-                self.actions.edit_brush_mode.setChecked(False)
-        # Disable auto labeling if needed
-        if (
-            disable_auto_labeling
-            and self.auto_labeling_widget.auto_labeling_mode
-            != AutoLabelingMode.NONE
-        ):
-            self.clear_auto_labeling_marks()
-            self.auto_labeling_widget.set_auto_labeling_mode(None)
-
-        self.canvas.set_editing(edit)
-        self.canvas.create_mode = create_mode
-        self.canvas._brush_drawing = False
-        if edit:
-            self._enable_create_mode_actions()
-        else:
-            self.hide_attributes_panel()
-            self.actions.union_selection.setEnabled(False)
-            create_actions = self._create_mode_actions()
-            if create_mode not in create_actions:
-                raise ValueError(f"Unsupported create_mode: {create_mode}")
-            self._enable_create_mode_actions()
-            create_actions[create_mode].setEnabled(False)
-        self.actions.edit_mode.setEnabled(not edit)
-        self.update_labeling_instruction()
+        """Delegates to widgets.mode_controller (canvas & tests call this)."""
+        self._mode_controller.toggle_draw_mode(
+            edit=edit,
+            create_mode=create_mode,
+            disable_auto_labeling=disable_auto_labeling,
+            preserve_brush_mode=preserve_brush_mode,
+        )
 
     def _create_mode_actions(self):
-        """Map each canvas draw mode to the action that selects it.
-
-        Kept in sync with ``Shape.get_supported_shape()``; a mode missing here
-        raises in ``toggle_draw_mode`` instead of silently doing nothing.
-        """
-        actions = self.actions
-        return {
-            "polygon": actions.create_mode,
-            "rectangle": actions.create_rectangle_mode,
-            "point": actions.create_point_mode,
-            "cuboid": actions.create_cuboid_mode,
-            "rotation": actions.create_rotation_mode,
-            "quadrilateral": actions.create_quadrilateral_mode,
-            "circle": actions.create_circle_mode,
-            "line": actions.create_line_mode,
-            "linestrip": actions.create_linestrip_mode,
-        }
+        """Delegates to widgets.mode_controller."""
+        return self._mode_controller.create_mode_actions()
 
     def _enable_create_mode_actions(self):
-        """Re-arm every drawing mode when leaving or entering one."""
-        for mode_action in self._create_mode_actions().values():
-            mode_action.setEnabled(True)
-        self.actions.create_brush_polygon_mode.setEnabled(True)
-        for digit_action in self.actions.digit_shortcut_actions:
-            digit_action.setEnabled(True)
+        """Delegates to widgets.mode_controller."""
+        self._mode_controller.enable_create_mode_actions()
 
     def toggle_brush_polygon_mode(self):
-        """Toggle brush drawing mode for polygons."""
-        if (
-            self.canvas.drawing()
-            and self.canvas.create_mode == "polygon"
-            and self.canvas._brush_drawing
-        ):
-            self.toggle_draw_mode(True)
-            return
-        self.toggle_draw_mode(False, create_mode="polygon")
-        self.canvas._brush_drawing = True
-        self.actions.create_mode.setEnabled(True)
-        self.actions.create_brush_polygon_mode.setEnabled(False)
+        """Delegates to widgets.mode_controller."""
+        self._mode_controller.toggle_brush_polygon_mode()
 
     def set_edit_mode(self):
-        # Disable auto labeling
-        self.clear_auto_labeling_marks()
-        self.auto_labeling_widget.set_auto_labeling_mode(None)
-
-        self.toggle_draw_mode(True)
-        self.update_labeling_instruction()
+        """Delegates to widgets.mode_controller."""
+        self._mode_controller.set_edit_mode()
 
     def toggle_brush_mode(self, checked: bool) -> None:
-        """Enable or disable brush editing for a polygon.
-
-        Enabling requires exactly one selected polygon and switches the
-        canvas to edit mode before brush editing starts.
-
-        Args:
-            checked: ``True`` when the toolbar toggle is switched on.
-        """
-        if checked:
-            selected_shapes = self.canvas.selected_shapes
-            if (
-                len(selected_shapes) != 1
-                or selected_shapes[0].shape_type != "polygon"
-                or selected_shapes[0].locked
-            ):
-                self.actions.edit_brush_mode.setChecked(False)
-                return
-            if self.canvas.current is not None:
-                self.canvas.current = None
-                self.canvas.set_hiding(False)
-                self.canvas.drawing_polygon.emit(False)
-                self.canvas.update()
-            self.toggle_draw_mode(True, preserve_brush_mode=True)
-            self.canvas.set_brush_mode(True)
-            self.update_labeling_instruction()
-            return
-
-        if getattr(self.canvas, "is_brush_mode", False):
-            self.canvas.set_brush_mode(False)
-        self.update_labeling_instruction()
+        """Delegates to widgets.mode_controller (toolbar toggle)."""
+        self._mode_controller.toggle_brush_mode(checked)
 
     def on_brush_mode_changed(self, enabled: bool) -> None:
-        """Synchronize brush action and lock the active shape selection."""
-        self.actions.edit_brush_mode.setChecked(enabled)
-        self.label_list.setEnabled(not enabled)
+        """Delegates to widgets.mode_controller (canvas signal)."""
+        self._mode_controller.on_brush_mode_changed(enabled)
 
     def update_file_menu(self):
         current = self.filename
@@ -2539,206 +2442,46 @@ class LabelingWidget(LabelDialog):
         filelist_items.set_file_item_low_conf(self, item, has_low_conf)
 
     def _active_label_dir(self):
-        directory = self.output_dir or None
-        if not directory and self.filename:
-            directory = osp.dirname(self.filename)
-        return directory
+        """Delegates to filelist.quality (training launcher reads this)."""
+        return self.file_quality_controller.active_label_dir()
 
     def _prev_labeled_image(self):
-        """Walk back from the current image; first labelled one wins.
-
-        Returns ``(image_path, label_file, (w, h))`` or ``None``.
-        """
-        paths = self.image_list
-        if not paths:
-            return None
-        start = self.file_list_widget.currentRow()
-        if start < 0:
-            return None
-        for index in range(start - 1, -1, -1):
-            image_path = paths[index]
-            label_file = self._label_path_for_image(image_path)
-            if not osp.exists(label_file):
-                continue
-            try:
-                with open(label_file, "r", encoding="utf-8") as f:
-                    data = json.load(f)
-                if isinstance(data, dict) and data.get("shapes"):
-                    probe = QtGui.QImage(image_path)
-                    img_size = (
-                        (probe.width(), probe.height())
-                        if not probe.isNull()
-                        else None
-                    )
-                    return image_path, label_file, img_size
-            except (OSError, ValueError):
-                continue
-        return None
+        """Delegates to filelist.propagate."""
+        return self.label_propagate_controller.prev_labeled_image()
 
     def _propagate_previous_labels(self):
-        """Copy annotations from the previous image, scaled to this one."""
-        from anylabeling.views.labeling.utils.shape_propagate import (
-            propagate_labels,
-        )
-
-        if not self.filename:
-            self.status(self.tr("请先打开一张图片再使用标注传播。"), 3000)
-            return
-        image = getattr(self, "image", None)
-        if image is None or image.isNull():
-            image = QtGui.QImage(self.filename)
-        dst_w, dst_h = image.width(), image.height()
-        if dst_w <= 0 or dst_h <= 0:
-            self.status(self.tr("无法读取当前图片尺寸。"), 3000)
-            return
-
-        prev = self._prev_labeled_image()
-        if prev is None:
-            self.status(self.tr("当前图片之前没有可复制的标注。"), 3000)
-            return
-        _prev_path, prev_file, prev_size = prev
-
-        existing = []
-        for shape in self.canvas.shapes:
-            existing.append(
-                {
-                    "label": shape.label,
-                    "shape_type": getattr(shape, "shape_type", "rectangle"),
-                    "points": [[p.x(), p.y()] for p in shape.points],
-                }
-            )
-
-        planned = propagate_labels(
-            prev_file, prev_size, dst_w, dst_h, existing_shapes=existing
-        )
-        if not planned:
-            self.status(self.tr("没有需要复制的新标注（已存在或来源为空）。"), 3000)
-            return
-
-        new_shapes = []
-        for payload in planned:
-            shape = Shape(
-                label=payload.get("label") or "",
-                shape_type=payload.get("shape_type") or "rectangle",
-            )
-            for point in payload.get("points") or []:
-                shape.add_point(QtCore.QPointF(float(point[0]), float(point[1])))
-            if (
-                len(shape.points) > 1
-                and shape.shape_type not in ("point", "linestrip")
-            ):
-                shape.close()
-            new_shapes.append(shape)
-
-        self.load_shapes(
-            list(self.canvas.shapes) + new_shapes, replace=True
-        )
-        self.set_dirty()
-        self.status(
-            self.tr("已从上一张图复制 %1 个标注。").replace(
-                "%1", str(len(new_shapes))
-            ),
-            4000,
-        )
+        """Delegates to filelist.propagate."""
+        self.label_propagate_controller.propagate_previous_labels()
 
     def _load_active_thresholds(self):
-        """Per-class accept/review thresholds for the open folder (cached)."""
-        directory = self._active_label_dir()
-        if not directory:
-            return {}
-        if getattr(self, "_al_threshold_dir", None) == directory and getattr(
-            self, "_al_thresholds", None
-        ) is not None:
-            return self._al_thresholds
-        self._al_threshold_dir = directory
-        self._al_thresholds = load_thresholds(directory)
-        return self._al_thresholds
+        """Delegates to filelist.quality."""
+        return self.file_quality_controller.load_active_thresholds()
 
     def invalidate_active_thresholds(self):
-        """Drop the cached thresholds (called after a calibration run)."""
-        self._al_threshold_dir = None
-        self._al_thresholds = None
+        """Delegates to filelist.quality (called after a calibration run)."""
+        self.file_quality_controller.invalidate_active_thresholds()
 
     def _shapes_need_review(self, shapes):
-        thresholds = self._load_active_thresholds()
-        if thresholds:
-            return needs_review(shapes, thresholds=thresholds)
-        # No calibration yet: keep the historical fixed band.
-        return shapes_have_low_confidence(shapes)
+        """Delegates to filelist.quality."""
+        return self.file_quality_controller.shapes_need_review(shapes)
 
     def _file_item_has_low_conf(self, item):
-        cached = item.data(FILE_LOW_CONF_ROLE)
-        if cached is not None:
-            return bool(cached)
-        has_low_conf = False
-        label_file = self._label_path_for_image(item.text())
-        if QtCore.QFile.exists(label_file):
-            try:
-                with open(label_file, "r", encoding="utf-8") as handle:
-                    data = json.load(handle)
-                has_low_conf = self._shapes_need_review(
-                    data.get("shapes") if isinstance(data, dict) else None
-                )
-            except Exception:  # noqa: BLE001
-                has_low_conf = False
-        self._set_file_item_low_conf(item, has_low_conf)
-        return has_low_conf
+        """Delegates to filelist.quality (low_conf filter reads this)."""
+        return self.file_quality_controller.file_item_has_low_conf(item)
 
     def _note_save_quality(self, shapes, file_item=None):
-        image = getattr(self, "image", None)
-        image_width = image.width() if image is not None else 0
-        image_height = image.height() if image is not None else 0
-        stats = inspect_shape_quality(shapes, image_width, image_height)
-        self._last_quality_status = format_save_quality_status(stats)
-        if file_item is not None:
-            self._set_file_item_low_conf(
-                file_item, self._shapes_need_review(shapes)
-            )
-            combo = getattr(self, "file_filter_combo", None)
-            if combo is not None and combo.currentData() == "low_conf":
-                file_item.setHidden(not bool(file_item.data(FILE_LOW_CONF_ROLE)))
-        return self._last_quality_status
+        """Delegates to filelist.quality (save path + attribute panel call)."""
+        return self.file_quality_controller.note_save_quality(shapes, file_item)
 
     def _maybe_focus_low_confidence_shapes(self):
-        combo = getattr(self, "file_filter_combo", None)
-        if combo is None or combo.currentData() != "low_conf":
-            return
-        thresholds = self._load_active_thresholds()
-        selected = []
-        for shape in self.canvas.shapes:
-            accept, review = thresholds_for(
-                getattr(shape, "label", "") or "", thresholds
-            )
-            if shape_uncertainty(shape, accept, review) > 0:
-                selected.append(shape)
-        if selected:
-            self.canvas.select_shapes(selected)
+        """Delegates to filelist.quality (called after a file load)."""
+        self.file_quality_controller.maybe_focus_low_confidence_shapes()
 
     def mark_file_item_negative_state(self, image_file, negative):
-        """Public helper used by batch auto-label to flag a saved image as a
-        negative sample (confirmed empty annotation, zero shapes).
-
-        Mirrors what happens on the single-image save path so batch runs and
-        manual saves stay consistent: negative samples show an amber badge in
-        the file list and export as empty .txt for YOLO training.
-        """
-        try:
-            target = osp.normpath(osp.abspath(image_file))
-            items = self.file_list_widget.findItems(
-                target, Qt.MatchFlag.MatchExactly
-            )
-            if not items:
-                for row in range(self.file_list_widget.count()):
-                    candidate = self.file_list_widget.item(row)
-                    if osp.normpath(osp.abspath(candidate.text())) == target:
-                        items = [candidate]
-                        break
-            if len(items) == 1:
-                self._set_file_item_annotated(
-                    items[0], True, negative=bool(negative)
-                )
-        except Exception:  # noqa: BLE001
-            pass
+        """Delegates to filelist.quality (batch auto-label flags negatives)."""
+        self.file_quality_controller.mark_file_item_negative_state(
+            image_file, negative
+        )
 
     def _create_file_list_item(self, file, label_file, read_checked=True):
         item = QtWidgets.QListWidgetItem(file)

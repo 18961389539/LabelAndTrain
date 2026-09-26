@@ -1,5 +1,10 @@
 # PaddleOCR 文档解析与智能文字识别
 
+> **归档页面：上游功能。** 本构建为 YOLO-only，不包含该面板。此页面描述的是上游
+> X-AnyLabeling，而非 JLLabelingAndTrain。参见 [README](../../README_zh-CN.md)
+> 的「Fork 范围」一节。
+
+
 ## 简介
 
 [PaddleOCR](https://aistudio.baidu.com/paddleocr) 是百度飞桨生态中的 OCR 与文档智能工具，覆盖通用文字识别、文档版面分析、表格解析、公式识别等能力，适用于扫描件、拍照文档、多页 PDF、技术文档等常见资料处理场景。

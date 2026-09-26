@@ -1,5 +1,10 @@
 # Overview
 
+> **Archived: an upstream feature.** This build is YOLO-only and ships no such
+> panel; the page describes upstream X-AnyLabeling, not JLLabelingAndTrain.
+> See "Fork scope" in the [README](../../README.md).
+
+
 The X-AnyLabeling Chatbot is an AI assistant integrated into the annotation workflow. It supports natural-language conversations, batch image-question answering, and importing or exporting single-turn and multi-turn multimodal data in [ShareGPT](https://github.com/hiyouga/LLaMA-Factory/blob/main/data/README.md#multi-modal-image-dataset) format for frameworks such as [LLaMA-Factory](https://github.com/hiyouga/LLaMA-Factory).
 
 <video src="https://github.com/user-attachments/assets/c97b943a-71e6-470c-bb73-b4c8d299687f" width="100%" controls>

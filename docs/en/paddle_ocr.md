@@ -1,5 +1,10 @@
 # PaddleOCR Document Parsing and Intelligent Text Recognition
 
+> **Archived: an upstream feature.** This build is YOLO-only and ships no such
+> panel; the page describes upstream X-AnyLabeling, not JLLabelingAndTrain.
+> See "Fork scope" in the [README](../../README.md).
+
+
 ## Overview
 
 [PaddleOCR](https://aistudio.baidu.com/paddleocr) is an OCR and document intelligence toolkit in the Baidu PaddlePaddle ecosystem. It covers general text recognition, document layout analysis, table parsing, formula recognition, and other capabilities for common document-processing scenarios such as scanned documents, photographed documents, multi-page PDFs, and technical documents.

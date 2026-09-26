@@ -1053,10 +1053,16 @@ For details on integrating and using your own custom AI models within X-AnyLabel
 
 ## 10. Advanced Features
 
+- Ultralytics Training Platforms: [Link](../../examples/training/ultralytics/README.md)
+
+The entries below are **upstream** features. This build ships no such
+panels; the links are kept for reference only:
+
 - Remote Server Guide: [Link](https://github.com/CVHub520/X-AnyLabeling-Server)
 - Chatbot Guide: [Link](./chatbot.md)
 - VQA Guide: [Link](./vqa.md)
 - Image Classifier: [Link](./image_classifier.md)
-- Video Classifier: [Link](./video_classifier.md)
-- Ultralytics Training Platforms: [Link](../../examples/training/ultralytics/README.md)
 - Document Parsing and Intelligent Text Recognition: [Link](./paddle_ocr.md)
+
+(Upstream's "video classifier" page does not exist in either `docs/en/` or
+`docs/zh_cn/`, so it is no longer linked.)

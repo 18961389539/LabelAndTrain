@@ -18,7 +18,7 @@ Written by Wei Wang (CVHub)
         ```bash
         python tools/deployment/export_onnx.py --config configs/dfine/dfine_hgnetv2_s_coco.yml --resume weights/dfine_s_obj2coco.pth --check --simplify
         ```
-        7. Modified the paramters and run this script
+        7. Modified the parameters and run this script
         ```bash
         python ${export_dfine_onnx.py}
         ```

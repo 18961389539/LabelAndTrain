@@ -1,5 +1,28 @@
 [flake8]
-ignore = E203, E266, E501, W503, F403, F401, B905, E402
+# The single source of truth for flake8 in this repo.  It deliberately lives
+# here rather than in pyproject.toml: flake8 does not read pyproject without
+# the Flake8-pyproject plugin, and having a second copy there only invited the
+# two to drift apart.
+#
+# E501 is not policed -- line length is handled by black and by review.  B950
+# is flake8-bugbear's 10%-tolerance variant of that exact check, so leaving it
+# enabled while E501 is off would enforce 86 columns through the back door.
+#
+# select = B requires flake8-bugbear, select = C4 requires
+# flake8-comprehensions.  Both are in the `dev` extra of pyproject.toml and
+# mirrored by the flake8 hook in .pre-commit-config.yaml; keep the three in
+# sync or the counts in scripts/flake8_baseline.txt stop meaning anything.
+ignore = E203, E266, E501, W503, F403, F401, B905, E402, B950
 max-line-length = 79
 max-complexity = 18
 select = B,C,E,F,W,T4,B9
+# resources.py is emitted by pyside6-rcc (scripts/generate_languages.py and the
+# packaging scripts); black already skips it for the same reason.
+exclude =
+    .git,
+    __pycache__,
+    build,
+    dist,
+    wheels_dist,
+    .venv,
+    anylabeling/resources/resources.py

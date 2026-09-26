@@ -11,6 +11,9 @@ try:
     from anylabeling.views.labeling.utils.shortcuts_help import (
         SHORTCUT_GROUPS,
     )
+    from anylabeling.views.labeling.widgets.mode_controller import (
+        ModeController,
+    )
 
     PYQT_AVAILABLE = True
 except Exception:
@@ -49,6 +52,7 @@ def make_widget():
         hide_attributes_panel=Mock(),
         update_labeling_instruction=Mock(),
     )
+    widget._mode_controller = ModeController(widget)
     widget._create_mode_actions = lambda: LabelingWidget._create_mode_actions(
         widget
     )

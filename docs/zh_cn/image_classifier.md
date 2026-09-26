@@ -1,5 +1,10 @@
 # 概述
 
+> **归档页面：上游功能。** 本构建为 YOLO-only，不包含该面板。此页面描述的是上游
+> X-AnyLabeling，而非 JLLabelingAndTrain。参见 [README](../../README_zh-CN.md)
+> 的「Fork 范围」一节。
+
+
 X-AnyLabeling 的图像分类器是独立的图像分类标注窗口，支持多类分类（单标签）和多标签分类。用户可以管理标签、对单张或多张图像进行 AI 辅助分类、查看数据集统计信息，并将已分类图像按类别导出到对应目录。
 
 <video src="https://github.com/user-attachments/assets/0652adfb-48a4-4219-9b18-16ff5ce31be0" width="100%" controls>

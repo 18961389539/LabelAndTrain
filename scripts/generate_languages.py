@@ -3,6 +3,7 @@ import glob
 import sys
 import shutil
 import subprocess
+import xml.etree.ElementTree as ElementTree
 from PyQt6 import QtCore
 
 #: Directories that never carry app strings. A bare ``**/*.py`` glob would
@@ -136,6 +137,50 @@ def existing_catalogs():
     )
 
 
+#: How much of a catalog a run may shed before it is treated as a mistake.
+#: Extraction only ever *moves* strings, so a double-digit drop means they
+#: stopped being extractable rather than stopped being used.
+MAX_SHRINK_RATIO = 0.9
+
+
+def catalog_entry_count(path: str) -> int:
+    """Number of ``<message>`` entries in a ``.ts`` catalog (0 if absent)."""
+    if not os.path.isfile(path):
+        return 0
+    try:
+        root = ElementTree.parse(path).getroot()
+    except ElementTree.ParseError as error:
+        raise RuntimeError(
+            f"{path} is not well-formed XML ({error}). Refusing to "
+            "overwrite it -- check that the last extraction finished."
+        ) from error
+    return sum(len(context.findall("message")) for context in root.findall("context"))
+
+
+def check_catalog_did_not_shrink(path: str, before: int) -> int:
+    """Guard against translations silently falling out of the extraction.
+
+    ``pylupdate6`` can only attribute a ``tr()`` call to a context when it
+    can see one -- ``self.tr(...)`` inside a class works, but a bare
+    ``widget.tr(...)`` inside a module-level function does not, and the
+    string is dropped with no warning.  This repository moved a lot of
+    methods out of ``LabelingWidget`` into ``widget``-first module
+    functions, so an extraction that suddenly loses hundreds of entries is
+    almost certainly that, not a genuine cleanup of dead strings.
+    """
+    after = catalog_entry_count(path)
+    if before and after < before * MAX_SHRINK_RATIO:
+        raise RuntimeError(
+            f"{path} went from {before} to {after} entries in one run. "
+            "Strings the extractor cannot place are being dropped: check "
+            "for tr() calls on a receiver other than self that live outside "
+            "a class (e.g. widget.tr(...) in a module-level function). "
+            "Commit or back up the catalog before re-running if the drop is "
+            "expected."
+        )
+    return after
+
+
 # Refresh what is there by default; name a language explicitly to start one
 # that does not exist yet, e.g. ``generate_languages.py zh_CN en_US``.
 supported_languages = sys.argv[1:] or existing_catalogs() or ["zh_CN"]
@@ -165,9 +210,11 @@ for language in supported_languages:
     # Extract translations from the .py file. Check the result: a missing
     # extractor used to print a shell error and then silently recompile the
     # stale .ts, which is how the catalog drifted out of date unnoticed.
+    catalog = f"{translations_path}/{language}.ts"
+    entries_before = catalog_entry_count(catalog)
     command = (
         f"{lupdate} --no-obsolete {' '.join(py_files)} "
-        f"-ts {translations_path}/{language}.ts"
+        f"-ts {catalog}"
     )
     result = subprocess.run(command, shell=True)
     if result.returncode != 0:
@@ -175,6 +222,7 @@ for language in supported_languages:
             f"String extraction failed (exit {result.returncode}). Is "
             "'pylupdate6' on PATH? Activate the project virtualenv first."
         )
+    check_catalog_did_not_shrink(catalog, entries_before)
 
     # Compile the .ts file into a .qm file
     translation_file = f"{translations_path}/{language}.ts"

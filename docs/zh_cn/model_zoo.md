@@ -1,5 +1,10 @@
 # X-AnyLabeling 模型库
 
+> **归档页面：上游功能。** 本构建为 YOLO-only，不包含该面板。此页面描述的是上游
+> X-AnyLabeling，而非 JLLabelingAndTrain。参见 [README](../../README_zh-CN.md)
+> 的「Fork 范围」一节。
+
+
 > ModelScope 模型集合：[X-AnyLabeling](https://www.modelscope.cn/collections/X-AnyLabeling-7b0e1798bcda43)
 
 

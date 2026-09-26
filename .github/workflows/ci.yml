@@ -7,6 +7,31 @@ on:
   workflow_dispatch:
 
 jobs:
+  lint:
+    name: Lint (flake8 against the baseline)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      # Keep this list in step with the `dev` extra in pyproject.toml and with
+      # the flake8 hook in .pre-commit-config.yaml -- .flake8 selects "B" and
+      # "C4", which only exist with these plugins installed, so a run without
+      # them would silently check a smaller rule set and always pass.
+      # tests/test_utils/test_lint_config_consistency.py is the guard.
+      - name: Install flake8 and the plugins .flake8 selects
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install flake8 flake8-bugbear flake8-comprehensions
+
+      - name: Compare against scripts/flake8_baseline.txt
+        run: python scripts/check_flake8_baseline.py
+
   test:
     name: Unit tests (${{ matrix.os }})
     runs-on: ${{ matrix.os }}

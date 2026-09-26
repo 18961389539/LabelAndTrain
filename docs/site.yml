@@ -16,8 +16,8 @@ workflows:
     document: image_classifier.md
   - id: paddle-ocr
     document: paddle_ocr.md
-  - id: video-classifier
-    document: video_classifier.md
+  # video-classifier was declared here while no video_classifier.md exists
+  # in either locale -- a workflow pointing at a missing document.
   - id: vqa
     document: vqa.md
   - id: chatbot

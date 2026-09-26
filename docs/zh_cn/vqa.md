@@ -1,5 +1,10 @@
 # 概述
 
+> **归档页面：上游功能。** 本构建为 YOLO-only，不包含该面板。此页面描述的是上游
+> X-AnyLabeling，而非 JLLabelingAndTrain。参见 [README](../../README_zh-CN.md)
+> 的「Fork 范围」一节。
+
+
 X-AnyLabeling 的视觉问答工具用于标注多模态图像问答数据集。它支持创建图像对应的问题与答案，提供多种可配置的输入组件，并集成 AI 辅助功能，可为监督微调、强化学习后训练等任务准备结构化数据。
 
 <video src="https://github.com/user-attachments/assets/53adcff4-b962-41b7-a408-3afecd8d8c82" width="100%" controls>

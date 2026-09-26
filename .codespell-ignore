@@ -1,0 +1,25 @@
+# Words codespell should not touch in this repo.  One per line; `#` starts a
+# comment, blank lines are ignored.
+#
+# Passed via --ignore-words in .pre-commit-config.yaml.
+
+# Real dataset names, not typos.
+dota
+mot
+
+# Real model names: D-FINE and its ONNX exporter.
+dfine
+
+# codespell splits `pResx` / `pResy` / `pRes` in Canvas.rotate_point as if the
+# word were "pres"; the locals are short for "result x / y".
+pres
+
+# A real typo, deliberately parked.  `widget.tr("Show Degress")` is the
+# View-menu item and its translation ("显示旋转角度") lives in zh_CN.ts keyed by
+# that misspelling.  Renaming the source string therefore drags in the whole
+# catalog chain: recompile the .qm *and* regenerate the blob embedded in
+# resources.py, or the lookup silently misses and the item falls back to
+# English.  It is worth doing -- but as a dedicated i18n pass that also
+# settles the `widget.tr(...)` extraction problem (see the note in
+# CHANGELOG), not as a side effect of a lint cleanup.
+degress

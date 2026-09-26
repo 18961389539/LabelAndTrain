@@ -1,5 +1,10 @@
 # Overview
 
+> **Archived: an upstream feature.** This build is YOLO-only and ships no such
+> panel; the page describes upstream X-AnyLabeling, not JLLabelingAndTrain.
+> See "Fork scope" in the [README](../../README.md).
+
+
 The X-AnyLabeling Visual Question Answering (VQA) tool annotates multimodal image-question answering datasets. It supports image-based question-and-answer pairs, configurable input components, and AI assistance for preparing structured data for supervised fine-tuning, reinforcement-learning post-training, and similar tasks.
 
 <video src="https://github.com/user-attachments/assets/53adcff4-b962-41b7-a408-3afecd8d8c82" width="100%" controls>

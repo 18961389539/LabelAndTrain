@@ -1,5 +1,10 @@
 # 概述
 
+> **归档页面：上游功能。** 本构建为 YOLO-only，不包含该面板。此页面描述的是上游
+> X-AnyLabeling，而非 JLLabelingAndTrain。参见 [README](../../README_zh-CN.md)
+> 的「Fork 范围」一节。
+
+
 X-AnyLabeling 的聊天机器人是集成在标注流程中的 AI 助手，可与大语言模型（LLM）进行自然语言交互、批量处理图文问答数据，并导入或导出单轮及多轮对话数据。导出的多模态数据采用 [ShareGPT](https://github.com/hiyouga/LLaMA-Factory/blob/main/data/README_zh.md#%E5%A4%9A%E6%A8%A1%E6%80%81%E5%9B%BE%E5%83%8F%E6%95%B0%E6%8D%AE%E9%9B%86-1) 格式，可用于 [LLaMA-Factory](https://github.com/hiyouga/LLaMA-Factory) 等大模型微调框架。
 
 <video src="https://github.com/user-attachments/assets/c97b943a-71e6-470c-bb73-b4c8d299687f" width="100%" controls>

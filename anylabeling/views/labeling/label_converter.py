@@ -1462,4 +1462,3 @@ class LabelConverter:
             output_file = osp.join(output_path, "coco_keypoints.json")
 
         self.save_json(coco_data, output_file, indent=4)
-

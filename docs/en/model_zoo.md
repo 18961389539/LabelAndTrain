@@ -1,5 +1,10 @@
 # X-AnyLabeling Model Zoo
 
+> **Archived: an upstream feature.** This build is YOLO-only and ships no such
+> panel; the page describes upstream X-AnyLabeling, not JLLabelingAndTrain.
+> See "Fork scope" in the [README](../../README.md).
+
+
 
 ## Classification
 

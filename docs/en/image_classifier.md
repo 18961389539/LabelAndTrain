@@ -1,5 +1,10 @@
 # Overview
 
+> **Archived: an upstream feature.** This build is YOLO-only and ships no such
+> panel; the page describes upstream X-AnyLabeling, not JLLabelingAndTrain.
+> See "Fork scope" in the [README](../../README.md).
+
+
 The X-AnyLabeling Image Classifier is a dedicated annotation window for multi-class (single-label) and multi-label classification. It supports label management, AI-assisted classification for individual images or batches, dataset statistics, keyboard navigation, and category-based image export.
 
 <video src="https://github.com/user-attachments/assets/0652adfb-48a4-4219-9b18-16ff5ce31be0" width="100%" controls>

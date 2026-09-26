@@ -102,6 +102,11 @@ dev = [
     "build",
     "black",
     "flake8",
+    # .flake8 selects "B" and "C4", which only exist with these two installed.
+    # They must match the flake8 hook in .pre-commit-config.yaml and whatever
+    # CI installs, or scripts/flake8_baseline.txt counts different rules.
+    "flake8-bugbear",
+    "flake8-comprehensions",
     "pyinstaller",
     "pytest",
     "PySide6>=6.6.0,<6.10.0; sys_platform == 'linux'",
@@ -205,16 +210,7 @@ exclude = '''
 | ^/anylabeling/resources/resources\.py$
 '''
 
-[tool.flake8]
-max-line-length = 79
-max-complexity = 18
-select = ["B", "C", "E", "F", "W", "T4", "B9"]
-ignore = ["E203", "E266", "E501", "W503", "F403", "F401", "B905", "E402"]
-exclude = [
-  ".git",
-  "__pycache__",
-  "build",
-  "dist",
-  ".venv",
-  "anylabeling/resources/resources.py"
-]
+# flake8 is configured in .flake8, not here.  flake8 only reads pyproject.toml
+# through the third-party Flake8-pyproject plugin, so the [tool.flake8] table
+# that used to sit here was dead config -- and being a second copy of the same
+# ignore list, it was free to drift away from the one that actually applied.

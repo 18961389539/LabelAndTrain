@@ -7,6 +7,9 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 try:
     from anylabeling.views.labeling.label_widget import LabelingWidget
+    from anylabeling.views.labeling.widgets.mode_controller import (
+        ModeController,
+    )
 
     PYQT_AVAILABLE = True
 except Exception:
@@ -51,6 +54,7 @@ class TestLabelWidgetBrushMode(unittest.TestCase):
             actions=SimpleNamespace(edit_brush_mode=brush_action),
             label_list=label_list,
         )
+        widget._mode_controller = ModeController(widget)
 
         LabelingWidget.on_brush_mode_changed(widget, True)
 

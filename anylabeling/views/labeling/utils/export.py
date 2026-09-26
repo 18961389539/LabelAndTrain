@@ -729,7 +729,3 @@ def export_coco_annotation(self, mode):
     self.export_thread.start()
 
     progress_dialog.canceled.connect(self.export_thread.terminate)
-
-
-
-

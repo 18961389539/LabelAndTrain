@@ -22,7 +22,7 @@ Written by Wei Wang (CVHub)
 
         model.export()
         ```
-        7. Modified the paramters and run this script
+        7. Modified the parameters and run this script
         ```bash
         python ${export_rfdetr_onnx.py}
         ```

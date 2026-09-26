@@ -1122,10 +1122,14 @@ font_family: null  # null 表示使用系统默认字体，也可填写字体名
 
 ## 10. 高级功能
 
+- Ultralytics 训练平台：[链接](../../examples/training/ultralytics/README.md)
+
+以下条目属于**上游**功能，本构建已移除对应面板，链接仅作归档参考：
+
 - 远程推理服务指南：[链接](https://github.com/CVHub520/X-AnyLabeling-Server)
 - 聊天机器人：[链接](./chatbot.md)
 - 视觉问答：[链接](./vqa.md)
 - 图像分类器：[链接](./image_classifier.md)
-- 视频分类器：[链接](./video_classifier.md)
-- Ultralytics 训练平台：[链接](../../examples/training/ultralytics/README.md)
 - 文档解析与智能文字识别：[链接](./paddle_ocr.md)
+
+（上游的「视频分类器」页面在 `docs/en/` 与 `docs/zh_cn/` 中均不存在，故不再链接。）
