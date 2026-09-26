@@ -1122,6 +1122,7 @@ font_family: null  # null 表示使用系统默认字体，也可填写字体名
 
 ## 10. 高级功能
 
+- 本分支独有功能（项目管理、检查状态、智能工具、训练迭代、溯源信息）：[链接](./fork_features.md)
 - Ultralytics 训练平台：[链接](../../examples/training/ultralytics/README.md)
 
 以下条目属于**上游**功能，本构建已移除对应面板，链接仅作归档参考：

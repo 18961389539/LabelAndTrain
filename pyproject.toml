@@ -109,6 +109,7 @@ dev = [
     "flake8-comprehensions",
     "pyinstaller",
     "pytest",
+    "pytest-cov",
     "PySide6>=6.6.0,<6.10.0; sys_platform == 'linux'",
     "PySide6>=6.6.0; sys_platform != 'linux'",
     "twine",
@@ -190,6 +191,27 @@ markers = [
     "slow: skip slow tests unless --slow is set",
 ]
 norecursedirs = [".git", "dist", "build"]
+
+# Coverage is reported, never enforced.  The measured number is 44% of 31891
+# statements; the fork's own training dialog alone is 1741 statements at 12%,
+# and Qt widget code is expensive to reach without driving real event loops.
+# A threshold nobody can pass is worse than a number somebody reads, so CI
+# prints the table and stops there.
+[tool.coverage.run]
+source = ["anylabeling"]
+omit = [
+    # Emitted by pyside6-rcc: a multi-megabyte byte literal, nothing to cover.
+    "anylabeling/resources/resources.py",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+exclude_lines = [
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+]
 
 [tool.black]
 line-length = 79

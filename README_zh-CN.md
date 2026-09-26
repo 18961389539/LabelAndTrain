@@ -135,9 +135,10 @@
 
 1. [安装文档](./docs/zh_cn/get_started.md)
 2. [用户手册](./docs/zh_cn/user_guide.md)
-3. [命令行界面](./docs/zh_cn/cli.md)
-4. [自定义模型](./docs/zh_cn/custom_model.md)
-5. [常见问题答疑](./docs/zh_cn/faq.md)
+3. [本分支独有功能](./docs/zh_cn/fork_features.md) —— 项目管理、检查状态、智能工具、训练迭代、溯源信息
+4. [命令行界面](./docs/zh_cn/cli.md)
+5. [自定义模型](./docs/zh_cn/custom_model.md)
+6. [常见问题答疑](./docs/zh_cn/faq.md)
 
 以下文档描述的是**上游**功能，本构建已移除对应面板，仅作归档参考：
 [聊天机器人](./docs/zh_cn/chatbot.md)、

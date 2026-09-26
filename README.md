@@ -75,6 +75,13 @@ This is a trimmed build. Compared with upstream it does **not** include:
 Docs and examples for pruned features are still in the tree (`docs/en/chatbot.md`,
 `examples/grounding/`, …). They describe **upstream**, not this build.
 
+The features this fork *adds* used to be documented nowhere but `CHANGELOG.md`.
+They now have a page of their own — project management, the review-state
+workflow, the eleven smart tools, the training loop and shape provenance:
+[`docs/zh_cn/fork_features.md`](./docs/zh_cn/fork_features.md). It is in Chinese
+on purpose; Chinese is the source language for everything this fork owns (see
+above), and the interface it describes only ships `zh_CN`.
+
 ## Features
 
 - Auto-labeling: SAM2 interactive prompts, prompt-free automatic mask generation, YOLO detection / segmentation / pose / classification.
