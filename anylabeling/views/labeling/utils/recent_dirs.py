@@ -44,7 +44,5 @@ def drop_recent_dir(dirs, directory):
         return list(dirs or [])
     key = _norm_key(directory)
     return [
-        entry
-        for entry in (dirs or [])
-        if entry and _norm_key(entry) != key
+        entry for entry in (dirs or []) if entry and _norm_key(entry) != key
     ]

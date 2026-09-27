@@ -129,9 +129,7 @@ def json_txt_mismatch(json_path, data=None, class_names=None):
     names = class_names
     if names is None:
         names = merge_class_names(
-            load_class_names(
-                osp.join(osp.dirname(json_path), "classes.txt")
-            ),
+            load_class_names(osp.join(osp.dirname(json_path), "classes.txt")),
             [
                 shape.get("label")
                 for shape in shapes

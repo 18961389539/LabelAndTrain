@@ -117,8 +117,14 @@ def review_state_name(widget, state):
 
 
 def file_item_tooltip(
-    widget, file, label_file, state, reviewed_at=None, counts=None,
-    negative=False, low_conf=False,
+    widget,
+    file,
+    label_file,
+    state,
+    reviewed_at=None,
+    counts=None,
+    negative=False,
+    low_conf=False,
 ):
     """Hover text for one file row: what it is, and where it stands.
 

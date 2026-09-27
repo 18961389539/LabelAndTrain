@@ -107,9 +107,7 @@ def audit_dataset(image_list, image_dir):
     if not images:
         return results
 
-    image_basenames = {
-        osp.splitext(osp.basename(p))[0] for p in images
-    }
+    image_basenames = {osp.splitext(osp.basename(p))[0] for p in images}
     class_counts = {}
     thresholds = load_thresholds(image_dir)
     review_scores = []
@@ -147,7 +145,10 @@ def audit_dataset(image_list, image_dir):
                     class_counts[label] = class_counts.get(label, 0) + count
                 if needs_review(shapes, thresholds=thresholds):
                     review_scores.append(
-                        (image_path, image_uncertainty(shapes, thresholds=thresholds))
+                        (
+                            image_path,
+                            image_uncertainty(shapes, thresholds=thresholds),
+                        )
                     )
             if json_txt_mismatch(label_file, data):
                 results["json_txt"].append(image_path)
@@ -250,9 +251,7 @@ def run_data_audit(parent):
                     child = QTreeWidgetItem([path, ""])
                     image_path = ""
                 else:
-                    child = QTreeWidgetItem(
-                        [osp.basename(path), path]
-                    )
+                    child = QTreeWidgetItem([osp.basename(path), path])
                     image_path = path if key != "orphan" else ""
                 child.setData(0, Qt.ItemDataRole.UserRole, image_path)
                 root.addChild(child)

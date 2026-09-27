@@ -186,7 +186,9 @@ def main(argv=None):
     regressions, improvements = compare(current, baseline)
 
     if improvements and not args.quiet:
-        print(f"Improved ({len(improvements)} entries -- refresh the baseline):")
+        print(
+            f"Improved ({len(improvements)} entries -- refresh the baseline):"
+        )
         for path, code, was, now in improvements:
             print(f"  {path} {code}: {was} -> {now}")
         print()

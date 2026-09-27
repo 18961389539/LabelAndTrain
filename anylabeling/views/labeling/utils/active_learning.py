@@ -248,9 +248,7 @@ def rank_by_uncertainty(
         if shapes is None:
             score = unlabeled_score
         else:
-            score = image_uncertainty(
-                shapes, accept, review, thresholds
-            )
+            score = image_uncertainty(shapes, accept, review, thresholds)
         scored.append((path, score))
     scored.sort(key=lambda item: (-item[1], str(item[0])))
     return scored
@@ -302,7 +300,9 @@ def calibrate_thresholds(
     result = {}
     if not isinstance(class_scores, dict):
         return result
-    confirmed_scores = confirmed_scores if isinstance(confirmed_scores, dict) else {}
+    confirmed_scores = (
+        confirmed_scores if isinstance(confirmed_scores, dict) else {}
+    )
 
     global_pool = sorted(
         value
@@ -333,11 +333,15 @@ def calibrate_thresholds(
 
         gap = _largest_gap_threshold(effective)
 
-        confirmed_pool = sorted(
-            value
-            for value in confirmed_scores.get(label) or []
-            if isinstance(value, (int, float)) and not isinstance(value, bool)
-        ) or global_confirmed
+        confirmed_pool = (
+            sorted(
+                value
+                for value in confirmed_scores.get(label) or []
+                if isinstance(value, (int, float))
+                and not isinstance(value, bool)
+            )
+            or global_confirmed
+        )
 
         if len(confirmed_pool) >= min_samples:
             accept = _quantile(confirmed_pool, CONFIRMED_ACCEPT_QUANTILE)
@@ -364,7 +368,9 @@ def calibrate_thresholds(
     return result
 
 
-def thresholds_for(label, thresholds, accept=DEFAULT_ACCEPT, review=DEFAULT_REVIEW):
+def thresholds_for(
+    label, thresholds, accept=DEFAULT_ACCEPT, review=DEFAULT_REVIEW
+):
     """Look up ``(accept, review)`` for a label, falling back to defaults."""
     if isinstance(thresholds, dict):
         entry = thresholds.get(label) or thresholds.get(str(label).strip())
@@ -465,7 +471,9 @@ def append_iteration(directory, **fields):
         "round": len(rounds) + 1,
         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
     }
-    record.update({key: value for key, value in fields.items() if value is not None})
+    record.update(
+        {key: value for key, value in fields.items() if value is not None}
+    )
     rounds.append(record)
     return _write_history(directory, history)
 

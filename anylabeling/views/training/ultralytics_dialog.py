@@ -516,9 +516,7 @@ class UltralyticsDialog(QDialog):
             "completed": self.tr("训练完成"),
             "error": self.tr("训练失败"),
         }.get(self.training_status, self.tr("启动训练并查看日志"))
-        self.step_bar.set_state(
-            current, [data_hint, config_hint, train_hint]
-        )
+        self.step_bar.set_state(current, [data_hint, config_hint, train_hint])
 
     def on_step_bar_clicked(self, index):
         if index <= self.tab_widget.currentIndex():
@@ -876,7 +874,9 @@ class UltralyticsDialog(QDialog):
             QMessageBox.information(
                 self,
                 self.tr("智能推荐参数"),
-                self.tr("请先在标注界面打开一个图片文件夹，再点「智能推荐参数」。"),
+                self.tr(
+                    "请先在标注界面打开一个图片文件夹，再点「智能推荐参数」。"
+                ),
             )
             return None
 
@@ -2009,9 +2009,9 @@ class UltralyticsDialog(QDialog):
             task_root, self.KEEP_DATASET_BUILDS, current
         )
         self.append_training_log(
-            self.tr("已清理 %1 个数据集副本，释放 %2 MB。").replace(
-                "%1", str(len(deleted))
-            ).replace("%2", f"{freed / (1024 * 1024):.1f}")
+            self.tr("已清理 %1 个数据集副本，释放 %2 MB。")
+            .replace("%1", str(len(deleted)))
+            .replace("%2", f"{freed / (1024 * 1024):.1f}")
         )
         if failed:
             self.append_training_log(
@@ -2032,9 +2032,7 @@ class UltralyticsDialog(QDialog):
             return None
 
         manifest = getattr(self, "_last_dataset_manifest", None) or {}
-        dataset_dir = (
-            os.path.dirname(manifest.get("data_yaml") or "") or None
-        )
+        dataset_dir = os.path.dirname(manifest.get("data_yaml") or "") or None
         from anylabeling.views.labeling.project import label_dir_for_dataset
 
         label_dir = label_dir_for_dataset(
@@ -2069,20 +2067,22 @@ class UltralyticsDialog(QDialog):
                 "dir": dataset_dir,
                 "label_dir": label_dir,
                 "manifest": manifest_path,
-                "manifest_sha1": file_sha1(manifest_path)
-                if manifest_path
-                else None,
+                "manifest_sha1": (
+                    file_sha1(manifest_path) if manifest_path else None
+                ),
                 "seed": manifest.get("seed"),
                 "classes": manifest.get("classes"),
                 "counts": manifest.get("counts"),
             },
-            "metrics": None
-            if metrics is None
-            else {
-                "loss": metrics[0],
-                "map50": metrics[1],
-                "epochs": metrics[2],
-            },
+            "metrics": (
+                None
+                if metrics is None
+                else {
+                    "loss": metrics[0],
+                    "map50": metrics[1],
+                    "epochs": metrics[2],
+                }
+            ),
         }
 
         meta_path = os.path.join(project_path, "run_meta.json")
@@ -2151,9 +2151,7 @@ class UltralyticsDialog(QDialog):
                 # Keep the full traceback in the log view so advanced users
                 # can diagnose crashes, while the dialog shows a readable
                 # summary.
-                self.append_training_log(
-                    self.tr("--- Traceback ---")
-                )
+                self.append_training_log(self.tr("--- Traceback ---"))
                 self.append_training_log(trace.strip())
             # Explain cryptic codes (e.g. Windows -1073741819 == access
             # violation) and offer an explicit retry path.
@@ -2164,9 +2162,7 @@ class UltralyticsDialog(QDialog):
             box.setText(self.tr("Training failed:\n%s") % readable)
             if trace:
                 box.setInformativeText(
-                    self.tr(
-                        "Full traceback was written to the training log."
-                    )
+                    self.tr("Full traceback was written to the training log.")
                 )
             retry_btn = box.addButton(
                 self.tr("Retry Training"),
@@ -2232,10 +2228,13 @@ class UltralyticsDialog(QDialog):
                 "or free GPU memory and retry."
             )
         if "exited with code" in text:
-            return self.tr(
-                "%s — the training subprocess terminated unexpectedly. "
-                "Please check the training log above for details."
-            ) % text
+            return (
+                self.tr(
+                    "%s — the training subprocess terminated unexpectedly. "
+                    "Please check the training log above for details."
+                )
+                % text
+            )
         return text
 
     def init_training_status(self, parent_layout):
@@ -2474,12 +2473,8 @@ class UltralyticsDialog(QDialog):
                         config["basic"]["data"],
                         self.output_dir,
                         config["basic"].get("pose_config"),
-                        config["checkpoint"].get(
-                            "skip_empty_files", False
-                        ),
-                        config["checkpoint"].get(
-                            "only_checked_files", False
-                        ),
+                        config["checkpoint"].get("skip_empty_files", False),
+                        config["checkpoint"].get("only_checked_files", False),
                         seed=seed,
                         seed_source=seed_source,
                     )
@@ -2603,9 +2598,7 @@ class UltralyticsDialog(QDialog):
         # freeze the dialog for tens of seconds / minutes.
         self._dataset_pending_config = config
         self.start_training_button.setEnabled(False)
-        self.start_training_button.setText(
-            self.tr("Preparing dataset...")
-        )
+        self.start_training_button.setText(self.tr("Preparing dataset..."))
         self.append_training_log(
             self.tr("Preparing dataset in the background...")
         )
@@ -2649,9 +2642,7 @@ class UltralyticsDialog(QDialog):
         self.start_training_button.setText(self.tr("Start Training"))
 
         if error_msg:
-            self.append_training_log(
-                f"Failed to prepare dataset: {error_msg}"
-            )
+            self.append_training_log(f"Failed to prepare dataset: {error_msg}")
             QMessageBox.critical(
                 self,
                 self.tr("Dataset Error"),
@@ -2678,16 +2669,12 @@ class UltralyticsDialog(QDialog):
         except Exception as e:
             error_msg = f"Failed to start training: {str(e)}"
             self.append_training_log(f"ERROR: {error_msg}")
-            QMessageBox.critical(
-                self, self.tr("Training Error"), error_msg
-            )
+            QMessageBox.critical(self, self.tr("Training Error"), error_msg)
 
     def _start_training_after_args(self, train_args):
         success, message = self.training_manager.start_training(train_args)
         if not success:
-            self.append_training_log(
-                f"Failed to start training: {message}"
-            )
+            self.append_training_log(f"Failed to start training: {message}")
             QMessageBox.critical(self, self.tr("Training Error"), message)
 
     def init_training_actions(self, parent_layout):
@@ -2888,9 +2875,7 @@ class UltralyticsDialog(QDialog):
             return
         self._pending_autolabel_after_export = True
         self.use_autolabel_button.setEnabled(False)
-        self.append_training_log(
-            self.tr("正在导出 ONNX 以便用于自动标注...")
-        )
+        self.append_training_log(self.tr("正在导出 ONNX 以便用于自动标注..."))
         success, message = self.export_manager.start_export(
             self.current_project_path, "onnx"
         )
@@ -2999,11 +2984,15 @@ class UltralyticsDialog(QDialog):
             has_visible=has_visible,
             # A classifier ranks its top-k; a 0.25 floor would silently drop
             # every suggestion once the classes are many.
-            conf_threshold=0.0 if self.selected_task_type == "Classify" else 0.25,
+            conf_threshold=(
+                0.0 if self.selected_task_type == "Classify" else 0.25
+            ),
         )
         parent = self.parent()
         self.accept()
-        widget = getattr(parent, "auto_labeling_widget", None) if parent else None
+        widget = (
+            getattr(parent, "auto_labeling_widget", None) if parent else None
+        )
         if widget is None:
             return
         widget._last_model_selection = ("Custom", name, yaml_path)
@@ -3025,7 +3014,9 @@ class UltralyticsDialog(QDialog):
                 load_history,
                 suggest_next_step,
             )
-            from anylabeling.views.labeling.utils.smart_tools import label_dir_for
+            from anylabeling.views.labeling.utils.smart_tools import (
+                label_dir_for,
+            )
 
             label_dir = label_dir_for(parent)
             suggestion = suggest_next_step(load_history(label_dir))
@@ -3041,13 +3032,14 @@ class UltralyticsDialog(QDialog):
                     "\n已确认的空标注（负样本）会跳过。"
                     "\n\n%1\n\n是否现在开始？"
                 ).replace("%1", suggestion_text),
-                QMessageBox.StandardButton.Yes
-                | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             )
             if reply != QMessageBox.StandardButton.Yes:
                 if hasattr(parent, "status"):
                     parent.status(
-                        parent.tr("稍后可在「4. 迭代收益看板」查看下一步建议。"),
+                        parent.tr(
+                            "稍后可在「4. 迭代收益看板」查看下一步建议。"
+                        ),
                         4000,
                     )
                 return

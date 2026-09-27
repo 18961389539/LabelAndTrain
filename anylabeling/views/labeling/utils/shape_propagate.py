@@ -65,16 +65,8 @@ def scale_shape(shape, src_w, src_h, dst_w, dst_h):
 def bbox_signature(shape, img_w, img_h):
     """Normalized, rounded bounding box used to detect duplicate shapes."""
     points = shape.get("points") or []
-    xs = [
-        p[0]
-        for p in points
-        if isinstance(p, (list, tuple)) and len(p) >= 2
-    ]
-    ys = [
-        p[1]
-        for p in points
-        if isinstance(p, (list, tuple)) and len(p) >= 2
-    ]
+    xs = [p[0] for p in points if isinstance(p, (list, tuple)) and len(p) >= 2]
+    ys = [p[1] for p in points if isinstance(p, (list, tuple)) and len(p) >= 2]
     if not xs or not ys:
         return ("", (0, 0, 0, 0))
     if img_w > 0 and img_h > 0:
@@ -85,7 +77,12 @@ def bbox_signature(shape, img_w, img_h):
             round(max(ys) / img_h, 2),
         )
     else:
-        norm = (round(min(xs), 1), round(min(ys), 1), round(max(xs), 1), round(max(ys), 1))
+        norm = (
+            round(min(xs), 1),
+            round(min(ys), 1),
+            round(max(xs), 1),
+            round(max(ys), 1),
+        )
     return (shape.get("label") or "", norm)
 
 

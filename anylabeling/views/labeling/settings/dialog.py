@@ -716,9 +716,7 @@ class SettingsDialog(QtWidgets.QDialog):
         self._shortcut_editor_roots = []
         matches = self._search_matches(query)
 
-        self.header_title.setText(
-            self.tr("搜索结果：%d 项") % len(matches)
-        )
+        self.header_title.setText(self.tr("搜索结果：%d 项") % len(matches))
         self._clear_layout(self.content_body_layout)
         self._content_height_hint = 0
         self.content_scroll.setVerticalScrollBarPolicy(
@@ -775,7 +773,9 @@ class SettingsDialog(QtWidgets.QDialog):
             )
         else:
             self._set_status(
-                self.tr("在搜索结果里可以直接修改；点「打开此页」查看它所在的页面。"),
+                self.tr(
+                    "在搜索结果里可以直接修改；点「打开此页」查看它所在的页面。"
+                ),
                 "info",
             )
         self._content_height_hint = max(
@@ -1465,9 +1465,7 @@ class SettingsDialog(QtWidgets.QDialog):
             QtCore.Qt.AlignmentFlag.AlignRight
             | QtCore.Qt.AlignmentFlag.AlignVCenter,
         )
-        self._bindings[field.key] = EditorBinding(
-            field, setter, error_setter
-        )
+        self._bindings[field.key] = EditorBinding(field, setter, error_setter)
         setter(self._controller.get_value(field.key))
         return row
 
@@ -1680,9 +1678,7 @@ class SettingsDialog(QtWidgets.QDialog):
             | QtCore.Qt.AlignmentFlag.AlignVCenter,
         )
 
-        self._bindings[field.key] = EditorBinding(
-            field, setter, error_setter
-        )
+        self._bindings[field.key] = EditorBinding(field, setter, error_setter)
         setter(self._controller.get_value(field.key))
         return row
 
@@ -2054,7 +2050,9 @@ class SettingsDialog(QtWidgets.QDialog):
         box = QtWidgets.QMessageBox(self)
         box.setIcon(QtWidgets.QMessageBox.Icon.Warning)
         box.setWindowTitle(self.tr("Unsaved Changes"))
-        box.setText(self.tr("以下页面的修改尚未保存：{pages}").format(pages=pages))
+        box.setText(
+            self.tr("以下页面的修改尚未保存：{pages}").format(pages=pages)
+        )
         box.setInformativeText(self.tr("关闭设置窗口后这些修改会丢失。"))
         box.setStyleSheet(self._message_box_style())
         save_button = box.addButton(

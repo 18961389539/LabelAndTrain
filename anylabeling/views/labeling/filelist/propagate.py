@@ -102,10 +102,12 @@ class LabelPropagateController:
                 shape_type=payload.get("shape_type") or "rectangle",
             )
             for point in payload.get("points") or []:
-                shape.add_point(QtCore.QPointF(float(point[0]), float(point[1])))
-            if (
-                len(shape.points) > 1
-                and shape.shape_type not in ("point", "linestrip")
+                shape.add_point(
+                    QtCore.QPointF(float(point[0]), float(point[1]))
+                )
+            if len(shape.points) > 1 and shape.shape_type not in (
+                "point",
+                "linestrip",
             ):
                 shape.close()
             new_shapes.append(shape)

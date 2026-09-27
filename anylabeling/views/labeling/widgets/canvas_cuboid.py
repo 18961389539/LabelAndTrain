@@ -18,7 +18,6 @@ from PyQt6 import QtCore, QtGui
 from .. import utils
 from ..shape import Shape
 
-
 CUBOID_FRONT_EDGE_CENTER_INDICES = {
     Shape.CUBOID_FRONT_LEFT_EDGE_CENTER,
     Shape.CUBOID_FRONT_RIGHT_EDGE_CENTER,

@@ -154,7 +154,9 @@ def catalog_entry_count(path: str) -> int:
             f"{path} is not well-formed XML ({error}). Refusing to "
             "overwrite it -- check that the last extraction finished."
         ) from error
-    return sum(len(context.findall("message")) for context in root.findall("context"))
+    return sum(
+        len(context.findall("message")) for context in root.findall("context")
+    )
 
 
 def check_catalog_did_not_shrink(path: str, before: int) -> int:
@@ -192,9 +194,7 @@ for language in supported_languages:
     # Scan the project's own Python sources (never the virtualenv).
     py_files = source_files()
     if not py_files:
-        raise RuntimeError(
-            "No Python sources found to extract strings from."
-        )
+        raise RuntimeError("No Python sources found to extract strings from.")
     print(f"Extracting from {len(py_files)} source files")
 
     # Create a QTranslator object to generate the .ts file
@@ -212,10 +212,7 @@ for language in supported_languages:
     # stale .ts, which is how the catalog drifted out of date unnoticed.
     catalog = f"{translations_path}/{language}.ts"
     entries_before = catalog_entry_count(catalog)
-    command = (
-        f"{lupdate} --no-obsolete {' '.join(py_files)} "
-        f"-ts {catalog}"
-    )
+    command = f"{lupdate} --no-obsolete {' '.join(py_files)} " f"-ts {catalog}"
     result = subprocess.run(command, shell=True)
     if result.returncode != 0:
         raise RuntimeError(

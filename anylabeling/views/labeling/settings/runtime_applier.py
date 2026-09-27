@@ -543,9 +543,7 @@ class SettingsRuntimeApplier:
                 flags |= Qt.ItemFlag.ItemIsUserCheckable
             item.setFlags(flags)
             if editable:
-                annotated = bool(
-                    item.data(Qt.ItemDataRole.UserRole + 1)
-                )
+                annotated = bool(item.data(Qt.ItemDataRole.UserRole + 1))
                 item.setCheckState(
                     Qt.CheckState.Checked
                     if annotated

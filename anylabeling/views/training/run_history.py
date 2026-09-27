@@ -85,9 +85,7 @@ def collect_run_history(runs_root, task=None):
                     "weights_sha1": _short(weights.get("sha1")),
                     "model": args.get("model") or "",
                     "dataset": _dir_name(dataset.get("label_dir")),
-                    "dataset_label_dir": str(
-                        dataset.get("label_dir") or ""
-                    ),
+                    "dataset_label_dir": str(dataset.get("label_dir") or ""),
                 }
             )
 

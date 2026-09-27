@@ -37,10 +37,10 @@ class FileReviewController:
         if state == REVIEW_UNCHECKED:
             widget.other_data.pop(REVIEWED_AT_FIELD, None)
         else:
-            widget.other_data[REVIEWED_AT_FIELD] = (
-                QtCore.QDateTime.currentDateTime().toString(
-                    QtCore.Qt.DateFormat.ISODate
-                )
+            widget.other_data[
+                REVIEWED_AT_FIELD
+            ] = QtCore.QDateTime.currentDateTime().toString(
+                QtCore.Qt.DateFormat.ISODate
             )
         widget._sync_annotation_checked_state()
         label_file = widget.get_label_file()

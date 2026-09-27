@@ -167,7 +167,11 @@ class BatchRunOptionsDialog(QDialog):
             self.tr("已有 JSON 标注的图片直接跳过，避免覆盖人工结果")
         )
         layout.addWidget(self.skip_existing)
-        hint = QLabel(self.tr("处理过程中可点「暂停」随时停下。失败的图片结束后可点回去检查。"))
+        hint = QLabel(
+            self.tr(
+                "处理过程中可点「暂停」随时停下。失败的图片结束后可点回去检查。"
+            )
+        )
         hint.setWordWrap(True)
         layout.addWidget(hint)
         buttons = QDialogButtonBox(
@@ -304,10 +308,13 @@ def finish_processing(
                 "(of %d total)."
             ) % (succeeded, failed, total)
         else:
-            message = self.tr(
-                "Processing completed successfully! "
-                "(%d images processed)"
-            ) % total
+            message = (
+                self.tr(
+                    "Processing completed successfully! "
+                    "(%d images processed)"
+                )
+                % total
+            )
 
     popup = Popup(
         message,
@@ -523,9 +530,7 @@ def save_auto_labeling_result(self, image_file, auto_labeling_result):
                 ),
             )
         except Exception as e:  # noqa: BLE001
-            logger.error(
-                f"Failed to write YOLO txt for '{label_file}': {e}"
-            )
+            logger.error(f"Failed to write YOLO txt for '{label_file}': {e}")
 
         # Keep the file-list badge in sync: a saved file whose final shapes
         # are empty is a negative sample (background image) for YOLO.
@@ -547,7 +552,9 @@ def save_auto_labeling_result(self, image_file, auto_labeling_result):
 
 class BatchProcessingThread(QThread):
     progress_updated = pyqtSignal(int, str)
-    processing_finished = pyqtSignal(int, int, list)  # succeeded, failed, failed_files
+    processing_finished = pyqtSignal(
+        int, int, list
+    )  # succeeded, failed, failed_files
     error_occurred = pyqtSignal(str)
 
     def __init__(
@@ -677,7 +684,6 @@ def process_next_image(self, progress_dialog, batch=True):
     ]
     total_images = len(self.image_list)
     self._progress_dialog = progress_dialog
-
 
     skip_detection = (
         self.auto_labeling_widget.button_skip_detection.isChecked()

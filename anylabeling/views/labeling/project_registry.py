@@ -74,11 +74,7 @@ def record_project(root, label_dir=None):
         entry for entry in registry["projects"] if entry.get("root") != root
     ]
     previous = next(
-        (
-            entry
-            for entry in registry["projects"]
-            if entry.get("root") == root
-        ),
+        (entry for entry in registry["projects"] if entry.get("root") == root),
         {},
     )
     projects.insert(

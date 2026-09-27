@@ -11,8 +11,7 @@ _CUSTOM_MODELS = [
 
 
 # --- set_cache_auto_label ---
-_CACHED_AUTO_LABELING_MODELS = [
-]
+_CACHED_AUTO_LABELING_MODELS = []
 
 
 # --- set_auto_labeling_marks ---
@@ -38,8 +37,7 @@ _SKIP_DET_MODELS = []
 
 
 # --- skip_prediction_on_new_marks ---
-_SKIP_PREDICTION_ON_NEW_MARKS_MODELS = [
-]
+_SKIP_PREDICTION_ON_NEW_MARKS_MODELS = []
 
 
 # --- set_auto_labeling_conf ---
@@ -83,13 +81,11 @@ _ON_NEXT_FILES_CHANGED_MODELS = [
 
 
 # --- update_thumbnail_display ---
-_THUMBNAIL_RENDER_MODELS = {
-}
+_THUMBNAIL_RENDER_MODELS = {}
 
 
 # --- batch_processing_invalid_models ---
-_BATCH_PROCESSING_INVALID_MODELS = [
-]
+_BATCH_PROCESSING_INVALID_MODELS = []
 
 
 # --- batch_processing_auto_grid_models ---
@@ -99,5 +95,4 @@ _BATCH_PROCESSING_AUTO_GRID_MODELS = [
 
 
 # --- batch_processing_text_prompt_models ---
-_BATCH_PROCESSING_TEXT_PROMPT_MODELS = [
-]
+_BATCH_PROCESSING_TEXT_PROMPT_MODELS = []

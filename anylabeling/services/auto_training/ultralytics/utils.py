@@ -307,19 +307,25 @@ def write_autolabel_model_yaml(
         "model_path": os.path.abspath(model_path),
         "conf_threshold": conf_threshold,
         "iou_threshold": 0.45,
-        "classes": dict(classes) if isinstance(classes, dict) else list(classes or []),
+        "classes": (
+            dict(classes) if isinstance(classes, dict) else list(classes or [])
+        ),
     }
     if isinstance(classes, dict):
         # The pose adapter derives kpt_shape from these when the ONNX carries
         # no metadata, so the visibility flag has to agree with the names.
-        payload["has_visible"] = True if has_visible is None else bool(has_visible)
+        payload["has_visible"] = (
+            True if has_visible is None else bool(has_visible)
+        )
         if kpt_threshold is not None:
             payload["kpt_threshold"] = float(kpt_threshold)
     parent = os.path.dirname(yaml_path)
     if parent:
         os.makedirs(parent, exist_ok=True)
     with open(yaml_path, "w", encoding="utf-8") as handle:
-        yaml.dump(payload, handle, allow_unicode=True, default_flow_style=False)
+        yaml.dump(
+            payload, handle, allow_unicode=True, default_flow_style=False
+        )
     return yaml_path
 
 

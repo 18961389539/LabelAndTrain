@@ -119,6 +119,7 @@ from .filelist import items as filelist_items
 from .filelist.controller import FileReviewController
 from .filelist.propagate import LabelPropagateController
 from .filelist.quality import FileQualityController
+
 # Re-exported: the rest of the widget and the async checkers read the
 # row roles and label-JSON field names from this module's namespace.
 from .filelist.roles import (  # noqa: F401
@@ -449,8 +450,7 @@ class LabelingWidget(LabelDialog):
         self.unique_label_list = UniqueLabelQListWidget()
         self.unique_label_list.setToolTip(
             self.tr(
-                "单击选择类别后开始画框。双击或右键可重命名。"
-                "Esc 取消选择。"
+                "单击选择类别后开始画框。双击或右键可重命名。" "Esc 取消选择。"
             )
         )
         self.unique_label_list.itemDoubleClicked.connect(
@@ -462,9 +462,7 @@ class LabelingWidget(LabelDialog):
         self.unique_label_list.customContextMenuRequested.connect(
             self._unique_label_context_menu
         )
-        self.label_search = SearchBar(
-            placeholder_text=self.tr("搜索标签...")
-        )
+        self.label_search = SearchBar(placeholder_text=self.tr("搜索标签..."))
         self.label_search.setToolTip(
             self.tr(
                 "按名称过滤下方类别列表；不匹配的类别只是隐藏，"
@@ -535,7 +533,9 @@ class LabelingWidget(LabelDialog):
         self.file_filter_combo.addItem(self.tr("待复核"), "low_conf")
         self.file_filter_combo.setItemData(
             self.file_filter_combo.count() - 1,
-            self.tr("含有未达自动接受阈值目标的图片；阈值可由「阈值校准」生成"),
+            self.tr(
+                "含有未达自动接受阈值目标的图片；阈值可由「阈值校准」生成"
+            ),
             Qt.ItemDataRole.ToolTipRole,
         )
         self.file_filter_combo.currentIndexChanged.connect(
@@ -974,10 +974,14 @@ class LabelingWidget(LabelDialog):
                 .replace("%4", rect_sc)
             )
         if auto_visible:
-            return self.tr(
-                "自动标注：点选或框选提示 → 生成结果 → 人工改框 · "
-                "%1/%2 切图"
-            ).replace("%1", prev_sc).replace("%2", next_sc)
+            return (
+                self.tr(
+                    "自动标注：点选或框选提示 → 生成结果 → 人工改框 · "
+                    "%1/%2 切图"
+                )
+                .replace("%1", prev_sc)
+                .replace("%2", next_sc)
+            )
         if getattr(self.canvas, "is_brush_mode", False):
             return self.tr("画笔编辑：涂抹修改轮廓 · 右键退出")
         if self.canvas.drawing():
@@ -1046,9 +1050,7 @@ class LabelingWidget(LabelDialog):
             label.setText("")
             return
         shape_count = (
-            len(self.canvas.shapes)
-            if hasattr(self.canvas, "shapes")
-            else 0
+            len(self.canvas.shapes) if hasattr(self.canvas, "shapes") else 0
         )
         zoom = self.zoom_widget.value()
         size_text = ""
@@ -2063,9 +2065,7 @@ class LabelingWidget(LabelDialog):
             utils.new_icon("copy", "svg"), self.tr("Copy File Path")
         )
         menu.addSeparator()
-        check_and_next_action = menu.addAction(
-            self.tr("标记已检查并下一张")
-        )
+        check_and_next_action = menu.addAction(self.tr("标记已检查并下一张"))
         del_label_action = menu.addAction(
             utils.new_icon("trash", "svg"), self.tr("删除标注文件")
         )
@@ -2122,13 +2122,9 @@ class LabelingWidget(LabelDialog):
             status = (
                 0
                 if checked
-                else 1
-                if annotated
-                else 2
-                if negative
-                else 3
-                if low_conf
-                else 4
+                else (
+                    1 if annotated else 2 if negative else 3 if low_conf else 4
+                )
             )
             return (status, text.lower())
         return (osp.basename(text).lower(),)
@@ -2173,11 +2169,15 @@ class LabelingWidget(LabelDialog):
         layout.setSpacing(8)
 
         search = QtWidgets.QLineEdit()
-        search.setPlaceholderText(self.tr("搜索快捷键或功能（如 Ctrl+Z / 撤销）…"))
+        search.setPlaceholderText(
+            self.tr("搜索快捷键或功能（如 Ctrl+Z / 撤销）…")
+        )
         layout.addWidget(search)
 
         tree = QtWidgets.QTreeWidget()
-        tree.setHeaderLabels([self.tr("快捷键"), self.tr("功能"), self.tr("分组")])
+        tree.setHeaderLabels(
+            [self.tr("快捷键"), self.tr("功能"), self.tr("分组")]
+        )
         tree.setColumnWidth(0, 110)
         tree.setColumnWidth(1, 240)
         tree.setRootIsDecorated(False)
@@ -2283,13 +2283,25 @@ class LabelingWidget(LabelDialog):
         return filelist_items.review_state_name(self, state)
 
     def _file_item_tooltip(
-        self, file, label_file, state, reviewed_at=None, counts=None,
-        negative=False, low_conf=False,
+        self,
+        file,
+        label_file,
+        state,
+        reviewed_at=None,
+        counts=None,
+        negative=False,
+        low_conf=False,
     ):
         """Delegates to filelist.items."""
         return filelist_items.file_item_tooltip(
-            self, file, label_file, state, reviewed_at=reviewed_at,
-            counts=counts, negative=negative, low_conf=low_conf,
+            self,
+            file,
+            label_file,
+            state,
+            reviewed_at=reviewed_at,
+            counts=counts,
+            negative=negative,
+            low_conf=low_conf,
         )
 
     def _shape_tooltip(self, shape):
@@ -2313,17 +2325,13 @@ class LabelingWidget(LabelDialog):
             origin = self.tr("来源未记录（早于来源记录功能）")
 
         lines = [
-            self.tr("类别：%1").replace(
-                "%1", shape.label or self.tr("（空）")
-            )
+            self.tr("类别：%1").replace("%1", shape.label or self.tr("（空）"))
         ]
         if shape.group_id is not None:
             lines.append(
                 self.tr("群组编号：%1").replace("%1", str(shape.group_id))
             )
-        lines.append(
-            self.tr("形状：%1").replace("%1", shape.shape_type or "")
-        )
+        lines.append(self.tr("形状：%1").replace("%1", shape.shape_type or ""))
         lines.append(origin)
         if shape.score is not None:
             lines.append(
@@ -2334,9 +2342,11 @@ class LabelingWidget(LabelDialog):
         if len(points) >= 2:
             xs = [point.x() for point in points]
             ys = [point.y() for point in points]
-            detail += self.tr("，外接框 %1x%2").replace(
-                "%1", str(int(round(max(xs) - min(xs))))
-            ).replace("%2", str(int(round(max(ys) - min(ys)))))
+            detail += (
+                self.tr("，外接框 %1x%2")
+                .replace("%1", str(int(round(max(xs) - min(xs)))))
+                .replace("%2", str(int(round(max(ys) - min(ys)))))
+            )
         lines.append(detail)
         for key, value in sorted((shape.attributes or {}).items()):
             lines.append(
@@ -2345,9 +2355,7 @@ class LabelingWidget(LabelDialog):
                 .replace("%2", str(value))
             )
         if shape.description:
-            lines.append(
-                self.tr("描述：%1").replace("%1", shape.description)
-            )
+            lines.append(self.tr("描述：%1").replace("%1", shape.description))
         protected = []
         if shape.locked:
             protected.append(self.tr("已锁定"))
@@ -2415,9 +2423,7 @@ class LabelingWidget(LabelDialog):
 
     def _set_file_item_annotated(self, item, annotated, negative=False):
         """Delegates to filelist.items."""
-        filelist_items.set_file_item_annotated(
-            self, item, annotated, negative
-        )
+        filelist_items.set_file_item_annotated(self, item, annotated, negative)
 
     def _refresh_file_item_status_icon(self, item):
         """Delegates to filelist.items (tests call this directly)."""
@@ -2471,7 +2477,9 @@ class LabelingWidget(LabelDialog):
 
     def _note_save_quality(self, shapes, file_item=None):
         """Delegates to filelist.quality (save path + attribute panel call)."""
-        return self.file_quality_controller.note_save_quality(shapes, file_item)
+        return self.file_quality_controller.note_save_quality(
+            shapes, file_item
+        )
 
     def _maybe_focus_low_confidence_shapes(self):
         """Delegates to filelist.quality (called after a file load)."""
@@ -2489,9 +2497,9 @@ class LabelingWidget(LabelDialog):
         if self._config.get("file_list_checkbox_editable", False):
             flags |= Qt.ItemFlag.ItemIsUserCheckable
         item.setFlags(flags)
-        has_annotation = (
-            QtCore.QFile.exists(label_file) and LabelFile.is_label_file(label_file)
-        )
+        has_annotation = QtCore.QFile.exists(
+            label_file
+        ) and LabelFile.is_label_file(label_file)
         item.setData(FILE_ANNOTATION_ROLE, bool(has_annotation))
         if self._config.get("file_list_checkbox_editable", False):
             if has_annotation:
@@ -2556,7 +2564,9 @@ class LabelingWidget(LabelDialog):
     def _update_current_file_checked_item(self):
         item = self._current_file_item()
         if item is not None:
-            self._set_file_item_review_state(item, self._current_review_state())
+            self._set_file_item_review_state(
+                item, self._current_review_state()
+            )
 
     def _sync_annotation_checked_state(self):
         self._update_annotation_checked_action()
@@ -3021,9 +3031,7 @@ class LabelingWidget(LabelDialog):
             elif mode == "checked":
                 visible = checked
             elif mode == "rework":
-                visible = (
-                    item.data(FILE_REVIEW_ROLE) == REVIEW_REJECTED
-                )
+                visible = item.data(FILE_REVIEW_ROLE) == REVIEW_REJECTED
             elif mode == "low_conf":
                 visible = self._file_item_has_low_conf(item)
             else:
@@ -3067,9 +3075,11 @@ class LabelingWidget(LabelDialog):
             else self.tr("默认阈值")
         )
         filter_text = self.file_filter_combo.currentText()
-        second_line = self.tr("筛选：%1 · 阈值来源：%2").replace(
-            "%1", filter_text
-        ).replace("%2", threshold_text)
+        second_line = (
+            self.tr("筛选：%1 · 阈值来源：%2")
+            .replace("%1", filter_text)
+            .replace("%2", threshold_text)
+        )
         self.file_progress_label.setText(f"{first_line}\n{second_line}")
 
     def _refresh_file_panel(self):
@@ -3081,9 +3091,13 @@ class LabelingWidget(LabelDialog):
             if self._load_active_thresholds()
             else self.tr("当前仍在使用默认阈值，建议先跑一次阈值校准。")
         )
-        return self.tr(
-            "推荐顺序：1 阈值校准 → 2 数据智能分析 → 3 漏标扫描 → 4 迭代收益看板。"
-        ) + "\n" + threshold_text
+        return (
+            self.tr(
+                "推荐顺序：1 阈值校准 → 2 数据智能分析 → 3 漏标扫描 → 4 迭代收益看板。"
+            )
+            + "\n"
+            + threshold_text
+        )
 
     def _maybe_show_smart_tools_guide(self, directory):
         if not directory:
@@ -4597,7 +4611,10 @@ class LabelingWidget(LabelDialog):
             self.open_prev_image()
             event.accept()
             return
-        if key == Qt.Key.Key_Return and modifiers & Qt.KeyboardModifier.ControlModifier:
+        if (
+            key == Qt.Key.Key_Return
+            and modifiers & Qt.KeyboardModifier.ControlModifier
+        ):
             self._finish_shape_and_save()
             event.accept()
             return
@@ -4614,7 +4631,9 @@ class LabelingWidget(LabelDialog):
         """Ctrl+Enter: finish the current drawing shape (if any) and save."""
         try:
             if getattr(self.canvas, "current", None) is not None and (
-                self.canvas.drawing() if hasattr(self.canvas, "drawing") else True
+                self.canvas.drawing()
+                if hasattr(self.canvas, "drawing")
+                else True
             ):
                 self.canvas.finalise()
         except Exception as e:  # noqa
@@ -4895,9 +4914,7 @@ class LabelingWidget(LabelDialog):
                         .replace("%1", str(label))
                         .replace("%2", str(count))
                     )
-                matched = (
-                    not query or query in str(label).lower()
-                )
+                matched = not query or query in str(label).lower()
                 item.setHidden(not matched)
         except Exception as e:  # noqa
             logger.warning(f"Label panel refresh failed: {e}")
@@ -4989,7 +5006,9 @@ class LabelingWidget(LabelDialog):
 
         labels = list(self._config.get("labels") or [])
         if old_label in labels:
-            labels = [new_label if name == old_label else name for name in labels]
+            labels = [
+                new_label if name == old_label else name for name in labels
+            ]
         elif new_label not in labels:
             labels.append(new_label)
         seen = set()
@@ -5022,8 +5041,10 @@ class LabelingWidget(LabelDialog):
         self._refresh_shape_filters()
         self._refresh_label_panel()
         self.set_dirty()
-        status = self.tr("已将 %1 改为 %2").replace("%1", old_label).replace(
-            "%2", new_label
+        status = (
+            self.tr("已将 %1 改为 %2")
+            .replace("%1", old_label)
+            .replace("%2", new_label)
         )
         if renamed:
             status += f" ({renamed})"
@@ -5251,7 +5272,9 @@ class LabelingWidget(LabelDialog):
             except Exception:
                 image_file = None
             folder_hint = (
-                osp.dirname(image_file) if image_file else osp.dirname(label_file)
+                osp.dirname(image_file)
+                if image_file
+                else osp.dirname(label_file)
             )
             dest = move_file_to_delete_folder(label_file, folder_hint)
             logger.info(f"Label file is moved to: {dest}")
@@ -5454,9 +5477,7 @@ class LabelingWidget(LabelDialog):
                     return
             deleted = self.canvas.delete_selected()
             if deleted and len(deleted) == 1:
-                self.status(
-                    self.tr("Deleted 1 object. Undo with Ctrl+Z.")
-                )
+                self.status(self.tr("Deleted 1 object. Undo with Ctrl+Z."))
         self.remove_labels(deleted)
         self.shape_selection_changed(self.canvas.selected_shapes)
         self.set_dirty()
@@ -5603,7 +5624,9 @@ class LabelingWidget(LabelDialog):
                 label_file = osp.splitext(filename)[0] + ".json"
                 if self.output_dir:
                     label_file_without_path = osp.basename(label_file)
-                    label_file = self.output_dir + "/" + label_file_without_path
+                    label_file = (
+                        self.output_dir + "/" + label_file_without_path
+                    )
                 label_files.append(label_file)
                 item = self._create_file_list_item(
                     filename, label_file, read_checked=False
@@ -5668,9 +5691,7 @@ class LabelingWidget(LabelDialog):
         for candidate_dir in (self.output_dir, image_dir):
             if not candidate_dir:
                 continue
-            names = load_class_names(
-                osp.join(candidate_dir, CLASSES_FILENAME)
-            )
+            names = load_class_names(osp.join(candidate_dir, CLASSES_FILENAME))
             if names:
                 break
         if not names:
@@ -5723,7 +5744,9 @@ class LabelingWidget(LabelDialog):
         if not self.isVisible():
             if not getattr(self, "_pending_missing_labels_prompt", False):
                 self._pending_missing_labels_prompt = True
-                QtCore.QTimer.singleShot(800, self._maybe_prompt_missing_labels)
+                QtCore.QTimer.singleShot(
+                    800, self._maybe_prompt_missing_labels
+                )
             return
         self._pending_missing_labels_prompt = False
         box = QtWidgets.QMessageBox(self)
@@ -5768,7 +5791,9 @@ class LabelingWidget(LabelDialog):
     def _current_model_identity(self):
         """Name of the loaded auto-labeling model, used for shape provenance."""
         manager = getattr(self.auto_labeling_widget, "model_manager", None)
-        return model_display_name(getattr(manager, "loaded_model_config", None))
+        return model_display_name(
+            getattr(manager, "loaded_model_config", None)
+        )
 
     def _current_model_version(self):
         """Digest of the loaded model's weights file, or None if unidentified.
@@ -5888,9 +5913,7 @@ class LabelingWidget(LabelDialog):
         if (
             auto_labeling_result.replace
             and not new_shapes
-            and any(
-                not shape.locked for shape in self.canvas.shapes
-            )
+            and any(not shape.locked for shape in self.canvas.shapes)
         ):
             logger.info(
                 "Auto labeling found no objects on this image; keeping "
@@ -5905,9 +5928,7 @@ class LabelingWidget(LabelDialog):
                 shape for shape in self.canvas.shapes if shape.locked
             ]
             self.label_list.clear()
-            self.load_shapes(
-                locked_shapes + new_shapes, replace=True
-            )
+            self.load_shapes(locked_shapes + new_shapes, replace=True)
         else:  # Just update existing shapes
             # Remove shapes with label AutoLabelingMode.OBJECT
             for shape in self.canvas.shapes:
@@ -6363,7 +6384,9 @@ def _build_actions(widget):
         lambda: run_review_jump(widget),
         None,
         "check",
-        widget.tr("按不确定性优先级跳到下一张待复核的图片（再次点击可继续跳）"),
+        widget.tr(
+            "按不确定性优先级跳到下一张待复核的图片（再次点击可继续跳）"
+        ),
         enabled=True,
     )
     smart_propagate = action(
@@ -6371,7 +6394,9 @@ def _build_actions(widget):
         widget._propagate_previous_labels,
         None,
         "copy",
-        widget.tr("把上一张已标注图片的框按比例复制到当前图片，自动跳过重复框"),
+        widget.tr(
+            "把上一张已标注图片的框按比例复制到当前图片，自动跳过重复框"
+        ),
         enabled=True,
     )
     smart_archive = action(
@@ -6387,7 +6412,9 @@ def _build_actions(widget):
         lambda: run_training_advice(widget),
         None,
         "brain",
-        widget.tr("训练前预检 + 基于当前数据与历史轮次推荐 epochs/batch/imgsz 初值"),
+        widget.tr(
+            "训练前预检 + 基于当前数据与历史轮次推荐 epochs/batch/imgsz 初值"
+        ),
         enabled=True,
     )
     smart_template = action(
@@ -6395,7 +6422,9 @@ def _build_actions(widget):
         lambda: run_template_propagation(widget),
         None,
         "labels",
-        widget.tr("为未标注图片按相似度匹配已标注模板，批量生成预标注后再人工确认"),
+        widget.tr(
+            "为未标注图片按相似度匹配已标注模板，批量生成预标注后再人工确认"
+        ),
         enabled=True,
     )
     smart_stale_audit = action(
@@ -7095,9 +7124,7 @@ def _build_actions(widget):
     )
     # Same reasoning as show_masks: the shortcut must win over a focused
     # child widget (e.g. the text-prompt QLineEdit).
-    show_attributes.setShortcutContext(
-        Qt.ShortcutContext.ApplicationShortcut
-    )
+    show_attributes.setShortcutContext(Qt.ShortcutContext.ApplicationShortcut)
     show_scores = action(
         widget.tr("Show Scores"),
         lambda x: widget.set_canvas_params("show_scores", x),
@@ -7269,9 +7296,7 @@ def _build_actions(widget):
         widget.tr("Auto Labeling"),
     )
 
-    widget.label_list.setContextMenuPolicy(
-        Qt.ContextMenuPolicy.NoContextMenu
-    )
+    widget.label_list.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
 
     # Store actions for further handling.
     widget.actions = utils.Struct(
@@ -7571,9 +7596,7 @@ def _build_actions(widget):
             smart_restore_backup,
         ),
     )
-    utils.add_actions(
-        widget.menus.train, (ultralytics_train, run_history)
-    )
+    utils.add_actions(widget.menus.train, (ultralytics_train, run_history))
     utils.add_actions(
         widget.menus.tool,
         (

@@ -405,7 +405,9 @@ def _append_result_dialog_actions(
     export_button.clicked.connect(
         lambda: _export_dialog_rows(dialog, parent, directory, title)
     )
-    open_button.clicked.connect(lambda: _open_result_folder(dialog, parent, directory))
+    open_button.clicked.connect(
+        lambda: _open_result_folder(dialog, parent, directory)
+    )
     jump_button.clicked.connect(lambda: _jump_to_result(dialog))
     dialog.layout().addLayout(buttons)
 
@@ -424,11 +426,17 @@ def run_threshold_calibration(parent):
     for image_path, data in _label_entries(parent):
         if data is None:
             continue
-        is_confirmed = confirmed.get(osp.normpath(osp.abspath(image_path)), False)
+        is_confirmed = confirmed.get(
+            osp.normpath(osp.abspath(image_path)), False
+        )
         entries.append((data, is_confirmed))
 
     if not entries:
-        _notify(parent, parent.tr("当前文件夹没有可用的标注，无法校准。"), "warning")
+        _notify(
+            parent,
+            parent.tr("当前文件夹没有可用的标注，无法校准。"),
+            "warning",
+        )
         return None
 
     class_scores, confirmed_scores = collect_score_samples(entries)
@@ -444,9 +452,9 @@ def run_threshold_calibration(parent):
     if not thresholds:
         _notify(
             parent,
-            parent.tr("样本不足（至少需要 %1 个带分数的框），暂不校准。").replace(
-                "%1", str(MIN_CALIBRATION_SAMPLES)
-            ),
+            parent.tr(
+                "样本不足（至少需要 %1 个带分数的框），暂不校准。"
+            ).replace("%1", str(MIN_CALIBRATION_SAMPLES)),
             "warning",
         )
         return None
@@ -536,7 +544,11 @@ def run_smart_analysis(parent):
         lambda message: (
             progress.close(),
             logger.error(f"Smart analysis failed: {message}"),
-            _notify(parent, parent.tr("分析失败：%1").replace("%1", message), "warning"),
+            _notify(
+                parent,
+                parent.tr("分析失败：%1").replace("%1", message),
+                "warning",
+            ),
         )
     )
 
@@ -575,7 +587,9 @@ def run_smart_analysis(parent):
             duplicate_rows.append(
                 (
                     osp.basename(head),
-                    parent.tr("与 %1 张图重复").replace("%1", str(len(group) - 1)),
+                    parent.tr("与 %1 张图重复").replace(
+                        "%1", str(len(group) - 1)
+                    ),
                     head,
                 )
             )
@@ -585,18 +599,14 @@ def run_smart_analysis(parent):
         )
 
         summary = (
-            parent.tr(
-                "共 %1 张图 · 已标注 %2 · 标注框 %3 个 · 小目标 %4 个"
-            )
+            parent.tr("共 %1 张图 · 已标注 %2 · 标注框 %3 个 · 小目标 %4 个")
             .replace("%1", str(stats["total_images"]))
             .replace("%2", str(stats["labeled_images"]))
             .replace("%3", str(stats["total_shapes"]))
             .replace("%4", str(stats["area_buckets"]["small"]))
         )
         title = QLabel(summary)
-        title.setStyleSheet(
-            "font-size: 13px; font-weight: 500; padding: 2px;"
-        )
+        title.setStyleSheet("font-size: 13px; font-weight: 500; padding: 2px;")
         dialog.layout().insertWidget(0, title)
         _append_result_dialog_actions(
             dialog, parent, directory, parent.tr("数据智能分析")
@@ -649,20 +659,20 @@ class _SmartTaskThread(QThread):
 
 
 def _make_progress_dialog(parent, title, maximum):
-    dialog = QProgressDialog(title, parent.tr("取消"), 0, max(maximum, 1), parent)
+    dialog = QProgressDialog(
+        title, parent.tr("取消"), 0, max(maximum, 1), parent
+    )
     dialog.setWindowModality(Qt.WindowModality.WindowModal)
     dialog.setWindowTitle(title)
     dialog.setMinimumWidth(380)
     dialog.setAutoClose(False)
     dialog.setAutoReset(False)
     dialog.setValue(0)
-    dialog.setStyleSheet(
-        f"""
+    dialog.setStyleSheet(f"""
         QProgressDialog {{ background-color: {get_theme()["background"]};
             border-radius: 12px; padding: 18px; }}
         QLabel {{ color: {get_theme()["text"]}; font-size: 13px; }}
-        """
-    )
+        """)
     dialog.show()
     return dialog
 
@@ -695,17 +705,17 @@ class _MissingScanThread(QThread):
                     break
                 annotations = (data or {}).get("shapes") or []
                 try:
-                    result = (
-                        self.app.auto_labeling_widget.model_manager.predict_shapes(
-                            self.app.image, image_path, batch=True
-                        )
+                    result = self.app.auto_labeling_widget.model_manager.predict_shapes(
+                        self.app.image, image_path, batch=True
                     )
                 except Exception as exc:  # noqa: BLE001
                     logger.warning(
                         f"Missing scan: prediction failed for {image_path}: {exc}"
                     )
                     result = None
-                predictions = getattr(result, "shapes", None) if result else None
+                predictions = (
+                    getattr(result, "shapes", None) if result else None
+                )
                 if predictions:
                     missing = find_missing_predictions(
                         predictions,
@@ -714,10 +724,10 @@ class _MissingScanThread(QThread):
                         min_score=self.min_score,
                     )
                     if missing:
-                        self._results.append((image_path, _shapes_to_payloads(missing)))
-                self.progress_updated.emit(
-                    index + 1, f"{index + 1}/{total}"
-                )
+                        self._results.append(
+                            (image_path, _shapes_to_payloads(missing))
+                        )
+                self.progress_updated.emit(index + 1, f"{index + 1}/{total}")
             self.results_ready.emit(self._results)
         except Exception as exc:  # noqa: BLE001
             self.error_occurred.emit(str(exc))
@@ -750,7 +760,10 @@ def run_missing_scan(parent, iou_threshold=0.5, min_score=DEFAULT_ACCEPT):
     manager = getattr(
         getattr(parent, "auto_labeling_widget", None), "model_manager", None
     )
-    if manager is None or getattr(manager, "loaded_model_config", None) is None:
+    if (
+        manager is None
+        or getattr(manager, "loaded_model_config", None) is None
+    ):
         _notify(parent, parent.tr("请先加载一个自动标注模型。"), "warning")
         return
 
@@ -870,7 +883,9 @@ def _write_missing(parent, results):
             with open(label_file, "w", encoding="utf-8") as handle:
                 json.dump(data, handle, ensure_ascii=False, indent=2)
         except OSError as exc:
-            logger.warning(f"Missing scan: failed to write {label_file}: {exc}")
+            logger.warning(
+                f"Missing scan: failed to write {label_file}: {exc}"
+            )
     return written
 
 
@@ -962,9 +977,7 @@ def list_label_backups(label_dir):
 
 def plan_backup_restore(backup_dir, label_dir, skip_files=None):
     """Map a snapshot's jsons onto the label files they came from."""
-    skipped = {
-        osp.normpath(osp.abspath(path)) for path in (skip_files or ())
-    }
+    skipped = {osp.normpath(osp.abspath(path)) for path in (skip_files or ())}
     plan = {}
     try:
         names = sorted(os.listdir(backup_dir))
@@ -1134,9 +1147,7 @@ def show_iteration_dashboard(parent):
         parent.tr("迭代收益看板"),
         parent.tr("每次训练并回灌标注后会自动追加一轮记录。"),
     )
-    dialog.add_category(
-        parent.tr("轮次"), [(line, "", "") for line in lines]
-    )
+    dialog.add_category(parent.tr("轮次"), [(line, "", "") for line in lines])
     suggestion = suggest_next_step(history)
     dialog.add_category(
         parent.tr("系统建议"),
@@ -1211,7 +1222,9 @@ def run_review_jump(parent, forward=True):
         return
 
     results = audit_dataset([path for path, _ in entries], directory)
-    queue = [osp.normpath(osp.abspath(p)) for p in (results.get("review") or [])]
+    queue = [
+        osp.normpath(osp.abspath(p)) for p in (results.get("review") or [])
+    ]
     if not queue:
         _notify(parent, parent.tr("太棒了，暂无待复核图片。"))
         return
@@ -1226,7 +1239,11 @@ def run_review_jump(parent, forward=True):
     parent.load_file(target)
     status = getattr(parent, "status", None)
     if callable(status):
-        status(parent.tr("待复核队列 %1/%2").replace("%1", str(index + 1)).replace("%2", str(len(queue))))
+        status(
+            parent.tr("待复核队列 %1/%2")
+            .replace("%1", str(index + 1))
+            .replace("%2", str(len(queue)))
+        )
 
 
 # --------------------------------------------------------------------------
@@ -1262,9 +1279,9 @@ def run_duplicate_archive(parent):
     answer = QMessageBox.question(
         parent,
         parent.tr("一键去重归档"),
-        parent.tr(
-            "将归档 %1 张重复图片及其标注到「%2」文件夹，是否继续？"
-        ).replace("%1", str(len(images))).replace("%2", ARCHIVE_DIRNAME),
+        parent.tr("将归档 %1 张重复图片及其标注到「%2」文件夹，是否继续？")
+        .replace("%1", str(len(images)))
+        .replace("%2", ARCHIVE_DIRNAME),
         QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         QMessageBox.StandardButton.No,
     )
@@ -1281,7 +1298,9 @@ def run_duplicate_archive(parent):
             logger.warning("Duplicate archive: failed to reload file list")
     _notify(
         parent,
-        parent.tr("已归档 %1 项（打开「%2」文件夹可查）").replace("%1", str(len(moved))).replace("%2", ARCHIVE_DIRNAME),
+        parent.tr("已归档 %1 项（打开「%2」文件夹可查）")
+        .replace("%1", str(len(moved)))
+        .replace("%2", ARCHIVE_DIRNAME),
     )
 
 
@@ -1319,7 +1338,9 @@ def run_training_advice(parent):
         max_dim = max(image.width(), image.height())
 
     checks = preflight_checks(stats)
-    advice = recommend_training_config(stats, history=hist_info, max_image_dim=max_dim)
+    advice = recommend_training_config(
+        stats, history=hist_info, max_image_dim=max_dim
+    )
 
     dialog = _ResultDialog(
         parent,
@@ -1458,9 +1479,9 @@ def run_stale_model_audit(parent):
     )
     for producer in sorted(by_producer):
         dialog.add_category(
-            parent.tr("来自 %1（%2 个）").replace("%1", producer).replace(
-                "%2", str(len(by_producer[producer]))
-            ),
+            parent.tr("来自 %1（%2 个）")
+            .replace("%1", producer)
+            .replace("%2", str(len(by_producer[producer]))),
             by_producer[producer],
         )
     if not by_producer:
@@ -1519,9 +1540,7 @@ def _delete_reported_stale(parent, dialog):
     open_label = None
     filename = getattr(parent, "filename", None)
     if filename:
-        open_label = _label_file_for_image(
-            filename, label_dir_for(parent)
-        )
+        open_label = _label_file_for_image(filename, label_dir_for(parent))
     # The open file lives in the canvas too: editing it on disk while unsaved
     # human work is pending would lose that work, so leave it alone.
     skip = set()
@@ -1715,7 +1734,9 @@ def run_template_propagation(parent):
         else:
             targets.append(image_path)
     if not templates:
-        _notify(parent, parent.tr("至少需要一张已标注图片作为模板。"), "warning")
+        _notify(
+            parent, parent.tr("至少需要一张已标注图片作为模板。"), "warning"
+        )
         return
     if not targets:
         _notify(parent, parent.tr("没有未标注的图片需要预标注。"))
@@ -1740,14 +1761,20 @@ def run_template_propagation(parent):
         lambda message: (
             progress.close(),
             logger.error(f"Template propagation failed: {message}"),
-            _notify(parent, parent.tr("匹配失败：%1").replace("%1", message), "warning"),
+            _notify(
+                parent,
+                parent.tr("匹配失败：%1").replace("%1", message),
+                "warning",
+            ),
         )
     )
 
     def _finish(batch):
         progress.close()
         if not batch:
-            _notify(parent, parent.tr("没有找到与已标注模板足够相似的未标注图片。"))
+            _notify(
+                parent, parent.tr("没有找到与已标注模板足够相似的未标注图片。")
+            )
             return
 
         dialog = _ResultDialog(
@@ -1780,13 +1807,17 @@ def run_template_propagation(parent):
             if failed:
                 _notify(
                     parent,
-                    parent.tr("已写入 %1 项，%2 项失败。").replace("%1", str(written)).replace("%2", str(failed)),
+                    parent.tr("已写入 %1 项，%2 项失败。")
+                    .replace("%1", str(written))
+                    .replace("%2", str(failed)),
                     "warning",
                 )
             else:
                 _notify(
                     parent,
-                    parent.tr("已写入 %1 张图片的预标注。").replace("%1", str(written)),
+                    parent.tr("已写入 %1 张图片的预标注。").replace(
+                        "%1", str(written)
+                    ),
                 )
 
         write_button.clicked.connect(_write)
@@ -1840,7 +1871,9 @@ def _write_prelabels(parent, batch):
                 json.dump(data, handle, ensure_ascii=False, indent=2)
             written += 1
         except OSError as exc:
-            logger.warning(f"Template propagation: failed to write {label_file}: {exc}")
+            logger.warning(
+                f"Template propagation: failed to write {label_file}: {exc}"
+            )
             failed += 1
     # Reload the image currently open if it received new pre-labels, so the
     # canvas picks them up. We never rebuild the whole file list here: that

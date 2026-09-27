@@ -180,7 +180,9 @@ class ProjectSwitcherDialog(QtWidgets.QDialog):
             QtWidgets.QMessageBox.information(
                 self,
                 self.tr("暂无项目设置"),
-                self.tr("该项目还没有 .jllabel 设置文件；它会在首次保存时创建。"),
+                self.tr(
+                    "该项目还没有 .jllabel 设置文件；它会在首次保存时创建。"
+                ),
             )
             return
         _open_in_file_manager(settings_dir)

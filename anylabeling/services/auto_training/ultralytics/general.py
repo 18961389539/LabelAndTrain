@@ -14,7 +14,6 @@ from .config import (
     TASK_SHAPE_MAPPINGS,
 )
 
-
 MANIFEST_NAME = "manifest.json"
 
 
@@ -81,11 +80,7 @@ def plan_dataset_prune(runs, keep: int, current_dir: str = None):
     age, so the answer can never delete the data a result refers to.
     """
     current = os.path.normpath(current_dir) if current_dir else None
-    candidates = [
-        path
-        for path in runs
-        if os.path.normpath(path) != current
-    ]
+    candidates = [path for path in runs if os.path.normpath(path) != current]
     to_delete = candidates[keep:] if keep and keep > 0 else list(candidates)
     return to_delete
 
@@ -126,9 +121,7 @@ def _manifest_entries(pairs, split: str, label_digests: dict) -> List[dict]:
         entries.append(
             {
                 "image": os.path.abspath(image_file),
-                "label": (
-                    os.path.abspath(label_file) if label_file else None
-                ),
+                "label": (os.path.abspath(label_file) if label_file else None),
                 "sha1": (
                     label_digests.get(label_file) if label_file else None
                 ),
@@ -231,9 +224,7 @@ def create_yolo_dataset(
                             ).hexdigest()[:8]
                             dst_filename = f"{stem}_{digest}{ext}"
                         used_names.add(dst_filename)
-                        dst_image_path = os.path.join(
-                            class_dir, dst_filename
-                        )
+                        dst_image_path = os.path.join(class_dir, dst_filename)
 
                         if os.name == "nt":  # Windows
                             shutil.copy2(image_file, dst_image_path)
@@ -356,7 +347,9 @@ def create_yolo_dataset(
 
     # ensure train/val split is randomized, but reproducible from the seed
     # recorded in the manifest
-    valid_images = random.Random(seed).sample(valid_images, k=len(valid_images))
+    valid_images = random.Random(seed).sample(
+        valid_images, k=len(valid_images)
+    )
 
     train_count = int(len(valid_images) * dataset_ratio)
     train_valid_images = valid_images[:train_count]
@@ -463,9 +456,8 @@ def create_yolo_dataset(
         },
         "data_yaml": yaml_file,
         "data_yaml_sha1": file_sha1(yaml_file),
-        "files": _manifest_entries(
-            train_pairs, "train", label_digests
-        ) + _manifest_entries(val_valid_images, "val", label_digests),
+        "files": _manifest_entries(train_pairs, "train", label_digests)
+        + _manifest_entries(val_valid_images, "val", label_digests),
     }
     manifest_file = os.path.join(temp_dir, "manifest.json")
     with open(manifest_file, "w", encoding="utf-8") as f:

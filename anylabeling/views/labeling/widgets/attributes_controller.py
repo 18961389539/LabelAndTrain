@@ -85,9 +85,7 @@ def update_attributes(widget, shape_index):
         ).get(property, "combobox")
         has_current_value = property in update_shape.attributes
         current_value = update_shape.attributes.get(property)
-        current_value_text = (
-            str(current_value) if has_current_value else None
-        )
+        current_value_text = str(current_value) if has_current_value else None
         if hasattr(widget, "grid_layout_container"):
             font_metrics = QFontMetrics(widget.grid_layout_container.font())
         else:
@@ -113,10 +111,7 @@ def update_attributes(widget, shape_index):
         if widget_type == "radiobutton":
             radio_options = list(options)
             unknown_radio_value = None
-            if (
-                has_current_value
-                and current_value_text not in radio_options
-            ):
+            if has_current_value and current_value_text not in radio_options:
                 unknown_radio_value = current_value_text
                 radio_options.append(unknown_radio_value)
             radio_container = QWidget()
@@ -176,22 +171,16 @@ def update_attributes(widget, shape_index):
 
             idx = 0
             while idx < len(buttons_data):
-                display_text, original_text, button_width = buttons_data[
-                    idx
-                ]
+                display_text, original_text, button_width = buttons_data[idx]
 
                 if not current_row_buttons:
-                    current_row_buttons.append(
-                        (display_text, original_text)
-                    )
+                    current_row_buttons.append((display_text, original_text))
                     current_row_width = button_width
                     idx += 1
                     continue
 
                 if current_row_width + button_width <= available_width:
-                    current_row_buttons.append(
-                        (display_text, original_text)
-                    )
+                    current_row_buttons.append((display_text, original_text))
                     current_row_width += button_width
                     idx += 1
                 else:
@@ -247,9 +236,9 @@ def update_attributes(widget, shape_index):
                                     radio_button.setChecked(True)
                                     del blocker
                                     if not has_current_value:
-                                        update_shape.attributes[
-                                            property
-                                        ] = btn_original
+                                        update_shape.attributes[property] = (
+                                            btn_original
+                                        )
                                         attributes_changed = True
 
                             row_layout.addStretch()
@@ -268,22 +257,18 @@ def update_attributes(widget, shape_index):
                             btn_display,
                             btn_original,
                         ) in current_row_buttons:
-                            radio_button = (
-                                create_radio_button_with_handler(
-                                    btn_display,
-                                    btn_original,
-                                    property,
-                                    shape_index,
-                                )
+                            radio_button = create_radio_button_with_handler(
+                                btn_display,
+                                btn_original,
+                                property,
+                                shape_index,
                             )
                             row_layout.addWidget(radio_button)
                             if current_value_text == btn_original or (
                                 not has_current_value
                                 and btn_original == options[0]
                             ):
-                                blocker = QtCore.QSignalBlocker(
-                                    radio_button
-                                )
+                                blocker = QtCore.QSignalBlocker(radio_button)
                                 radio_button.setChecked(True)
                                 del blocker
                                 if not has_current_value:
@@ -311,16 +296,13 @@ def update_attributes(widget, shape_index):
                     )
                     row_layout.addWidget(radio_button)
                     if current_value_text == btn_original or (
-                        not has_current_value
-                        and btn_original == options[0]
+                        not has_current_value and btn_original == options[0]
                     ):
                         blocker = QtCore.QSignalBlocker(radio_button)
                         radio_button.setChecked(True)
                         del blocker
                         if not has_current_value:
-                            update_shape.attributes[property] = (
-                                btn_original
-                            )
+                            update_shape.attributes[property] = btn_original
                             attributes_changed = True
                 row_layout.addStretch()
                 row_widget = QWidget()
@@ -328,9 +310,7 @@ def update_attributes(widget, shape_index):
                 main_layout.addWidget(row_widget)
 
             radio_container.setLayout(main_layout)
-            widget.grid_layout.addWidget(
-                radio_container, row_counter, 0, 1, 2
-            )
+            widget.grid_layout.addWidget(radio_container, row_counter, 0, 1, 2)
             row_counter += 1
         elif widget_type == "group_id":
             property_combo = QComboBox()
@@ -349,9 +329,7 @@ def update_attributes(widget, shape_index):
                     shape_idx, prop, combo
                 )
             )
-            widget.grid_layout.addWidget(
-                property_combo, row_counter, 0, 1, 2
-            )
+            widget.grid_layout.addWidget(property_combo, row_counter, 0, 1, 2)
             row_counter += 1
         elif widget_type == "lineedit":
             property_line = QLineEdit()
@@ -377,9 +355,7 @@ def update_attributes(widget, shape_index):
                     shape_idx, prop, combo
                 )
             )
-            widget.grid_layout.addWidget(
-                property_combo, row_counter, 0, 1, 2
-            )
+            widget.grid_layout.addWidget(property_combo, row_counter, 0, 1, 2)
             row_counter += 1
 
     widget.grid_layout_container = QWidget()
@@ -505,9 +481,7 @@ def shape_selection_changed(widget, selected_shapes):
             widget.label_list.scroll_to_item(item)
     widget._no_selection_slot = False
     n_selected = len(selected_shapes)
-    same_type = (
-        len(set(shape.shape_type for shape in selected_shapes)) <= 1
-    )
+    same_type = len(set(shape.shape_type for shape in selected_shapes)) <= 1
     has_locked = any(shape.locked for shape in selected_shapes)
     has_unlocked = any(not shape.locked for shape in selected_shapes)
     group_shapes = widget.canvas._active_group_shapes()

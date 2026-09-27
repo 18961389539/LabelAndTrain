@@ -100,7 +100,10 @@ dependencies = [
 
 dev = [
     "build",
-    "black",
+    # Pinned exactly: black's output style changes between releases, and a
+    # moving formatter would reformat the tree on every upgrade.  Keep in
+    # step with the black hook rev in .pre-commit-config.yaml.
+    "black==26.5.1",
     "flake8",
     # .flake8 selects "B" and "C4", which only exist with these two installed.
     # They must match the flake8 hook in .pre-commit-config.yaml and whatever

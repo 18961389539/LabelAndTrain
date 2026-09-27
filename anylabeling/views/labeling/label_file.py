@@ -215,9 +215,7 @@ class LabelFile:
         except LabelFileError:
             raise
         except Exception as e:  # noqa
-            raise LabelFileError(
-                f"保存标签文件失败: {e}"
-            ) from e
+            raise LabelFileError(f"保存标签文件失败: {e}") from e
         finally:
             if temporary_file and osp.exists(temporary_file):
                 try:

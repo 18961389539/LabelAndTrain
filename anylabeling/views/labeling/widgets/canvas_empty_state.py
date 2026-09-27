@@ -17,8 +17,7 @@ class CanvasEmptyStateWidget(QtWidgets.QWidget):
         self.setObjectName("CanvasEmptyState")
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         t = get_theme()
-        self.setStyleSheet(
-            f"""
+        self.setStyleSheet(f"""
             QWidget#CanvasEmptyState {{
                 background: transparent;
             }}
@@ -31,8 +30,7 @@ class CanvasEmptyStateWidget(QtWidgets.QWidget):
                 color: {t["text_placeholder"]};
                 font-size: 13px;
             }}
-            """
-        )
+            """)
 
         title = QtWidgets.QLabel(self.tr("打开文件夹开始标注"))
         title.setObjectName("EmptyTitle")

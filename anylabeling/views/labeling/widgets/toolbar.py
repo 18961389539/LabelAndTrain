@@ -237,7 +237,8 @@ class FloatingToolPanel(QtWidgets.QFrame):
             if event.button() == QtCore.Qt.MouseButton.LeftButton:
                 self._dragging = True
                 self._drag_offset = (
-                    event.globalPosition().toPoint() - self.frameGeometry().topLeft()
+                    event.globalPosition().toPoint()
+                    - self.frameGeometry().topLeft()
                 )
                 self._handle.setCursor(QtCore.Qt.CursorShape.ClosedHandCursor)
                 return True
@@ -257,7 +258,10 @@ class FloatingToolPanel(QtWidgets.QFrame):
             self._clamp_to_parent()
             self._user_moved = True
             return True
-        elif event.type() == QtCore.QEvent.Type.MouseButtonRelease and self._dragging:
+        elif (
+            event.type() == QtCore.QEvent.Type.MouseButtonRelease
+            and self._dragging
+        ):
             self._dragging = False
             self._handle.setCursor(QtCore.Qt.CursorShape.OpenHandCursor)
             if self._user_moved:

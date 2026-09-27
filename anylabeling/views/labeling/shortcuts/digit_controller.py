@@ -26,9 +26,7 @@ class DigitShortcutController:
         digit_shortcut_dialog = DigitShortcutDialog(parent=widget)
         result = digit_shortcut_dialog.exec()
         if result == QtWidgets.QDialog.DialogCode.Accepted:
-            widget._config["digit_shortcuts"] = (
-                widget.drawing_digit_shortcuts
-            )
+            widget._config["digit_shortcuts"] = widget.drawing_digit_shortcuts
             save_config(widget._config)
 
     def create_digit_mode(self, digit_num):

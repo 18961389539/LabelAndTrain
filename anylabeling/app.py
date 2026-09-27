@@ -164,9 +164,7 @@ def _install_runtime_exception_hook(logger):
             sys.__excepthook__(exc_type, exc_value, exc_tb)
             return
 
-        text = "".join(
-            traceback.format_exception(exc_type, exc_value, exc_tb)
-        )
+        text = "".join(traceback.format_exception(exc_type, exc_value, exc_tb))
         try:
             logger.error(f"Unhandled exception:\n{text}")
         except Exception:  # noqa: BLE001

@@ -98,8 +98,7 @@ def _clamp_points(points, image_width, image_height):
     max_x = max(0, image_width - 1)
     max_y = max(0, image_height - 1)
     return [
-        [max(0, min(p[0], max_x)), max(0, min(p[1], max_y))]
-        for p in points
+        [max(0, min(p[0], max_x)), max(0, min(p[1], max_y))] for p in points
     ]
 
 

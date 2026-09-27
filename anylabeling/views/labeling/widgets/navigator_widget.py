@@ -137,9 +137,7 @@ class NavigatorWidget(QWidget):
             # used to leave the navigator blank with no explanation.
             pixmap = QPixmap(str(image_data))
             if pixmap.isNull():
-                logger.warning(
-                    f"Navigator could not load image: {image_data}"
-                )
+                logger.warning(f"Navigator could not load image: {image_data}")
                 self.original_image = None
                 self.thumbnail = None
                 self.update()

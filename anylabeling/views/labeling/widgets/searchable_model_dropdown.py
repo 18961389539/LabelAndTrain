@@ -387,8 +387,7 @@ class SearchableModelDropdownPopup(QWidget):
             button.setCheckable(True)
             button.setChecked(group == "all")
             button.setCursor(Qt.CursorShape.PointingHandCursor)
-            button.setStyleSheet(
-                f"""
+            button.setStyleSheet(f"""
                 QPushButton {{
                     background: {t["background_secondary"]};
                     color: {t["text"]};
@@ -402,8 +401,7 @@ class SearchableModelDropdownPopup(QWidget):
                     color: white;
                     border-color: {t["primary"]};
                 }}
-                """
-            )
+                """)
             self._task_filter_group.addButton(button)
             button.clicked.connect(
                 lambda _checked=False, g=group: self.set_task_filter(g)

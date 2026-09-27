@@ -52,10 +52,7 @@ LABEL_COLORMAP = label_colormap()
 
 
 class Canvas(
-    BrushCanvasMixin,
-    CanvasRotationMixin,
-    CuboidCanvasMixin,
-    QtWidgets.QWidget
+    BrushCanvasMixin, CanvasRotationMixin, CuboidCanvasMixin, QtWidgets.QWidget
 ):  # pylint: disable=too-many-public-methods, too-many-instance-attributes
     """Canvas widget to handle label drawing"""
 
@@ -212,7 +209,9 @@ class Canvas(
         self.show_scores = True
         self.show_degrees = False
         self.show_attributes = True
-        self.show_linking = False  # KIE linking disabled for YOLO-only workflow
+        self.show_linking = (
+            False  # KIE linking disabled for YOLO-only workflow
+        )
 
         # Set cross line options.
         self.cross_line_show = True
@@ -1632,10 +1631,10 @@ class Canvas(
                         self.set_hiding()
                         self.drawing_polygon.emit(True)
                         self.update()
-                elif (
-                    self.out_off_pixmap(pos)
-                    and self.create_mode in ["polygon", "linestrip"]
-                ):
+                elif self.out_off_pixmap(pos) and self.create_mode in [
+                    "polygon",
+                    "linestrip",
+                ]:
                     w = self.pixmap.width()
                     h = self.pixmap.height()
                     if w > 0 and h > 0:

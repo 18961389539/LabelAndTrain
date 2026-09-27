@@ -270,9 +270,10 @@ class ModelManager(QObject):
         kept = []
         removed = False
         for model in custom_models:
-            if os.path.normpath(
-                os.path.abspath(model.get("config_file", ""))
-            ) == config_file:
+            if (
+                os.path.normpath(os.path.abspath(model.get("config_file", "")))
+                == config_file
+            ):
                 removed = True
                 continue
             kept.append(model)
@@ -542,7 +543,9 @@ class ModelManager(QObject):
 
         model_config = copy.deepcopy(self.model_configs[model_id])
         model_config["_cancel_event"] = self._cancel_event
-        model_config["_cancel_prediction_event"] = self._cancel_prediction_event
+        model_config["_cancel_prediction_event"] = (
+            self._cancel_prediction_event
+        )
         model_config["_on_progress"] = (
             lambda downloaded, total: self.download_progress.emit(
                 downloaded, total
@@ -636,9 +639,7 @@ class ModelManager(QObject):
                 )
                 with self.loaded_model_config_lock:
                     self.loaded_model_config = model_config
-                logger.info(
-                    "SegmentAnything2 engine initialized successfully"
-                )
+                logger.info("SegmentAnything2 engine initialized successfully")
                 self.auto_segmentation_model_selected.emit()
                 logger.info("auto_segmentation_model_selected emitted")
                 logger.info(

@@ -110,7 +110,11 @@ def preflight_checks(stats):
 
     if not checks:
         checks.append(
-            {"level": "ok", "code": "healthy", "message": "预检通过，数据分布健康。"}
+            {
+                "level": "ok",
+                "code": "healthy",
+                "message": "预检通过，数据分布健康。",
+            }
         )
     return checks
 
@@ -140,7 +144,10 @@ def history_summary(history):
         map50 = last.get("map50")
         if map50 is None:
             for key, value in last.items():
-                if "map50" in str(key).lower() and "map50-95" not in str(key).lower():
+                if (
+                    "map50" in str(key).lower()
+                    and "map50-95" not in str(key).lower()
+                ):
                     map50 = value
                     break
     try:
@@ -166,7 +173,12 @@ def recommend_training_config(stats, history=None, max_image_dim=None):
     checks = preflight_checks(stats)
     errs = [c for c in checks if c["level"] == "err"]
     if errs:
-        return {"epochs": 100, "batch": 16, "imgsz": 640, "text": errs[0]["message"]}
+        return {
+            "epochs": 100,
+            "batch": 16,
+            "imgsz": 640,
+            "text": errs[0]["message"],
+        }
 
     class_counts = stats.get("class_counts") or {}
     labeled = int(stats.get("labeled_images") or 0)
@@ -199,7 +211,9 @@ def recommend_training_config(stats, history=None, max_image_dim=None):
     lines = []
     lines.append("推荐初值：" + " · ".join(suggestions) + "。")
     if labeled < LOW_DATA_THRESHOLD:
-        lines.append("数据量小，适当延长训练并开启数据增强（mosaic/随机裁剪）防过拟合。")
+        lines.append(
+            "数据量小，适当延长训练并开启数据增强（mosaic/随机裁剪）防过拟合。"
+        )
     elif labeled >= MUCH_DATA_THRESHOLD:
         lines.append("数据量充足，可减少轮数并用更大 imgsz 提速收敛。")
 
@@ -208,7 +222,10 @@ def recommend_training_config(stats, history=None, max_image_dim=None):
     if imbalance_warns:
         lines.append("检测到类别不平衡：" + imbalance_warns[0]["detail"])
     elif few_warns:
-        lines.append("存在小类样本不足，建议先做主动学习补充硬样例。" + few_warns[0]["message"])
+        lines.append(
+            "存在小类样本不足，建议先做主动学习补充硬样例。"
+            + few_warns[0]["message"]
+        )
 
     if any(c["code"] == "unlabeled_majority" for c in checks):
         missing = stats.get("missing_json") or 0
@@ -220,9 +237,13 @@ def recommend_training_config(stats, history=None, max_image_dim=None):
         iterations = history.get("iterations")
         last_map50 = history.get("last_map50")
         if last_map50 is not None and last_map50 < 0.3:
-            lines.append("上一轮 mAP50 偏低，建议先检查标注质量并回看「迭代收益看板」。")
+            lines.append(
+                "上一轮 mAP50 偏低，建议先检查标注质量并回看「迭代收益看板」。"
+            )
         elif iterations:
-            lines.append(f"已是第 {int(iterations)} 轮迭代，建议同步查看「迭代收益看板」判断是否停止。")
+            lines.append(
+                f"已是第 {int(iterations)} 轮迭代，建议同步查看「迭代收益看板」判断是否停止。"
+            )
 
     return {
         "epochs": epochs,

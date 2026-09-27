@@ -113,9 +113,7 @@ def safe_check_model(model_path, timeout=30, on_stage=None):
     if p.exitcode == 0:
         if on_stage is not None:
             on_stage(
-                QCoreApplication.translate(
-                    "Model", "Model file verified."
-                )
+                QCoreApplication.translate("Model", "Model file verified.")
             )
         return True
     elif p.exitcode is None:
@@ -471,8 +469,7 @@ class Model(metaclass=ModelMeta):
                         self._emit_stage(
                             QCoreApplication.translate(
                                 "Model",
-                                "Downloading {file_name} "
-                                "(size unknown)...",
+                                "Downloading {file_name} " "(size unknown)...",
                             ).format(file_name=os.path.basename(dest_path))
                         )
 
@@ -500,8 +497,7 @@ class Model(metaclass=ModelMeta):
                             "Download completed: {file_name} ({size_mb:.1f} MB)",
                         ).format(
                             file_name=os.path.basename(dest_path),
-                            size_mb=os.path.getsize(dest_path)
-                            / (1024 * 1024),
+                            size_mb=os.path.getsize(dest_path) / (1024 * 1024),
                         )
                     )
                     return True

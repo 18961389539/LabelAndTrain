@@ -27,15 +27,20 @@ repos:
     -   id: trailing-whitespace
         files: \.(py|sh|rst|yml|yaml)$
 
-# black used to be listed here -- twice, once to rewrite and once with
-# --check, which is self-contradictory.  It is gone for a stronger reason:
-# `black --check` currently rejects 44 of the 156 files it looks at, and the
-# changes it wants (wrapping a trailing comment onto its own line inside
-# parentheses) fight this repo's documented style.  Turning it on would mean
-# either reformatting the tree as a side effect of the next unrelated commit,
-# or failing on any file a contributor happens to touch.  Neither is a call
-# this config should make on its own -- see the open "black style" decision.
-# Re-add it once that is settled, exactly once, without --check.
+# black was removed here once because `black --check` rejected 44 of the 156
+# files it looked at, and turning it on piecemeal would have reformatted the
+# tree as a side effect of unrelated commits.  The decision went the other
+# way instead: one dedicated reformat commit brought the tree to black's
+# style (42 files, the two files a parallel refactor batch had in flight
+# excluded -- pre-commit will settle them when that batch lands), and the
+# hook is back, exactly once, rewriting rather than --check.  The version is
+# pinned to the same 26.5.1 as the `black` entry in the `dev` extra, because
+# black's output style changes between releases and a moving formatter would
+# churn the tree on every upgrade.
+-   repo: https://github.com/psf/black
+    rev: 26.5.1
+    hooks:
+    -   id: black
 
 -   repo: local
     hooks:

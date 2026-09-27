@@ -106,9 +106,7 @@ class YOLOv8Cls(Model):
                     "label": name,
                     "score": round(score, 6),
                     "model": self.config.get("name"),
-                    "created_at": datetime.now().strftime(
-                        "%Y-%m-%d %H:%M:%S"
-                    ),
+                    "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 }
             )
         return predictions

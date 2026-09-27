@@ -35,15 +35,15 @@ class UniqueLabelQListWidget(EscapableQListWidget):
         item.setData(Qt.ItemDataRole.UserRole, label)
         return item
 
-    def set_item_label(
-        self, item, label, color=None, opacity=255, count=None
-    ):
+    def set_item_label(self, item, label, color=None, opacity=255, count=None):
         qlabel = QtWidgets.QLabel()
         qlabel.setContentsMargins(8, 4, 8, 4)
         if color is None:
             text = "" if label is None else str(label)
         else:
-            text = "{}".format(html.escape("" if label is None else str(label)))
+            text = "{}".format(
+                html.escape("" if label is None else str(label))
+            )
         if count is not None:
             text = _badge_html(text, count)
         qlabel.setText(text)

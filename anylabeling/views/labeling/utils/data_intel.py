@@ -379,9 +379,10 @@ def suggest_balancing(stats):
             minority_label, minority = min(
                 class_counts.items(), key=lambda item: item[1]
             )
-            if minority_label != majority_label and majority >= max(
-                minority, 1
-            ) * IMBALANCE_RATIO:
+            if (
+                minority_label != majority_label
+                and majority >= max(minority, 1) * IMBALANCE_RATIO
+            ):
                 suggestions.append(
                     f"类别严重失衡：「{minority_label}」只有 {minority} 个，"
                     f"而「{majority_label}」有 {majority} 个。"

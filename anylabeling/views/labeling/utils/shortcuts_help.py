@@ -153,7 +153,5 @@ def filter_shortcut_rows(rows, query):
     if not query:
         return rows
     return [
-        row
-        for row in rows
-        if any(query in str(part).lower() for part in row)
+        row for row in rows if any(query in str(part).lower() for part in row)
     ]

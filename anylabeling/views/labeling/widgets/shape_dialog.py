@@ -264,15 +264,21 @@ class ShapeModifyDialog(RangeTableDialog):
         """
         if not self.image_file_list:
             return ""
-        clipped = [max(0, start_idx - 1), min(len(self.image_file_list), end_idx)]
+        clipped = [
+            max(0, start_idx - 1),
+            min(len(self.image_file_list), end_idx),
+        ]
         if clipped[0] >= clipped[1]:
             return ""
         first_img = os.path.basename(self.image_file_list[clipped[0]])
         last_img = os.path.basename(self.image_file_list[clipped[1] - 1])
         count = clipped[1] - clipped[0]
-        return self.tr(
-            "%s ... %s  (%d file%s in range)"
-        ) % (first_img, last_img, count, "" if count == 1 else "s")
+        return self.tr("%s ... %s  (%d file%s in range)") % (
+            first_img,
+            last_img,
+            count,
+            "" if count == 1 else "s",
+        )
 
     def delete_annotations_in_range(self, start_idx, end_idx):
         """
