@@ -79,11 +79,26 @@ jobs:
         if: failure()
         shell: bash
         run: |
-          grep -E "^(FAILED|ERROR) " pytest-out.txt |
-            sed "s/ - .*//" | sort -u | head -9 |
-            while IFS= read -r line; do
-              echo "::error::${line:0:350}"
-            done
+          # pytest -rf messages are multi-line (assertEqual diffs ride
+          # along); keep only the test id per failure so 10 fit the cap.
+          # GitHub's bash template runs with -e -o pipefail: a grep with no
+          # match aborts the step before any annotation lands, hence the
+          # || true guards.
+          {
+            grep -E "^(FAILED|ERROR) " pytest-out.txt |
+              sed "s/ - .*//" | sort -u | head -9 |
+              while IFS= read -r line; do
+                echo "::error::${line:0:350}"
+              done
+          } || true
+          if ! grep -qE "^(FAILED|ERROR) " pytest-out.txt; then
+            {
+              grep -vE "^[0-9.]+s (call|setup|teardown)" pytest-out.txt |
+                tail -8 | while IFS= read -r line; do
+                  echo "::error::${line:0:350}"
+                done
+            } || true
+          fi
 
   # The README's OS badge says linux/win/mac; the test job above only runs
   # Windows.  These smoke runs make the other two claims checked instead of
@@ -135,17 +150,25 @@ jobs:
       # annotations at 10 per step, so stay under that.
       - name: Surface failures as annotations
         if: failure()
+        shell: bash
         run: |
           # pytest -rf messages are multi-line (assertEqual diffs ride
           # along); keep only the test id per failure so 10 fit the cap.
-          grep -E "^(FAILED|ERROR) " pytest-out.txt |
-            sed "s/ - .*//" | sort -u | head -9 |
-            while IFS= read -r line; do
-              echo "::error::${line:0:350}"
-            done
-          if ! grep -qE "^(FAILED|ERROR) " pytest-out.txt; then
-            grep -vE "^[0-9.]+s (call|setup|teardown)" pytest-out.txt |
-              tail -8 | while IFS= read -r line; do
+          # GitHub's bash template runs with -e -o pipefail: a grep with no
+          # match aborts the step before any annotation lands, hence the
+          # || true guards.
+          {
+            grep -E "^(FAILED|ERROR) " pytest-out.txt |
+              sed "s/ - .*//" | sort -u | head -9 |
+              while IFS= read -r line; do
                 echo "::error::${line:0:350}"
               done
+          } || true
+          if ! grep -qE "^(FAILED|ERROR) " pytest-out.txt; then
+            {
+              grep -vE "^[0-9.]+s (call|setup|teardown)" pytest-out.txt |
+                tail -8 | while IFS= read -r line; do
+                  echo "::error::${line:0:350}"
+                done
+            } || true
           fi
