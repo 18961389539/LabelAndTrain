@@ -107,21 +107,23 @@ jobs:
           python -m pytest tests -q --tb=no -rf > pytest-out.txt 2>&1
           code=$?
           set -e
-          # The log-download API needs admin rights, but job annotations are
-          # public: surface the failure list there so non-admin sessions can
-          # debug a red smoke run without the web UI.
-          if [ $code -ne 0 ]; then
-            grep -E "^(FAILED|ERROR) " pytest-out.txt | head -40 |
-              while IFS= read -r line; do
-                echo "::error::${line:0:400}"
-              done
-            # Collection-time crashes produce no FAILED lines at all: dump
-            # the tail so the annotations carry something actionable.
-            if ! grep -qE "^(FAILED|ERROR) " pytest-out.txt; then
-              tail -25 pytest-out.txt | while IFS= read -r line; do
-                echo "::error::${line:0:400}"
-              done
-            fi
-            tail -30 pytest-out.txt
-          fi
+          tail -40 pytest-out.txt
           exit $code
+
+      # The log-download API needs admin rights, but job annotations are
+      # public: a failing run leaves its failure list here so non-admin
+      # sessions can debug a red smoke run without the web UI.  GitHub caps
+      # annotations at 10 per step, so stay under that.
+      - name: Surface failures as annotations
+        if: failure()
+        run: |
+          grep -E "^(FAILED|ERROR) " pytest-out.txt | head -8 |
+            while IFS= read -r line; do
+              echo "::error::${line:0:350}"
+            done
+          if ! grep -qE "^(FAILED|ERROR) " pytest-out.txt; then
+            grep -vE "^[0-9.]+s (call|setup|teardown)" pytest-out.txt |
+              tail -8 | while IFS= read -r line; do
+                echo "::error::${line:0:350}"
+              done
+          fi
