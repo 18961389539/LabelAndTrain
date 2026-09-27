@@ -15,7 +15,14 @@ import re
 import shutil
 import time
 
-from PyQt6.QtCore import Qt, QThread, QTimer, QUrl, pyqtSignal
+from PyQt6.QtCore import (
+    QCoreApplication,
+    QThread,
+    QTimer,
+    QUrl,
+    Qt,
+    pyqtSignal,
+)
 from PyQt6.QtGui import QColor, QDesktopServices
 from PyQt6.QtWidgets import (
     QAbstractItemView,
@@ -199,7 +206,12 @@ class _ResultDialog(QDialog):
         layout.setSpacing(10)
 
         self.tree = QTreeWidget()
-        self.tree.setHeaderLabels([parent.tr("项目"), parent.tr("说明")])
+        self.tree.setHeaderLabels(
+            [
+                QCoreApplication.translate("LabelingWidget", "项目"),
+                QCoreApplication.translate("LabelingWidget", "说明"),
+            ]
+        )
         self.tree.setColumnWidth(0, 300)
         self.tree.setRootIsDecorated(True)
         self.tree.setSelectionMode(
@@ -330,7 +342,13 @@ def _safe_export_name(title):
 def _export_dialog_rows(dialog, parent, directory, title):
     rows = _result_rows(dialog)
     if not rows:
-        _notify(parent, parent.tr("当前没有可导出的结果。"), "warning")
+        _notify(
+            parent,
+            QCoreApplication.translate(
+                "LabelingWidget", "当前没有可导出的结果。"
+            ),
+            "warning",
+        )
         return None
     export_dir = directory or label_dir_for(parent) or os.getcwd()
     os.makedirs(export_dir, exist_ok=True)
@@ -350,7 +368,9 @@ def _export_dialog_rows(dialog, parent, directory, title):
             handle.write(",".join(f'"{value}"' for value in values) + "\n")
     _notify(
         parent,
-        parent.tr("结果已导出：%1").replace("%1", osp.basename(path)),
+        QCoreApplication.translate("LabelingWidget", "结果已导出：%1").replace(
+            "%1", osp.basename(path)
+        ),
     )
     return path
 
@@ -364,7 +384,11 @@ def _open_result_folder(dialog, parent, directory):
             target = osp.dirname(image_path)
             break
     if not target:
-        _notify(parent, parent.tr("没有可打开的目录。"), "warning")
+        _notify(
+            parent,
+            QCoreApplication.translate("LabelingWidget", "没有可打开的目录。"),
+            "warning",
+        )
         return False
     return QDesktopServices.openUrl(QUrl.fromLocalFile(target))
 
@@ -388,9 +412,15 @@ def _append_result_dialog_actions(
     include_close=True,
 ):
     buttons = QHBoxLayout()
-    export_button = QPushButton(parent.tr("导出 CSV"))
-    open_button = QPushButton(parent.tr("打开所在目录"))
-    jump_button = QPushButton(parent.tr("跳到首个结果"))
+    export_button = QPushButton(
+        QCoreApplication.translate("LabelingWidget", "导出 CSV")
+    )
+    open_button = QPushButton(
+        QCoreApplication.translate("LabelingWidget", "打开所在目录")
+    )
+    jump_button = QPushButton(
+        QCoreApplication.translate("LabelingWidget", "跳到首个结果")
+    )
     buttons.addWidget(export_button)
     buttons.addWidget(open_button)
     buttons.addWidget(jump_button)
@@ -398,7 +428,9 @@ def _append_result_dialog_actions(
     for button in extra_buttons or []:
         buttons.addWidget(button)
     if include_close:
-        close_button = QPushButton(parent.tr("关闭"))
+        close_button = QPushButton(
+            QCoreApplication.translate("LabelingWidget", "关闭")
+        )
         close_button.clicked.connect(dialog.reject)
         buttons.addWidget(close_button)
 
@@ -418,7 +450,13 @@ def _append_result_dialog_actions(
 def run_threshold_calibration(parent):
     directory = label_dir_for(parent)
     if not directory:
-        _notify(parent, parent.tr("请先打开一个图片文件夹。"), "warning")
+        _notify(
+            parent,
+            QCoreApplication.translate(
+                "LabelingWidget", "请先打开一个图片文件夹。"
+            ),
+            "warning",
+        )
         return None
 
     confirmed = _confirmed_lookup(parent)
@@ -434,7 +472,9 @@ def run_threshold_calibration(parent):
     if not entries:
         _notify(
             parent,
-            parent.tr("当前文件夹没有可用的标注，无法校准。"),
+            QCoreApplication.translate(
+                "LabelingWidget", "当前文件夹没有可用的标注，无法校准。"
+            ),
             "warning",
         )
         return None
@@ -443,7 +483,10 @@ def run_threshold_calibration(parent):
     if not class_scores:
         _notify(
             parent,
-            parent.tr("没有带置信度的自动标注框，请先跑一次自动标注。"),
+            QCoreApplication.translate(
+                "LabelingWidget",
+                "没有带置信度的自动标注框，请先跑一次自动标注。",
+            ),
             "warning",
         )
         return None
@@ -452,8 +495,9 @@ def run_threshold_calibration(parent):
     if not thresholds:
         _notify(
             parent,
-            parent.tr(
-                "样本不足（至少需要 %1 个带分数的框），暂不校准。"
+            QCoreApplication.translate(
+                "LabelingWidget",
+                "样本不足（至少需要 %1 个带分数的框），暂不校准。",
             ).replace("%1", str(MIN_CALIBRATION_SAMPLES)),
             "warning",
         )
@@ -471,10 +515,11 @@ def run_threshold_calibration(parent):
 
     dialog = _ResultDialog(
         parent,
-        parent.tr("阈值校准"),
-        parent.tr(
+        QCoreApplication.translate("LabelingWidget", "阈值校准"),
+        QCoreApplication.translate(
+            "LabelingWidget",
             "已按各类的置信度分布生成自动接受/建议复核阈值，"
-            "结果写入 classes_thresholds.json，并立即用于「待复核」筛选。"
+            "结果写入 classes_thresholds.json，并立即用于「待复核」筛选。",
         ),
     )
     rows = []
@@ -482,16 +527,23 @@ def run_threshold_calibration(parent):
         rows.append(
             (
                 label,
-                parent.tr("自动接受 ≥ %1 · 建议复核 < %2 · 样本 %3")
+                QCoreApplication.translate(
+                    "LabelingWidget", "自动接受 ≥ %1 · 建议复核 < %2 · 样本 %3"
+                )
                 .replace("%1", f"{entry['accept']:.2f}")
                 .replace("%2", f"{entry['review']:.2f}")
                 .replace("%3", str(entry["samples"])),
                 "",
             )
         )
-    dialog.add_category(parent.tr("各类阈值"), rows)
+    dialog.add_category(
+        QCoreApplication.translate("LabelingWidget", "各类阈值"), rows
+    )
     _append_result_dialog_actions(
-        dialog, parent, directory, parent.tr("阈值校准")
+        dialog,
+        parent,
+        directory,
+        QCoreApplication.translate("LabelingWidget", "阈值校准"),
     )
     dialog.exec()
     return thresholds
@@ -503,12 +555,24 @@ def run_threshold_calibration(parent):
 def run_smart_analysis(parent):
     directory = label_dir_for(parent)
     if not directory:
-        _notify(parent, parent.tr("请先打开一个图片文件夹。"), "warning")
+        _notify(
+            parent,
+            QCoreApplication.translate(
+                "LabelingWidget", "请先打开一个图片文件夹。"
+            ),
+            "warning",
+        )
         return
 
     entries = list(_label_entries(parent))
     if not entries:
-        _notify(parent, parent.tr("当前没有可分析的图片。"), "warning")
+        _notify(
+            parent,
+            QCoreApplication.translate(
+                "LabelingWidget", "当前没有可分析的图片。"
+            ),
+            "warning",
+        )
         return
 
     paths = [path for path, _ in entries]
@@ -534,7 +598,9 @@ def run_smart_analysis(parent):
         return stats, hard, duplicates
 
     progress = _make_progress_dialog(
-        parent, parent.tr("正在分析数据集…"), len(entries)
+        parent,
+        QCoreApplication.translate("LabelingWidget", "正在分析数据集…"),
+        len(entries),
     )
     thread = _SmartTaskThread(_job, total=len(entries))
     thread.progress_updated.connect(
@@ -546,7 +612,9 @@ def run_smart_analysis(parent):
             logger.error(f"Smart analysis failed: {message}"),
             _notify(
                 parent,
-                parent.tr("分析失败：%1").replace("%1", message),
+                QCoreApplication.translate(
+                    "LabelingWidget", "分析失败：%1"
+                ).replace("%1", message),
                 "warning",
             ),
         )
@@ -558,27 +626,39 @@ def run_smart_analysis(parent):
 
         dialog = _ResultDialog(
             parent,
-            parent.tr("数据智能分析"),
-            parent.tr("双击条目可跳转到对应图片。"),
+            QCoreApplication.translate("LabelingWidget", "数据智能分析"),
+            QCoreApplication.translate(
+                "LabelingWidget", "双击条目可跳转到对应图片。"
+            ),
         )
 
         advice = suggest_balancing(stats)
         dialog.add_category(
-            parent.tr("配平建议"),
+            QCoreApplication.translate("LabelingWidget", "配平建议"),
             [(line, "", "") for line in advice],
         )
 
         dialog.add_category(
-            parent.tr("难例优先复核"),
+            QCoreApplication.translate("LabelingWidget", "难例优先复核"),
             [
                 (
                     osp.basename(path),
-                    parent.tr("不确定性 %1").replace("%1", f"{score:.2f}"),
+                    QCoreApplication.translate(
+                        "LabelingWidget", "不确定性 %1"
+                    ).replace("%1", f"{score:.2f}"),
                     path,
                 )
                 for path, score in hard
             ]
-            or [(parent.tr("暂无（所有图片都较确定）"), "", "")],
+            or [
+                (
+                    QCoreApplication.translate(
+                        "LabelingWidget", "暂无（所有图片都较确定）"
+                    ),
+                    "",
+                    "",
+                )
+            ],
         )
 
         duplicate_rows = []
@@ -587,19 +667,31 @@ def run_smart_analysis(parent):
             duplicate_rows.append(
                 (
                     osp.basename(head),
-                    parent.tr("与 %1 张图重复").replace(
-                        "%1", str(len(group) - 1)
-                    ),
+                    QCoreApplication.translate(
+                        "LabelingWidget", "与 %1 张图重复"
+                    ).replace("%1", str(len(group) - 1)),
                     head,
                 )
             )
         dialog.add_category(
-            parent.tr("疑似重复图片"),
-            duplicate_rows or [(parent.tr("未发现重复图片"), "", "")],
+            QCoreApplication.translate("LabelingWidget", "疑似重复图片"),
+            duplicate_rows
+            or [
+                (
+                    QCoreApplication.translate(
+                        "LabelingWidget", "未发现重复图片"
+                    ),
+                    "",
+                    "",
+                )
+            ],
         )
 
         summary = (
-            parent.tr("共 %1 张图 · 已标注 %2 · 标注框 %3 个 · 小目标 %4 个")
+            QCoreApplication.translate(
+                "LabelingWidget",
+                "共 %1 张图 · 已标注 %2 · 标注框 %3 个 · 小目标 %4 个",
+            )
             .replace("%1", str(stats["total_images"]))
             .replace("%2", str(stats["labeled_images"]))
             .replace("%3", str(stats["total_shapes"]))
@@ -609,7 +701,10 @@ def run_smart_analysis(parent):
         title.setStyleSheet("font-size: 13px; font-weight: 500; padding: 2px;")
         dialog.layout().insertWidget(0, title)
         _append_result_dialog_actions(
-            dialog, parent, directory, parent.tr("数据智能分析")
+            dialog,
+            parent,
+            directory,
+            QCoreApplication.translate("LabelingWidget", "数据智能分析"),
         )
 
         dialog.exec()
@@ -660,7 +755,11 @@ class _SmartTaskThread(QThread):
 
 def _make_progress_dialog(parent, title, maximum):
     dialog = QProgressDialog(
-        title, parent.tr("取消"), 0, max(maximum, 1), parent
+        title,
+        QCoreApplication.translate("LabelingWidget", "取消"),
+        0,
+        max(maximum, 1),
+        parent,
     )
     dialog.setWindowModality(Qt.WindowModality.WindowModal)
     dialog.setWindowTitle(title)
@@ -754,7 +853,13 @@ def run_missing_scan(parent, iou_threshold=0.5, min_score=DEFAULT_ACCEPT):
     """Find boxes the model is confident about but nobody labelled."""
     directory = label_dir_for(parent)
     if not directory:
-        _notify(parent, parent.tr("请先打开一个图片文件夹。"), "warning")
+        _notify(
+            parent,
+            QCoreApplication.translate(
+                "LabelingWidget", "请先打开一个图片文件夹。"
+            ),
+            "warning",
+        )
         return
 
     manager = getattr(
@@ -764,7 +869,13 @@ def run_missing_scan(parent, iou_threshold=0.5, min_score=DEFAULT_ACCEPT):
         manager is None
         or getattr(manager, "loaded_model_config", None) is None
     ):
-        _notify(parent, parent.tr("请先加载一个自动标注模型。"), "warning")
+        _notify(
+            parent,
+            QCoreApplication.translate(
+                "LabelingWidget", "请先加载一个自动标注模型。"
+            ),
+            "warning",
+        )
         return
 
     entries = [
@@ -773,18 +884,27 @@ def run_missing_scan(parent, iou_threshold=0.5, min_score=DEFAULT_ACCEPT):
         if data is not None
     ]
     if not entries:
-        _notify(parent, parent.tr("当前没有已标注的图片可供比对。"), "warning")
+        _notify(
+            parent,
+            QCoreApplication.translate(
+                "LabelingWidget", "当前没有已标注的图片可供比对。"
+            ),
+            "warning",
+        )
         return
 
     progress = _make_progress_dialog(
-        parent, parent.tr("正在扫描疑似漏标…"), len(entries)
+        parent,
+        QCoreApplication.translate("LabelingWidget", "正在扫描疑似漏标…"),
+        len(entries),
     )
     dialog = _ResultDialog(
         parent,
-        parent.tr("疑似漏标"),
-        parent.tr(
+        QCoreApplication.translate("LabelingWidget", "疑似漏标"),
+        QCoreApplication.translate(
+            "LabelingWidget",
             "模型给出高置信度框但标注中没有对应目标。"
-            "确认后可点「写入标注」直接补充。"
+            "确认后可点「写入标注」直接补充。",
         ),
     )
 
@@ -820,9 +940,21 @@ def run_missing_scan(parent, iou_threshold=0.5, min_score=DEFAULT_ACCEPT):
                     )
                 )
         if not rows:
-            rows = [(parent.tr("未发现疑似漏标"), "", "")]
-        dialog.add_category(parent.tr("疑似漏标的框"), rows)
-        write_button = QPushButton(parent.tr("写入标注"))
+            rows = [
+                (
+                    QCoreApplication.translate(
+                        "LabelingWidget", "未发现疑似漏标"
+                    ),
+                    "",
+                    "",
+                )
+            ]
+        dialog.add_category(
+            QCoreApplication.translate("LabelingWidget", "疑似漏标的框"), rows
+        )
+        write_button = QPushButton(
+            QCoreApplication.translate("LabelingWidget", "写入标注")
+        )
         write_button.setStyleSheet(_highlight_button())
 
         def _write():
@@ -830,7 +962,9 @@ def run_missing_scan(parent, iou_threshold=0.5, min_score=DEFAULT_ACCEPT):
             dialog.accept()
             _notify(
                 parent,
-                parent.tr("已补充 %1 个标注框。").replace("%1", str(written)),
+                QCoreApplication.translate(
+                    "LabelingWidget", "已补充 %1 个标注框。"
+                ).replace("%1", str(written)),
             )
 
         write_button.clicked.connect(_write)
@@ -838,7 +972,7 @@ def run_missing_scan(parent, iou_threshold=0.5, min_score=DEFAULT_ACCEPT):
             dialog,
             parent,
             directory,
-            parent.tr("疑似漏标"),
+            QCoreApplication.translate("LabelingWidget", "疑似漏标"),
             extra_buttons=[write_button],
         )
         dialog.exec()
@@ -1137,24 +1271,44 @@ def apply_stale_deletions(
 def show_iteration_dashboard(parent):
     directory = label_dir_for(parent)
     if not directory:
-        _notify(parent, parent.tr("请先打开一个图片文件夹。"), "warning")
+        _notify(
+            parent,
+            QCoreApplication.translate(
+                "LabelingWidget", "请先打开一个图片文件夹。"
+            ),
+            "warning",
+        )
         return
     history = load_history(directory)
     lines = format_iteration_summary(history)
 
     dialog = _ResultDialog(
         parent,
-        parent.tr("迭代收益看板"),
-        parent.tr("每次训练并回灌标注后会自动追加一轮记录。"),
+        QCoreApplication.translate("LabelingWidget", "迭代收益看板"),
+        QCoreApplication.translate(
+            "LabelingWidget", "每次训练并回灌标注后会自动追加一轮记录。"
+        ),
     )
-    dialog.add_category(parent.tr("轮次"), [(line, "", "") for line in lines])
+    dialog.add_category(
+        QCoreApplication.translate("LabelingWidget", "轮次"),
+        [(line, "", "") for line in lines],
+    )
     suggestion = suggest_next_step(history)
     dialog.add_category(
-        parent.tr("系统建议"),
-        [(parent.tr("下一步"), suggestion["reason"], "")],
+        QCoreApplication.translate("LabelingWidget", "系统建议"),
+        [
+            (
+                QCoreApplication.translate("LabelingWidget", "下一步"),
+                suggestion["reason"],
+                "",
+            )
+        ],
     )
     _append_result_dialog_actions(
-        dialog, parent, directory, parent.tr("迭代收益看板")
+        dialog,
+        parent,
+        directory,
+        QCoreApplication.translate("LabelingWidget", "迭代收益看板"),
     )
     dialog.exec()
 
@@ -1214,11 +1368,23 @@ def run_review_jump(parent, forward=True):
     """Open the next/previous image that still needs human review."""
     directory = label_dir_for(parent)
     if not directory:
-        _notify(parent, parent.tr("请先打开一个图片文件夹。"), "warning")
+        _notify(
+            parent,
+            QCoreApplication.translate(
+                "LabelingWidget", "请先打开一个图片文件夹。"
+            ),
+            "warning",
+        )
         return
     entries = list(_label_entries(parent))
     if not entries:
-        _notify(parent, parent.tr("当前没有可分析的图片。"), "warning")
+        _notify(
+            parent,
+            QCoreApplication.translate(
+                "LabelingWidget", "当前没有可分析的图片。"
+            ),
+            "warning",
+        )
         return
 
     results = audit_dataset([path for path, _ in entries], directory)
@@ -1226,7 +1392,12 @@ def run_review_jump(parent, forward=True):
         osp.normpath(osp.abspath(p)) for p in (results.get("review") or [])
     ]
     if not queue:
-        _notify(parent, parent.tr("太棒了，暂无待复核图片。"))
+        _notify(
+            parent,
+            QCoreApplication.translate(
+                "LabelingWidget", "太棒了，暂无待复核图片。"
+            ),
+        )
         return
 
     current = None
@@ -1234,13 +1405,17 @@ def run_review_jump(parent, forward=True):
         current = osp.normpath(osp.abspath(parent.filename))
     target, index = next_review_target(queue, current, forward=forward)
     if target is None:
-        _notify(parent, parent.tr("已到复核队列末尾。"), "info")
+        _notify(
+            parent,
+            QCoreApplication.translate("LabelingWidget", "已到复核队列末尾。"),
+            "info",
+        )
         return
     parent.load_file(target)
     status = getattr(parent, "status", None)
     if callable(status):
         status(
-            parent.tr("待复核队列 %1/%2")
+            QCoreApplication.translate("LabelingWidget", "待复核队列 %1/%2")
             .replace("%1", str(index + 1))
             .replace("%2", str(len(queue)))
         )
@@ -1253,15 +1428,29 @@ def run_duplicate_archive(parent):
     """Move near-duplicate images (and their sidecars) out of the folder."""
     directory = label_dir_for(parent)
     if not directory:
-        _notify(parent, parent.tr("请先打开一个图片文件夹。"), "warning")
+        _notify(
+            parent,
+            QCoreApplication.translate(
+                "LabelingWidget", "请先打开一个图片文件夹。"
+            ),
+            "warning",
+        )
         return
     paths = _image_list(parent)
     if not paths:
-        _notify(parent, parent.tr("当前没有可分析的图片。"), "warning")
+        _notify(
+            parent,
+            QCoreApplication.translate(
+                "LabelingWidget", "当前没有可分析的图片。"
+            ),
+            "warning",
+        )
         return
 
     progress = _make_progress_dialog(
-        parent, parent.tr("正在查找重复图片…"), max(1, len(paths))
+        parent,
+        QCoreApplication.translate("LabelingWidget", "正在查找重复图片…"),
+        max(1, len(paths)),
     )
     groups = find_duplicate_groups(
         paths,
@@ -1273,13 +1462,21 @@ def run_duplicate_archive(parent):
 
     plan = archive_duplicates_plan(groups, directory)
     if not plan:
-        _notify(parent, parent.tr("没有发现可归档的重复图片。"))
+        _notify(
+            parent,
+            QCoreApplication.translate(
+                "LabelingWidget", "没有发现可归档的重复图片。"
+            ),
+        )
         return
     images = [src for src, _ in plan if _looks_like_image(src)]
     answer = QMessageBox.question(
         parent,
-        parent.tr("一键去重归档"),
-        parent.tr("将归档 %1 张重复图片及其标注到「%2」文件夹，是否继续？")
+        QCoreApplication.translate("LabelingWidget", "一键去重归档"),
+        QCoreApplication.translate(
+            "LabelingWidget",
+            "将归档 %1 张重复图片及其标注到「%2」文件夹，是否继续？",
+        )
         .replace("%1", str(len(images)))
         .replace("%2", ARCHIVE_DIRNAME),
         QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
@@ -1298,7 +1495,9 @@ def run_duplicate_archive(parent):
             logger.warning("Duplicate archive: failed to reload file list")
     _notify(
         parent,
-        parent.tr("已归档 %1 项（打开「%2」文件夹可查）")
+        QCoreApplication.translate(
+            "LabelingWidget", "已归档 %1 项（打开「%2」文件夹可查）"
+        )
         .replace("%1", str(len(moved)))
         .replace("%2", ARCHIVE_DIRNAME),
     )
@@ -1321,11 +1520,23 @@ def run_training_advice(parent):
     """Pre-flight checks plus suggested hyperparameters for the next round."""
     directory = label_dir_for(parent)
     if not directory:
-        _notify(parent, parent.tr("请先打开一个图片文件夹。"), "warning")
+        _notify(
+            parent,
+            QCoreApplication.translate(
+                "LabelingWidget", "请先打开一个图片文件夹。"
+            ),
+            "warning",
+        )
         return
     entries = list(_label_entries(parent))
     if not entries:
-        _notify(parent, parent.tr("当前没有可分析的图片。"), "warning")
+        _notify(
+            parent,
+            QCoreApplication.translate(
+                "LabelingWidget", "当前没有可分析的图片。"
+            ),
+            "warning",
+        )
         return
 
     stats = analyze_distribution(entries)
@@ -1344,15 +1555,18 @@ def run_training_advice(parent):
 
     dialog = _ResultDialog(
         parent,
-        parent.tr("训练建议"),
-        parent.tr("训练前预检与下一轮超参初值，可按推荐手动填入训练面板。"),
+        QCoreApplication.translate("LabelingWidget", "训练建议"),
+        QCoreApplication.translate(
+            "LabelingWidget",
+            "训练前预检与下一轮超参初值，可按推荐手动填入训练面板。",
+        ),
     )
     dialog.add_category(
-        parent.tr("预检"),
+        QCoreApplication.translate("LabelingWidget", "预检"),
         [(check["message"], "", "") for check in checks],
     )
     dialog.add_category(
-        parent.tr("推荐初值"),
+        QCoreApplication.translate("LabelingWidget", "推荐初值"),
         [
             (
                 f"Epochs={advice['epochs']} · Batch={advice['batch']} · imgsz={advice['imgsz']}",
@@ -1362,7 +1576,10 @@ def run_training_advice(parent):
         ],
     )
     _append_result_dialog_actions(
-        dialog, parent, directory, parent.tr("训练建议")
+        dialog,
+        parent,
+        directory,
+        QCoreApplication.translate("LabelingWidget", "训练建议"),
     )
     dialog.exec()
 
@@ -1380,11 +1597,23 @@ def run_stale_model_audit(parent):
     """
     directory = label_dir_for(parent)
     if not directory:
-        _notify(parent, parent.tr("请先打开一个图片文件夹。"), "warning")
+        _notify(
+            parent,
+            QCoreApplication.translate(
+                "LabelingWidget", "请先打开一个图片文件夹。"
+            ),
+            "warning",
+        )
         return
     entries = list(_label_entries(parent))
     if not entries:
-        _notify(parent, parent.tr("当前没有可分析的图片。"), "warning")
+        _notify(
+            parent,
+            QCoreApplication.translate(
+                "LabelingWidget", "当前没有可分析的图片。"
+            ),
+            "warning",
+        )
         return
 
     current_model = parent._current_model_identity()
@@ -1402,7 +1631,7 @@ def run_stale_model_audit(parent):
                 continue
             producer = model_identity_label(
                 model_of(shape), model_version_of(shape)
-            ) or parent.tr("未记录来源")
+            ) or QCoreApplication.translate("LabelingWidget", "未记录来源")
             label_name, detail = describe_shape(shape)
             ref = {
                 "index": index,
@@ -1429,67 +1658,84 @@ def run_stale_model_audit(parent):
     stale_total = sum(len(rows) for rows in by_producer.values())
     dialog = _ResultDialog(
         parent,
-        parent.tr("旧轮模型框盘点"),
-        parent.tr(
+        QCoreApplication.translate("LabelingWidget", "旧轮模型框盘点"),
+        QCoreApplication.translate(
+            "LabelingWidget",
             "双击条目可跳转到对应图片；勾选条目后可删除。被锁定的框、"
-            "来源不明的框以及期间被改动过的框都不会被删除。"
+            "来源不明的框以及期间被改动过的框都不会被删除。",
         ),
     )
     dialog.add_category(
-        parent.tr("概览"),
+        QCoreApplication.translate("LabelingWidget", "概览"),
         [
             (
-                parent.tr("当前模型：%1").replace(
+                QCoreApplication.translate(
+                    "LabelingWidget", "当前模型：%1"
+                ).replace(
                     "%1",
                     model_identity_label(current_model, current_version)
-                    or parent.tr("未加载"),
+                    or QCoreApplication.translate("LabelingWidget", "未加载"),
                 ),
                 "",
                 "",
             ),
             (
-                parent.tr("可清理的旧轮模型框 %1 个").replace(
-                    "%1", str(stale_total)
+                QCoreApplication.translate(
+                    "LabelingWidget", "可清理的旧轮模型框 %1 个"
+                ).replace("%1", str(stale_total)),
+                QCoreApplication.translate(
+                    "LabelingWidget", "由其它模型产生，未被本轮结果覆盖"
                 ),
-                parent.tr("由其它模型产生，未被本轮结果覆盖"),
                 "",
             ),
             (
-                parent.tr("本轮模型框 %1 个").replace(
-                    "%1", str(current_model_boxes)
-                ),
-                "",
-                "",
-            ),
-            (
-                parent.tr("人工框 %1 个").replace(
-                    "%1", str(counts[SOURCE_HUMAN])
-                ),
+                QCoreApplication.translate(
+                    "LabelingWidget", "本轮模型框 %1 个"
+                ).replace("%1", str(current_model_boxes)),
                 "",
                 "",
             ),
             (
-                parent.tr("来源不明 %1 个").replace(
-                    "%1", str(counts[SOURCE_UNKNOWN])
+                QCoreApplication.translate(
+                    "LabelingWidget", "人工框 %1 个"
+                ).replace("%1", str(counts[SOURCE_HUMAN])),
+                "",
+                "",
+            ),
+            (
+                QCoreApplication.translate(
+                    "LabelingWidget", "来源不明 %1 个"
+                ).replace("%1", str(counts[SOURCE_UNKNOWN])),
+                QCoreApplication.translate(
+                    "LabelingWidget", "早于来源记录功能，不参与清理"
                 ),
-                parent.tr("早于来源记录功能，不参与清理"),
                 "",
             ),
         ],
     )
     for producer in sorted(by_producer):
         dialog.add_category(
-            parent.tr("来自 %1（%2 个）")
+            QCoreApplication.translate("LabelingWidget", "来自 %1（%2 个）")
             .replace("%1", producer)
             .replace("%2", str(len(by_producer[producer]))),
             by_producer[producer],
         )
     if not by_producer:
         dialog.add_category(
-            parent.tr("可清理项"),
-            [(parent.tr("没有其它模型留下的框"), "", "")],
+            QCoreApplication.translate("LabelingWidget", "可清理项"),
+            [
+                (
+                    QCoreApplication.translate(
+                        "LabelingWidget", "没有其它模型留下的框"
+                    ),
+                    "",
+                    "",
+                )
+            ],
         )
-    delete_button = QPushButton(parent.tr("删除所选"))
+    delete_button = QPushButton(
+        QCoreApplication.translate("LabelingWidget", "删除所选")
+    )
     delete_button.clicked.connect(
         lambda: _delete_reported_stale(parent, dialog)
     )
@@ -1497,7 +1743,7 @@ def run_stale_model_audit(parent):
         dialog,
         parent,
         directory,
-        parent.tr("旧轮模型框盘点"),
+        QCoreApplication.translate("LabelingWidget", "旧轮模型框盘点"),
         extra_buttons=[delete_button],
     )
     dialog.exec()
@@ -1507,7 +1753,13 @@ def _delete_reported_stale(parent, dialog):
     """Delete exactly the stale boxes the reviewed report has selected."""
     rows = [row for row in dialog.selected_rows() if row.get("shape_ref")]
     if not rows:
-        _notify(parent, parent.tr("请先在列表中选择要删除的框。"), "warning")
+        _notify(
+            parent,
+            QCoreApplication.translate(
+                "LabelingWidget", "请先在列表中选择要删除的框。"
+            ),
+            "warning",
+        )
         return
 
     targets = {}
@@ -1523,12 +1775,13 @@ def _delete_reported_stale(parent, dialog):
     total = sum(len(refs) for refs in targets.values())
     answer = QMessageBox.question(
         parent,
-        parent.tr("删除旧轮模型框"),
-        parent.tr(
+        QCoreApplication.translate("LabelingWidget", "删除旧轮模型框"),
+        QCoreApplication.translate(
+            "LabelingWidget",
             "将从 %1 个文件中删除选中的 %2 个框。\n"
             "锁定、来源不明以及报告之后被改动过的框会自动跳过。\n"
             "当前打开的图片删除后可用 Ctrl+Z 撤销；其余文件删除前会先备份到 "
-            ".label_backups，之后可用「从备份恢复标注」取回。"
+            ".label_backups，之后可用「从备份恢复标注」取回。",
         )
         .replace("%1", str(len(targets)))
         .replace("%2", str(total)),
@@ -1575,26 +1828,36 @@ def _delete_reported_stale(parent, dialog):
     if counts["backup_failed"]:
         _notify(
             parent,
-            parent.tr("备份失败，已放弃删除，标注文件未作修改。"),
+            QCoreApplication.translate(
+                "LabelingWidget", "备份失败，已放弃删除，标注文件未作修改。"
+            ),
             "warning",
         )
         return
     if counts["deleted"]:
         message = (
-            parent.tr("已删除 %1 个框（涉及 %2 个文件），备份在 %3")
+            QCoreApplication.translate(
+                "LabelingWidget", "已删除 %1 个框（涉及 %2 个文件），备份在 %3"
+            )
             .replace("%1", str(counts["deleted"]))
             .replace("%2", str(counts["files"]))
             .replace(
                 "%3",
                 osp.basename(counts["backup_dir"] or "")
-                or parent.tr("未备份"),
+                or QCoreApplication.translate("LabelingWidget", "未备份"),
             )
         )
         if open_deleted:
-            message += parent.tr("；当前图片可直接 Ctrl+Z 撤销")
+            message += QCoreApplication.translate(
+                "LabelingWidget", "；当前图片可直接 Ctrl+Z 撤销"
+            )
         _notify(parent, message, "copy-green")
     else:
-        _notify(parent, parent.tr("没有框被删除。"), "warning")
+        _notify(
+            parent,
+            QCoreApplication.translate("LabelingWidget", "没有框被删除。"),
+            "warning",
+        )
     skipped = (
         counts["skipped_locked"]
         + counts["skipped_changed"]
@@ -1622,28 +1885,36 @@ def run_backup_restore(parent):
     """
     directory = label_dir_for(parent)
     if not directory:
-        _notify(parent, parent.tr("请先打开一个图片文件夹。"), "warning")
+        _notify(
+            parent,
+            QCoreApplication.translate(
+                "LabelingWidget", "请先打开一个图片文件夹。"
+            ),
+            "warning",
+        )
         return
     runs = list_label_backups(directory)
     if not runs:
         _notify(
             parent,
-            parent.tr("没有找到标注备份（%1 下没有快照）。").replace(
-                "%1", BACKUP_ROOT_NAME
-            ),
+            QCoreApplication.translate(
+                "LabelingWidget", "没有找到标注备份（%1 下没有快照）。"
+            ).replace("%1", BACKUP_ROOT_NAME),
             "warning",
         )
         return
     entries = [
-        parent.tr("%1（%2 个文件）")
+        QCoreApplication.translate("LabelingWidget", "%1（%2 个文件）")
         .replace("%1", name)
         .replace("%2", str(count))
         for name, _path, count in runs
     ]
     choice, ok = QInputDialog.getItem(
         parent,
-        parent.tr("从备份恢复标注"),
-        parent.tr("选择要恢复的备份（最新在前）："),
+        QCoreApplication.translate("LabelingWidget", "从备份恢复标注"),
+        QCoreApplication.translate(
+            "LabelingWidget", "选择要恢复的备份（最新在前）："
+        ),
         entries,
         0,
         False,
@@ -1662,11 +1933,12 @@ def run_backup_restore(parent):
 
     answer = QMessageBox.question(
         parent,
-        parent.tr("从备份恢复标注"),
-        parent.tr(
+        QCoreApplication.translate("LabelingWidget", "从备份恢复标注"),
+        QCoreApplication.translate(
+            "LabelingWidget",
             "将用备份 %1 中的 %2 个文件覆盖当前标注。\n"
             "被覆盖的文件会先写入一个新的备份；选错了就在列表里再选更新的那一项。\n"
-            "当前打开且有未保存改动的图片不会被覆盖。"
+            "当前打开且有未保存改动的图片不会被覆盖。",
         )
         .replace("%1", name)
         .replace("%2", str(count)),
@@ -1680,7 +1952,10 @@ def run_backup_restore(parent):
     if result["backup_failed"]:
         _notify(
             parent,
-            parent.tr("备份当前标注失败，已放弃恢复，文件未作修改。"),
+            QCoreApplication.translate(
+                "LabelingWidget",
+                "备份当前标注失败，已放弃恢复，文件未作修改。",
+            ),
             "warning",
         )
         return
@@ -1692,13 +1967,19 @@ def run_backup_restore(parent):
     if result["restored"]:
         _notify(
             parent,
-            parent.tr("已恢复 %1 个标注文件，被覆盖的版本备份在 %2")
+            QCoreApplication.translate(
+                "LabelingWidget", "已恢复 %1 个标注文件，被覆盖的版本备份在 %2"
+            )
             .replace("%1", str(result["restored"]))
             .replace("%2", osp.basename(result["undo_dir"] or "") or "?"),
             "copy-green",
         )
     else:
-        _notify(parent, parent.tr("没有文件被恢复。"), "warning")
+        _notify(
+            parent,
+            QCoreApplication.translate("LabelingWidget", "没有文件被恢复。"),
+            "warning",
+        )
 
 
 # --------------------------------------------------------------------------
@@ -1718,11 +1999,23 @@ def run_template_propagation(parent):
 
     directory = label_dir_for(parent)
     if not directory:
-        _notify(parent, parent.tr("请先打开一个图片文件夹。"), "warning")
+        _notify(
+            parent,
+            QCoreApplication.translate(
+                "LabelingWidget", "请先打开一个图片文件夹。"
+            ),
+            "warning",
+        )
         return
     entries = list(_label_entries(parent))
     if not entries:
-        _notify(parent, parent.tr("当前没有可分析的图片。"), "warning")
+        _notify(
+            parent,
+            QCoreApplication.translate(
+                "LabelingWidget", "当前没有可分析的图片。"
+            ),
+            "warning",
+        )
         return
 
     templates = []
@@ -1735,11 +2028,20 @@ def run_template_propagation(parent):
             targets.append(image_path)
     if not templates:
         _notify(
-            parent, parent.tr("至少需要一张已标注图片作为模板。"), "warning"
+            parent,
+            QCoreApplication.translate(
+                "LabelingWidget", "至少需要一张已标注图片作为模板。"
+            ),
+            "warning",
         )
         return
     if not targets:
-        _notify(parent, parent.tr("没有未标注的图片需要预标注。"))
+        _notify(
+            parent,
+            QCoreApplication.translate(
+                "LabelingWidget", "没有未标注的图片需要预标注。"
+            ),
+        )
         return
 
     def _job(emit_progress):
@@ -1751,7 +2053,11 @@ def run_template_propagation(parent):
         )
 
     progress = _make_progress_dialog(
-        parent, parent.tr("正在匹配相似模板并生成预标注…"), len(targets)
+        parent,
+        QCoreApplication.translate(
+            "LabelingWidget", "正在匹配相似模板并生成预标注…"
+        ),
+        len(targets),
     )
     thread = _SmartTaskThread(_job, total=len(targets))
     thread.progress_updated.connect(
@@ -1763,7 +2069,9 @@ def run_template_propagation(parent):
             logger.error(f"Template propagation failed: {message}"),
             _notify(
                 parent,
-                parent.tr("匹配失败：%1").replace("%1", message),
+                QCoreApplication.translate(
+                    "LabelingWidget", "匹配失败：%1"
+                ).replace("%1", message),
                 "warning",
             ),
         )
@@ -1773,16 +2081,21 @@ def run_template_propagation(parent):
         progress.close()
         if not batch:
             _notify(
-                parent, parent.tr("没有找到与已标注模板足够相似的未标注图片。")
+                parent,
+                QCoreApplication.translate(
+                    "LabelingWidget",
+                    "没有找到与已标注模板足够相似的未标注图片。",
+                ),
             )
             return
 
         dialog = _ResultDialog(
             parent,
-            parent.tr("智能模板预标注"),
-            parent.tr(
+            QCoreApplication.translate("LabelingWidget", "智能模板预标注"),
+            QCoreApplication.translate(
+                "LabelingWidget",
                 "每张未标注图片按相似度匹配一张已标注模板生成预标注框，"
-                "请先人工抽查再批量写入。"
+                "请先人工抽查再批量写入。",
             ),
         )
         rows = []
@@ -1797,8 +2110,13 @@ def run_template_propagation(parent):
                     item["target"],
                 )
             )
-        dialog.add_category(parent.tr("可预标注的图片"), rows)
-        write_button = QPushButton(parent.tr("写入预标注"))
+        dialog.add_category(
+            QCoreApplication.translate("LabelingWidget", "可预标注的图片"),
+            rows,
+        )
+        write_button = QPushButton(
+            QCoreApplication.translate("LabelingWidget", "写入预标注")
+        )
         write_button.setStyleSheet(_highlight_button())
 
         def _write():
@@ -1807,7 +2125,9 @@ def run_template_propagation(parent):
             if failed:
                 _notify(
                     parent,
-                    parent.tr("已写入 %1 项，%2 项失败。")
+                    QCoreApplication.translate(
+                        "LabelingWidget", "已写入 %1 项，%2 项失败。"
+                    )
                     .replace("%1", str(written))
                     .replace("%2", str(failed)),
                     "warning",
@@ -1815,9 +2135,9 @@ def run_template_propagation(parent):
             else:
                 _notify(
                     parent,
-                    parent.tr("已写入 %1 张图片的预标注。").replace(
-                        "%1", str(written)
-                    ),
+                    QCoreApplication.translate(
+                        "LabelingWidget", "已写入 %1 张图片的预标注。"
+                    ).replace("%1", str(written)),
                 )
 
         write_button.clicked.connect(_write)
@@ -1825,7 +2145,7 @@ def run_template_propagation(parent):
             dialog,
             parent,
             directory,
-            parent.tr("智能模板预标注"),
+            QCoreApplication.translate("LabelingWidget", "智能模板预标注"),
             extra_buttons=[write_button],
         )
         dialog.exec()

@@ -13,7 +13,7 @@ from typing import Optional
 import cv2
 import numpy as np
 from PyQt6 import QtCore, QtGui, QtWidgets
-from PyQt6.QtCore import Qt, pyqtSlot
+from PyQt6.QtCore import QCoreApplication, Qt, pyqtSlot
 from PyQt6.QtGui import QFontMetrics
 from PyQt6.QtWidgets import (
     QButtonGroup,
@@ -6244,712 +6244,838 @@ def _build_actions(widget):
     shortcuts = widget._config["shortcuts"]
 
     open_ = action(
-        widget.tr("Open File"),
+        QCoreApplication.translate("LabelingWidget", "Open File"),
         widget.open_file,
         shortcuts["open"],
         "file",
-        widget.tr("Open image or label file"),
+        QCoreApplication.translate(
+            "LabelingWidget", "Open image or label file"
+        ),
     )
     opendir = action(
-        widget.tr("Open Dir"),
+        QCoreApplication.translate("LabelingWidget", "Open Dir"),
         widget.open_folder_dialog,
         shortcuts["open_dir"],
         "open",
-        widget.tr("Open Dir"),
+        QCoreApplication.translate("LabelingWidget", "Open Dir"),
     )
     open_project = action(
-        widget.tr("Switch Project"),
+        QCoreApplication.translate("LabelingWidget", "Switch Project"),
         widget.open_project_switcher,
         shortcuts["open_project"],
         "open",
-        widget.tr("Switch between recently opened projects"),
+        QCoreApplication.translate(
+            "LabelingWidget", "Switch between recently opened projects"
+        ),
     )
     open_next_image = action(
-        widget.tr("Next Image"),
+        QCoreApplication.translate("LabelingWidget", "Next Image"),
         widget.open_next_image,
         shortcuts["open_next"],
         "next",
-        widget.tr("Open next image"),
+        QCoreApplication.translate("LabelingWidget", "Open next image"),
         enabled=False,
     )
     open_prev_image = action(
-        widget.tr("Prev Image"),
+        QCoreApplication.translate("LabelingWidget", "Prev Image"),
         widget.open_prev_image,
         shortcuts["open_prev"],
         "prev",
-        widget.tr("Open prev image"),
+        QCoreApplication.translate("LabelingWidget", "Open prev image"),
         enabled=False,
     )
     open_next_unchecked_image = action(
-        widget.tr("Next Unchecked Image"),
+        QCoreApplication.translate("LabelingWidget", "Next Unchecked Image"),
         widget.open_next_unchecked_image,
         shortcuts["open_next_unchecked"],
         "next",
-        widget.tr("Open next unchecked image"),
+        QCoreApplication.translate(
+            "LabelingWidget", "Open next unchecked image"
+        ),
         enabled=False,
     )
     open_prev_unchecked_image = action(
-        widget.tr("Prev Unchecked Image"),
+        QCoreApplication.translate("LabelingWidget", "Prev Unchecked Image"),
         widget.open_prev_unchecked_image,
         shortcuts["open_prev_unchecked"],
         "prev",
-        widget.tr("Open previous unchecked image"),
+        QCoreApplication.translate(
+            "LabelingWidget", "Open previous unchecked image"
+        ),
         enabled=False,
     )
     save = action(
-        widget.tr("Save"),
+        QCoreApplication.translate("LabelingWidget", "Save"),
         widget.save_file,
         shortcuts["save"],
         "save",
-        widget.tr("Save labels to file"),
+        QCoreApplication.translate("LabelingWidget", "Save labels to file"),
         enabled=False,
     )
     save_as = action(
-        widget.tr("Save As"),
+        QCoreApplication.translate("LabelingWidget", "Save As"),
         widget.save_file_as,
         shortcuts["save_as"],
         "save-as",
-        widget.tr("Save labels to a different file"),
+        QCoreApplication.translate(
+            "LabelingWidget", "Save labels to a different file"
+        ),
         enabled=False,
     )
     run_all_images = action(
-        widget.tr("Auto Run"),
+        QCoreApplication.translate("LabelingWidget", "Auto Run"),
         lambda: utils.run_all_images(widget),
         shortcuts["auto_run"],
         "auto-run",
-        widget.tr("Auto run all images at once"),
+        QCoreApplication.translate(
+            "LabelingWidget", "Auto run all images at once"
+        ),
         enabled=False,
     )
     delete_file = action(
-        widget.tr("Delete File"),
+        QCoreApplication.translate("LabelingWidget", "Delete File"),
         widget.delete_file,
         shortcuts["delete_file"],
         "delete",
-        widget.tr("Delete current label file"),
+        QCoreApplication.translate(
+            "LabelingWidget", "Delete current label file"
+        ),
         enabled=False,
     )
     delete_image_file = action(
-        widget.tr("Delete Image File"),
+        QCoreApplication.translate("LabelingWidget", "Delete Image File"),
         widget.delete_image_file,
         shortcuts["delete_image_file"],
         "delete",
-        widget.tr("Delete current image file"),
+        QCoreApplication.translate(
+            "LabelingWidget", "Delete current image file"
+        ),
         enabled=True,
     )
     data_audit = action(
-        widget.tr("数据体检"),
+        QCoreApplication.translate("LabelingWidget", "数据体检"),
         lambda: run_data_audit(widget),
         None,
         "icon",
-        widget.tr(
+        QCoreApplication.translate(
+            "LabelingWidget",
             "Scan the folder for unlabeled images, empty/corrupted "
-            "labels and orphan label files"
+            "labels and orphan label files",
         ),
         enabled=True,
     )
     smart_calibrate = action(
-        widget.tr("1. 阈值校准"),
+        QCoreApplication.translate("LabelingWidget", "1. 阈值校准"),
         lambda: run_threshold_calibration(widget),
         None,
         "settings",
-        widget.tr("推荐先做：按各类置信度分布生成自动接受 / 建议复核阈值"),
+        QCoreApplication.translate(
+            "LabelingWidget",
+            "推荐先做：按各类置信度分布生成自动接受 / 建议复核阈值",
+        ),
         enabled=True,
     )
     smart_analysis = action(
-        widget.tr("2. 数据智能分析"),
+        QCoreApplication.translate("LabelingWidget", "2. 数据智能分析"),
         lambda: run_smart_analysis(widget),
         None,
         "overview",
-        widget.tr("阈值校准后再做：难例排序、重复图片检测与配平建议"),
+        QCoreApplication.translate(
+            "LabelingWidget",
+            "阈值校准后再做：难例排序、重复图片检测与配平建议",
+        ),
         enabled=True,
     )
     smart_missing_scan = action(
-        widget.tr("3. 漏标扫描"),
+        QCoreApplication.translate("LabelingWidget", "3. 漏标扫描"),
         lambda: run_missing_scan(widget),
         None,
         "search",
-        widget.tr("智能分析后再做：用当前模型找出置信度高但没有标注的目标"),
+        QCoreApplication.translate(
+            "LabelingWidget",
+            "智能分析后再做：用当前模型找出置信度高但没有标注的目标",
+        ),
         enabled=True,
     )
     smart_iteration = action(
-        widget.tr("4. 迭代收益看板"),
+        QCoreApplication.translate("LabelingWidget", "4. 迭代收益看板"),
         lambda: show_iteration_dashboard(widget),
         None,
         "loop",
-        widget.tr("最后查看：每轮训练→回灌的边际收益与下一步建议"),
+        QCoreApplication.translate(
+            "LabelingWidget", "最后查看：每轮训练→回灌的边际收益与下一步建议"
+        ),
         enabled=True,
     )
     smart_review = action(
-        widget.tr("5. 智能复核（下一张待复核）"),
+        QCoreApplication.translate(
+            "LabelingWidget", "5. 智能复核（下一张待复核）"
+        ),
         lambda: run_review_jump(widget),
         None,
         "check",
-        widget.tr(
-            "按不确定性优先级跳到下一张待复核的图片（再次点击可继续跳）"
+        QCoreApplication.translate(
+            "LabelingWidget",
+            "按不确定性优先级跳到下一张待复核的图片（再次点击可继续跳）",
         ),
         enabled=True,
     )
     smart_propagate = action(
-        widget.tr("6. 标注传播（上一张→当前图）"),
+        QCoreApplication.translate(
+            "LabelingWidget", "6. 标注传播（上一张→当前图）"
+        ),
         widget._propagate_previous_labels,
         None,
         "copy",
-        widget.tr(
-            "把上一张已标注图片的框按比例复制到当前图片，自动跳过重复框"
+        QCoreApplication.translate(
+            "LabelingWidget",
+            "把上一张已标注图片的框按比例复制到当前图片，自动跳过重复框",
         ),
         enabled=True,
     )
     smart_archive = action(
-        widget.tr("7. 一键去重归档"),
+        QCoreApplication.translate("LabelingWidget", "7. 一键去重归档"),
         lambda: run_duplicate_archive(widget),
         None,
         "trash",
-        widget.tr("把近重复图片及其标注移动到「._duplicates_archive」文件夹"),
+        QCoreApplication.translate(
+            "LabelingWidget",
+            "把近重复图片及其标注移动到「._duplicates_archive」文件夹",
+        ),
         enabled=True,
     )
     smart_advice = action(
-        widget.tr("8. 训练建议"),
+        QCoreApplication.translate("LabelingWidget", "8. 训练建议"),
         lambda: run_training_advice(widget),
         None,
         "brain",
-        widget.tr(
-            "训练前预检 + 基于当前数据与历史轮次推荐 epochs/batch/imgsz 初值"
+        QCoreApplication.translate(
+            "LabelingWidget",
+            "训练前预检 + 基于当前数据与历史轮次推荐 epochs/batch/imgsz 初值",
         ),
         enabled=True,
     )
     smart_template = action(
-        widget.tr("9. 智能模板预标注（批量）"),
+        QCoreApplication.translate(
+            "LabelingWidget", "9. 智能模板预标注（批量）"
+        ),
         lambda: run_template_propagation(widget),
         None,
         "labels",
-        widget.tr(
-            "为未标注图片按相似度匹配已标注模板，批量生成预标注后再人工确认"
+        QCoreApplication.translate(
+            "LabelingWidget",
+            "为未标注图片按相似度匹配已标注模板，批量生成预标注后再人工确认",
         ),
         enabled=True,
     )
     smart_stale_audit = action(
-        widget.tr("10. 旧轮模型框盘点"),
+        QCoreApplication.translate("LabelingWidget", "10. 旧轮模型框盘点"),
         lambda: run_stale_model_audit(widget),
         None,
         "layers",
-        widget.tr("列出由其它模型留下、可考虑清理的框（只报告，不删除）"),
+        QCoreApplication.translate(
+            "LabelingWidget",
+            "列出由其它模型留下、可考虑清理的框（只报告，不删除）",
+        ),
         enabled=True,
     )
     smart_restore_backup = action(
-        widget.tr("11. 从备份恢复标注（撤销批量删除）"),
+        QCoreApplication.translate(
+            "LabelingWidget", "11. 从备份恢复标注（撤销批量删除）"
+        ),
         lambda: run_backup_restore(widget),
         None,
         "undo",
-        widget.tr(
+        QCoreApplication.translate(
+            "LabelingWidget",
             "把 .label_backups 里的某一次快照写回标注目录；"
-            "被覆盖的文件会先生成一个新快照"
+            "被覆盖的文件会先生成一个新快照",
         ),
         enabled=True,
     )
     toggle_annotation_checked = action(
-        widget.tr("Mark as Checked"),
+        QCoreApplication.translate("LabelingWidget", "Mark as Checked"),
         widget.set_annotation_checked,
         shortcuts.get("toggle_annotation_checked"),
         None,
-        widget.tr("Mark current annotation as checked"),
+        QCoreApplication.translate(
+            "LabelingWidget", "Mark current annotation as checked"
+        ),
         checkable=True,
         enabled=False,
     )
     mark_checked_and_next = action(
-        widget.tr("检查完成并下一张"),
+        QCoreApplication.translate("LabelingWidget", "检查完成并下一张"),
         widget.mark_checked_and_next,
         shortcuts["mark_checked_and_next"],
         None,
-        widget.tr("将当前图片标为已检查，并跳到下一张未检查图片"),
+        QCoreApplication.translate(
+            "LabelingWidget", "将当前图片标为已检查，并跳到下一张未检查图片"
+        ),
         enabled=False,
     )
     mark_rejected_and_next = action(
-        widget.tr("打回并下一张"),
+        QCoreApplication.translate("LabelingWidget", "打回并下一张"),
         widget.mark_rejected_and_next,
         shortcuts.get("mark_rejected_and_next"),
         None,
-        widget.tr("将当前图片标为需返工，并跳到下一张未检查图片"),
+        QCoreApplication.translate(
+            "LabelingWidget", "将当前图片标为需返工，并跳到下一张未检查图片"
+        ),
         enabled=False,
     )
     # Menu-only on purpose: no shortcut key is invented here, so there is no
     # config entry that could drift from a real binding.
     confirm_classification = action(
-        widget.tr("确认分类建议"),
+        QCoreApplication.translate("LabelingWidget", "确认分类建议"),
         widget.confirm_classification,
         None,
         None,
-        widget.tr("把分类模型的整图建议写入图片类别（flags）"),
+        QCoreApplication.translate(
+            "LabelingWidget", "把分类模型的整图建议写入图片类别（flags）"
+        ),
         enabled=False,
     )
 
     change_output_dir = action(
-        widget.tr("Change Output Dir"),
+        QCoreApplication.translate("LabelingWidget", "Change Output Dir"),
         slot=widget.change_output_dir_dialog,
         shortcut=shortcuts["save_to"],
         icon="open",
-        tip=widget.tr("Change where annotations are loaded/saved"),
+        tip=QCoreApplication.translate(
+            "LabelingWidget", "Change where annotations are loaded/saved"
+        ),
     )
 
     save_auto = action(
-        text=widget.tr("Save Automatically"),
+        text=QCoreApplication.translate(
+            "LabelingWidget", "Save Automatically"
+        ),
         slot=lambda x: widget._config.update({"auto_save": x}),
         icon=None,
-        tip=widget.tr("Save automatically"),
+        tip=QCoreApplication.translate("LabelingWidget", "Save automatically"),
         checkable=True,
         enabled=True,
         checked=widget._config["auto_save"],
     )
 
     save_with_image_data = action(
-        text=widget.tr("Save With Image Data"),
+        text=QCoreApplication.translate(
+            "LabelingWidget", "Save With Image Data"
+        ),
         slot=lambda x: widget._config.update({"store_data": x}),
         icon=None,
-        tip=widget.tr("Save image data in label file"),
+        tip=QCoreApplication.translate(
+            "LabelingWidget", "Save image data in label file"
+        ),
         checkable=True,
         checked=widget._config["store_data"],
     )
 
     close = action(
-        widget.tr("Close"),
+        QCoreApplication.translate("LabelingWidget", "Close"),
         widget.close_file,
         shortcuts["close"],
         "cancel",
-        widget.tr("Close current file"),
+        QCoreApplication.translate("LabelingWidget", "Close current file"),
     )
 
     keep_prev_mode = action(
-        widget.tr("Keep Previous Annotation"),
+        QCoreApplication.translate(
+            "LabelingWidget", "Keep Previous Annotation"
+        ),
         lambda x: widget._config.update({"keep_prev": x}),
         shortcuts["toggle_keep_prev_mode"],
         None,
-        widget.tr('Toggle "Keep Previous Annotation" mode'),
+        QCoreApplication.translate(
+            "LabelingWidget", 'Toggle "Keep Previous Annotation" mode'
+        ),
         checkable=True,
         checked=widget._config["keep_prev"],
     )
 
     auto_use_last_label_mode = action(
-        widget.tr("Auto Use Last Label"),
+        QCoreApplication.translate("LabelingWidget", "Auto Use Last Label"),
         lambda x: widget._config.update({"auto_use_last_label": x}),
         shortcuts["toggle_auto_use_last_label"],
         None,
-        widget.tr('Toggle "Auto Use Last Label" mode'),
+        QCoreApplication.translate(
+            "LabelingWidget", 'Toggle "Auto Use Last Label" mode'
+        ),
         checkable=True,
         checked=widget._config["auto_use_last_label"],
     )
 
     auto_use_last_gid_mode = action(
-        widget.tr("Auto Use Last Group ID"),
+        QCoreApplication.translate("LabelingWidget", "Auto Use Last Group ID"),
         lambda x: widget._config.update({"auto_use_last_gid": x}),
         shortcuts["toggle_auto_use_last_gid"],
         None,
-        widget.tr('Toggle "Auto Use Last Group ID" mode'),
+        QCoreApplication.translate(
+            "LabelingWidget", 'Toggle "Auto Use Last Group ID" mode'
+        ),
         checkable=True,
         checked=widget._config["auto_use_last_gid"],
     )
 
     use_system_clipboard = action(
-        widget.tr("Use System Clipboard"),
+        QCoreApplication.translate("LabelingWidget", "Use System Clipboard"),
         widget.toggle_system_clipboard,
-        tip=widget.tr("Use system clipboard for copy and paste"),
+        tip=QCoreApplication.translate(
+            "LabelingWidget", "Use system clipboard for copy and paste"
+        ),
         checkable=True,
         checked=widget._config["system_clipboard"],
         enabled=True,
     )
 
     visibility_shapes_mode = action(
-        widget.tr("Visibility Shapes"),
+        QCoreApplication.translate("LabelingWidget", "Visibility Shapes"),
         widget.toggle_visibility_shapes,
         shortcuts["toggle_visibility_shapes"],
         None,
-        widget.tr('Toggle "Visibility Shapes" mode'),
+        QCoreApplication.translate(
+            "LabelingWidget", 'Toggle "Visibility Shapes" mode'
+        ),
         checkable=True,
         checked=widget._config["show_shapes"],
     )
 
     create_mode = action(
-        widget.tr("Create Polygons"),
+        QCoreApplication.translate("LabelingWidget", "Create Polygons"),
         lambda: widget.toggle_draw_mode(False, create_mode="polygon"),
         shortcuts["create_polygon"],
         "polygon",
-        widget.tr("Start drawing polygons"),
+        QCoreApplication.translate("LabelingWidget", "Start drawing polygons"),
         enabled=False,
     )
     create_brush_polygon_mode = action(
-        widget.tr("Create Brush Polygons"),
+        QCoreApplication.translate("LabelingWidget", "Create Brush Polygons"),
         widget.toggle_brush_polygon_mode,
         shortcuts["create_brush_polygon"],
         "brush_polygon",
-        widget.tr("Toggle brush mode for drawing polygons"),
+        QCoreApplication.translate(
+            "LabelingWidget", "Toggle brush mode for drawing polygons"
+        ),
         enabled=False,
     )
     create_rectangle_mode = action(
-        widget.tr("Create Rectangle"),
+        QCoreApplication.translate("LabelingWidget", "Create Rectangle"),
         lambda: widget.toggle_draw_mode(False, create_mode="rectangle"),
         shortcuts["create_rectangle"],
         "rectangle",
-        widget.tr("Start drawing rectangles"),
+        QCoreApplication.translate(
+            "LabelingWidget", "Start drawing rectangles"
+        ),
         enabled=False,
     )
     create_point_mode = action(
-        widget.tr("Create Point"),
+        QCoreApplication.translate("LabelingWidget", "Create Point"),
         lambda: widget.toggle_draw_mode(False, create_mode="point"),
         shortcuts["create_point"],
         "point",
-        widget.tr("Start drawing points"),
+        QCoreApplication.translate("LabelingWidget", "Start drawing points"),
         enabled=False,
     )
     # These six existed only as config keys: the shortcuts-help dialog
     # advertised them, but no QAction ever bound them, so the shapes were
     # reachable through the digit-shortcut manager alone.
     create_cuboid_mode = action(
-        widget.tr("创建立方体"),
+        QCoreApplication.translate("LabelingWidget", "创建立方体"),
         lambda: widget.toggle_draw_mode(False, create_mode="cuboid"),
         shortcuts["create_cuboid"],
         None,
-        widget.tr("开始画立方体"),
+        QCoreApplication.translate("LabelingWidget", "开始画立方体"),
         enabled=False,
     )
     create_rotation_mode = action(
-        widget.tr("创建旋转框"),
+        QCoreApplication.translate("LabelingWidget", "创建旋转框"),
         lambda: widget.toggle_draw_mode(False, create_mode="rotation"),
         shortcuts["create_rotation"],
         None,
-        widget.tr("开始画旋转框"),
+        QCoreApplication.translate("LabelingWidget", "开始画旋转框"),
         enabled=False,
     )
     create_quadrilateral_mode = action(
-        widget.tr("创建四边形"),
+        QCoreApplication.translate("LabelingWidget", "创建四边形"),
         lambda: widget.toggle_draw_mode(False, create_mode="quadrilateral"),
         shortcuts["create_quadrilateral"],
         None,
-        widget.tr("开始画四边形"),
+        QCoreApplication.translate("LabelingWidget", "开始画四边形"),
         enabled=False,
     )
     create_circle_mode = action(
-        widget.tr("创建圆"),
+        QCoreApplication.translate("LabelingWidget", "创建圆"),
         lambda: widget.toggle_draw_mode(False, create_mode="circle"),
         shortcuts["create_circle"],
         None,
-        widget.tr("开始画圆"),
+        QCoreApplication.translate("LabelingWidget", "开始画圆"),
         enabled=False,
     )
     create_line_mode = action(
-        widget.tr("创建线段"),
+        QCoreApplication.translate("LabelingWidget", "创建线段"),
         lambda: widget.toggle_draw_mode(False, create_mode="line"),
         shortcuts["create_line"],
         None,
-        widget.tr("开始画线段"),
+        QCoreApplication.translate("LabelingWidget", "开始画线段"),
         enabled=False,
     )
     create_linestrip_mode = action(
-        widget.tr("创建折线"),
+        QCoreApplication.translate("LabelingWidget", "创建折线"),
         lambda: widget.toggle_draw_mode(False, create_mode="linestrip"),
         shortcuts["create_linestrip"],
         None,
-        widget.tr("开始画折线"),
+        QCoreApplication.translate("LabelingWidget", "开始画折线"),
         enabled=False,
     )
     digit_shortcut_0 = action(
-        widget.tr("Digit Shortcut 0"),
+        QCoreApplication.translate("LabelingWidget", "Digit Shortcut 0"),
         lambda: widget.create_digit_mode(0),
         "0",
         "digit0",
         enabled=False,
     )
     digit_shortcut_1 = action(
-        widget.tr("Digit Shortcut 1"),
+        QCoreApplication.translate("LabelingWidget", "Digit Shortcut 1"),
         lambda: widget.create_digit_mode(1),
         "1",
         "digit1",
         enabled=False,
     )
     digit_shortcut_2 = action(
-        widget.tr("Digit Shortcut 2"),
+        QCoreApplication.translate("LabelingWidget", "Digit Shortcut 2"),
         lambda: widget.create_digit_mode(2),
         "2",
         "digit2",
         enabled=False,
     )
     digit_shortcut_3 = action(
-        widget.tr("Digit Shortcut 3"),
+        QCoreApplication.translate("LabelingWidget", "Digit Shortcut 3"),
         lambda: widget.create_digit_mode(3),
         "3",
         "digit3",
         enabled=False,
     )
     digit_shortcut_4 = action(
-        widget.tr("Digit Shortcut 4"),
+        QCoreApplication.translate("LabelingWidget", "Digit Shortcut 4"),
         lambda: widget.create_digit_mode(4),
         "4",
         "digit4",
         enabled=False,
     )
     digit_shortcut_5 = action(
-        widget.tr("Digit Shortcut 5"),
+        QCoreApplication.translate("LabelingWidget", "Digit Shortcut 5"),
         lambda: widget.create_digit_mode(5),
         "5",
         "digit5",
         enabled=False,
     )
     digit_shortcut_6 = action(
-        widget.tr("Digit Shortcut 6"),
+        QCoreApplication.translate("LabelingWidget", "Digit Shortcut 6"),
         lambda: widget.create_digit_mode(6),
         "6",
         "digit6",
         enabled=False,
     )
     digit_shortcut_7 = action(
-        widget.tr("Digit Shortcut 7"),
+        QCoreApplication.translate("LabelingWidget", "Digit Shortcut 7"),
         lambda: widget.create_digit_mode(7),
         "7",
         "digit7",
         enabled=False,
     )
     digit_shortcut_8 = action(
-        widget.tr("Digit Shortcut 8"),
+        QCoreApplication.translate("LabelingWidget", "Digit Shortcut 8"),
         lambda: widget.create_digit_mode(8),
         "8",
         "digit8",
         enabled=False,
     )
     digit_shortcut_9 = action(
-        widget.tr("Digit Shortcut 9"),
+        QCoreApplication.translate("LabelingWidget", "Digit Shortcut 9"),
         lambda: widget.create_digit_mode(9),
         "9",
         "digit9",
         enabled=False,
     )
     edit_mode = action(
-        widget.tr("Edit Object"),
+        QCoreApplication.translate("LabelingWidget", "Edit Object"),
         widget.set_edit_mode,
         shortcuts["edit_polygon"],
         "edit",
-        widget.tr("Move and edit the selected polygons"),
+        QCoreApplication.translate(
+            "LabelingWidget", "Move and edit the selected polygons"
+        ),
         enabled=False,
     )
     edit_brush_mode = action(
-        widget.tr("Edit Brush"),
+        QCoreApplication.translate("LabelingWidget", "Edit Brush"),
         lambda checked: widget.toggle_brush_mode(checked),
         shortcuts.get("edit_brush_mode", "Shift+B"),
         "brush",
-        widget.tr(
+        QCoreApplication.translate(
+            "LabelingWidget",
             "Select one polygon, then paint to add, hold Ctrl to erase, "
-            "and scroll to resize the brush"
+            "and scroll to resize the brush",
         ),
         enabled=False,
         checkable=True,
         checked=False,
     )
     group_selected_shapes = action(
-        widget.tr("Group Selected Shapes"),
+        QCoreApplication.translate("LabelingWidget", "Group Selected Shapes"),
         widget.group_selected_shapes,
         shortcuts["group_selected_shapes"],
         None,
-        widget.tr("Group shapes by assigning a same group_id"),
+        QCoreApplication.translate(
+            "LabelingWidget", "Group shapes by assigning a same group_id"
+        ),
         enabled=True,
     )
     ungroup_selected_shapes = action(
-        widget.tr("Ungroup Selected Shapes"),
+        QCoreApplication.translate(
+            "LabelingWidget", "Ungroup Selected Shapes"
+        ),
         widget.ungroup_selected_shapes,
         shortcuts["ungroup_selected_shapes"],
         None,
-        widget.tr("Ungroup shapes"),
+        QCoreApplication.translate("LabelingWidget", "Ungroup shapes"),
         enabled=True,
     )
 
     delete = action(
-        widget.tr("Delete"),
+        QCoreApplication.translate("LabelingWidget", "Delete"),
         widget.delete_selected_shape,
         shortcuts["delete_polygon"],
         "cancel",
-        widget.tr("Delete the selected polygons"),
+        QCoreApplication.translate(
+            "LabelingWidget", "Delete the selected polygons"
+        ),
         enabled=False,
     )
     duplicate = action(
-        widget.tr("Duplicate Polygons"),
+        QCoreApplication.translate("LabelingWidget", "Duplicate Polygons"),
         widget.duplicate_selected_shape,
         shortcuts["duplicate_polygon"],
         "copy",
-        widget.tr("Create a duplicate of the selected polygons"),
+        QCoreApplication.translate(
+            "LabelingWidget", "Create a duplicate of the selected polygons"
+        ),
         enabled=False,
     )
     copy = action(
-        widget.tr("Copy Object"),
+        QCoreApplication.translate("LabelingWidget", "Copy Object"),
         widget.copy_selected_shape,
         shortcuts["copy_polygon"],
         "copy",
-        widget.tr("Copy selected polygons to clipboard"),
+        QCoreApplication.translate(
+            "LabelingWidget", "Copy selected polygons to clipboard"
+        ),
         enabled=False,
     )
     paste = action(
-        widget.tr("Paste Object"),
+        QCoreApplication.translate("LabelingWidget", "Paste Object"),
         widget.paste_selected_shape,
         shortcuts["paste_polygon"],
         "paste",
-        widget.tr("Paste copied polygons"),
+        QCoreApplication.translate("LabelingWidget", "Paste copied polygons"),
         enabled=widget._config["system_clipboard"],
     )
     undo_last_point = action(
-        widget.tr("Undo last point"),
+        QCoreApplication.translate("LabelingWidget", "Undo last point"),
         widget.canvas.undo_last_point,
         shortcuts["undo_last_point"],
         "undo",
-        widget.tr("Undo last drawn point"),
+        QCoreApplication.translate("LabelingWidget", "Undo last drawn point"),
         enabled=False,
     )
     remove_point = action(
-        text=widget.tr("Remove Selected Point"),
+        text=QCoreApplication.translate(
+            "LabelingWidget", "Remove Selected Point"
+        ),
         slot=widget.remove_selected_point,
         shortcut=shortcuts["remove_selected_point"],
         icon="edit",
-        tip=widget.tr("Remove selected point from polygon"),
+        tip=QCoreApplication.translate(
+            "LabelingWidget", "Remove selected point from polygon"
+        ),
         enabled=False,
     )
 
     undo = action(
-        widget.tr("Undo"),
+        QCoreApplication.translate("LabelingWidget", "Undo"),
         widget.undo_shape_edit,
         shortcuts["undo"],
         "undo",
-        widget.tr("Undo last add and edit of shape"),
+        QCoreApplication.translate(
+            "LabelingWidget", "Undo last add and edit of shape"
+        ),
         enabled=False,
     )
     redo = action(
-        widget.tr("Redo"),
+        QCoreApplication.translate("LabelingWidget", "Redo"),
         widget.redo_shape_edit,
         shortcuts.get("redo", "Ctrl+Shift+Z"),
         "redo",
-        widget.tr("Redo the last undone edit of shape"),
+        QCoreApplication.translate(
+            "LabelingWidget", "Redo the last undone edit of shape"
+        ),
         enabled=False,
     )
     hide_selected_polygons = action(
-        widget.tr("Hide Selected Polygons"),
+        QCoreApplication.translate("LabelingWidget", "Hide Selected Polygons"),
         widget.hide_selected_polygons,
         shortcuts["hide_selected_polygons"],
         None,
-        widget.tr("Hide selected polygons"),
+        QCoreApplication.translate("LabelingWidget", "Hide selected polygons"),
         enabled=True,
     )
     show_hidden_polygons = action(
-        widget.tr("Show Hidden Polygons"),
+        QCoreApplication.translate("LabelingWidget", "Show Hidden Polygons"),
         widget.show_hidden_polygons,
         shortcuts["show_hidden_polygons"],
         None,
-        widget.tr("Show hidden polygons"),
+        QCoreApplication.translate("LabelingWidget", "Show hidden polygons"),
         enabled=True,
     )
 
     overview = action(
-        widget.tr("Overview"),
+        QCoreApplication.translate("LabelingWidget", "Overview"),
         widget.overview,
         shortcuts["show_overview"],
         icon="overview",
-        tip=widget.tr("Show annotations statistics"),
+        tip=QCoreApplication.translate(
+            "LabelingWidget", "Show annotations statistics"
+        ),
     )
     save_crop = action(
-        widget.tr("Save Cropped Image"),
+        QCoreApplication.translate("LabelingWidget", "Save Cropped Image"),
         lambda: utils.save_crop(widget),
         icon="crop",
-        tip=widget.tr(
-            "Save cropped image. (Support rectangle/rotation/polygon shape_type)"
+        tip=QCoreApplication.translate(
+            "LabelingWidget",
+            "Save cropped image. (Support rectangle/rotation/polygon shape_type)",
         ),
     )
     save_visualization_image = action(
-        widget.tr("Save Visualization Image"),
+        QCoreApplication.translate(
+            "LabelingWidget", "Save Visualization Image"
+        ),
         lambda: utils.save_visualization(widget),
         icon="file",
-        tip=widget.tr("Save visualization image"),
+        tip=QCoreApplication.translate(
+            "LabelingWidget", "Save visualization image"
+        ),
     )
     digit_shortcut_manager = action(
-        widget.tr("Digit Shortcut Manager"),
+        QCoreApplication.translate("LabelingWidget", "Digit Shortcut Manager"),
         widget.digit_shortcut_manager,
         shortcuts["edit_digit_shortcut"],
         icon="edit",
-        tip=widget.tr(
-            "Manage Digit Shortcuts: Assign Drawing Modes and Labels to Number Keys"
+        tip=QCoreApplication.translate(
+            "LabelingWidget",
+            "Manage Digit Shortcuts: Assign Drawing Modes and Labels to Number Keys",
         ),
     )
     label_manager = action(
-        widget.tr("Label Manager"),
+        QCoreApplication.translate("LabelingWidget", "Label Manager"),
         widget.label_manager,
         shortcuts["edit_labels"],
         icon="edit",
-        tip=widget.tr(
-            "Manage Labels: Rename, Delete, Hide/Show, Adjust Color"
+        tip=QCoreApplication.translate(
+            "LabelingWidget",
+            "Manage Labels: Rename, Delete, Hide/Show, Adjust Color",
         ),
     )
     shortcuts_help = action(
-        widget.tr("快捷键速查"),
+        QCoreApplication.translate("LabelingWidget", "快捷键速查"),
         widget.show_shortcuts_help,
         shortcuts["show_shortcuts_help"],
         icon="search",
-        tip=widget.tr("查看所有可用快捷键，可按快捷键或功能搜索"),
+        tip=QCoreApplication.translate(
+            "LabelingWidget", "查看所有可用快捷键，可按快捷键或功能搜索"
+        ),
     )
     gid_manager = action(
-        widget.tr("Group ID Manager"),
+        QCoreApplication.translate("LabelingWidget", "Group ID Manager"),
         widget.gid_manager,
         shortcuts["edit_group_id"],
         icon="edit",
-        tip=widget.tr("Manage Group ID"),
+        tip=QCoreApplication.translate("LabelingWidget", "Manage Group ID"),
     )
     shape_manager = action(
-        widget.tr("Shape Manager"),
+        QCoreApplication.translate("LabelingWidget", "Shape Manager"),
         widget.shape_manager,
         shortcuts["edit_shapes"],
         icon="edit",
-        tip=widget.tr("Manage Shapes: Add, Delete, Remove"),
+        tip=QCoreApplication.translate(
+            "LabelingWidget", "Manage Shapes: Add, Delete, Remove"
+        ),
         enabled=False,
     )
     copy_coordinates = action(
-        widget.tr("Copy Coordinates"),
+        QCoreApplication.translate("LabelingWidget", "Copy Coordinates"),
         widget.copy_shape_coordinates,
         icon="copy",
-        tip=widget.tr("Copy shape coordinates to clipboard"),
+        tip=QCoreApplication.translate(
+            "LabelingWidget", "Copy shape coordinates to clipboard"
+        ),
         enabled=False,
     )
     union_selection = action(
-        widget.tr("Union Selection"),
+        QCoreApplication.translate("LabelingWidget", "Union Selection"),
         widget.union_selection,
         shortcuts["union_selected_shapes"],
         icon="union",
-        tip=widget.tr("Union multiple selected rectangle shapes"),
+        tip=QCoreApplication.translate(
+            "LabelingWidget", "Union multiple selected rectangle shapes"
+        ),
         enabled=False,
     )
     toggle_shape_lock = action(
-        widget.tr("Lock Shape"),
+        QCoreApplication.translate("LabelingWidget", "Lock Shape"),
         widget.toggle_selected_shapes_lock,
-        tip=widget.tr("Prevent changes to the selected shapes' coordinates"),
+        tip=QCoreApplication.translate(
+            "LabelingWidget",
+            "Prevent changes to the selected shapes' coordinates",
+        ),
         checkable=True,
         enabled=False,
     )
     shape_converter = action(
-        widget.tr("Shape Converter"),
+        QCoreApplication.translate("LabelingWidget", "Shape Converter"),
         lambda: utils.open_shape_converter(widget),
         icon="convert",
-        tip=widget.tr("Open shape converter"),
+        tip=QCoreApplication.translate(
+            "LabelingWidget", "Open shape converter"
+        ),
     )
 
     loop_thru_labels = action(
-        widget.tr("Loop Through Labels"),
+        QCoreApplication.translate("LabelingWidget", "Loop Through Labels"),
         widget.loop_thru_labels,
         shortcut=shortcuts["loop_thru_labels"],
         icon="loop",
-        tip=widget.tr("Loop through labels"),
+        tip=QCoreApplication.translate(
+            "LabelingWidget", "Loop through labels"
+        ),
         enabled=False,
     )
     loop_select_labels = action(
-        widget.tr("Loop Select Labels"),
+        QCoreApplication.translate("LabelingWidget", "Loop Select Labels"),
         widget.loop_select_labels,
         shortcut=shortcuts["loop_select_labels"],
         icon="circle-selection",
-        tip=widget.tr("Loop select labels"),
+        tip=QCoreApplication.translate("LabelingWidget", "Loop select labels"),
         enabled=False,
     )
     select_toggle_shapes = action(
-        widget.tr("Toggle Shapes Visibility"),
+        QCoreApplication.translate(
+            "LabelingWidget", "Toggle Shapes Visibility"
+        ),
         widget.toggle_select_all,
         icon="eye",
-        tip=widget.tr("Hide all shapes"),
+        tip=QCoreApplication.translate("LabelingWidget", "Hide all shapes"),
         enabled=False,
     )
     widget.select_toggle_action = select_toggle_shapes
@@ -6960,7 +7086,7 @@ def _build_actions(widget):
         icon="ultralytics",
     )
     run_history = action(
-        widget.tr("实验历史"),
+        QCoreApplication.translate("LabelingWidget", "实验历史"),
         widget.show_run_history,
     )
 
@@ -6968,87 +7094,104 @@ def _build_actions(widget):
     zoom.setDefaultWidget(widget.zoom_widget)
     widget.zoom_widget.setWhatsThis(
         str(
-            widget.tr(
+            QCoreApplication.translate(
+                "LabelingWidget",
                 "Zoom in or out of the image. Also accessible with "
-                "{} and {} from the canvas."
+                "{} and {} from the canvas.",
             )
         ).format(
             utils.fmt_shortcut(
                 f"{shortcuts['zoom_in']},{shortcuts['zoom_out']}"
             ),
-            utils.fmt_shortcut(widget.tr("Ctrl+Wheel")),
+            utils.fmt_shortcut(
+                QCoreApplication.translate("LabelingWidget", "Ctrl+Wheel")
+            ),
         )
     )
     widget.zoom_widget.setEnabled(False)
 
     zoom_in = action(
-        widget.tr("Zoom In"),
+        QCoreApplication.translate("LabelingWidget", "Zoom In"),
         functools.partial(widget.add_zoom, 1.1),
         shortcuts["zoom_in"],
         "zoom-in",
-        widget.tr("Increase zoom level"),
+        QCoreApplication.translate("LabelingWidget", "Increase zoom level"),
         enabled=False,
     )
     zoom_out = action(
-        widget.tr("Zoom Out"),
+        QCoreApplication.translate("LabelingWidget", "Zoom Out"),
         functools.partial(widget.add_zoom, 0.9),
         shortcuts["zoom_out"],
         "zoom-out",
-        widget.tr("Decrease zoom level"),
+        QCoreApplication.translate("LabelingWidget", "Decrease zoom level"),
         enabled=False,
     )
     zoom_org = action(
-        widget.tr("Original Size"),
+        QCoreApplication.translate("LabelingWidget", "Original Size"),
         functools.partial(widget.set_zoom, 100),
         shortcuts["zoom_to_original"],
         "zoom",
-        widget.tr("Zoom to original size"),
+        QCoreApplication.translate("LabelingWidget", "Zoom to original size"),
         enabled=False,
     )
     keep_prev_scale = action(
-        widget.tr("Keep Previous Scale"),
+        QCoreApplication.translate("LabelingWidget", "Keep Previous Scale"),
         lambda x: widget._config.update({"keep_prev_scale": x}),
-        tip=widget.tr("Keep previous zoom scale"),
+        tip=QCoreApplication.translate(
+            "LabelingWidget", "Keep previous zoom scale"
+        ),
         checkable=True,
         checked=widget._config["keep_prev_scale"],
         enabled=True,
     )
     keep_prev_brightness = action(
-        widget.tr("Keep Previous Brightness"),
+        QCoreApplication.translate(
+            "LabelingWidget", "Keep Previous Brightness"
+        ),
         lambda x: widget._config.update({"keep_prev_brightness": x}),
-        tip=widget.tr("Keep previous brightness"),
+        tip=QCoreApplication.translate(
+            "LabelingWidget", "Keep previous brightness"
+        ),
         checkable=True,
         checked=widget._config["keep_prev_brightness"],
         enabled=True,
     )
     keep_prev_contrast = action(
-        widget.tr("Keep Previous Contrast"),
+        QCoreApplication.translate("LabelingWidget", "Keep Previous Contrast"),
         lambda x: widget._config.update({"keep_prev_contrast": x}),
-        tip=widget.tr("Keep previous contrast"),
+        tip=QCoreApplication.translate(
+            "LabelingWidget", "Keep previous contrast"
+        ),
         checkable=True,
         checked=widget._config["keep_prev_contrast"],
         enabled=True,
     )
     fit_window = action(
-        widget.tr("Fit Window"),
+        QCoreApplication.translate("LabelingWidget", "Fit Window"),
         widget.set_fit_window,
         shortcuts["fit_window"],
         "fit-window",
-        widget.tr("Zoom follows window size"),
+        QCoreApplication.translate(
+            "LabelingWidget", "Zoom follows window size"
+        ),
         checkable=True,
         enabled=False,
     )
     fit_width = action(
-        widget.tr("Fit Width"),
+        QCoreApplication.translate("LabelingWidget", "Fit Width"),
         widget.set_fit_width,
         shortcuts["fit_width"],
         "fit-width",
-        widget.tr("Zoom follows window width"),
+        QCoreApplication.translate(
+            "LabelingWidget", "Zoom follows window width"
+        ),
         checkable=True,
         enabled=False,
     )
     brightness_contrast = action(
-        widget.tr("Set Brightness Contrast"),
+        QCoreApplication.translate(
+            "LabelingWidget", "Set Brightness Contrast"
+        ),
         widget.brightness_contrast,
         None,
         "color",
@@ -7056,15 +7199,17 @@ def _build_actions(widget):
         enabled=False,
     )
     set_cross_line = action(
-        widget.tr("Set Cross Line"),
+        QCoreApplication.translate("LabelingWidget", "Set Cross Line"),
         widget.set_cross_line,
-        tip=widget.tr("Adjust cross line for mouse position"),
+        tip=QCoreApplication.translate(
+            "LabelingWidget", "Adjust cross line for mouse position"
+        ),
         icon="cartesian",
     )
     show_groups = action(
-        widget.tr("Show Groups"),
+        QCoreApplication.translate("LabelingWidget", "Show Groups"),
         lambda x: widget.set_canvas_params("show_groups", x),
-        tip=widget.tr("Show shape groups"),
+        tip=QCoreApplication.translate("LabelingWidget", "Show shape groups"),
         icon=None,
         checkable=True,
         checked=widget._config["show_groups"],
@@ -7072,10 +7217,12 @@ def _build_actions(widget):
         auto_trigger=True,
     )
     show_masks = action(
-        widget.tr("Show Masks"),
+        QCoreApplication.translate("LabelingWidget", "Show Masks"),
         lambda x: widget.set_canvas_params("show_masks", x),
         shortcut=shortcuts["show_masks"],
-        tip=widget.tr("Show semi-transparent masks for shapes"),
+        tip=QCoreApplication.translate(
+            "LabelingWidget", "Show semi-transparent masks for shapes"
+        ),
         icon=None,
         checkable=True,
         checked=widget._config["show_masks"],
@@ -7086,10 +7233,12 @@ def _build_actions(widget):
     # QLineEdit) has focus, so Ctrl+M reliably toggles the mask overlay.
     show_masks.setShortcutContext(Qt.ShortcutContext.ApplicationShortcut)
     show_texts = action(
-        widget.tr("Show Texts"),
+        QCoreApplication.translate("LabelingWidget", "Show Texts"),
         lambda x: widget.set_canvas_params("show_texts", x),
         shortcut=shortcuts["show_texts"],
-        tip=widget.tr("Show text above shapes"),
+        tip=QCoreApplication.translate(
+            "LabelingWidget", "Show text above shapes"
+        ),
         icon=None,
         checkable=True,
         checked=widget._config["show_texts"],
@@ -7097,10 +7246,12 @@ def _build_actions(widget):
         auto_trigger=True,
     )
     show_labels = action(
-        widget.tr("Show Labels"),
+        QCoreApplication.translate("LabelingWidget", "Show Labels"),
         lambda x: widget.set_canvas_params("show_labels", x),
         shortcut=shortcuts["show_labels"],
-        tip=widget.tr("Show label inside shapes"),
+        tip=QCoreApplication.translate(
+            "LabelingWidget", "Show label inside shapes"
+        ),
         icon=None,
         checkable=True,
         checked=widget._config["show_labels"],
@@ -7112,10 +7263,12 @@ def _build_actions(widget):
     # an action, which left Ctrl+Shift+L advertised in the F1 cheat sheet
     # while doing nothing.
     show_attributes = action(
-        widget.tr("Show Attributes"),
+        QCoreApplication.translate("LabelingWidget", "Show Attributes"),
         lambda x: widget.set_canvas_params("show_attributes", x),
         shortcut=shortcuts["show_attributes"],
-        tip=widget.tr("Show attributes below shapes"),
+        tip=QCoreApplication.translate(
+            "LabelingWidget", "Show attributes below shapes"
+        ),
         icon=None,
         checkable=True,
         checked=widget._config["show_attributes"],
@@ -7126,9 +7279,11 @@ def _build_actions(widget):
     # child widget (e.g. the text-prompt QLineEdit).
     show_attributes.setShortcutContext(Qt.ShortcutContext.ApplicationShortcut)
     show_scores = action(
-        widget.tr("Show Scores"),
+        QCoreApplication.translate("LabelingWidget", "Show Scores"),
         lambda x: widget.set_canvas_params("show_scores", x),
-        tip=widget.tr("Show score inside shapes"),
+        tip=QCoreApplication.translate(
+            "LabelingWidget", "Show score inside shapes"
+        ),
         icon=None,
         checkable=True,
         checked=widget._config["show_scores"],
@@ -7136,9 +7291,11 @@ def _build_actions(widget):
         auto_trigger=True,
     )
     show_degrees = action(
-        widget.tr("Show Degress"),
+        QCoreApplication.translate("LabelingWidget", "Show Degrees"),
         lambda x: widget.set_canvas_params("show_degrees", x),
-        tip=widget.tr("Show degrees above rotated shapes"),
+        tip=QCoreApplication.translate(
+            "LabelingWidget", "Show degrees above rotated shapes"
+        ),
         icon=None,
         checkable=True,
         checked=widget._config["show_degrees"],
@@ -7153,9 +7310,9 @@ def _build_actions(widget):
     widget._theme_actions = {}
     current_appearance = widget._config.get("theme", "auto")
     for _mode, _label in (
-        ("auto", widget.tr("System")),
-        ("light", widget.tr("Light")),
-        ("dark", widget.tr("Dark")),
+        ("auto", QCoreApplication.translate("LabelingWidget", "System")),
+        ("light", QCoreApplication.translate("LabelingWidget", "Light")),
+        ("dark", QCoreApplication.translate("LabelingWidget", "Dark")),
     ):
         _act = QtGui.QAction(_label, theme_group)
         _act.setCheckable(True)
@@ -7170,73 +7327,89 @@ def _build_actions(widget):
     # Upload
     upload_export_icon = "label"
     upload_image_flags_file = action(
-        widget.tr("Image Flags"),
+        QCoreApplication.translate("LabelingWidget", "Image Flags"),
         lambda: utils.upload_image_flags_file(widget),
         None,
         icon=upload_export_icon,
-        tip=widget.tr("Upload Custom Image Flags File"),
+        tip=QCoreApplication.translate(
+            "LabelingWidget", "Upload Custom Image Flags File"
+        ),
     )
     upload_label_flags_file = action(
-        widget.tr("Label Flags"),
+        QCoreApplication.translate("LabelingWidget", "Label Flags"),
         lambda: utils.upload_label_flags_file(widget, LABEL_OPACITY),
         None,
         icon=upload_export_icon,
-        tip=widget.tr("Upload Custom Label Flags File"),
+        tip=QCoreApplication.translate(
+            "LabelingWidget", "Upload Custom Label Flags File"
+        ),
     )
     upload_label_classes_file = action(
-        widget.tr("Label Classes"),
+        QCoreApplication.translate("LabelingWidget", "Label Classes"),
         lambda: utils.upload_label_classes_file(widget),
         None,
         icon=upload_export_icon,
-        tip=widget.tr("Upload Custom Label Classes File"),
+        tip=QCoreApplication.translate(
+            "LabelingWidget", "Upload Custom Label Classes File"
+        ),
     )
     upload_yolo_hbb_annotation = action(
-        widget.tr("YOLO HBB"),
+        QCoreApplication.translate("LabelingWidget", "YOLO HBB"),
         lambda: utils.upload_yolo_annotation(widget, "hbb", LABEL_OPACITY),
         None,
         icon=upload_export_icon,
-        tip=widget.tr(
-            "Upload Custom YOLO Horizontal Bounding Boxes Annotations"
+        tip=QCoreApplication.translate(
+            "LabelingWidget",
+            "Upload Custom YOLO Horizontal Bounding Boxes Annotations",
         ),
     )
     upload_yolo_seg_annotation = action(
-        widget.tr("YOLO Seg"),
+        QCoreApplication.translate("LabelingWidget", "YOLO Seg"),
         lambda: utils.upload_yolo_annotation(widget, "seg", LABEL_OPACITY),
         None,
         icon=upload_export_icon,
-        tip=widget.tr("Upload Custom YOLO Segmentation Annotations"),
+        tip=QCoreApplication.translate(
+            "LabelingWidget", "Upload Custom YOLO Segmentation Annotations"
+        ),
     )
     upload_yolo_pose_annotation = action(
-        widget.tr("YOLO Pose"),
+        QCoreApplication.translate("LabelingWidget", "YOLO Pose"),
         lambda: utils.upload_yolo_annotation(widget, "pose", LABEL_OPACITY),
         None,
         icon=upload_export_icon,
-        tip=widget.tr("Upload Custom YOLO Pose Annotations"),
+        tip=QCoreApplication.translate(
+            "LabelingWidget", "Upload Custom YOLO Pose Annotations"
+        ),
     )
 
     # Export
     export_yolo_hbb_annotation = action(
-        widget.tr("YOLO HBB"),
+        QCoreApplication.translate("LabelingWidget", "YOLO HBB"),
         lambda: utils.export_yolo_annotation(widget, "hbb"),
         None,
         icon=upload_export_icon,
-        tip=widget.tr(
-            "Export Custom YOLO Horizontal Bounding Boxes Annotations"
+        tip=QCoreApplication.translate(
+            "LabelingWidget",
+            "Export Custom YOLO Horizontal Bounding Boxes Annotations",
         ),
     )
     export_yolo_seg_annotation = action(
-        widget.tr("YOLO Seg"),
+        QCoreApplication.translate("LabelingWidget", "YOLO Seg"),
         lambda: utils.export_yolo_annotation(widget, "seg"),
         None,
         icon=upload_export_icon,
-        tip=widget.tr("Export Custom YOLO Segmentation Annotations"),
+        tip=QCoreApplication.translate(
+            "LabelingWidget", "Export Custom YOLO Segmentation Annotations"
+        ),
     )
     export_yolo_pose_annotation = action(
-        widget.tr("YOLO Pose"),
+        QCoreApplication.translate("LabelingWidget", "YOLO Pose"),
         lambda: utils.export_yolo_annotation(widget, "pose"),
         None,
         icon=upload_export_icon,
-        tip=widget.tr("Export Custom YOLO Pose Annotations"),
+        tip=QCoreApplication.translate(
+            "LabelingWidget", "Export Custom YOLO Pose Annotations"
+        ),
     )
 
     # Group zoom controls into a list for easier toggling.
@@ -7258,42 +7431,48 @@ def _build_actions(widget):
     }
 
     edit = action(
-        widget.tr("Edit Label"),
+        QCoreApplication.translate("LabelingWidget", "Edit Label"),
         widget.edit_label,
         shortcuts["edit_label"],
         "edit",
-        widget.tr("Modify the label of the selected polygon"),
+        QCoreApplication.translate(
+            "LabelingWidget", "Modify the label of the selected polygon"
+        ),
         enabled=False,
     )
 
     fill_drawing = action(
-        widget.tr("Fill Drawing Polygon"),
+        QCoreApplication.translate("LabelingWidget", "Fill Drawing Polygon"),
         widget.canvas.set_fill_drawing,
         None,
         "color",
-        widget.tr("Fill polygon while drawing"),
+        QCoreApplication.translate(
+            "LabelingWidget", "Fill polygon while drawing"
+        ),
         checkable=True,
         enabled=True,
     )
     fill_drawing.trigger()
 
     show_navigator = action(
-        widget.tr("Navigator"),
+        QCoreApplication.translate("LabelingWidget", "Navigator"),
         widget.toggle_navigator,
         shortcuts["show_navigator"],
         "navigator",
-        widget.tr("Show/hide the navigator window"),
+        QCoreApplication.translate(
+            "LabelingWidget", "Show/hide the navigator window"
+        ),
         checkable=True,
         enabled=True,
     )
 
     # AI Actions
     toggle_auto_labeling_widget = action(
-        widget.tr("Auto Labeling"),
+        QCoreApplication.translate("LabelingWidget", "Auto Labeling"),
         widget.toggle_auto_labeling_widget,
         shortcuts["auto_label"],
         "brain",
-        widget.tr("Auto Labeling"),
+        QCoreApplication.translate("LabelingWidget", "Auto Labeling"),
     )
 
     widget.label_list.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
@@ -7531,17 +7710,31 @@ def _build_actions(widget):
     )
 
     widget.menus = utils.Struct(
-        file=widget.menu(widget.tr("File")),
-        edit=widget.menu(widget.tr("Edit")),
-        view=widget.menu(widget.tr("View")),
-        theme=widget.menu(widget.tr("Theme")),
-        upload=widget.menu(widget.tr("Upload")),
-        export=widget.menu(widget.tr("Export")),
-        tool=widget.menu(widget.tr("Tool")),
-        train=widget.menu(widget.tr("Train")),
-        smart_tools=widget.menu(widget.tr("智能工具")),
-        recent_files=QtWidgets.QMenu(widget.tr("Open Recent")),
-        recent_dirs=QtWidgets.QMenu(widget.tr("打开最近文件夹")),
+        file=widget.menu(QCoreApplication.translate("LabelingWidget", "File")),
+        edit=widget.menu(QCoreApplication.translate("LabelingWidget", "Edit")),
+        view=widget.menu(QCoreApplication.translate("LabelingWidget", "View")),
+        theme=widget.menu(
+            QCoreApplication.translate("LabelingWidget", "Theme")
+        ),
+        upload=widget.menu(
+            QCoreApplication.translate("LabelingWidget", "Upload")
+        ),
+        export=widget.menu(
+            QCoreApplication.translate("LabelingWidget", "Export")
+        ),
+        tool=widget.menu(QCoreApplication.translate("LabelingWidget", "Tool")),
+        train=widget.menu(
+            QCoreApplication.translate("LabelingWidget", "Train")
+        ),
+        smart_tools=widget.menu(
+            QCoreApplication.translate("LabelingWidget", "智能工具")
+        ),
+        recent_files=QtWidgets.QMenu(
+            QCoreApplication.translate("LabelingWidget", "Open Recent")
+        ),
+        recent_dirs=QtWidgets.QMenu(
+            QCoreApplication.translate("LabelingWidget", "打开最近文件夹")
+        ),
     )
     widget.menus.recent_files.aboutToShow.connect(widget.update_file_menu)
     widget.menus.recent_dirs.aboutToShow.connect(
@@ -7822,7 +8015,10 @@ def _build_layout(widget):
         widget.set_cache_auto_label
     )
     widget.auto_labeling_widget.model_manager.prediction_started.connect(
-        lambda: widget.canvas.set_loading(True, widget.tr("Please wait..."))
+        lambda: widget.canvas.set_loading(
+            True,
+            QCoreApplication.translate("LabelingWidget", "Please wait..."),
+        )
     )
     widget.auto_labeling_widget.model_manager.prediction_finished.connect(
         lambda: widget.canvas.set_loading(False)
@@ -7872,7 +8068,9 @@ def _build_layout(widget):
     right_sidebar_layout.addWidget(widget.thumbnail_container)
 
     # Shape attributes
-    widget.shape_attributes = QLabel(widget.tr("Attributes"))
+    widget.shape_attributes = QLabel(
+        QCoreApplication.translate("LabelingWidget", "Attributes")
+    )
     widget.grid_layout = QGridLayout()
     widget.scroll_area = QScrollArea()
     # Show vertical scrollbar as needed
@@ -7907,7 +8105,9 @@ def _build_layout(widget):
     labels_header_layout = QHBoxLayout()
     labels_header_layout.setContentsMargins(0, 2, 0, 2)
     labels_header_layout.addStretch()
-    labels_title = QLabel(widget.tr("Labels"))
+    labels_title = QLabel(
+        QCoreApplication.translate("LabelingWidget", "Labels")
+    )
     labels_header_layout.addWidget(labels_title)
     labels_header_layout.addStretch()
     labels_header_layout.addWidget(widget.labels_checkbox)
@@ -7937,7 +8137,9 @@ def _build_layout(widget):
     shapes_header_layout = QHBoxLayout()
     shapes_header_layout.setContentsMargins(0, 2, 0, 2)
     shapes_header_layout.addStretch()
-    shapes_title = QLabel(widget.tr("Shapes"))
+    shapes_title = QLabel(
+        QCoreApplication.translate("LabelingWidget", "Shapes")
+    )
     shapes_header_layout.addWidget(shapes_title)
     shapes_header_layout.addStretch()
     shapes_header_layout.addWidget(widget.shapes_checkbox)

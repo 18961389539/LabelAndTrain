@@ -8,6 +8,7 @@ menu entry is actually used.
 """
 
 from __future__ import annotations
+from PyQt6.QtCore import QCoreApplication
 
 
 def start_training(widget, mode):
@@ -19,13 +20,16 @@ def start_training(widget, mode):
 
         if not check_package_installed("ultralytics"):
             widget.error_message(
-                widget.tr("缺少 Ultralytics"),
-                widget.tr(
+                QCoreApplication.translate(
+                    "LabelingWidget", "缺少 Ultralytics"
+                ),
+                QCoreApplication.translate(
+                    "LabelingWidget",
                     "尚未安装 ultralytics，无法打开训练窗口。<br>"
                     "请先安装：<br>"
                     "<code>pip install ultralytics</code><br>"
                     "或<br>"
-                    "<code>uv pip install ultralytics --torch-backend=auto</code>"
+                    "<code>uv pip install ultralytics --torch-backend=auto</code>",
                 ),
             )
             return

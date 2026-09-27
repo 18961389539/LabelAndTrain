@@ -6,7 +6,7 @@ from typing import List
 import PIL.Image
 import PIL.ImageOps
 from PyQt6 import QtCore, QtWidgets
-from PyQt6.QtCore import Qt, QObject, pyqtSignal
+from PyQt6.QtCore import QCoreApplication, QObject, Qt, pyqtSignal
 
 from ...labeling.logger import logger
 
@@ -100,14 +100,17 @@ class ExifProcessingDialog:
     def show_detection_dialog(parent, exif_count: int) -> bool:
         reply = QtWidgets.QMessageBox.question(
             parent,
-            parent.tr("EXIF Orientation Detected"),
-            parent.tr(
+            QCoreApplication.translate(
+                "LabelingWidget", "EXIF Orientation Detected"
+            ),
+            QCoreApplication.translate(
+                "LabelingWidget",
                 "Detected %s images with EXIF orientation data. "
                 "Direct annotation without correction may cause training anomalies.\n\n"
                 "We will process these images in background and create backups in "
                 "'x-anylabeling-exif-backup' folder under current directory. "
                 "This may take some time.\n\n"
-                "Continue processing or ignore?"
+                "Continue processing or ignore?",
             )
             % exif_count,
             QtWidgets.QMessageBox.StandardButton.Ok
@@ -119,8 +122,10 @@ class ExifProcessingDialog:
     @staticmethod
     def process_exif_files_with_progress(parent, exif_files: List[str]):
         progress = QtWidgets.QProgressDialog(
-            parent.tr("Processing EXIF orientation..."),
-            parent.tr("Cancel"),
+            QCoreApplication.translate(
+                "LabelingWidget", "Processing EXIF orientation..."
+            ),
+            QCoreApplication.translate("LabelingWidget", "Cancel"),
             0,
             len(exif_files),
             parent,
@@ -128,7 +133,9 @@ class ExifProcessingDialog:
         progress.setWindowModality(Qt.WindowModality.WindowModal)
         progress.setAutoClose(True)
 
-        template = parent.tr("Processing: %s")
+        template = QCoreApplication.translate(
+            "LabelingWidget", "Processing: %s"
+        )
         for i, filename in enumerate(exif_files):
             if progress.wasCanceled():
                 break
@@ -144,14 +151,17 @@ class ExifProcessingDialog:
                 osp.dirname(osp.dirname(exif_files[0])),
                 "x-anylabeling-exif-backup",
             )
-            template = parent.tr(
+            template = QCoreApplication.translate(
+                "LabelingWidget",
                 "Successfully processed %s images.\n\n"
                 "Original images backed up to:\n"
-                "%s"
+                "%s",
             )
             QtWidgets.QMessageBox.information(
                 parent,
-                parent.tr("EXIF Processing Complete"),
+                QCoreApplication.translate(
+                    "LabelingWidget", "EXIF Processing Complete"
+                ),
                 template % (len(exif_files), backup_dir),
             )
 

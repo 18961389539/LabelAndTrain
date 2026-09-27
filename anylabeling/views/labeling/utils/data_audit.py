@@ -18,7 +18,7 @@ import os
 import os.path as osp
 
 from PyQt6 import QtWidgets
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QCoreApplication, Qt
 from PyQt6.QtWidgets import (
     QDialog,
     QLabel,
@@ -195,7 +195,9 @@ def run_data_audit(parent):
     """
     if not getattr(parent, "filename", None):
         popup = Popup(
-            parent.tr("请先打开一个图片文件夹再进行数据体检。"),
+            QCoreApplication.translate(
+                "LabelingWidget", "请先打开一个图片文件夹再进行数据体检。"
+            ),
             parent,
             icon=new_icon_path("warning", "svg"),
         )
@@ -213,21 +215,27 @@ def run_data_audit(parent):
     )
 
     dialog = QDialog(parent)
-    dialog.setWindowTitle(parent.tr("数据体检"))
+    dialog.setWindowTitle(
+        QCoreApplication.translate("LabelingWidget", "数据体检")
+    )
     dialog.setMinimumSize(560, 480)
     layout = QVBoxLayout(dialog)
 
     if issue_total == 0 and review_total == 0:
-        summary = parent.tr("体检通过：未发现问题。")
+        summary = QCoreApplication.translate(
+            "LabelingWidget", "体检通过：未发现问题。"
+        )
         label = QLabel(summary)
         label.setStyleSheet("padding: 24px; font-size: 14px;")
         layout.addWidget(label)
     else:
-        summary = parent.tr("发现 %1 个问题：").replace("%1", str(issue_total))
+        summary = QCoreApplication.translate(
+            "LabelingWidget", "发现 %1 个问题："
+        ).replace("%1", str(issue_total))
         if review_total:
-            summary += parent.tr("（另有 %1 张建议优先复核）").replace(
-                "%1", str(review_total)
-            )
+            summary += QCoreApplication.translate(
+                "LabelingWidget", "（另有 %1 张建议优先复核）"
+            ).replace("%1", str(review_total))
         label = QLabel(summary)
         label.setStyleSheet("padding: 6px 2px; font-weight: 600;")
         layout.addWidget(label)
@@ -267,11 +275,14 @@ def run_data_audit(parent):
         tree.itemDoubleClicked.connect(on_double_click)
         layout.addWidget(tree)
 
-    hint_text = parent.tr("双击条目可跳转到对应图片。")
+    hint_text = QCoreApplication.translate(
+        "LabelingWidget", "双击条目可跳转到对应图片。"
+    )
     if capped:
-        hint_text += parent.tr(
+        hint_text += QCoreApplication.translate(
+            "LabelingWidget",
             "列表按排序截断显示，总数见类别标题；完整复核队列可用"
-            "「智能工具 → 5. 智能复核」按序浏览。"
+            "「智能工具 → 5. 智能复核」按序浏览。",
         )
     hint = QLabel(hint_text)
     hint.setStyleSheet("color: #86868b; padding: 4px 2px;")

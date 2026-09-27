@@ -4,7 +4,7 @@ import math
 from typing import Any
 
 from PyQt6 import QtCore, QtGui, QtWidgets
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QCoreApplication, Qt
 
 from anylabeling.views.common.device_manager import device_manager
 
@@ -120,41 +120,51 @@ class SettingsRuntimeApplier:
         }
         shortcut_map["shortcuts.quit"] = self._ensure_hidden_shortcut_action(
             "quit",
-            self._widget.tr("Quit"),
+            QCoreApplication.translate("LabelingWidget", "Quit"),
             self._quit_application,
         )
         shortcut_map["shortcuts.open_settings"] = (
             self._ensure_hidden_shortcut_action(
                 "open_settings",
-                self._widget.tr("Open Settings"),
+                self.QCoreApplication.translate(
+                    "LabelingWidget", "Open Settings"
+                ),
                 self._widget.open_settings_dialog,
             )
         )
         shortcut_map["shortcuts.show_shortcuts_help"] = (
             self._ensure_hidden_shortcut_action(
                 "show_shortcuts_help",
-                self._widget.tr("Show Shortcuts Help"),
+                self.QCoreApplication.translate(
+                    "LabelingWidget", "Show Shortcuts Help"
+                ),
                 self._widget.show_shortcuts_help,
             )
         )
         shortcut_map["shortcuts.add_point_to_edge"] = (
             self._ensure_hidden_shortcut_action(
                 "add_point_to_edge",
-                self._widget.tr("Add Point To Edge"),
+                self.QCoreApplication.translate(
+                    "LabelingWidget", "Add Point To Edge"
+                ),
                 self._widget.add_point_to_edge,
             )
         )
         shortcut_map["shortcuts.auto_labeling_add_point"] = (
             self._ensure_hidden_shortcut_action(
                 "auto_labeling_add_point",
-                self._widget.tr("Auto Labeling Add Point"),
+                self.QCoreApplication.translate(
+                    "LabelingWidget", "Auto Labeling Add Point"
+                ),
                 lambda: self._trigger_auto_labeling_button("button_add_point"),
             )
         )
         shortcut_map["shortcuts.auto_labeling_remove_point"] = (
             self._ensure_hidden_shortcut_action(
                 "auto_labeling_remove_point",
-                self._widget.tr("Auto Labeling Remove Point"),
+                self.QCoreApplication.translate(
+                    "LabelingWidget", "Auto Labeling Remove Point"
+                ),
                 lambda: self._trigger_auto_labeling_button(
                     "button_remove_point"
                 ),
@@ -163,21 +173,27 @@ class SettingsRuntimeApplier:
         shortcut_map["shortcuts.auto_labeling_run"] = (
             self._ensure_hidden_shortcut_action(
                 "auto_labeling_run",
-                self._widget.tr("Auto Labeling Run"),
+                self.QCoreApplication.translate(
+                    "LabelingWidget", "Auto Labeling Run"
+                ),
                 lambda: self._trigger_auto_labeling_button("button_run"),
             )
         )
         shortcut_map["shortcuts.auto_labeling_clear"] = (
             self._ensure_hidden_shortcut_action(
                 "auto_labeling_clear",
-                self._widget.tr("Auto Labeling Clear"),
+                self.QCoreApplication.translate(
+                    "LabelingWidget", "Auto Labeling Clear"
+                ),
                 lambda: self._trigger_auto_labeling_button("button_clear"),
             )
         )
         shortcut_map["shortcuts.auto_labeling_finish_object"] = (
             self._ensure_hidden_shortcut_action(
                 "auto_labeling_finish_object",
-                self._widget.tr("Auto Labeling Finish Object"),
+                self.QCoreApplication.translate(
+                    "LabelingWidget", "Auto Labeling Finish Object"
+                ),
                 lambda: self._trigger_auto_labeling_button(
                     "button_finish_object"
                 ),
@@ -200,13 +216,18 @@ class SettingsRuntimeApplier:
         combo = ",".join([v for v in (zoom_in, zoom_out) if v])
         self._widget.zoom_widget.setWhatsThis(
             str(
-                self._widget.tr(
+                self.QCoreApplication.translate(
+                    "LabelingWidget",
                     "Zoom in or out of the image. Also accessible with "
-                    "{} and {} from the canvas."
+                    "{} and {} from the canvas.",
                 )
             ).format(
                 utils.fmt_shortcut(combo or "-"),
-                utils.fmt_shortcut(self._widget.tr("Ctrl+Wheel")),
+                utils.fmt_shortcut(
+                    self.QCoreApplication.translate(
+                        "LabelingWidget", "Ctrl+Wheel"
+                    )
+                ),
             )
         )
 

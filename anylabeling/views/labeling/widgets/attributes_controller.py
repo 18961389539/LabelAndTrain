@@ -16,7 +16,7 @@ import os
 import os.path as osp
 
 from PyQt6 import QtCore
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QCoreApplication, Qt
 from PyQt6.QtGui import QFontMetrics
 from PyQt6.QtWidgets import (
     QButtonGroup,
@@ -63,9 +63,10 @@ def update_attributes(widget, shape_index):
     row_counter = 0
 
     def unknown_value_tooltip(value):
-        return widget.tr(
+        return QCoreApplication.translate(
+            "LabelingWidget",
             "Value '{}' is not defined in the current attribute "
-            "configuration."
+            "configuration.",
         ).format(value)
 
     def set_current_combo_value(combo, value):
@@ -447,7 +448,10 @@ def save_attributes(widget, _shapes):
         return True
     except LabelFileError as e:
         widget.error_message(
-            widget.tr("Error saving label data"), widget.tr("<b>%s</b>") % e
+            QCoreApplication.translate(
+                "LabelingWidget", "Error saving label data"
+            ),
+            QCoreApplication.translate("LabelingWidget", "<b>%s</b>") % e,
         )
         return False
 

@@ -95,7 +95,11 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e ".[cpu]" pyinstaller
+          # Same locked set the test job verified; a release binary is built
+          # from exactly the versions the gate ran against, not from a fresh
+          # resolution that might pick up something newer overnight.
+          python -m pip install -r requirements-lock.txt
+          python -m pip install -e . --no-deps
 
       - name: Build executable
         run: bash scripts/build_executable.sh ${{ matrix.target }}

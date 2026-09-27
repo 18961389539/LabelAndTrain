@@ -11,6 +11,7 @@ untouched.
 import json
 import os.path as osp
 
+from PyQt6.QtCore import QCoreApplication
 from PyQt6 import QtCore, QtGui
 
 from ..shape import Shape
@@ -60,19 +61,34 @@ class LabelPropagateController:
 
         widget = self._widget
         if not widget.filename:
-            widget.status(widget.tr("请先打开一张图片再使用标注传播。"), 3000)
+            widget.status(
+                QCoreApplication.translate(
+                    "LabelingWidget", "请先打开一张图片再使用标注传播。"
+                ),
+                3000,
+            )
             return
         image = getattr(widget, "image", None)
         if image is None or image.isNull():
             image = QtGui.QImage(widget.filename)
         dst_w, dst_h = image.width(), image.height()
         if dst_w <= 0 or dst_h <= 0:
-            widget.status(widget.tr("无法读取当前图片尺寸。"), 3000)
+            widget.status(
+                QCoreApplication.translate(
+                    "LabelingWidget", "无法读取当前图片尺寸。"
+                ),
+                3000,
+            )
             return
 
         prev = self.prev_labeled_image()
         if prev is None:
-            widget.status(widget.tr("当前图片之前没有可复制的标注。"), 3000)
+            widget.status(
+                QCoreApplication.translate(
+                    "LabelingWidget", "当前图片之前没有可复制的标注。"
+                ),
+                3000,
+            )
             return
         _prev_path, prev_file, prev_size = prev
 
@@ -91,7 +107,11 @@ class LabelPropagateController:
         )
         if not planned:
             widget.status(
-                widget.tr("没有需要复制的新标注（已存在或来源为空）。"), 3000
+                QCoreApplication.translate(
+                    "LabelingWidget",
+                    "没有需要复制的新标注（已存在或来源为空）。",
+                ),
+                3000,
             )
             return
 
@@ -117,8 +137,8 @@ class LabelPropagateController:
         )
         widget.set_dirty()
         widget.status(
-            widget.tr("已从上一张图复制 %1 个标注。").replace(
-                "%1", str(len(new_shapes))
-            ),
+            QCoreApplication.translate(
+                "LabelingWidget", "已从上一张图复制 %1 个标注。"
+            ).replace("%1", str(len(new_shapes))),
             4000,
         )

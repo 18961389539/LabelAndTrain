@@ -11,7 +11,7 @@ import threading
 import time
 
 from PyQt6 import QtWidgets
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal
+from PyQt6.QtCore import QCoreApplication, QTimer, Qt, pyqtSignal
 from PyQt6.QtGui import QIcon, QPixmap
 from PyQt6.QtWidgets import (
     QDialog,
@@ -3025,20 +3025,22 @@ class UltralyticsDialog(QDialog):
             )
             reply = QMessageBox.question(
                 parent,
-                parent.tr("建议立即回灌"),
-                parent.tr(
+                QCoreApplication.translate("LabelingWidget", "建议立即回灌"),
+                QCoreApplication.translate(
+                    "LabelingWidget",
                     "已加载训练权重。建议立即对未标注和待复核图片重新自动标注，"
                     "完成后会自动更新「迭代收益看板」。"
                     "\n已确认的空标注（负样本）会跳过。"
-                    "\n\n%1\n\n是否现在开始？"
+                    "\n\n%1\n\n是否现在开始？",
                 ).replace("%1", suggestion_text),
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             )
             if reply != QMessageBox.StandardButton.Yes:
                 if hasattr(parent, "status"):
                     parent.status(
-                        parent.tr(
-                            "稍后可在「4. 迭代收益看板」查看下一步建议。"
+                        QCoreApplication.translate(
+                            "LabelingWidget",
+                            "稍后可在「4. 迭代收益看板」查看下一步建议。",
                         ),
                         4000,
                     )

@@ -124,6 +124,19 @@ cpu = [
     "onnx>=1.15.0",
     "onnxruntime>=1.15.0",
 ]
+# What CI's test job and the release gate need beyond the runtime extras.
+# Kept as an extra so requirements-lock.txt can pin them like everything else.
+# requirements-lock.txt (cpu+dev+test, resolved universally for the three OSes
+# CI builds on) is generated with:
+#   uv pip compile --universal --extra cpu --extra dev --extra test \
+#       -o requirements-lock.txt pyproject.toml
+# CI and the release builds install that lock, so regenerate and commit it
+# whenever this file's dependencies change -- an unpinned `-e .` install would
+# otherwise quietly drift from what the binaries were built with.
+test = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+]
 # CUDA 12.x: Latest ONNX + ONNXRuntime GPU (>= 1.18.1 for CUDA 12.x support)
 gpu = [
     "numpy>=2.0.0",

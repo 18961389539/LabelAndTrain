@@ -7,7 +7,7 @@ can drive them with a light stub, the same pattern as
 
 import os.path as osp
 
-from PyQt6.QtCore import QFile, Qt
+from PyQt6.QtCore import QCoreApplication, QFile, Qt
 
 from ..schema import REVIEW_CONFIRMED, REVIEW_REJECTED, REVIEW_UNCHECKED
 from .roles import (
@@ -110,10 +110,16 @@ def set_file_item_low_conf(widget, item, has_low_conf):
 
 def review_state_name(widget, state):
     return {
-        REVIEW_UNCHECKED: widget.tr("未检查"),
-        REVIEW_CONFIRMED: widget.tr("已检查"),
-        REVIEW_REJECTED: widget.tr("需返工"),
-    }.get(state, widget.tr("未知"))
+        REVIEW_UNCHECKED: QCoreApplication.translate(
+            "LabelingWidget", "未检查"
+        ),
+        REVIEW_CONFIRMED: QCoreApplication.translate(
+            "LabelingWidget", "已检查"
+        ),
+        REVIEW_REJECTED: QCoreApplication.translate(
+            "LabelingWidget", "需返工"
+        ),
+    }.get(state, QCoreApplication.translate("LabelingWidget", "未知"))
 
 
 def file_item_tooltip(
@@ -136,30 +142,54 @@ def file_item_tooltip(
     annotated = QFile.exists(label_file)
     lines = [osp.basename(str(file)), str(file)]
     lines.append(
-        widget.tr("标注文件：%1").replace("%1", osp.basename(label_file))
+        QCoreApplication.translate("LabelingWidget", "标注文件：%1").replace(
+            "%1", osp.basename(label_file)
+        )
         if annotated
-        else widget.tr("尚无标注文件（保存后创建）")
+        else QCoreApplication.translate(
+            "LabelingWidget", "尚无标注文件（保存后创建）"
+        )
     )
-    status = widget.tr("复核状态：%1").replace(
-        "%1", review_state_name(widget, state)
-    )
+    status = QCoreApplication.translate(
+        "LabelingWidget", "复核状态：%1"
+    ).replace("%1", review_state_name(widget, state))
     if reviewed_at:
-        status += widget.tr("（%1）").replace("%1", reviewed_at)
+        status += QCoreApplication.translate(
+            "LabelingWidget", "（%1）"
+        ).replace("%1", reviewed_at)
     lines.append(status)
     if counts:
         lines.append(
-            widget.tr("对象 %1 个：模型 %2 / 人工 %3 / 未记录 %4")
+            QCoreApplication.translate(
+                "LabelingWidget", "对象 %1 个：模型 %2 / 人工 %3 / 未记录 %4"
+            )
             .replace("%1", str(counts["total"]))
             .replace("%2", str(counts["model"]))
             .replace("%3", str(counts["human"]))
             .replace("%4", str(counts["unknown"]))
         )
     if state == REVIEW_REJECTED:
-        lines.append(widget.tr("图标含义：已打回，待人工返工"))
+        lines.append(
+            QCoreApplication.translate(
+                "LabelingWidget", "图标含义：已打回，待人工返工"
+            )
+        )
     elif negative:
-        lines.append(widget.tr("图标含义：负样本（确认无目标，空标注）"))
+        lines.append(
+            QCoreApplication.translate(
+                "LabelingWidget", "图标含义：负样本（确认无目标，空标注）"
+            )
+        )
     elif state == REVIEW_UNCHECKED and annotated:
-        lines.append(widget.tr("图标含义：已标注，尚未复核"))
+        lines.append(
+            QCoreApplication.translate(
+                "LabelingWidget", "图标含义：已标注，尚未复核"
+            )
+        )
     if low_conf:
-        lines.append(widget.tr("含低置信度对象（建议复核）"))
+        lines.append(
+            QCoreApplication.translate(
+                "LabelingWidget", "含低置信度对象（建议复核）"
+            )
+        )
     return "\n".join(lines)

@@ -6,7 +6,7 @@ import tempfile
 from math import sqrt
 
 import numpy as np
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QCoreApplication, Qt
 from PyQt6 import QtCore, QtGui, QtWidgets
 
 from anylabeling.views.labeling.logger import logger
@@ -441,7 +441,9 @@ def on_thumbnail_click(widget):
         if widget.thumbnail_pixmap and not widget.thumbnail_pixmap.isNull():
             dialog = QtWidgets.QDialog(widget)
             dialog.setWindowTitle(
-                widget.tr("Thumbnail - Click anywhere to close")
+                QCoreApplication.translate(
+                    "LabelingWidget", "Thumbnail - Click anywhere to close"
+                )
             )
             dialog.setModal(True)
 
