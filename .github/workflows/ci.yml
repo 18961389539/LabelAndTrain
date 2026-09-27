@@ -64,7 +64,22 @@ jobs:
       # pyproject.toml.  `--cov` is not in `addopts` so that a local
       # `pytest tests` stays the fast path.
       - name: Run tests with a coverage summary
-        run: python -m pytest tests --cov=anylabeling --cov-report=term
+        run: |
+          set +e
+          python -m pytest tests --cov=anylabeling --cov-report=term > pytest-out.txt 2>&1
+          code=$?
+          set -e
+          tail -40 pytest-out.txt
+          exit $code
+
+      - name: Surface failures as annotations
+        if: failure()
+        run: |
+          grep -E "^(FAILED|ERROR) " pytest-out.txt |
+            sed "s/ - .*//" | sort -u | head -9 |
+            while IFS= read -r line; do
+              echo "::error::${line:0:350}"
+            done
 
   # The README's OS badge says linux/win/mac; the test job above only runs
   # Windows.  These smoke runs make the other two claims checked instead of
