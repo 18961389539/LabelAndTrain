@@ -9,6 +9,7 @@ X-AnyLabeling is an open-source project, and we welcome your collaboration. Befo
 - [Fork the Repository](#fork-the-repository)
 - [Clone Your Fork](#clone-your-fork)
 - [Create a New Branch](#create-a-new-branch)
+- [Testing Conventions (This Fork)](#testing-conventions-this-fork)
 - [Code Like a Wizard](#code-like-a-wizard)
 - [Committing Your Work](#committing-your-work)
 - [Sync with Upstream](#sync-with-upstream)
@@ -66,6 +67,82 @@ def greet(name: str, greeting: str = "Hello") -> str:
 ```
 
 Following this pattern helps ensure consistency throughout the codebase.
+
+## Testing Conventions (This Fork)
+
+This section is how the test suite actually works here. It was learned the
+hard way — read it before writing or changing tests, and before adding a
+method call to existing widget code.
+
+### The `SimpleNamespace` stub pattern
+
+Most unit tests in `tests/` do not boot Qt. They call **real methods on fake
+widgets**:
+
+```python
+from types import SimpleNamespace
+from anylabeling.views.labeling.label_widget import LabelingWidget
+
+widget = SimpleNamespace(canvas=SimpleNamespace(), actions=SimpleNamespace())
+result = LabelingWidget.apply_attribute_change(widget, shape, "label", "cat")
+```
+
+The stub carries only the members the code path under test actually touches.
+This keeps logic tests fast, deterministic and Qt-free — but it creates one
+sharp edge:
+
+### New `self.foo()` calls break old stubs
+
+A `SimpleNamespace` stub has **no class hierarchy**: if you add a call to a
+new (or existing) instance method inside a method the stubs already traverse,
+every such test fails with `AttributeError: 'SimpleNamespace' object has no
+attribute 'foo'` — even though the application itself is fine. This has
+bitten real refactors: a batch that made settings code touch
+`QCoreApplication`-related attributes directly turned 17 passing tests red
+in one commit, purely because the stubs could not serve the new members.
+
+**The rule that prevents it: put new helper logic in module-level functions
+that take the widget as the first argument, not in new class methods.**
+
+```python
+# In some_module.py next to the widget:
+def apply_attribute_change(widget, shape, key, value):
+    ...  # uses widget.canvas, widget.actions, ...
+
+# label_widget.py keeps a thin delegate so existing call sites still work:
+def apply_attribute_change(self, shape, key, value):
+    return some_module.apply_attribute_change(self, shape, key, value)
+```
+
+Stubs can reach module-level functions (the test imports and calls them
+directly, or the thin delegate runs against the stub's members), so old
+stubs survive the refactor untouched. This is exactly how
+`attributes_controller.py`, `settings/appearance.py` and the canvas mixins
+already work — follow those precedents.
+
+### When you must extend a stub
+
+If a code path genuinely needs a new member on a stub, add **exactly what
+that path touches** — `widget.canvas.store_shapes`, `widget.actions.undo`,
+a `MagicMock` for a collaborator — and nothing speculative. If you find
+yourself adding more than a handful of members, that is a signal the logic
+belongs in a module-level function instead.
+
+### Two related invariants
+
+- **Tests must never write the real user config.** Anything that saves
+  config must run under `config.set_work_directory(tmp_path)` with a
+  `finally` that restores the old work directory — `save_config` falls
+  through to `~/.xanylabelingrc` when the current config file does not
+  exist yet, and a test that forgets this corrupts a real user file.
+- **Wiring claims get real objects.** Stub tests verify logic;
+  `tests/test_labeling/test_widget_wiring.py` constructs the real
+  `LabelingWidget` and is the place for "this shortcut exists", "this
+  action is enabled when..." style assertions. Do not weaken the real
+  fixture to make a stub test pass — fix the stub or the code.
+
+Run the full suite before committing: `python -m pytest tests -q`.
+CI runs the same thing, but a red commit wastes a round trip for everyone.
 
 ## Code Like a Wizard
 
