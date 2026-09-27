@@ -48,13 +48,19 @@ class TestSettingsSchema(unittest.TestCase):
         # -show_linking, -toggle_compare_view: no action ever bound them
         # (KIE linking is off in this YOLO-only fork and the compare view was
         # never implemented), so they were dropped instead of advertised.
-        self.assertEqual(len(shortcut_fields), 74)
+        # +smart_data_audit, +smart_review, +smart_propagate,
+        # +smart_stale_audit: the quality/review tools were menu-only, which
+        # left the actions an annotator runs on every batch unreachable from
+        # the keyboard.
+        self.assertEqual(len(shortcut_fields), 78)
         keys = {field.key for field in shortcut_fields}
         self.assertIn("shortcuts.open_project", keys)
         self.assertIn("shortcuts.mark_checked_and_next", keys)
         self.assertIn("shortcuts.mark_rejected_and_next", keys)
         self.assertIn("shortcuts.show_shortcuts_help", keys)
         self.assertIn("shortcuts.show_attributes", keys)
+        self.assertIn("shortcuts.smart_data_audit", keys)
+        self.assertIn("shortcuts.smart_stale_audit", keys)
         self.assertNotIn("shortcuts.show_linking", keys)
         self.assertNotIn("shortcuts.toggle_compare_view", keys)
         for shape_mode in (

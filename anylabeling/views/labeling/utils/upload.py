@@ -18,7 +18,10 @@ from anylabeling.views.labeling.logger import logger
 from anylabeling.views.labeling.widgets import Popup
 from anylabeling.views.labeling.utils.qt import new_icon_path
 from anylabeling.views.labeling.utils.style import *
-from anylabeling.views.labeling.utils.export import _check_filename_exist
+from anylabeling.views.labeling.utils.export import (
+    _check_filename_exist,
+    resolve_classes_for_yolo,
+)
 from anylabeling.views.labeling.utils.theme import get_theme
 
 
@@ -318,20 +321,19 @@ def upload_yolo_annotation(self, mode, LABEL_OPACITY):
             labels.append(class_name)
             labels.extend(keypoint_name)
 
-    elif mode in ["hbb", "seg"]:
-        filter = "Classes Files (*.txt);;All Files (*)"
-        self.classes_file, _ = QtWidgets.QFileDialog.getOpenFileName(
-            self,
-            self.tr("Select a specific classes file"),
-            "",
-            filter,
-        )
-        if not self.classes_file:
+    elif mode in ["hbb", "seg", "obb"]:
+        resolved = resolve_classes_for_yolo(self, mode)
+        if resolved is None:
             return
-
-        with open(self.classes_file, "r", encoding="utf-8") as f:
-            labels = f.read().splitlines()
-        converter = LabelConverter(classes_file=self.classes_file)
+        labels, _, converter = resolved
+        if not labels:
+            popup = Popup(
+                self.tr("The class list is empty - nothing can be imported."),
+                self,
+                icon=new_icon_path("warning", "svg"),
+            )
+            popup.show_popup(self, position="center")
+            return
 
     dialog = QtWidgets.QDialog(self)
     dialog.setWindowTitle(self.tr("Upload Options"))
@@ -476,6 +478,12 @@ def upload_yolo_annotation(self, mode, LABEL_OPACITY):
                     output_file=output_file,
                     image_file=image_file,
                     mode=mode,
+                )
+            elif mode == "obb":
+                converter.yolo_obb_to_custom(
+                    input_file=input_file,
+                    output_file=output_file,
+                    image_file=image_file,
                 )
             elif mode == "pose":
                 converter.yolo_pose_to_custom(

@@ -259,6 +259,29 @@ def _find_next_label_loop_shape(shapes, start_index, canvas_shapes):
     return len(shapes), None
 
 
+def _report_inherited_shapes(widget, count):
+    """Announce shapes inherited from the previous image (``keep_prev``).
+
+    Those shapes are a proposal, not an edit: they are deliberately left
+    unsaved (see ``LabelingWidget.set_dirty``), so the annotator has to be
+    told instead of finding out at training time.
+    """
+    if count <= 0:
+        return
+    message = QCoreApplication.translate(
+        "LabelingWidget",
+        "已继承上一张的 {n} 个标注，尚未写入本图"
+        "（按 Ctrl+S 保存，或直接编辑后自动保存）",
+    ).replace("{n}", str(count))
+    logger.info(
+        f"keep_prev: inherited {count} shape(s) from the previous image; "
+        "they will not be auto-saved until the annotator edits or saves."
+    )
+    status = getattr(widget, "status", None)
+    if callable(status):
+        status(message, 8000)
+
+
 def fill_progress_template(template, annotated, total, checked):
     return (
         template.replace("%1", str(annotated))
@@ -389,6 +412,10 @@ class LabelingWidget(LabelDialog):
 
         # Whether we need to save or not.
         self.dirty = False
+        # True while the shapes on screen came from the previous image via
+        # ``keep_prev`` and the annotator has not touched them yet. Such a
+        # proposal must never be written to disk on its own: see set_dirty().
+        self._pending_inherited_shapes = False
 
         self._no_selection_slot = False
         self._copied_shapes = None
@@ -1077,12 +1104,18 @@ class LabelingWidget(LabelDialog):
             hint = self.tr("打开图片文件夹后即可开始标注")
         elif self.dirty:
             state, color = self.tr("未保存"), t["warning"]
-            hint = self.tr("当前图片有未写入的改动")
-            hint += (
-                self.tr("（自动保存已开启，稍候即写入）")
-                if self._config.get("auto_save")
-                else self.tr("，按 Ctrl+S 保存")
-            )
+            if self._pending_inherited_shapes:
+                hint = self.tr(
+                    "标注继承自上一张，尚未写入本图"
+                    "（按 Ctrl+S 保存，或编辑后自动保存）"
+                )
+            else:
+                hint = self.tr("当前图片有未写入的改动")
+                hint += (
+                    self.tr("（自动保存已开启，稍候即写入）")
+                    if self._config.get("auto_save")
+                    else self.tr("，按 Ctrl+S 保存")
+                )
         else:
             state, color = self.tr("已保存"), t["success"]
             hint = self.tr("当前图片的改动已写入标签 JSON")
@@ -1320,11 +1353,23 @@ class LabelingWidget(LabelDialog):
         )
         utils.add_actions(self.menus.edit, actions + self.actions.editMenu)
 
-    def set_dirty(self):
+    def set_dirty(self, from_inherited=False):
+        """Mark the current image as having unsaved changes.
+
+        ``from_inherited=True`` is used only by the ``keep_prev`` injection in
+        :meth:`load_file`: the shapes on screen are a *proposal* copied from
+        the previous image, not an edit. Auto-saving them straight to disk is
+        how an image that honestly contains nothing (a negative sample) ends
+        up silently duplicating its neighbour, so the proposal stays unsaved
+        until the annotator edits something, saves explicitly, or answers the
+        save prompt when leaving. Any other call means a real change and
+        clears the pending flag.
+        """
         # Even if we autosave the file, we keep the ability to undo
         self.actions.undo.setEnabled(self.canvas.is_shape_restorable)
+        self._pending_inherited_shapes = bool(from_inherited)
 
-        if self._config["auto_save"]:
+        if self._config["auto_save"] and not self._pending_inherited_shapes:
             label_file = osp.splitext(self.image_path)[0] + ".json"
             if self.output_dir:
                 label_file_without_path = osp.basename(label_file)
@@ -1394,6 +1439,8 @@ class LabelingWidget(LabelDialog):
 
     def set_clean(self):
         self.dirty = False
+        # A save (explicit or confirmed) ends the inherited-shapes proposal.
+        self._pending_inherited_shapes = False
         self.actions.save.setEnabled(False)
         self.actions.union_selection.setEnabled(False)
         self._enable_create_mode_actions()
@@ -4515,7 +4562,8 @@ class LabelingWidget(LabelDialog):
             self.load_shapes(
                 prev_shapes, replace=False, update_last_label=False
             )
-            self.set_dirty()
+            self.set_dirty(from_inherited=True)
+            _report_inherited_shapes(self, len(self.canvas.shapes))
         else:
             self.set_clean()
         self.canvas.setEnabled(True)
@@ -5376,13 +5424,25 @@ class LabelingWidget(LabelDialog):
         # so a mis-click on close can never throw work away.
         # Only the plain folder mode opts in — the `--output` mode keeps
         # its own semantics.
-        if silent and self._config.get("auto_save") and not self.output_file:
+        # Shapes inherited from the previous image are exempt: they were
+        # never auto-saved on purpose, so writing them during a plain
+        # "next image" would reintroduce the silent write. Ask instead.
+        if (
+            silent
+            and self._config.get("auto_save")
+            and not self.output_file
+            and not self._pending_inherited_shapes
+        ):
             self.save_file()
             return not self.dirty
         mb = QtWidgets.QMessageBox
         msg = self.tr(
             f'Save annotations to "{self.filename!r}" before closing?'
         )
+        if self._pending_inherited_shapes:
+            msg += self.tr(
+                "\n\n提示：当前标注是从上一张继承来的，尚未写入本图。"
+            )
         answer = mb.question(
             self,
             self.tr("Save annotations?"),
@@ -5393,6 +5453,7 @@ class LabelingWidget(LabelDialog):
             mb.StandardButton.Save,
         )
         if answer == mb.StandardButton.Discard:
+            self._pending_inherited_shapes = False
             return True
         if answer == mb.StandardButton.Save:
             self.save_file()
@@ -6355,7 +6416,7 @@ def _build_actions(widget):
     data_audit = action(
         QCoreApplication.translate("LabelingWidget", "数据体检"),
         lambda: run_data_audit(widget),
-        None,
+        shortcuts["smart_data_audit"],
         "icon",
         QCoreApplication.translate(
             "LabelingWidget",
@@ -6412,7 +6473,7 @@ def _build_actions(widget):
             "LabelingWidget", "5. 智能复核（下一张待复核）"
         ),
         lambda: run_review_jump(widget),
-        None,
+        shortcuts["smart_review"],
         "check",
         QCoreApplication.translate(
             "LabelingWidget",
@@ -6425,7 +6486,7 @@ def _build_actions(widget):
             "LabelingWidget", "6. 标注传播（上一张→当前图）"
         ),
         widget._propagate_previous_labels,
-        None,
+        shortcuts["smart_propagate"],
         "copy",
         QCoreApplication.translate(
             "LabelingWidget",
@@ -6471,7 +6532,7 @@ def _build_actions(widget):
     smart_stale_audit = action(
         QCoreApplication.translate("LabelingWidget", "10. 旧轮模型框盘点"),
         lambda: run_stale_model_audit(widget),
-        None,
+        shortcuts["smart_stale_audit"],
         "layers",
         QCoreApplication.translate(
             "LabelingWidget",
@@ -7372,6 +7433,16 @@ def _build_actions(widget):
             "LabelingWidget", "Upload Custom YOLO Segmentation Annotations"
         ),
     )
+    upload_yolo_obb_annotation = action(
+        QCoreApplication.translate("LabelingWidget", "YOLO OBB"),
+        lambda: utils.upload_yolo_annotation(widget, "obb", LABEL_OPACITY),
+        None,
+        icon=upload_export_icon,
+        tip=QCoreApplication.translate(
+            "LabelingWidget",
+            "Upload Custom YOLO Oriented Bounding Boxes Annotations",
+        ),
+    )
     upload_yolo_pose_annotation = action(
         QCoreApplication.translate("LabelingWidget", "YOLO Pose"),
         lambda: utils.upload_yolo_annotation(widget, "pose", LABEL_OPACITY),
@@ -7409,6 +7480,16 @@ def _build_actions(widget):
         icon=upload_export_icon,
         tip=QCoreApplication.translate(
             "LabelingWidget", "Export Custom YOLO Pose Annotations"
+        ),
+    )
+    export_yolo_obb_annotation = action(
+        QCoreApplication.translate("LabelingWidget", "YOLO OBB"),
+        lambda: utils.export_yolo_annotation(widget, "obb"),
+        None,
+        icon=upload_export_icon,
+        tip=QCoreApplication.translate(
+            "LabelingWidget",
+            "Export Custom YOLO Oriented Bounding Boxes Annotations",
         ),
     )
 
@@ -7479,6 +7560,13 @@ def _build_actions(widget):
 
     # Store actions for further handling.
     widget.actions = utils.Struct(
+        # The quality/review tools live only in the 智能工具 menu, but they
+        # carry rebindable shortcuts now, so the settings runtime needs to
+        # reach them by name like every other action.
+        data_audit=data_audit,
+        smart_review=smart_review,
+        smart_propagate=smart_propagate,
+        smart_stale_audit=smart_stale_audit,
         save_auto=save_auto,
         save_with_image_data=save_with_image_data,
         change_output_dir=change_output_dir,
@@ -7554,9 +7642,11 @@ def _build_actions(widget):
         upload_yolo_hbb_annotation=upload_yolo_hbb_annotation,
         upload_yolo_seg_annotation=upload_yolo_seg_annotation,
         upload_yolo_pose_annotation=upload_yolo_pose_annotation,
+        upload_yolo_obb_annotation=upload_yolo_obb_annotation,
         export_yolo_hbb_annotation=export_yolo_hbb_annotation,
         export_yolo_seg_annotation=export_yolo_seg_annotation,
         export_yolo_pose_annotation=export_yolo_pose_annotation,
+        export_yolo_obb_annotation=export_yolo_obb_annotation,
         zoom=zoom,
         zoom_in=zoom_in,
         zoom_out=zoom_out,
@@ -7704,6 +7794,13 @@ def _build_actions(widget):
     widget.addAction(widget.actions.toggle_annotation_checked)
     widget.addAction(widget.actions.mark_checked_and_next)
     widget.addAction(widget.actions.mark_rejected_and_next)
+    # The quality/review actions live in a menu, which only owns its shortcuts
+    # while the menu bar is in play; adding them to the widget keeps the keys
+    # working while the canvas has focus.
+    widget.addAction(widget.actions.data_audit)
+    widget.addAction(widget.actions.smart_review)
+    widget.addAction(widget.actions.smart_propagate)
+    widget.addAction(widget.actions.smart_stale_audit)
 
     widget.canvas.vertex_selected.connect(
         widget.actions.remove_point.setEnabled
@@ -7818,11 +7915,8 @@ def _build_actions(widget):
             None,
             upload_yolo_hbb_annotation,
             upload_yolo_seg_annotation,
+            upload_yolo_obb_annotation,
             upload_yolo_pose_annotation,
-            None,
-            None,
-            None,
-            None,
         ),
     )
     utils.add_actions(
@@ -7830,12 +7924,8 @@ def _build_actions(widget):
         (
             export_yolo_hbb_annotation,
             export_yolo_seg_annotation,
+            export_yolo_obb_annotation,
             export_yolo_pose_annotation,
-            None,
-            None,
-            None,
-            None,
-            None,
         ),
     )
     utils.add_actions(

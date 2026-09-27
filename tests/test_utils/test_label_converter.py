@@ -100,6 +100,149 @@ class TestLabelConverterObbBounds(unittest.TestCase):
             self.assertEqual(f.read(), "")
 
 
+class TestLabelConverterYoloExportStats(unittest.TestCase):
+    """A skipped shape used to vanish without a trace.
+
+    ``stats`` is the out-parameter the export dialog reads to tell the
+    annotator what was dropped, so the counters have to be exact.
+    """
+
+    def setUp(self):
+        self.temp_dir = tempfile.mkdtemp()
+        self.classes_file = os.path.join(self.temp_dir, "classes.txt")
+        with open(self.classes_file, "w", encoding="utf-8") as f:
+            f.write("plane\nship\n")
+        self.converter = LabelConverter(classes_file=self.classes_file)
+
+    def tearDown(self):
+        import shutil
+
+        if os.path.exists(self.temp_dir):
+            shutil.rmtree(self.temp_dir)
+
+    def _write_label_file(self, shapes):
+        label_file = os.path.join(self.temp_dir, "label.json")
+        data = {
+            "imagePath": "image.jpg",
+            "imageWidth": 100,
+            "imageHeight": 50,
+            "shapes": shapes,
+        }
+        with open(label_file, "w", encoding="utf-8") as f:
+            json.dump(data, f)
+        return label_file
+
+    @staticmethod
+    def _rectangle(label, points=None):
+        return {
+            "label": label,
+            "shape_type": "rectangle",
+            "points": points or [[0, 0], [10, 0], [10, 10], [0, 10]],
+        }
+
+    def test_explicit_classes_list_is_used_instead_of_a_file(self):
+        converter = LabelConverter(classes=["a", "b"])
+
+        self.assertEqual(converter.classes, ["a", "b"])
+
+    def test_counters_name_every_reason_a_shape_was_dropped(self):
+        label_file = self._write_label_file(
+            [
+                self._rectangle("plane"),
+                self._rectangle("dog"),
+                {
+                    "label": "plane",
+                    "shape_type": "polygon",
+                    "points": [[0, 0], [10, 0], [10, 10]],
+                },
+            ]
+        )
+        stats = {}
+
+        self.converter.custom_to_yolo(
+            label_file,
+            os.path.join(self.temp_dir, "label.txt"),
+            "hbb",
+            stats=stats,
+        )
+
+        self.assertEqual(stats["exported"], 1)
+        self.assertEqual(
+            stats["skipped"],
+            {
+                "label not in classes: dog": 1,
+                "polygon is not part of a hbb export": 1,
+            },
+        )
+
+    def test_a_clean_export_reports_no_skips(self):
+        label_file = self._write_label_file(
+            [self._rectangle("plane"), self._rectangle("ship")]
+        )
+        stats = {}
+
+        self.converter.custom_to_yolo(
+            label_file,
+            os.path.join(self.temp_dir, "label.txt"),
+            "hbb",
+            stats=stats,
+        )
+
+        self.assertEqual(stats.get("exported"), 2)
+        self.assertNotIn("skipped", stats)
+
+    def test_missing_label_file_is_counted(self):
+        stats = {}
+
+        self.converter.custom_to_yolo(
+            os.path.join(self.temp_dir, "nope.json"),
+            os.path.join(self.temp_dir, "nope.txt"),
+            "hbb",
+            stats=stats,
+        )
+
+        self.assertEqual(stats["missing_label_file"], 1)
+
+    def test_obb_counts_the_shapes_it_leaves_out_of_bounds(self):
+        label_file = self._write_label_file(
+            [
+                {
+                    "label": "plane",
+                    "shape_type": "rotation",
+                    "points": [[0, 0], [10, 0], [10, 10], [0, 10]],
+                },
+                {
+                    "label": "plane",
+                    "shape_type": "rotation",
+                    "points": [[-5, 0], [10, 0], [10, 10], [0, 10]],
+                },
+            ]
+        )
+        stats = {}
+
+        self.converter.custom_to_yolo(
+            label_file,
+            os.path.join(self.temp_dir, "label.txt"),
+            "obb",
+            stats=stats,
+        )
+
+        self.assertEqual(stats["exported"], 1)
+        self.assertEqual(
+            stats["skipped"], {"rotation reaching outside the image": 1}
+        )
+
+    def test_without_a_stats_sink_nothing_changes(self):
+        # The CLI calls this the old way; the return value must stay a bool.
+        label_file = self._write_label_file([self._rectangle("plane")])
+
+        is_empty = self.converter.custom_to_yolo(
+            label_file, os.path.join(self.temp_dir, "label.txt"), "hbb"
+        )
+
+        self.assertFalse(is_empty)
+
+
 class TestLabelConverterVocValidation(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()

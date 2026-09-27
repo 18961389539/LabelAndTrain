@@ -99,6 +99,15 @@ SHORTCUT_GROUPS = [
         ],
     ),
     (
+        "质检与审核",
+        [
+            ("smart_data_audit", "数据体检"),
+            ("smart_review", "智能复核：跳到下一张待复核"),
+            ("smart_propagate", "标注传播：上一张→当前图"),
+            ("smart_stale_audit", "陈旧框审计"),
+        ],
+    ),
+    (
         "其它设置",
         [
             ("open_settings", "打开设置"),

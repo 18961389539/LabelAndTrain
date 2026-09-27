@@ -203,6 +203,10 @@ shortcuts:
   show_overview: Ctrl+G
   show_shortcuts_help: F1
   show_texts: Ctrl+T
+  smart_data_audit: Ctrl+Alt+A
+  smart_propagate: Ctrl+Alt+P
+  smart_review: Ctrl+Alt+R
+  smart_stale_audit: Ctrl+Alt+S
   toggle_annotation_checked: Ctrl+Alt+K
   toggle_auto_use_last_gid: Ctrl+Shift+G
   toggle_auto_use_last_label: Ctrl+Y

@@ -113,6 +113,41 @@ class TestWidgetWiring(unittest.TestCase):
         # Deliberately no shortcut: an advertised key with no binding is the
         # drift this test file exists to catch, so do not add one here.
         self.assertEqual(list(action.shortcuts()), [])
+
+    def test_yolo_obb_can_come_in_and_go_out_through_the_menus(self):
+        # Drawing rotation boxes (O) used to be a dead end: the converter
+        # spoke obb, the menus only offered hbb/seg/pose.
+        for menu in (self.widget.menus.export, self.widget.menus.upload):
+            texts = [action.text() for action in menu.actions()]
+            self.assertIn("YOLO OBB", texts)
+
+    def test_every_yolo_export_action_is_wired_to_the_converter(self):
+        for name in (
+            "export_yolo_hbb_annotation",
+            "export_yolo_seg_annotation",
+            "export_yolo_obb_annotation",
+            "export_yolo_pose_annotation",
+            "upload_yolo_hbb_annotation",
+            "upload_yolo_seg_annotation",
+            "upload_yolo_obb_annotation",
+            "upload_yolo_pose_annotation",
+        ):
+            action = getattr(self.widget.actions, name)
+            self.assertTrue(action.isEnabled(), name)
+
+    def test_the_quality_tools_are_reachable_from_the_keyboard(self):
+        # They used to be menu-only: the four actions an annotator runs on
+        # every batch needed a mouse.
+        for name, expected in (
+            ("data_audit", "Ctrl+Alt+A"),
+            ("smart_review", "Ctrl+Alt+R"),
+            ("smart_propagate", "Ctrl+Alt+P"),
+            ("smart_stale_audit", "Ctrl+Alt+S"),
+        ):
+            action = getattr(self.widget.actions, name)
+            self.assertIn(
+                expected, [s.toString() for s in action.shortcuts()], name
+            )
         texts = [
             menu.text()
             for menu in self.widget.menus.file.actions()

@@ -42,13 +42,12 @@ anylabeling/views/labeling/shortcuts/digit_controller.py                 B907 1
 anylabeling/views/labeling/utils/_io.py                                  B014 1
 anylabeling/views/labeling/utils/batch.py                                B907 2
 anylabeling/views/labeling/utils/batch.py                                C901 1
-anylabeling/views/labeling/utils/batch.py                                E303 1
 anylabeling/views/labeling/utils/batch.py                                F841 3
 anylabeling/views/labeling/utils/crop.py                                 C420 1
 anylabeling/views/labeling/utils/crop.py                                 F541 2
 anylabeling/views/labeling/utils/data_audit.py                           C901 1
 anylabeling/views/labeling/utils/export.py                               C901 1
-anylabeling/views/labeling/utils/export.py                               F405 18
+anylabeling/views/labeling/utils/export.py                               F405 15
 anylabeling/views/labeling/utils/file_search.py                          B903 1
 anylabeling/views/labeling/utils/file_search.py                          C901 2
 anylabeling/views/labeling/utils/qt.py                                   B907 1

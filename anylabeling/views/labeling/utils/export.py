@@ -18,6 +18,7 @@ from anylabeling.views.labeling.logger import logger
 from anylabeling.views.labeling.widgets import Popup
 from anylabeling.views.labeling.utils.qt import new_icon_path
 from anylabeling.views.labeling.utils.style import *
+from anylabeling.views.labeling.utils.style import get_msg_box_style
 from anylabeling.views.labeling.utils.theme import get_theme
 
 
@@ -92,11 +93,129 @@ def _check_filename_exist(self):
     return True
 
 
+def resolve_classes_for_yolo(widget, mode):
+    """Pick the class list for a YOLO export/import.
+
+    The open project's own labels are offered first — they are what the
+    annotator just drew with — and picking a ``classes.txt`` stays available
+    for when the target order differs from the annotated one.
+
+    Returns ``(classes, source_label, converter)``, or ``None`` when the
+    annotator cancelled.
+    """
+    labels = [
+        str(name) for name in (widget._config.get("labels") or []) if name
+    ]
+    if labels:
+        box = QtWidgets.QMessageBox(widget)
+        box.setIcon(QtWidgets.QMessageBox.Icon.Question)
+        box.setWindowTitle(widget.tr("Select the class list"))
+        box.setText(
+            widget.tr("用当前标签列表（%d 个类别）还是选择一个 classes.txt？")
+            % len(labels)
+        )
+        preview = ", ".join(labels[:8])
+        if len(labels) > 8:
+            preview += ", ..."
+        box.setInformativeText(
+            preview
+            + "\n\n"
+            + widget.tr(
+                "类别顺序决定 YOLO 的类别编号，导出前请确认与训练一致。"
+            )
+        )
+        current_button = box.addButton(
+            widget.tr("用当前标签列表"),
+            QtWidgets.QMessageBox.ButtonRole.AcceptRole,
+        )
+        file_button = box.addButton(
+            widget.tr("选择 classes.txt..."),
+            QtWidgets.QMessageBox.ButtonRole.ActionRole,
+        )
+        box.addButton(
+            widget.tr("Cancel"), QtWidgets.QMessageBox.ButtonRole.RejectRole
+        )
+        box.setDefaultButton(current_button)
+        box.setStyleSheet(get_msg_box_style())
+        box.exec()
+        clicked = box.clickedButton()
+        if clicked is current_button:
+            logger.info(f"{mode}: using the open project's label list")
+            return (
+                labels,
+                widget.tr("当前标签列表"),
+                LabelConverter(classes=labels),
+            )
+        if clicked is not file_button:
+            return None
+
+    classes_file, _ = QtWidgets.QFileDialog.getOpenFileName(
+        widget,
+        widget.tr("Select a specific classes file"),
+        "",
+        "Classes Files (*.txt);;All Files (*)",
+    )
+    if not classes_file:
+        return None
+    widget.classes_file = classes_file
+    logger.info(f"{mode}: classes from {classes_file}")
+    converter = LabelConverter(classes_file=classes_file)
+    return list(converter.classes), osp.basename(classes_file), converter
+
+
+def _write_classes_file(save_path, classes):
+    """Drop the class list next to the exported labels."""
+    target = osp.join(save_path, "classes.txt")
+    with open(target, "w", encoding="utf-8") as handle:
+        for name in classes:
+            handle.write(f"{name}\n")
+    return target
+
+
+def _format_yolo_export_summary(
+    widget, counted_files, total_files, stats, copied_images, classes_target
+):
+    """Human-readable recap of a YOLO export, skips included.
+
+    "Exporting annotations successfully!" with nothing else is how a batch
+    that silently dropped half its polygons passes for a good run.
+    """
+    lines = [
+        widget.tr("导出完成：%d/%d 张图，%d 个标注")
+        % (counted_files, total_files, stats.get("exported", 0)),
+    ]
+    if copied_images:
+        lines.append(widget.tr("已复制 %d 张图片") % copied_images)
+    if classes_target:
+        lines.append(widget.tr("已写入 %s") % osp.basename(classes_target))
+    missing = stats.get("missing_label_file", 0)
+    if missing:
+        lines.append(
+            widget.tr("没有标签文件（按空标注处理）：%d 张") % missing
+        )
+    skipped = stats.get("skipped") or {}
+    if skipped:
+        total_skipped = sum(skipped.values())
+        lines.append(widget.tr("跳过 %d 个无法转换的标注：") % total_skipped)
+        for reason, count in sorted(
+            skipped.items(), key=lambda item: (-item[1], item[0])
+        ):
+            lines.append(f"    - {count} × {reason}")
+        lines.append(
+            widget.tr(
+                "若不应跳过，请检查类别列表与形状类型（例如 hbb 只导出矩形框）。"
+            )
+        )
+    return "\n".join(lines)
+
+
 def export_yolo_annotation(self, mode):
     if not _check_filename_exist(self):
         return
 
     # Handle config/classes file selection based on mode
+    classes = []
+    classes_source = ""
     if mode == "pose":
         filter = "Classes Files (*.yaml);;All Files (*)"
         self.yaml_file, _ = QtWidgets.QFileDialog.getOpenFileName(
@@ -118,18 +237,21 @@ def export_yolo_annotation(self, mode):
             )
             popup.show_popup(self, popup_height=65, position="center")
             return
+        classes = list(converter.classes)
 
-    elif mode in ["hbb", "seg"]:
-        filter = "Classes Files (*.txt);;All Files (*)"
-        self.classes_file, _ = QtWidgets.QFileDialog.getOpenFileName(
-            self,
-            self.tr("Select a specific classes file"),
-            "",
-            filter,
-        )
-        if not self.classes_file:
+    else:
+        resolved = resolve_classes_for_yolo(self, mode)
+        if resolved is None:
             return
-        converter = LabelConverter(classes_file=self.classes_file)
+        classes, classes_source, converter = resolved
+        if not classes:
+            popup = Popup(
+                self.tr("The class list is empty - nothing can be exported."),
+                self,
+                icon=new_icon_path("warning", "svg"),
+            )
+            popup.show_popup(self, position="center")
+            return
 
     dialog = QtWidgets.QDialog(self)
     dialog.setWindowTitle(self.tr("Export options"))
@@ -196,6 +318,22 @@ def export_yolo_annotation(self, mode):
     )
     layout.addWidget(skip_empty_files_checkbox)
 
+    write_classes_checkbox = None
+    if classes:
+        write_classes_checkbox = QtWidgets.QCheckBox(
+            self.tr("在导出目录写入 classes.txt（%d 个类别）") % len(classes)
+        )
+        write_classes_checkbox.setChecked(True)
+        write_classes_checkbox.setToolTip(
+            self.tr(
+                "勾选后会在导出目录生成 classes.txt，类别顺序与本次导出"
+                "所用的列表一致；训练前不必再手工摆一份。\n"
+                "类别来源：%s"
+            )
+            % (classes_source or self.tr("项目标签列表"))
+        )
+        layout.addWidget(write_classes_checkbox)
+
     button_layout = QHBoxLayout()
     button_layout.setContentsMargins(0, 16, 0, 0)
     button_layout.setSpacing(8)
@@ -257,32 +395,66 @@ def export_yolo_annotation(self, mode):
         msg_box.setText(self.tr("Directory already exists. Choose an action:"))
         msg_box.setInformativeText(
             self.tr(
-                "• Yes    - Merge with existing files\n"
-                "• No     - Delete existing directory\n"
+                "• Merge  - Keep what is already there and overwrite the "
+                "label files this run writes\n"
+                "• Clear  - Delete this whole directory and rebuild it "
+                "(asks again first)\n"
                 "• Cancel - Abort export"
             )
         )
 
-        msg_box.addButton(
-            self.tr("Yes"), QtWidgets.QMessageBox.ButtonRole.YesRole
+        merge_button = msg_box.addButton(
+            self.tr("Merge"), QtWidgets.QMessageBox.ButtonRole.AcceptRole
         )
-        no_button = msg_box.addButton(
-            self.tr("No"), QtWidgets.QMessageBox.ButtonRole.NoRole
+        clear_button = msg_box.addButton(
+            self.tr("Clear"), QtWidgets.QMessageBox.ButtonRole.DestructiveRole
         )
         cancel_button = msg_box.addButton(
             self.tr("Cancel"), QtWidgets.QMessageBox.ButtonRole.RejectRole
         )
+        msg_box.setDefaultButton(merge_button)
         msg_box.setStyleSheet(get_msg_box_style())
         msg_box.exec()
 
         clicked_button = msg_box.clickedButton()
-        if clicked_button == no_button:
+        if clicked_button == clear_button:
+            # A recursive delete of whatever the annotator typed, in a folder
+            # that may already hold the images this export copied: never one
+            # click away, and never the default button.
+            confirm = QtWidgets.QMessageBox(self)
+            confirm.setIcon(QtWidgets.QMessageBox.Icon.Critical)
+            confirm.setWindowTitle(self.tr("Delete the whole directory?"))
+            confirm.setText(
+                self.tr("即将删除并重建该目录，" "里面的内容不会进回收站：")
+            )
+            confirm.setInformativeText(save_path)
+            clear_yes = confirm.addButton(
+                self.tr("删除并重建"),
+                QtWidgets.QMessageBox.ButtonRole.DestructiveRole,
+            )
+            confirm_cancel = confirm.addButton(
+                self.tr("Cancel"),
+                QtWidgets.QMessageBox.ButtonRole.RejectRole,
+            )
+            confirm.setDefaultButton(confirm_cancel)
+            confirm.setStyleSheet(get_msg_box_style())
+            confirm.exec()
+            if confirm.clickedButton() is not clear_yes:
+                return
+            logger.warning(f"Export cleared the output directory: {save_path}")
             shutil.rmtree(save_path)
             os.makedirs(save_path)
         elif clicked_button == cancel_button:
             return
     else:
         os.makedirs(save_path)
+
+    classes_target = None
+    if (
+        write_classes_checkbox is not None
+        and write_classes_checkbox.isChecked()
+    ):
+        classes_target = _write_classes_file(save_path, classes)
 
     progress_dialog = QProgressDialog(
         self.tr("Exporting..."), self.tr("Cancel"), 0, len(image_list), self
@@ -296,6 +468,9 @@ def export_yolo_annotation(self, mode):
     )
 
     try:
+        stats = {}
+        exported_files = 0
+        copied_images = 0
         for i, image_file in enumerate(image_list):
             image_file_name = osp.basename(image_file)
             dst_file_name = osp.splitext(image_file_name)[0] + ".txt"
@@ -308,11 +483,14 @@ def export_yolo_annotation(self, mode):
                 dst_file,
                 mode,
                 skip_empty_files=skip_empty_files,
+                stats=stats,
             )
+            exported_files += 1
 
             if save_images and not (skip_empty_files and is_empty_file):
                 image_dst = osp.join(save_path, image_file_name)
                 shutil.copy(image_file, image_dst)
+                copied_images += 1
 
             if skip_empty_files and is_empty_file and osp.exists(dst_file):
                 os.remove(dst_file)
@@ -322,18 +500,43 @@ def export_yolo_annotation(self, mode):
                 break
 
         progress_dialog.close()
-        template = self.tr(
-            "Exporting annotations successfully!\n"
-            "Results have been saved to:\n"
-            "%s"
+        summary = _format_yolo_export_summary(
+            self,
+            exported_files,
+            len(image_list),
+            stats,
+            copied_images,
+            classes_target,
         )
-        message_text = template % save_path
+        message_text = (
+            self.tr(
+                "Exporting annotations successfully!\n"
+                "Results have been saved to:\n"
+                "%s"
+            )
+            % save_path
+        )
+        message_text += "\n\n" + summary
+        skipped_total = sum((stats.get("skipped") or {}).values())
+        if skipped_total or stats.get("missing_label_file"):
+            logger.warning(
+                f"YOLO ({mode}) export finished with skips: "
+                f"exported={stats.get('exported', 0)} "
+                f"skipped={stats.get('skipped') or {}} "
+                f"missing_label_file={stats.get('missing_label_file', 0)}"
+            )
         popup = Popup(
             message_text,
             self,
-            icon=new_icon_path("copy-green", "svg"),
+            icon=new_icon_path(
+                "warning" if skipped_total else "copy-green", "svg"
+            ),
         )
-        popup.show_popup(self, popup_height=65, position="center")
+        popup.show_popup(
+            self,
+            popup_height=95 + 18 * summary.count("\n"),
+            position="center",
+        )
 
     except Exception as e:
         message = f"Error occurred while exporting annotations: {str(e)}"

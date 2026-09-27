@@ -27,9 +27,15 @@ from anylabeling.views.labeling.utils.general import is_possible_rectangle
 
 
 class LabelConverter:
-    def __init__(self, classes_file=None, pose_cfg_file=None):
+    def __init__(self, classes_file=None, pose_cfg_file=None, classes=None):
         self.classes = []
-        if classes_file:
+        if classes:
+            # An explicit list (e.g. the open project's labels) has to win
+            # over the file, otherwise callers would have to round-trip it
+            # through a temporary .txt just to pass it along.
+            self.classes = [str(name) for name in classes]
+            logger.info(f"Loading classes: {self.classes}")
+        elif classes_file:
             self.classes = self.read_lines(classes_file)
             logger.info(f"Loading classes: {self.classes}")
 
@@ -933,6 +939,25 @@ class LabelConverter:
             )
             self.save_json(self.custom_data, output_file)
 
+    @staticmethod
+    def _bump_skip(stats, reason):
+        """Record one shape this export mode cannot represent.
+
+        No-op when no stats sink was handed in, so the CLI keeps working
+        exactly as before.
+        """
+        if stats is None:
+            return
+        skipped = stats.setdefault("skipped", {})
+        skipped[reason] = skipped.get(reason, 0) + 1
+
+    @staticmethod
+    def _bump_exported(stats):
+        """Count one written shape (no-op without a stats sink)."""
+        if stats is None:
+            return
+        stats["exported"] = stats.get("exported", 0) + 1
+
     def custom_to_yolo(  # noqa: C901
         self,
         input_file,
@@ -940,13 +965,25 @@ class LabelConverter:
         mode,
         skip_empty_files=False,
         obb_boundary_policy="skip",
+        stats=None,
     ):
+        """Convert one XLABEL json into a YOLO label file.
+
+        ``stats`` is an optional dict used as an out-parameter: it accumulates
+        ``exported`` plus ``skipped_shape_type`` / ``skipped_unknown_label``
+        counters. Shapes that this mode cannot represent used to vanish without
+        a trace, so callers can now tell the annotator what was dropped.
+        """
         is_empty_file = True
         if osp.exists(input_file):
             data = self.read_json(input_file)
         else:
             if not skip_empty_files:
                 pathlib.Path(output_file).touch()
+            if stats is not None:
+                stats["missing_label_file"] = (
+                    stats.get("missing_label_file", 0) + 1
+                )
             return is_empty_file
 
         image_width = data["imageWidth"]
@@ -970,6 +1007,9 @@ class LabelConverter:
                         points = rectangle_from_diagonal(points)
 
                     if label not in self.classes:
+                        self._bump_skip(
+                            stats, f"label not in classes: {label}"
+                        )
                         continue
                     class_index = self.classes.index(label)
 
@@ -987,6 +1027,7 @@ class LabelConverter:
                     )
 
                     is_empty_file = False
+                    self._bump_exported(stats)
                 elif mode == "seg" and shape_type == "polygon":
                     label = shape["label"]
                     points = np.array(
@@ -995,8 +1036,12 @@ class LabelConverter:
                         )
                     )
                     if len(points) < 3:
+                        self._bump_skip(stats, "polygon with < 3 points")
                         continue
                     if label not in self.classes:
+                        self._bump_skip(
+                            stats, f"label not in classes: {label}"
+                        )
                         continue
                     class_index = self.classes.index(label)
                     norm_points = points / image_size
@@ -1011,10 +1056,14 @@ class LabelConverter:
                         + "\n"
                     )
                     is_empty_file = False
+                    self._bump_exported(stats)
                 elif mode == "obb" and shape_type == "rotation":
                     label = shape["label"]
                     points = shape["points"]
                     if len(points) != 4:
+                        self._bump_skip(
+                            stats, f"rotation with {len(points)} points"
+                        )
                         continue
                     if obb_boundary_policy == "skip":
                         if any(
@@ -1024,6 +1073,9 @@ class LabelConverter:
                             or point[1] > image_height
                             for point in points
                         ):
+                            self._bump_skip(
+                                stats, "rotation reaching outside the image"
+                            )
                             continue
                     points = list(chain.from_iterable(points))
                     normalized_coords = [
@@ -1036,14 +1088,22 @@ class LabelConverter:
                     ]
                     x0, y0, x1, y1, x2, y2, x3, y3 = normalized_coords
                     if label not in self.classes:
+                        self._bump_skip(
+                            stats, f"label not in classes: {label}"
+                        )
                         continue
                     class_index = self.classes.index(label)
                     f.write(
                         f"{class_index} {x0} {y0} {x1} {y1} {x2} {y2} {x3} {y3}\n"
                     )
                     is_empty_file = False
+                    self._bump_exported(stats)
                 elif mode == "pose":
                     if shape_type not in ["rectangle", "point"]:
+                        self._bump_skip(
+                            stats,
+                            f"{shape_type} cannot be a pose keypoint",
+                        )
                         continue
                     if shape["group_id"] is None:
                         logger.error(
@@ -1077,6 +1137,13 @@ class LabelConverter:
                             visible,
                         ]
                     is_empty_file = False
+                    self._bump_exported(stats)
+                else:
+                    # This mode cannot express the shape at all (a polygon in
+                    # an hbb export, a box in a segmentation export, ...).
+                    self._bump_skip(
+                        stats, f"{shape_type} is not part of a {mode} export"
+                    )
             if mode == "pose":
                 classes = list(self.pose_classes.keys())
                 max_keypoints = max(

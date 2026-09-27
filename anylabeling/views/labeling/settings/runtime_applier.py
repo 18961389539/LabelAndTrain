@@ -117,6 +117,10 @@ class SettingsRuntimeApplier:
             "shortcuts.auto_run": self._widget.actions.run_all_images,
             "shortcuts.loop_thru_labels": self._widget.actions.loop_thru_labels,
             "shortcuts.loop_select_labels": self._widget.actions.loop_select_labels,
+            "shortcuts.smart_data_audit": self._widget.actions.data_audit,
+            "shortcuts.smart_review": self._widget.actions.smart_review,
+            "shortcuts.smart_propagate": self._widget.actions.smart_propagate,
+            "shortcuts.smart_stale_audit": self._widget.actions.smart_stale_audit,
         }
         shortcut_map["shortcuts.quit"] = self._ensure_hidden_shortcut_action(
             "quit",
