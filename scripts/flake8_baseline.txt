@@ -65,12 +65,12 @@ anylabeling/views/labeling/widgets/attributes_controller.py              C401 1
 anylabeling/views/labeling/widgets/attributes_controller.py              C901 1
 anylabeling/views/labeling/widgets/attributes_controller.py              F841 1
 anylabeling/views/labeling/widgets/auto_labeling/auto_labeling.py        B907 2
-anylabeling/views/labeling/widgets/auto_labeling/auto_labeling.py        C901 1
 anylabeling/views/labeling/widgets/auto_labeling/auto_labeling.py        E302 1
 anylabeling/views/labeling/widgets/auto_labeling/auto_labeling.py        E303 1
 anylabeling/views/labeling/widgets/auto_labeling/auto_labeling.py        F841 3
 anylabeling/views/labeling/widgets/auto_labeling/auto_labeling_ui.py     E128 2
 anylabeling/views/labeling/widgets/auto_labeling/auto_labeling_ui.py     E227 1
+anylabeling/views/labeling/widgets/auto_labeling/custom_model_config.py  C901 1
 anylabeling/views/labeling/widgets/canvas.py                             B007 3
 anylabeling/views/labeling/widgets/canvas.py                             B907 1
 anylabeling/views/labeling/widgets/filter_label_widget.py                B006 2
