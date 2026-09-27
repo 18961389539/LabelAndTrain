@@ -102,4 +102,19 @@ jobs:
           python -m pip install -e . --no-deps
 
       - name: Run tests
-        run: python -m pytest tests -q
+        run: |
+          set +e
+          python -m pytest tests -q --tb=no -rf > pytest-out.txt 2>&1
+          code=$?
+          set -e
+          # The log-download API needs admin rights, but job annotations are
+          # public: surface the failure list there so non-admin sessions can
+          # debug a red smoke run without the web UI.
+          if [ $code -ne 0 ]; then
+            grep -E "^(FAILED|ERROR) " pytest-out.txt | head -40 |
+              while IFS= read -r line; do
+                echo "::error::${line:0:400}"
+              done
+            tail -30 pytest-out.txt
+          fi
+          exit $code
