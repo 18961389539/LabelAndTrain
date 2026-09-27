@@ -113,8 +113,11 @@ dev = [
     "pyinstaller",
     "pytest",
     "pytest-cov",
-    "PySide6>=6.6.0,<6.10.0; sys_platform == 'linux'",
-    "PySide6>=6.6.0; sys_platform != 'linux'",
+    # PySide6 is deliberately NOT here: the i18n tools (pyside6-lrelease,
+    # pyside6-rcc) live in a separate tool venv, and having PySide6 installed
+    # next to PyQt6 makes `import onnxruntime` crash after PyQt6 has loaded
+    # (the two Qt bindings' DLLs collide), which took down the win-cpu
+    # release build.  See scripts/generate_languages.py for tool setup.
     "twine",
 ]
 
@@ -125,14 +128,20 @@ cpu = [
     "onnxruntime>=1.15.0",
 ]
 # What CI's test job and the release gate need beyond the runtime extras.
-# Kept as an extra so requirements-lock.txt can pin them like everything else.
-# requirements-lock.txt (cpu+dev+test, resolved universally for the three OSes
-# CI builds on) is generated with:
-#   uv pip compile --universal --extra cpu --extra dev --extra test \
-#       -o requirements-lock.txt pyproject.toml
-# CI and the release builds install that lock, so regenerate and commit it
-# whenever this file's dependencies change -- an unpinned `-e .` install would
-# otherwise quietly drift from what the binaries were built with.
+# Kept as an extra so the lock files can pin them like everything else.
+# The locks (cpu+dev+test) are per platform -- a universal resolution would
+# drag the Linux-only `PyQt6<6.10` cap onto Windows/macOS, where that PySide6-
+# era bound is not wanted and onnxruntime 1.30 crashes under PyInstaller's
+# isolated imports when PyQt6 6.9 is resident.  Regenerate all three with:
+#   uv pip compile --python-platform windows --python-version 3.12 \
+#       --extra cpu --extra dev --extra test -o requirements-lock-win.txt pyproject.toml
+#   uv pip compile --python-platform linux  --python-version 3.12 \
+#       --extra cpu --extra dev --extra test -o requirements-lock-linux.txt pyproject.toml
+#   uv pip compile --python-platform macos  --python-version 3.12 \
+#       --extra cpu --extra dev --extra test -o requirements-lock-macos.txt pyproject.toml
+# CI and the release builds install the lock for their OS, so regenerate and
+# commit whenever this file's dependencies change -- an unpinned `-e .`
+# install would otherwise quietly drift from what the binaries were built with.
 test = [
     "pytest>=8.0",
     "pytest-cov>=5.0",

@@ -80,10 +80,13 @@ jobs:
         include:
           - os: windows-latest
             target: win-cpu
+            lock: requirements-lock-win.txt
           - os: ubuntu-latest
             target: linux-cpu
+            lock: requirements-lock-linux.txt
           - os: macos-latest
             target: macos
+            lock: requirements-lock-macos.txt
     steps:
       - uses: actions/checkout@v4
 
@@ -98,7 +101,7 @@ jobs:
           # Same locked set the test job verified; a release binary is built
           # from exactly the versions the gate ran against, not from a fresh
           # resolution that might pick up something newer overnight.
-          python -m pip install -r requirements-lock.txt
+          python -m pip install -r ${{ matrix.lock }}
           python -m pip install -e . --no-deps
 
       - name: Build executable
