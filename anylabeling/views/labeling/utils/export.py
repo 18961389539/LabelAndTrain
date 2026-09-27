@@ -15,6 +15,13 @@ from PyQt6.QtWidgets import (
 
 from anylabeling.views.labeling.label_converter import LabelConverter
 from anylabeling.views.labeling.logger import logger
+from anylabeling.views.labeling.schema import (
+    REVIEW_UNCHECKED,
+    is_review_confirmed,
+)
+from anylabeling.views.labeling.utils.async_label_check import (
+    label_file_review_info,
+)
 from anylabeling.views.labeling.widgets import Popup
 from anylabeling.views.labeling.utils.qt import new_icon_path
 from anylabeling.views.labeling.utils.style import *
@@ -163,6 +170,36 @@ def resolve_classes_for_yolo(widget, mode):
     return list(converter.classes), osp.basename(classes_file), converter
 
 
+def split_images_by_review(image_list, label_path_for, only_confirmed):
+    """Split an export's image list by review state.
+
+    ``label_path_for`` maps an image path to its label file. With
+    ``only_confirmed`` the kept list holds the images whose label file is in
+    the confirmed state, and everything else — unchecked, rejected, or with no
+    label file at all — lands in the returned count. The training side already
+    has this filter (`only_checked_files` in the ultralytics general module);
+    the export used to ignore the review state entirely, so an image marked
+    需返工 was excluded from training and written into the export at once.
+    """
+    if not only_confirmed:
+        return list(image_list), 0
+    kept = []
+    skipped = 0
+    for image_file in image_list:
+        try:
+            state = label_file_review_info(label_path_for(image_file))[0]
+        except Exception as e:  # noqa: BLE001
+            logger.warning(
+                f"Could not read the review state of {image_file}: {e}"
+            )
+            state = REVIEW_UNCHECKED
+        if is_review_confirmed(state):
+            kept.append(image_file)
+        else:
+            skipped += 1
+    return kept, skipped
+
+
 def _write_classes_file(save_path, classes):
     """Drop the class list next to the exported labels."""
     target = osp.join(save_path, "classes.txt")
@@ -173,7 +210,13 @@ def _write_classes_file(save_path, classes):
 
 
 def _format_yolo_export_summary(
-    widget, counted_files, total_files, stats, copied_images, classes_target
+    widget,
+    counted_files,
+    total_files,
+    stats,
+    copied_images,
+    classes_target,
+    skipped_unchecked=0,
 ):
     """Human-readable recap of a YOLO export, skips included.
 
@@ -184,6 +227,11 @@ def _format_yolo_export_summary(
         widget.tr("导出完成：%d/%d 张图，%d 个标注")
         % (counted_files, total_files, stats.get("exported", 0)),
     ]
+    if skipped_unchecked:
+        lines.append(
+            widget.tr("按「仅导出已确认图片」跳过 %d 张（未检查或需返工）")
+            % skipped_unchecked
+        )
     if copied_images:
         lines.append(widget.tr("已复制 %d 张图片") % copied_images)
     if classes_target:
@@ -318,6 +366,24 @@ def export_yolo_annotation(self, mode):
     )
     layout.addWidget(skip_empty_files_checkbox)
 
+    only_checked_checkbox = QtWidgets.QCheckBox(
+        self.tr("仅导出「已确认」的图片")
+    )
+    only_checked_checkbox.setChecked(False)
+    only_checked_checkbox.setToolTip(
+        self.tr(
+            "Only export confirmed images / 仅导出已确认的图片\n"
+            "\n"
+            "默认关闭：导出当前文件夹里的全部图片，含未检查与「需返工」的。\n"
+            "\n"
+            "勾选后：只导出在文件列表里标记为「已确认」的图片，"
+            "未检查与需返工的一律跳过（数量会在导出结果里报出来）。\n"
+            "训练侧本来就有同样的过滤（只用已检查的图片），"
+            "勾上它可以让导出与训练集合保持一致。"
+        )
+    )
+    layout.addWidget(only_checked_checkbox)
+
     write_classes_checkbox = None
     if classes:
         write_classes_checkbox = QtWidgets.QCheckBox(
@@ -380,6 +446,7 @@ def export_yolo_annotation(self, mode):
 
     save_images = save_images_checkbox.isChecked()
     skip_empty_files = skip_empty_files_checkbox.isChecked()
+    only_checked = only_checked_checkbox.isChecked()
     save_path = path_edit.text()
     image_list = self.image_list if self.image_list else [self.filename]
 
@@ -387,6 +454,29 @@ def export_yolo_annotation(self, mode):
         label_file_name = osp.splitext(osp.basename(image_file))[0] + ".json"
         label_dir = self.output_dir or osp.dirname(image_file)
         return osp.join(label_dir, label_file_name)
+
+    skipped_unchecked = 0
+    if only_checked:
+        image_list, skipped_unchecked = split_images_by_review(
+            image_list, get_label_file, True
+        )
+        logger.info(
+            f"YOLO ({mode}) export filtered by review state: "
+            f"{len(image_list)} confirmed, {skipped_unchecked} skipped"
+        )
+        if not image_list:
+            popup = Popup(
+                self.tr(
+                    "没有「已确认」的图片可导出（共 %d 张未确认）。\n"
+                    "先在文件列表里把要看过的图标成「已检查」，"
+                    "或取消勾选「仅导出已确认的图片」。"
+                )
+                % skipped_unchecked,
+                self,
+                icon=new_icon_path("warning", "svg"),
+            )
+            popup.show_popup(self, position="center")
+            return
 
     if osp.exists(save_path):
         msg_box = QtWidgets.QMessageBox(self)
@@ -507,6 +597,7 @@ def export_yolo_annotation(self, mode):
             stats,
             copied_images,
             classes_target,
+            skipped_unchecked=skipped_unchecked,
         )
         message_text = (
             self.tr(

@@ -55,6 +55,10 @@ SHORTCUT_GROUPS = [
             ("copy_polygon", "复制到剪贴板"),
             ("paste_polygon", "粘贴标注"),
             ("undo", "撤销"),
+            (
+                "undo_last_point",
+                "撤销上一个点（画多边形时 Ctrl+Z 的作用）",
+            ),
             ("redo", "重做"),
             ("add_point_to_edge", "在边上加点"),
             ("remove_selected_point", "删除选中点"),
@@ -122,8 +126,11 @@ SHORTCUT_GROUPS = [
     ),
 ]
 
-#: config keys that may appear but are intentionally hidden (no user value).
-_HIDDEN_KEYS = {"undo_last_point"}
+#: Config keys that may appear but are intentionally hidden (no user value).
+#: Empty on purpose: ``undo_last_point`` used to sit here, which left the
+#: drawing-time meaning of ``Ctrl+Z`` — it removes the last vertex while a
+#: polygon is being drawn — undocumented in the one place a user looks for it.
+_HIDDEN_KEYS = frozenset()
 
 
 def _shortcut_to_text(value):

@@ -285,7 +285,6 @@ class SettingsRuntimeApplier:
             "auto_highlight_shape",
             "auto_switch_to_edit_mode",
             "exif_scan_enabled",
-            "switch_to_checked",
             "file_list_checkbox_editable",
             "system_clipboard",
         }:

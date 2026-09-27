@@ -6,7 +6,6 @@ from anylabeling.views.labeling.utils.shortcuts_help import (
     filter_shortcut_rows,
 )
 
-
 SAMPLE = {
     "open": "Ctrl+I",
     "open_next": "D",
@@ -52,16 +51,27 @@ class TestBuildShortcutRows(unittest.TestCase):
     def test_builds_rows_and_skips_empty(self):
         rows = build_shortcut_rows(SAMPLE)
         texts = {row[1] for row in rows}
-        self.assertIn("D", texts)          # open_next
-        self.assertIn("Ctrl+I", texts)     # open
+        self.assertIn("D", texts)  # open_next
+        self.assertIn("Ctrl+I", texts)  # open
         # save is None -> skipped
         self.assertFalse(any(row[2] == "保存标注" for row in rows))
 
-    def test_hidden_key_excluded(self):
+    def test_both_meanings_of_ctrl_z_are_advertised(self):
+        """Ctrl+Z is undo, and while drawing a polygon it drops the last point.
+
+        That second meaning used to be hidden from the cheat sheet, so the one
+        page a user consults when a key misbehaves was silent about it.
+        """
         rows = build_shortcut_rows(SAMPLE)
-        self.assertFalse(
-            any("撤销最后一点" in row[2] for row in rows)
-        )
+        ctrl_z = [row[2] for row in rows if row[1] == "Ctrl+Z"]
+        self.assertEqual(len(ctrl_z), 2, ctrl_z)
+        self.assertTrue(any(text == "撤销" for text in ctrl_z), ctrl_z)
+        self.assertTrue(any("点" in text for text in ctrl_z), ctrl_z)
+
+    def test_nothing_is_hidden_from_the_cheat_sheet(self):
+        from anylabeling.views.labeling.utils import shortcuts_help
+
+        self.assertEqual(shortcuts_help._HIDDEN_KEYS, frozenset())
 
     def test_list_shortcut_joined(self):
         rows = build_shortcut_rows(SAMPLE)
@@ -141,8 +151,7 @@ class TestAdvertisedShortcuts(unittest.TestCase):
             value: sorted(keys)
             for value, keys in by_value.items()
             if len(keys) > 1
-            and frozenset(f"shortcuts.{k}" for k in keys)
-            not in self.whitelist
+            and frozenset(f"shortcuts.{k}" for k in keys) not in self.whitelist
         }
         self.assertEqual(
             ambiguous, {}, "two actions share one key: Qt drops both"
