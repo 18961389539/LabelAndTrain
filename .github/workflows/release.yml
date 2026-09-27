@@ -102,7 +102,27 @@ jobs:
           python -m pip install -e . --no-deps
 
       - name: Build executable
-        run: bash scripts/build_executable.sh ${{ matrix.target }}
+        shell: bash
+        run: |
+          set +e
+          bash scripts/build_executable.sh ${{ matrix.target }} > build-log.txt 2>&1
+          code=$?
+          set -e
+          tail -40 build-log.txt
+          exit $code
+
+      # The log-download API needs admin rights; a failing build leaves its
+      # error lines as public job annotations instead.
+      - name: Surface build failure
+        if: failure()
+        shell: bash
+        run: |
+          {
+            grep -iE "error|not found|failed|traceback" build-log.txt |
+              tail -8 | while IFS= read -r line; do
+                echo "::error::${line:0:350}"
+              done
+          } || true
 
       - name: Collect artifacts and checksums
         shell: bash
