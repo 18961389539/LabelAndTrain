@@ -179,11 +179,14 @@ class TestModelVersion(unittest.TestCase):
             cwd = os.getcwd()
             try:
                 os.chdir(tmp)
-                # macOS: getcwd() returns the physical path, so a /var/tmp
-                # tempdir is reported as /private/var/... -- resolve both
-                # sides before comparing.
+                # Path spellings differ per platform even for the same file:
+                # macOS getcwd() reports /var/tmp as /private/var/..., and
+                # Windows CI builds tempdirs under 8.3 names (RUNNER~1).
+                # realpath() folds both back onto the long physical path on
+                # every OS, so compare resolved against resolved.
                 self.assertEqual(
-                    resolve_model_path(config), os.path.realpath(path)
+                    os.path.realpath(resolve_model_path(config)),
+                    os.path.realpath(path),
                 )
             finally:
                 os.chdir(cwd)
