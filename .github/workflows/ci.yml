@@ -115,6 +115,13 @@ jobs:
               while IFS= read -r line; do
                 echo "::error::${line:0:400}"
               done
+            # Collection-time crashes produce no FAILED lines at all: dump
+            # the tail so the annotations carry something actionable.
+            if ! grep -qE "^(FAILED|ERROR) " pytest-out.txt; then
+              tail -25 pytest-out.txt | while IFS= read -r line; do
+                echo "::error::${line:0:400}"
+              done
+            fi
             tail -30 pytest-out.txt
           fi
           exit $code

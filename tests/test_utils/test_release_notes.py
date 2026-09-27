@@ -36,13 +36,20 @@ class TestReleaseNotes(unittest.TestCase):
 
     def test_top_changelog_entry_is_the_release_being_tagged(self):
         tag = f"v{self.module.read_version()}"
+        section = self.module.read_changelog_section(tag)
         with mock.patch.object(
             self.module, "find_previous_tag", return_value=None
         ):
             notes = self.module.generate_notes(tag, "someone/repo")
+        # The newest section's own first bullet must reach the notes: this
+        # pins "notes = the section being tagged" without hard-coding which
+        # entry is newest, so cutting a release never breaks the guard.
+        first_bullet = next(
+            line for line in section.split(chr(10)) if line.startswith("- ")
+        )
+        self.assertIn(first_bullet, notes)
         # Anything below the fork marker is X-AnyLabeling's own history, and it
         # must not be pasted into this fork's release.
-        self.assertIn("Review state per image", notes)
         self.assertNotIn("# X-AnyLabeling Changelog", notes)
         self.assertNotIn("v4.0.0-beta", notes)
 
