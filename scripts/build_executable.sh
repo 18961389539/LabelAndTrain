@@ -4,6 +4,13 @@ set -euo pipefail
 system=${1:-}
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 ROOT_DIR=$(cd "${SCRIPT_DIR}/.." && pwd)
+# Under Git Bash / MSYS the paths above come out as /g/..., but the
+# Windows-native pyinstaller.exe cannot read them (no automatic path
+# conversion happens here). Convert once; linux/macOS have no cygpath
+# and keep the POSIX form.
+if command -v cygpath >/dev/null 2>&1; then
+    ROOT_DIR=$(cygpath -m "${ROOT_DIR}")
+fi
 SPEC_DIR="${ROOT_DIR}/packaging/pyinstaller/specs"
 DIST_DIR="${ROOT_DIR}/dist"
 export X_ANYLABELING_ROOT="${ROOT_DIR}"

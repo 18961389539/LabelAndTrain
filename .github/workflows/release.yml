@@ -1,0 +1,154 @@
+# Release pipeline: a pushed `v*` tag is the single trigger.
+#
+# Chain: verify (tag == app_info version == newest CHANGELOG entry, cheap and
+# first) -> tests gate the builds -> PyInstaller builds for the three OSes the
+# README claims -> one GitHub Release carrying every artifact plus SHA256SUMS.
+#
+# The build and notes steps reuse scripts/build_executable.sh and
+# scripts/generate_release_notes.py, which already know how to validate the
+# tag against anylabeling/app_info.py and CHANGELOG.md. Nothing here should
+# grow its own copy of that logic.
+
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  QT_QPA_PLATFORM: offscreen
+
+jobs:
+  verify:
+    name: Tag matches version and changelog
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # generate_release_notes.py runs `git describe --tags <tag>^`
+          # to find the previous tag, so full history is required.
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Validate tag against app_info and CHANGELOG
+        run: |
+          python scripts/generate_release_notes.py \
+            --tag "${{ github.ref_name }}" \
+            --repository "${{ github.repository }}" \
+            --output /tmp/release_notes.md
+          head -5 /tmp/release_notes.md
+
+  test:
+    name: Unit tests (release gate)
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[cpu]" pytest
+
+      - name: Run tests
+        run: python -m pytest tests -q
+
+  build:
+    name: Build (${{ matrix.target }})
+    needs: [verify, test]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: win-cpu
+          - os: ubuntu-latest
+            target: linux-cpu
+          - os: macos-latest
+            target: macos
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[cpu]" pyinstaller
+
+      - name: Build executable
+        run: bash scripts/build_executable.sh ${{ matrix.target }}
+
+      - name: Collect artifacts and checksums
+        shell: bash
+        run: |
+          mkdir release
+          # Files only: the macOS build leaves a .app directory in dist/ that
+          # the packaging step has already zipped around.
+          find dist -maxdepth 1 -type f -name 'JLLabelingAndTrain-*' -exec cp {} release/ \;
+          ls -l release/
+          cd release && sha256sum JLLabelingAndTrain-* > SHA256SUMS.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: artifacts-${{ matrix.target }}
+          path: release/
+          if-no-files-found: error
+
+  publish:
+    name: Publish GitHub Release
+    needs: [build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+          merge-multiple: true
+
+      - name: Generate release notes
+        run: |
+          python scripts/generate_release_notes.py \
+            --tag "${{ github.ref_name }}" \
+            --repository "${{ github.repository }}" \
+            --output release_notes.md
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            --title "${{ github.ref_name }}" \
+            --notes-file release_notes.md \
+            --verify-tag \
+            artifacts/*

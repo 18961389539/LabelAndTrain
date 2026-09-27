@@ -56,6 +56,16 @@ class TestReleaseNotes(unittest.TestCase):
             notes = self.module.generate_notes(tag, "someone/repo")
         self.assertNotIn("compare/", notes)
 
+    def test_notes_do_not_end_with_the_section_separator_rule(self):
+        # The `---` rule before upstream's level-1 heading is CHANGELOG
+        # furniture, not release-note content.
+        tag = f"v{self.module.read_version()}"
+        with mock.patch.object(
+            self.module, "find_previous_tag", return_value=None
+        ):
+            notes = self.module.generate_notes(tag, "someone/repo")
+        self.assertFalse(notes.rstrip().endswith("---"))
+
     def test_notes_do_not_point_at_upstream_download_channels(self):
         tag = f"v{self.module.read_version()}"
         with mock.patch.object(

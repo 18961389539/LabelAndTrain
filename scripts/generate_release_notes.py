@@ -45,6 +45,10 @@ def read_changelog_section(tag: str) -> str:
     section = changelog[matches[0].end() : end].strip()
     if not section:
         raise ValueError(f"Changelog entry for {tag} is empty")
+    # The fork's entry ends with a `---` rule ahead of upstream's own level-1
+    # heading; the heading guard above stops at the heading itself, and the
+    # rule would otherwise ride along as the last line of the release notes.
+    section = re.sub(r"(?:\n+---\s*)+$", "", section).rstrip()
     return section
 
 
