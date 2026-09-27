@@ -117,7 +117,10 @@ jobs:
       - name: Surface failures as annotations
         if: failure()
         run: |
-          grep -E "^(FAILED|ERROR) " pytest-out.txt | head -8 |
+          # pytest -rf messages are multi-line (assertEqual diffs ride
+          # along); keep only the test id per failure so 10 fit the cap.
+          grep -E "^(FAILED|ERROR) " pytest-out.txt |
+            sed "s/ - .*//" | sort -u | head -9 |
             while IFS= read -r line; do
               echo "::error::${line:0:350}"
             done

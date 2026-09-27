@@ -8,7 +8,9 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 try:
     from PyQt6 import QtGui, QtWidgets
 
-    from anylabeling.views.labeling.settings.controller import SettingsController
+    from anylabeling.views.labeling.settings.controller import (
+        SettingsController,
+    )
     from anylabeling.views.labeling.settings.dialog import SettingsDialog
     from anylabeling.views.labeling.settings.schema import load_template_config
 
@@ -17,7 +19,9 @@ except Exception:
     PYQT_AVAILABLE = False
 
 
-@unittest.skipUnless(PYQT_AVAILABLE, "PyQt6 is required for settings dialog tests")
+@unittest.skipUnless(
+    PYQT_AVAILABLE, "PyQt6 is required for settings dialog tests"
+)
 class TestSettingsDialogLayout(unittest.TestCase):
 
     def setUp(self):
@@ -164,13 +168,21 @@ class TestSettingsDialogLayout(unittest.TestCase):
             for index in range(1, font_combo.count())
         ]
         self.assertIsNone(font_combo.itemData(0))
-        self.assertEqual(listed_families, available_families)
+        # macOS enumerates fonts lazily: by assert time the database can hold
+        # families that were not yet loaded when the combo was filled.  The
+        # combo's contract is an order-preserving subset of the database, not
+        # a snapshot equality, so assert a subsequence instead.
+        it = iter(available_families)
+        self.assertTrue(
+            all(family in it for family in listed_families),
+            "font combo diverged from QFontDatabase order/content",
+        )
 
         if available_families:
             font_combo.setCurrentIndex(1)
             self.assertEqual(
                 dialog._controller.get_value("font_family"),
-                available_families[0],
+                listed_families[0],
             )
 
     def test_shortcuts_reset_viewport_margins(self):
@@ -223,7 +235,9 @@ class TestSettingsDialogLayout(unittest.TestCase):
         dialog._on_shortcuts_reset_clicked()
         self.app.processEvents()
 
-        self.assertEqual(controller.get_value("shortcuts.show_masks"), "Ctrl+M")
+        self.assertEqual(
+            controller.get_value("shortcuts.show_masks"), "Ctrl+M"
+        )
         self.assertEqual(
             controller.get_value("shortcuts.show_labels"),
             "Ctrl+L",
@@ -251,9 +265,7 @@ class TestSettingsDialogLayout(unittest.TestCase):
         controller = dialog._controller
         field = controller._field_map["model_hub"]
         initial_value = controller.get_value(field.key)
-        next_value = next(
-            v for v in field.options if v != initial_value
-        )
+        next_value = next(v for v in field.options if v != initial_value)
         dialog._on_editor_value_changed(field, next_value)
         self.app.processEvents()
         return field, initial_value, next_value
@@ -318,4 +330,6 @@ class TestSettingsDialogLayout(unittest.TestCase):
         # Nothing pending anymore, so closing must not prompt.
         dialog.close()
         self.app.processEvents()
-        self.assertEqual(controller.get_value("model_hub"), saved[0]["model_hub"])
+        self.assertEqual(
+            controller.get_value("model_hub"), saved[0]["model_hub"]
+        )

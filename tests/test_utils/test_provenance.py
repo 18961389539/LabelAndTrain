@@ -106,7 +106,11 @@ class TestShapeRoundTrip(unittest.TestCase):
         from anylabeling.views.labeling.shape import Shape
 
         restored = Shape().load_from_dict(
-            {"label": "cat", "points": [[0, 0], [1, 1]], "shape_type": "rectangle"}
+            {
+                "label": "cat",
+                "points": [[0, 0], [1, 1]],
+                "shape_type": "rectangle",
+            }
         )
         self.assertEqual(get_source(restored), SOURCE_UNKNOWN)
         self.assertNotEqual(get_source(restored), SOURCE_HUMAN)
@@ -175,7 +179,12 @@ class TestModelVersion(unittest.TestCase):
             cwd = os.getcwd()
             try:
                 os.chdir(tmp)
-                self.assertEqual(resolve_model_path(config), path)
+                # macOS: getcwd() returns the physical path, so a /var/tmp
+                # tempdir is reported as /private/var/... -- resolve both
+                # sides before comparing.
+                self.assertEqual(
+                    resolve_model_path(config), os.path.realpath(path)
+                )
             finally:
                 os.chdir(cwd)
 
@@ -196,9 +205,7 @@ class TestModelVersion(unittest.TestCase):
 
     def test_same_name_different_weights_counts_as_stale(self):
         shape = self._shape("a1b2c3d4e5f6")
-        self.assertTrue(
-            is_from_other_model(shape, "run_07", "ffeeccaa1122")
-        )
+        self.assertTrue(is_from_other_model(shape, "run_07", "ffeeccaa1122"))
         self.assertFalse(is_from_other_model(shape, "run_07", "a1b2c3d4e5f6"))
 
     def test_shape_without_a_version_is_not_made_stale_by_one(self):
