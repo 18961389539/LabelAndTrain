@@ -65,9 +65,14 @@ class TestCatalogMatchesSources(unittest.TestCase):
             filename = location.get("filename")
             if not filename:
                 continue
-            if not os.path.exists(
-                os.path.normpath(os.path.join(ts_dir, filename))
-            ):
+            # pylupdate6 writes separator-native paths: backslashes when the
+            # catalog was built on Windows, which only resolve on Windows.
+            # Normalise to forward slashes -- every os.path accepts them on
+            # all three platforms -- so the check is platform-independent.
+            candidate = os.path.normpath(
+                os.path.join(ts_dir, *filename.replace("\\", "/").split("/"))
+            )
+            if not os.path.exists(candidate):
                 broken.add(filename)
         self.assertEqual(
             sorted(broken),
@@ -84,10 +89,7 @@ class TestCatalogMatchesSources(unittest.TestCase):
             re.findall(r"^class\s+(\w+)", _source_text(), re.MULTILINE)
         )
         unknown = sorted(
-            {
-                context.findtext("name")
-                for context in root.findall("context")
-            }
+            {context.findtext("name") for context in root.findall("context")}
             - class_names
         )
         self.assertEqual(
@@ -156,9 +158,11 @@ class TestCompiledCatalogIsInSync(unittest.TestCase):
             for message in context.findall("message"):
                 source = message.findtext("source") or ""
                 translation = message.find("translation")
-                expected = "" if translation is None else (
-                    translation.text or ""
-                ).strip()
+                expected = (
+                    ""
+                    if translation is None
+                    else (translation.text or "").strip()
+                )
                 # Sources that are already Chinese translate to themselves,
                 # so a missing rebuild is undetectable for them.
                 if not expected or expected == source.strip():
