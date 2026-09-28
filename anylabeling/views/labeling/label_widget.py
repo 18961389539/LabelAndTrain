@@ -145,6 +145,7 @@ from .utils import file_lifecycle
 from .utils import file_navigation
 from .utils import file_list_ops
 from .utils import label_editing
+from .utils import shortcuts_help
 from .utils.file_lifecycle import (
     _report_inherited_shapes,
     move_file_to_delete_folder,  # noqa: F401 -- test imports stay valid
@@ -2062,58 +2063,8 @@ class LabelingWidget(LabelDialog):
         training_launcher.show_run_history(self, _value)
 
     def show_shortcuts_help(self):
-        """Dialog listing every configured shortcut with a search box."""
-        shortcuts = self._config.get("shortcuts", {})
-        rows = build_shortcut_rows(shortcuts)
-        dialog = QtWidgets.QDialog(self)
-        dialog.setWindowTitle(self.tr("快捷键速查"))
-        dialog.resize(460, 520)
-        layout = QtWidgets.QVBoxLayout(dialog)
-        layout.setContentsMargins(12, 12, 12, 12)
-        layout.setSpacing(8)
-
-        search = QtWidgets.QLineEdit()
-        search.setPlaceholderText(
-            self.tr("搜索快捷键或功能（如 Ctrl+Z / 撤销）…")
-        )
-        layout.addWidget(search)
-
-        tree = QtWidgets.QTreeWidget()
-        tree.setHeaderLabels(
-            [self.tr("快捷键"), self.tr("功能"), self.tr("分组")]
-        )
-        tree.setColumnWidth(0, 110)
-        tree.setColumnWidth(1, 240)
-        tree.setRootIsDecorated(False)
-        tree.setAlternatingRowColors(True)
-        layout.addWidget(tree, 1)
-
-        def render():
-            tree.clear()
-            for group_title, key_text, description in filter_shortcut_rows(
-                rows, search.text()
-            ):
-                item = QtWidgets.QTreeWidgetItem(
-                    [key_text, description, group_title]
-                )
-                tree.addTopLevelItem(item)
-
-        def on_query(_text):
-            render()
-            if tree.topLevelItemCount():
-                tree.scrollToTop()
-
-        search.textChanged.connect(on_query)
-        render()
-
-        close_btn = QtWidgets.QPushButton(self.tr("关闭"))
-        close_btn.clicked.connect(dialog.accept)
-        close_btn.setFixedWidth(80)
-        button_row = QtWidgets.QHBoxLayout()
-        button_row.addStretch()
-        button_row.addWidget(close_btn)
-        layout.addLayout(button_row)
-        dialog.exec()
+        """Delegates to shortcuts_help (wiring and tests stay)."""
+        shortcuts_help.show_shortcuts_help(self)
 
     def _delete_via_context(self, item, include_image):
         """Right-click delete from the file list.
@@ -3095,71 +3046,8 @@ class LabelingWidget(LabelDialog):
         del blocker
 
     def save_labels(self, filename):
-        label_file = LabelFile()
-        # Get current shapes
-        # Excluding auto labeling special shapes
-        shapes = [
-            item.shape().to_dict()
-            for item in self.label_list
-            if item.shape().label
-            not in [
-                AutoLabelingMode.OBJECT,
-                AutoLabelingMode.ADD,
-                AutoLabelingMode.REMOVE,
-            ]
-        ]
-        flags = {}
-        for i in range(self.flag_widget.count()):
-            item = self.flag_widget.item(i)
-            key = item.text()
-            flag = item.checkState() == Qt.CheckState.Checked
-            flags[key] = flag
-        self.other_data[CHECKED_FIELD] = self._annotation_checked()
-        try:
-            image_path = osp.relpath(self.image_path, osp.dirname(filename))
-            image_data = (
-                self.image_data if self._config["store_data"] else None
-            )
-            if osp.dirname(filename) and not osp.exists(osp.dirname(filename)):
-                os.makedirs(osp.dirname(filename))
-
-            label_file.save(
-                filename=filename,
-                shapes=shapes,
-                image_path=image_path,
-                image_data=image_data,
-                image_height=self.image.height(),
-                image_width=self.image.width(),
-                other_data=self.other_data,
-                flags=flags,
-            )
-            write_sidecar = getattr(self, "_write_yolo_sidecar", None)
-            if write_sidecar is not None:
-                write_sidecar(filename, shapes)
-            self.label_file = label_file
-            items = self.file_list_widget.findItems(
-                self.image_path, Qt.MatchFlag.MatchExactly
-            )
-            if len(items) > 0:
-                if len(items) != 1:
-                    raise RuntimeError("There are duplicate files.")
-                self._set_file_item_annotated(
-                    items[0], True, negative=not shapes
-                )
-                self._set_file_item_checked(
-                    items[0], self._annotation_checked()
-                )
-                self._note_save_quality(shapes, items[0])
-            else:
-                self._note_save_quality(shapes)
-            # disable allows next and previous image to proceed
-            # self.filename = filename
-            return True
-        except LabelFileError as e:
-            self.error_message(
-                self.tr("Error saving label data"), self.tr("<b>%s</b>") % e
-            )
-            return False
+        """Delegates to file_lifecycle (wiring and tests stay)."""
+        return file_lifecycle.save_labels(self, filename)
 
     def _yolo_class_names(self):
         """Class names for YOLO ids: Labels dock first, then config."""
@@ -3312,107 +3200,8 @@ class LabelingWidget(LabelDialog):
 
     # Callback functions:
     def new_shape(self):
-        """Pop-up and give focus to the label editor.
-
-        position MUST be in global coordinates.
-        """
-        items = self.unique_label_list.selectedItems()
-        text = None
-        if items:
-            text = items[0].data(Qt.ItemDataRole.UserRole)
-        flags = {}
-        group_id = None
-        description = ""
-        difficult = False
-        kie_linking = []
-
-        if self.canvas.shapes[-1].label in [
-            AutoLabelingMode.ADD,
-            AutoLabelingMode.REMOVE,
-        ]:
-            text = self.canvas.shapes[-1].label
-        elif (
-            self._config["display_label_popup"]
-            or not text
-            or self.canvas.shapes[-1].label == AutoLabelingMode.OBJECT
-        ):
-            last_label = self.find_last_label()
-            last_gid = (
-                self.find_last_gid()
-                if self._config["auto_use_last_gid"]
-                else None
-            )
-            if self.digit_to_label is not None:
-                text = self.digit_to_label
-                self.digit_to_label = None
-                if last_gid is not None:
-                    group_id = last_gid
-            elif self._config["auto_use_last_label"] and last_label:
-                text = last_label
-                if last_gid is not None:
-                    group_id = last_gid
-            else:
-                previous_text = self.label_dialog.edit.text()
-                (
-                    text,
-                    flags,
-                    group_id,
-                    description,
-                    difficult,
-                    kie_linking,
-                ) = self.label_dialog.pop_up(
-                    text,
-                    group_id=last_gid,
-                    move_mode=self._config.get("move_mode", "auto"),
-                )
-                if not text:
-                    self.label_dialog.edit.setText(previous_text)
-
-        if text and not self.validate_label(text):
-            self.error_message(
-                self.tr("Invalid label"),
-                self.tr("Invalid label '{}' with validation type '{}'").format(
-                    text, self._config["validate_label"]
-                ),
-            )
-            text = ""
-            return
-
-        if self.attributes and text:
-            text = self.reset_attribute(text, self.canvas.shapes[-1])
-
-        if text:
-            self.label_list.clearSelection()
-            shape = self.canvas.set_last_label(text, flags, group_id)
-            shape.group_id = group_id
-            shape.description = description
-            if text not in [AutoLabelingMode.ADD, AutoLabelingMode.REMOVE]:
-                shape.label = text
-            shape.difficult = difficult
-            shape.kie_linking = kie_linking
-            self.add_label(shape)
-            self.actions.edit_mode.setEnabled(True)
-            self.actions.undo_last_point.setEnabled(False)
-            self.actions.undo.setEnabled(True)
-            self.set_dirty()
-            if (
-                self.canvas.drawing()
-                and self.canvas.create_mode == "polygon"
-                and not self.actions.create_brush_polygon_mode.isEnabled()
-            ):
-                self.canvas._brush_drawing = True
-
-            if self.attributes and text in self.attributes:
-                shape.selected = True
-                self.shape_attributes.show()
-                self.scroll_area.show()
-                for i, canvas_shape in enumerate(self.canvas.shapes):
-                    if canvas_shape is shape:
-                        self.update_attributes(i)
-                        break
-        else:
-            self.canvas.undo_last_line()
-            self.canvas.shapes_backups.pop()
+        """Delegates to label_editing (wiring and tests stay)."""
+        label_editing.new_shape(self)
 
     def show_shape(self, shape_height, shape_width, pos):
         """Display annotation width and height while hovering inside.

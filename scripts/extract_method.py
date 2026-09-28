@@ -142,7 +142,7 @@ def _module_import_names(module_tree):
     return bound
 
 
-def _analyze(method, module_tree):
+def _analyze(method, module_tree):  # noqa: C901 -- binding forms
     """Free-variable report: what the body reaches beyond its locals."""
     locals_ = set(_param_names(method))
     for node in ast.walk(method):
@@ -154,6 +154,10 @@ def _analyze(method, module_tree):
             node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)
         ):
             locals_.update(_param_names(node))
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            # The nested def's own name is a local binding too -- missing
+            # it made every nested helper look like an unresolved global.
+            locals_.add(node.name)
         if isinstance(node, ast.comprehension):
             for t in ast.walk(node.target):
                 if isinstance(t, ast.Name):
@@ -217,17 +221,34 @@ def _line_span(node):
 
 
 def _string_offset_ranges(method, src):
-    """(start, end) byte ranges of string literals in the method text."""
-    line_offsets = {}
+    """Character ranges of string literals in the method text.
+
+    ast col_offset/end_col_offset are UTF-8 *byte* offsets, not character
+    offsets -- a column past a CJK string literal is three bytes further
+    than it looks.  Converting with character-length accumulation made
+    every range after a Chinese tr() string drift right, far enough to
+    swallow a real ``self``.  Each line's byte columns are converted
+    with a decode round-trip instead.
+    """
+    char_offsets = {1: 0}
     total = 0
+    texts = {}
     for i, line in enumerate(src.splitlines(keepends=True), start=1):
-        line_offsets[i] = total
+        texts[i] = line
+        char_offsets[i] = total
         total += len(line)
+
+    def to_char(lineno, byte_col):
+        text = texts[lineno]
+        return char_offsets[lineno] + len(
+            text.encode("utf-8")[:byte_col].decode("utf-8")
+        )
+
     ranges = []
     for node in ast.walk(method):
         if isinstance(node, ast.Constant) and isinstance(node.value, str):
-            start = line_offsets[node.lineno] + node.col_offset
-            end = line_offsets[node.end_lineno] + node.end_col_offset
+            start = to_char(node.lineno, node.col_offset)
+            end = to_char(node.end_lineno, node.end_col_offset)
             ranges.append((start, end))
     return ranges
 
@@ -407,15 +428,43 @@ def _target_module_text(existing, doc, import_lines, func_text):
         parts += import_lines + [""] if import_lines else []
         parts += [func_text, ""]
         return "\n".join(parts)
+
     lines = existing.splitlines(keepends=True)
+    present = {line.strip() for line in lines}
+    bound = set()
+    try:
+        for node in ast.parse(existing).body:
+            if isinstance(node, (ast.Import, ast.ImportFrom)):
+                bound |= _module_import_names(
+                    ast.Module(body=[node], type_ignores=[])
+                )
+    except SyntaxError:
+        pass
     for imp in import_lines:
-        if imp.strip() not in existing:
-            at = 0
-            for i, line in enumerate(lines):
-                if line.strip().startswith(("import ", "from ")):
-                    at = i + 1
-                    break
-            lines.insert(at, imp + "\n")
+        # Line-exact, not substring: "import os" must not be considered
+        # present just because "import os.path as osp" is (a real bug
+        # that left os.listdir calling an undefined name).
+        if imp.strip() in present:
+            continue
+        # Bound-name exact: the existing statement may be the same
+        # import in a different shape (black split the parens after an
+        # earlier batch), where string comparison double-inserts it and
+        # every name in it becomes an F811 redefinition.
+        try:
+            imp_bound = _module_import_names(
+                ast.Module(body=[ast.parse(imp)], type_ignores=[])
+            )
+        except SyntaxError:
+            imp_bound = set()
+        if imp_bound and imp_bound <= bound:
+            continue
+        at = 0
+        for i, line in enumerate(lines):
+            if line.strip().startswith(("import ", "from ")):
+                at = i + 1
+                break
+        lines.insert(at, imp + "\n")
+        bound |= imp_bound
     result = "".join(lines)
     if not result.endswith("\n"):
         result += "\n"

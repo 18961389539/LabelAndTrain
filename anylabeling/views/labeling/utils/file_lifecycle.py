@@ -8,16 +8,7 @@ they live together: the dangerous code shares one address.
 """
 
 import os
-from ..utils.file_search import (
-    parse_search_pattern,
-    matches_filename,
-    matches_label_attribute,
-)
-from .. import project_settings
-import re
-from PyQt6.QtCore import QCoreApplication, Qt, pyqtSlot
-from PyQt6 import QtCore, QtGui, QtWidgets
-from ..label_file import LabelFile, LabelFileError
+from anylabeling.services.auto_labeling.types import AutoLabelingMode
 from ..filelist.roles import (
     CHECKED_FIELD,
     FILE_ANNOTATION_ROLE,
@@ -28,6 +19,16 @@ from ..filelist.roles import (
     REVIEW_STATE_FIELD,
     REVIEWED_AT_FIELD,
 )
+from ..utils.file_search import (
+    parse_search_pattern,
+    matches_filename,
+    matches_label_attribute,
+)
+from .. import project_settings
+import re
+from PyQt6.QtCore import QCoreApplication, Qt, pyqtSlot
+from PyQt6 import QtCore, QtGui, QtWidgets
+from ..label_file import LabelFile, LabelFileError
 from .. import utils
 import os.path as osp
 import shutil
@@ -537,3 +538,74 @@ def delete_image_file(widget):
         widget.filename = filename
         if widget.filename:
             widget.load_file(widget.filename)
+
+
+def save_labels(widget, filename):
+    label_file = LabelFile()
+    # Get current shapes
+    # Excluding auto labeling special shapes
+    shapes = [
+        item.shape().to_dict()
+        for item in widget.label_list
+        if item.shape().label
+        not in [
+            AutoLabelingMode.OBJECT,
+            AutoLabelingMode.ADD,
+            AutoLabelingMode.REMOVE,
+        ]
+    ]
+    flags = {}
+    for i in range(widget.flag_widget.count()):
+        item = widget.flag_widget.item(i)
+        key = item.text()
+        flag = item.checkState() == Qt.CheckState.Checked
+        flags[key] = flag
+    widget.other_data[CHECKED_FIELD] = widget._annotation_checked()
+    try:
+        image_path = osp.relpath(widget.image_path, osp.dirname(filename))
+        image_data = (
+            widget.image_data if widget._config["store_data"] else None
+        )
+        if osp.dirname(filename) and not osp.exists(osp.dirname(filename)):
+            os.makedirs(osp.dirname(filename))
+
+        label_file.save(
+            filename=filename,
+            shapes=shapes,
+            image_path=image_path,
+            image_data=image_data,
+            image_height=widget.image.height(),
+            image_width=widget.image.width(),
+            other_data=widget.other_data,
+            flags=flags,
+        )
+        write_sidecar = getattr(widget, "_write_yolo_sidecar", None)
+        if write_sidecar is not None:
+            write_sidecar(filename, shapes)
+        widget.label_file = label_file
+        items = widget.file_list_widget.findItems(
+            widget.image_path, Qt.MatchFlag.MatchExactly
+        )
+        if len(items) > 0:
+            if len(items) != 1:
+                raise RuntimeError("There are duplicate files.")
+            widget._set_file_item_annotated(
+                items[0], True, negative=not shapes
+            )
+            widget._set_file_item_checked(
+                items[0], widget._annotation_checked()
+            )
+            widget._note_save_quality(shapes, items[0])
+        else:
+            widget._note_save_quality(shapes)
+        # disable allows next and previous image to proceed
+        # widget.filename = filename
+        return True
+    except LabelFileError as e:
+        widget.error_message(
+            QCoreApplication.translate(
+                "LabelingWidget", "Error saving label data"
+            ),
+            QCoreApplication.translate("LabelingWidget", "<b>%s</b>") % e,
+        )
+        return False

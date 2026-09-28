@@ -603,3 +603,108 @@ def finish_auto_labeling_object(widget):
 
     if updated_shapes:
         widget.set_dirty()
+
+
+def new_shape(widget):
+    """Pop-up and give focus to the label editor.
+
+    position MUST be in global coordinates.
+    """
+    items = widget.unique_label_list.selectedItems()
+    text = None
+    if items:
+        text = items[0].data(Qt.ItemDataRole.UserRole)
+    flags = {}
+    group_id = None
+    description = ""
+    difficult = False
+    kie_linking = []
+
+    if widget.canvas.shapes[-1].label in [
+        AutoLabelingMode.ADD,
+        AutoLabelingMode.REMOVE,
+    ]:
+        text = widget.canvas.shapes[-1].label
+    elif (
+        widget._config["display_label_popup"]
+        or not text
+        or widget.canvas.shapes[-1].label == AutoLabelingMode.OBJECT
+    ):
+        last_label = widget.find_last_label()
+        last_gid = (
+            widget.find_last_gid()
+            if widget._config["auto_use_last_gid"]
+            else None
+        )
+        if widget.digit_to_label is not None:
+            text = widget.digit_to_label
+            widget.digit_to_label = None
+            if last_gid is not None:
+                group_id = last_gid
+        elif widget._config["auto_use_last_label"] and last_label:
+            text = last_label
+            if last_gid is not None:
+                group_id = last_gid
+        else:
+            previous_text = widget.label_dialog.edit.text()
+            (
+                text,
+                flags,
+                group_id,
+                description,
+                difficult,
+                kie_linking,
+            ) = widget.label_dialog.pop_up(
+                text,
+                group_id=last_gid,
+                move_mode=widget._config.get("move_mode", "auto"),
+            )
+            if not text:
+                widget.label_dialog.edit.setText(previous_text)
+
+    if text and not widget.validate_label(text):
+        widget.error_message(
+            QCoreApplication.translate("LabelingWidget", "Invalid label"),
+            QCoreApplication.translate(
+                "LabelingWidget",
+                "Invalid label '{}' with validation type '{}'",
+            ).format(text, widget._config["validate_label"]),
+        )
+        text = ""
+        return
+
+    if widget.attributes and text:
+        text = widget.reset_attribute(text, widget.canvas.shapes[-1])
+
+    if text:
+        widget.label_list.clearSelection()
+        shape = widget.canvas.set_last_label(text, flags, group_id)
+        shape.group_id = group_id
+        shape.description = description
+        if text not in [AutoLabelingMode.ADD, AutoLabelingMode.REMOVE]:
+            shape.label = text
+        shape.difficult = difficult
+        shape.kie_linking = kie_linking
+        widget.add_label(shape)
+        widget.actions.edit_mode.setEnabled(True)
+        widget.actions.undo_last_point.setEnabled(False)
+        widget.actions.undo.setEnabled(True)
+        widget.set_dirty()
+        if (
+            widget.canvas.drawing()
+            and widget.canvas.create_mode == "polygon"
+            and not widget.actions.create_brush_polygon_mode.isEnabled()
+        ):
+            widget.canvas._brush_drawing = True
+
+        if widget.attributes and text in widget.attributes:
+            shape.selected = True
+            widget.shape_attributes.show()
+            widget.scroll_area.show()
+            for i, canvas_shape in enumerate(widget.canvas.shapes):
+                if canvas_shape is shape:
+                    widget.update_attributes(i)
+                    break
+    else:
+        widget.canvas.undo_last_line()
+        widget.canvas.shapes_backups.pop()

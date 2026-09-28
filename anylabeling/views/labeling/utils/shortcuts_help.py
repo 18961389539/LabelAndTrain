@@ -5,6 +5,8 @@ dialog itself lives in :mod:`label_widget` and only renders the rows.
 """
 
 from __future__ import annotations
+from PyQt6.QtCore import QCoreApplication
+from PyQt6 import QtCore, QtGui, QtWidgets
 
 #: (group title, [(config shortcut key, Chinese description), ...])
 SHORTCUT_GROUPS = [
@@ -171,3 +173,68 @@ def filter_shortcut_rows(rows, query):
     return [
         row for row in rows if any(query in str(part).lower() for part in row)
     ]
+
+
+def show_shortcuts_help(widget):
+    """Dialog listing every configured shortcut with a search box."""
+    shortcuts = widget._config.get("shortcuts", {})
+    rows = build_shortcut_rows(shortcuts)
+    dialog = QtWidgets.QDialog(widget)
+    dialog.setWindowTitle(
+        QCoreApplication.translate("LabelingWidget", "快捷键速查")
+    )
+    dialog.resize(460, 520)
+    layout = QtWidgets.QVBoxLayout(dialog)
+    layout.setContentsMargins(12, 12, 12, 12)
+    layout.setSpacing(8)
+
+    search = QtWidgets.QLineEdit()
+    search.setPlaceholderText(
+        QCoreApplication.translate(
+            "LabelingWidget", "搜索快捷键或功能（如 Ctrl+Z / 撤销）…"
+        )
+    )
+    layout.addWidget(search)
+
+    tree = QtWidgets.QTreeWidget()
+    tree.setHeaderLabels(
+        [
+            QCoreApplication.translate("LabelingWidget", "快捷键"),
+            QCoreApplication.translate("LabelingWidget", "功能"),
+            QCoreApplication.translate("LabelingWidget", "分组"),
+        ]
+    )
+    tree.setColumnWidth(0, 110)
+    tree.setColumnWidth(1, 240)
+    tree.setRootIsDecorated(False)
+    tree.setAlternatingRowColors(True)
+    layout.addWidget(tree, 1)
+
+    def render():
+        tree.clear()
+        for group_title, key_text, description in filter_shortcut_rows(
+            rows, search.text()
+        ):
+            item = QtWidgets.QTreeWidgetItem(
+                [key_text, description, group_title]
+            )
+            tree.addTopLevelItem(item)
+
+    def on_query(_text):
+        render()
+        if tree.topLevelItemCount():
+            tree.scrollToTop()
+
+    search.textChanged.connect(on_query)
+    render()
+
+    close_btn = QtWidgets.QPushButton(
+        QCoreApplication.translate("LabelingWidget", "关闭")
+    )
+    close_btn.clicked.connect(dialog.accept)
+    close_btn.setFixedWidth(80)
+    button_row = QtWidgets.QHBoxLayout()
+    button_row.addStretch()
+    button_row.addWidget(close_btn)
+    layout.addLayout(button_row)
+    dialog.exec()
