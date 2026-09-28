@@ -81,6 +81,9 @@ workflow, the eleven smart tools, the training loop and shape provenance:
 [`docs/zh_cn/fork_features.md`](./docs/zh_cn/fork_features.md). It is in Chinese
 on purpose; Chinese is the source language for everything this fork owns (see
 above), and the interface it describes only ships `zh_CN`.
+Process documents live next to it — e.g.
+[`docs/zh_cn/split_verification_2026-09-28.md`](./docs/zh_cn/split_verification_2026-09-28.md),
+the machine-verification checklist that gated the label-widget split batches.
 
 ## Features
 
