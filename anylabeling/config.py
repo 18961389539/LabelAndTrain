@@ -93,6 +93,15 @@ _MIGRATIONS = {
     1: [
         ("canvas.num_backups", 10, 100),
     ],
+    # v2: digit shortcuts ship enabled. ``null`` used to be the shipped
+    # default, which silently left the 0-9 keys dead -- an annotator got no
+    # hint that auto-assign (or Alt+D) even existed. Only an rc still
+    # carrying that untouched default is flipped; a deliberately configured
+    # map is never overwritten, and once the rc is stamped version 2 a
+    # hand-edited ``null`` (the "off" switch) survives future loads.
+    2: [
+        ("digit_shortcuts", None, {}),
+    ],
 }
 
 

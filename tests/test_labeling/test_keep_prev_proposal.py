@@ -101,9 +101,10 @@ class TestKeepPrevProposal(unittest.TestCase):
             )
 
     def tearDown(self):
-        timer = getattr(self.widget, "_auto_save_feedback_timer", None)
-        if timer is not None:
-            timer.stop()
+        for attr in ("_auto_save_feedback_timer", "_auto_save_timer"):
+            timer = getattr(self.widget, attr, None)
+            if timer is not None:
+                timer.stop()
         for key, value in self._saved_config.items():
             self.widget._config[key] = value
         self.widget.parent = None
@@ -143,6 +144,9 @@ class TestKeepPrevProposal(unittest.TestCase):
         self._inherit_from_previous_image()
 
         self.widget.set_dirty()
+        # The edit re-arms auto-save, which is debounced now: flush the
+        # scheduled write the way a real pause (or an image switch) would.
+        self.widget.flush_pending_auto_save()
 
         self.assertFalse(self.widget._pending_inherited_shapes)
         self.assertTrue(os.path.exists(self.label_b))
@@ -181,10 +185,11 @@ class TestKeepPrevProposal(unittest.TestCase):
     def test_a_clean_image_still_saves_silently_when_switching(self):
         # The exemption must not leak into the normal flow: once the shapes
         # on screen are the annotator's own, switching images stays silent.
+        # The edit re-armed the debounced auto-save; a scheduled write is an
+        # edit the annotator already trusted to auto_save, so may_continue
+        # flushes it instead of asking.
         self._inherit_from_previous_image()
         self.widget.set_dirty()
-        os.remove(self.label_b)
-        self.widget.dirty = True
 
         from unittest import mock
 

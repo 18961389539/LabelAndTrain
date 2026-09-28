@@ -60,11 +60,13 @@ jobs:
           python -m pip install -r requirements-lock-win.txt
           python -m pip install -e . --no-deps
 
-      # The coverage table is printed, not enforced -- see the note in
-      # pyproject.toml.  `--cov` is not in `addopts` so that a local
-      # `pytest tests` stays the fast path.
-      # shell: bash -- the runner default on Windows is pwsh, which chokes
-      # on the set +e / $? / while-read logic below.
+      # The ratchet is enforced through `fail_under` in pyproject.toml's
+      # [tool.coverage.report]: pytest-cov reads it from there, so this
+      # command fails when total coverage drops below the locked base.
+      # Raise that number when coverage grows; never lower it.
+      # `--cov` is not in `addopts` so that a local `pytest tests` stays
+      # the fast path.  shell: bash -- the runner default on Windows is
+      # pwsh, which chokes on the set +e / $? / while-read logic below.
       - name: Run tests with a coverage summary
         shell: bash
         run: |

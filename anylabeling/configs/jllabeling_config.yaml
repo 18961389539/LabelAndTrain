@@ -50,7 +50,7 @@ canvas:
     adjust_step: 2.0
     enable: true
     scale_step: 0.05
-config_version: 1
+config_version: 2
 custom_models: []
 default_shape_color:
 - 0
@@ -62,7 +62,7 @@ description_dock:
   movable: false
   show: true
 device: null
-digit_shortcuts: null
+digit_shortcuts: {}
 display_label_popup: true
 exif_scan_enabled: true
 file_dock:

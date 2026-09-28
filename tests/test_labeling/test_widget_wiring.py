@@ -218,10 +218,12 @@ class TestStaleCleanupOnOpenFile(unittest.TestCase):
     def tearDown(self):
         # The auto-save feedback is debounced by a timer: left running, it
         # fires inside a later test's event loop against a widget whose parent
-        # chain has already been dropped here.
-        timer = getattr(self.widget, "_auto_save_feedback_timer", None)
-        if timer is not None:
-            timer.stop()
+        # chain has already been dropped here. Same for the auto-save write
+        # timer itself.
+        for attr in ("_auto_save_feedback_timer", "_auto_save_timer"):
+            timer = getattr(self.widget, attr, None)
+            if timer is not None:
+                timer.stop()
         self.widget.parent = None
         self.tmp.cleanup()
 
@@ -306,8 +308,11 @@ class TestStaleCleanupOnOpenFile(unittest.TestCase):
             [shape.label for shape in self.widget.canvas.shapes], ["cat"]
         )
         self.assertEqual(len(self.widget.label_list), 1)
-        # set_dirty() saves at once under this build's auto_save: true default,
-        # so the undone box is back on disk too, not just on the canvas.
+        # set_dirty() debounces the auto-save under this build's
+        # auto_save: true default, so flush the scheduled write before
+        # judging the disk: the undone box must be back on file, not just
+        # on the canvas.
+        self.widget.flush_pending_auto_save()
         import json
 
         with open(self.label, "r", encoding="utf-8") as handle:

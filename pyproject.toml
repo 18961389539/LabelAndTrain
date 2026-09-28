@@ -217,11 +217,13 @@ markers = [
 ]
 norecursedirs = [".git", "dist", "build"]
 
-# Coverage is reported, never enforced.  The measured number is 44% of 31891
-# statements; the fork's own training dialog alone is 1741 statements at 12%,
-# and Qt widget code is expensive to reach without driving real event loops.
-# A threshold nobody can pass is worse than a number somebody reads, so CI
-# prints the table and stops there.
+# Coverage ratchet: `fail_under` locks the measured base and pytest-cov
+# fails any `--cov` run that drops below it (the CI test job runs with
+# --cov; a local bare `pytest tests` stays the fast path). Measured
+# 2026-09-28 at 44.72% of 32088 statements -- the fork's own training
+# dialog alone is 1741 statements at 12%, and Qt widget code is expensive
+# to reach without driving real event loops, so the honest floor is what
+# it is. Rule: when coverage grows, raise this number; never lower it.
 [tool.coverage.run]
 source = ["anylabeling"]
 omit = [
@@ -230,6 +232,7 @@ omit = [
 ]
 
 [tool.coverage.report]
+fail_under = 44
 show_missing = true
 skip_covered = true
 exclude_lines = [

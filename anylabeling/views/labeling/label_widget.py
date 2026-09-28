@@ -178,6 +178,11 @@ FILE_ANNOTATED_COLOR = "#3B82F6"
 FILE_UNCHECKED_COLOR = "#8C98A4"
 FILE_NEGATIVE_COLOR = "#F59E0B"
 FILE_REJECTED_COLOR = "#D9534F"
+# Auto-save debounce: edits schedule one write this many milliseconds after
+# the last change instead of an mkstemp+fsync+replace cycle per edit. Long
+# enough to collapse a drag or a burst of wheel adjustments, short enough
+# that a pause "just saves".
+AUTO_SAVE_DEBOUNCE_MS = 400
 FILE_SEARCH_COMPLETIONS = (
     "label::",
     "checked::0",
@@ -368,6 +373,11 @@ class LabelingWidget(LabelDialog):
         # Debounce for the auto-save "✓ saved" feedback so rapid edits
         # (which each trigger an auto-save) do not spam the status bar.
         self._auto_save_feedback_timer = None
+        # Auto-save itself is debounced too: edits schedule a single write
+        # a short delay out instead of one mkstemp+fsync per drag step.
+        self._auto_save_timer = None
+        self._auto_save_pending = False
+        self._auto_save_path = None
         self.label_flags = self._config["label_flags"]
         self.label_loop_count = -1
         self.label_loop_shapes = None
@@ -1364,31 +1374,31 @@ class LabelingWidget(LabelDialog):
         until the annotator edits something, saves explicitly, or answers the
         save prompt when leaving. Any other call means a real change and
         clears the pending flag.
+
+        Under ``auto_save`` the write is *debounced*: each edit schedules a
+        single save a short delay out instead of running one
+        mkstemp+fsync+replace cycle per drag step. The dirty flag stays set
+        until the write actually lands, so every path that leaves the image
+        (``may_continue``, :meth:`load_file`, close, export) flushes or asks
+        first.
         """
         # Even if we autosave the file, we keep the ability to undo
         self.actions.undo.setEnabled(self.canvas.is_shape_restorable)
         self._pending_inherited_shapes = bool(from_inherited)
 
         if self._config["auto_save"] and not self._pending_inherited_shapes:
+            # Resolve the target now: the pending write belongs to the
+            # image being edited, even if the flush runs later.
             label_file = osp.splitext(self.image_path)[0] + ".json"
             if self.output_dir:
                 label_file_without_path = osp.basename(label_file)
                 label_file = self.output_dir + "/" + label_file_without_path
-            ok = self.save_labels(label_file)
-            if ok:
-                # Feedback is debounced: rapid edits each trigger an
-                # auto-save, so only surface "✓ saved" once the user pauses.
-                self._schedule_auto_save_feedback()
-                self._update_save_state_label()
-            else:
-                # save_labels already popped an error dialog for the cause;
-                # also tint the status bar red so the failure is unmissable.
-                self._show_save_feedback(False)
-            if (
-                hasattr(self, "navigator_dialog")
-                and self.navigator_dialog.isVisible()
-            ):
-                self.update_navigator_shapes()
+            self._auto_save_path = label_file
+            self.dirty = True
+            self.actions.save.setEnabled(True)
+            self._schedule_auto_save()
+            self.update_progress_title()
+            self._update_save_state_label()
             return
         self.dirty = True
         self.actions.save.setEnabled(True)
@@ -1400,6 +1410,64 @@ class LabelingWidget(LabelDialog):
         self.update_progress_title()
         self._update_save_state_label()
         self._refresh_status_context()
+
+    def _schedule_auto_save(self):
+        """(Re)arm the debounced auto-save write timer."""
+        if self._auto_save_timer is None:
+            timer = QtCore.QTimer(self)
+            timer.setSingleShot(True)
+            timer.timeout.connect(self._flush_auto_save)
+            self._auto_save_timer = timer
+        self._auto_save_pending = True
+        self._auto_save_timer.start(AUTO_SAVE_DEBOUNCE_MS)
+
+    def _cancel_pending_auto_save(self):
+        """Drop a scheduled auto-save without writing (explicit save wins)."""
+        self._auto_save_pending = False
+        if self._auto_save_timer is not None:
+            self._auto_save_timer.stop()
+
+    def flush_pending_auto_save(self):
+        """Force a scheduled auto-save to disk right now.
+
+        Called wherever control leaves the current image: switching
+        (``may_continue``), loading another file, closing the window, and
+        batch export. Returns ``True`` when the disk write succeeded (or
+        nothing was scheduled); ``False`` on a failed write, leaving the
+        caller free to fall back to the save prompt.
+        """
+        if not self._auto_save_pending:
+            return True
+        self._cancel_pending_auto_save()
+        return self._write_auto_save()
+
+    def _flush_auto_save(self):
+        """Timer callback: land the scheduled write."""
+        if not self._auto_save_pending:
+            return
+        self._cancel_pending_auto_save()
+        self._write_auto_save()
+
+    def _write_auto_save(self):
+        ok = self.save_labels(self._auto_save_path)
+        if ok:
+            self.dirty = False
+            # Feedback is debounced (see _schedule_auto_save_feedback) so
+            # the toast fires once the user pauses, not per edit.
+            self._schedule_auto_save_feedback()
+            self._update_save_state_label()
+            self.update_progress_title()
+            if (
+                hasattr(self, "navigator_dialog")
+                and self.navigator_dialog.isVisible()
+            ):
+                self.update_navigator_shapes()
+        else:
+            # save_labels already popped an error dialog for the cause;
+            # also tint the status bar red so the failure is unmissable.
+            # dirty stays set: the changes are still not on disk.
+            self._show_save_feedback(False)
+        return ok
 
     def _schedule_auto_save_feedback(self):
         """Debounce the auto-save success indicator (fires on pause)."""
@@ -1439,6 +1507,9 @@ class LabelingWidget(LabelDialog):
 
     def set_clean(self):
         self.dirty = False
+        # Whatever just happened (load, explicit save) landed on disk; a
+        # still-armed debounce timer would only rewrite it.
+        self._cancel_pending_auto_save()
         # A save (explicit or confirmed) ends the inherited-shapes proposal.
         self._pending_inherited_shapes = False
         self.actions.save.setEnabled(False)
@@ -1493,6 +1564,10 @@ class LabelingWidget(LabelDialog):
         self.image_data = None
         self.label_file = None
         self.other_data = {}
+        # The pending auto-save targeted the image being torn down; its
+        # path is stale from here on (load_file flushes before reaching
+        # this point, so anything pending was already written or lost).
+        self._cancel_pending_auto_save()
         self.canvas.reset_state()
         self.brightness_contrast_dialog.clear_image()
         if hasattr(self, "canvas_adjustment"):
@@ -4428,6 +4503,9 @@ class LabelingWidget(LabelDialog):
             self.file_list_widget.update()
             return False
 
+        # A debounced auto-save belongs to the image currently open: land it
+        # before any state reset tears its target path down.
+        self.flush_pending_auto_save()
         self.reset_state()
         self.canvas.setEnabled(False)
 
@@ -5196,6 +5274,9 @@ class LabelingWidget(LabelDialog):
         return filename
 
     def _save_file(self, filename):
+        # An explicit save supersedes the debounced one; without this the
+        # timer would fire ~400ms later and rewrite the same file again.
+        self._cancel_pending_auto_save()
         if filename and self.save_labels(filename):
             self.add_recent_file(filename)
             self.set_clean()
@@ -5416,6 +5497,11 @@ class LabelingWidget(LabelDialog):
         return osp.exists(label_file)
 
     def may_continue(self, silent=False):
+        # A scheduled auto-save that has not landed yet is still an edit the
+        # annotator already trusted to auto_save: flush it now instead of
+        # asking, and only fall through to the prompts if the write failed.
+        if self._auto_save_pending and self.flush_pending_auto_save():
+            return True
         if not self.dirty:
             return True
         # When auto_save is on, switching between images should not break
