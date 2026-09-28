@@ -27,7 +27,7 @@ REPO_ROOT = os.path.abspath(
 #: modules; the rest is the core drawing surface.
 BUDGETS = {
     "anylabeling/views/labeling/label_widget.py": 7043,
-    "anylabeling/views/labeling/widgets/canvas.py": 3974,
+    "anylabeling/views/labeling/widgets/canvas.py": 3930,
 }
 
 

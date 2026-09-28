@@ -17,7 +17,7 @@ from anylabeling.views.labeling.utils.theme import get_theme
 
 from .. import utils
 from ..shape import Shape
-from . import rectangle_geometry
+from . import canvas_geometry
 from .canvas_brush import BrushCanvasMixin
 from .canvas_cuboid import (  # noqa: F401
     CUBOID_BACK_EDGE_CENTER_INDICES,
@@ -388,7 +388,7 @@ class Canvas(
         """Clip rectangle shape to pixmap boundaries"""
         if self.pixmap is None:
             return True
-        return rectangle_geometry.clip_rectangle_to_pixmap(
+        return canvas_geometry.clip_rectangle_to_pixmap(
             shape, self.pixmap.width(), self.pixmap.height()
         )
 
@@ -479,79 +479,35 @@ class Canvas(
 
     def _shape_hit_candidates(self, point):
         """Return shapes under a point in interaction priority order."""
-        candidates = []
         epsilon = self.epsilon / self.scale
-        for stack_index, shape in enumerate(self.shapes):
-            if not self.is_visible(shape):
-                continue
 
-            rect = shape.bounding_rect()
-            area = max(0.0, rect.width()) * max(0.0, rect.height())
-            vertex_distance = None
-            if not shape.locked:
-                if shape.shape_type == "cuboid" and len(shape.points) == 8:
-                    vertex_index = self.nearest_cuboid_control(
-                        shape, point, epsilon
-                    )
-                    vertex = (
-                        self.cuboid_control_point(shape, vertex_index)
-                        if vertex_index is not None
-                        else None
-                    )
-                else:
-                    vertex_index = shape.nearest_vertex(point, epsilon)
-                    vertex = (
-                        shape.points[vertex_index]
-                        if vertex_index is not None
-                        else None
-                    )
-                if vertex is not None:
-                    vertex_distance = utils.distance(vertex - point)
-
-            if vertex_distance is not None:
-                priority = (0, vertex_distance, area, -stack_index)
-                candidates.append((priority, shape))
-                continue
-
-            if (
-                not shape.locked
-                and len(shape.points) > 1
-                and shape.can_add_point()
-                and shape.shape_type != "quadrilateral"
-            ):
-                edge_index = shape.nearest_edge(point, epsilon)
-                if edge_index is not None:
-                    line = [
-                        shape.points[edge_index - 1],
-                        shape.points[edge_index],
-                    ]
-                    edge_distance = utils.distance_to_line(point, line)
-                    priority = (1, edge_distance, area, -stack_index)
-                    candidates.append((priority, shape))
-                    continue
-
-            if shape.shape_type in ["point", "line", "linestrip"]:
-                vertex_index = shape.nearest_vertex(point, epsilon * 3)
-                if vertex_index is None:
-                    continue
-                distance = utils.distance(shape.points[vertex_index] - point)
-                priority = (1, distance, area, -stack_index)
-                candidates.append((priority, shape))
-                continue
-
+        def cuboid_vertex_lookup(shape, pt, eps):
             if shape.shape_type == "cuboid" and len(shape.points) == 8:
-                front_path = self.cuboid_face_path(shape, CUBOID_FACE_FRONT)
-                hit = (
-                    front_path is not None and front_path.contains(point)
-                ) or self.cuboid_face_hit_test(shape, point) is not None
-            else:
-                hit = len(shape.points) > 1 and shape.contains_point(point)
-            if hit:
-                priority = (2, area, 0.0, -stack_index)
-                candidates.append((priority, shape))
+                index = self.nearest_cuboid_control(shape, pt, eps)
+                vertex = (
+                    self.cuboid_control_point(shape, index)
+                    if index is not None
+                    else None
+                )
+                return index, vertex
+            index = shape.nearest_vertex(pt, eps)
+            vertex = shape.points[index] if index is not None else None
+            return index, vertex
 
-        candidates.sort(key=lambda item: item[0])
-        return [shape for _, shape in candidates]
+        def cuboid_face_hit(shape, pt):
+            front_path = self.cuboid_face_path(shape, CUBOID_FACE_FRONT)
+            return (
+                front_path is not None and front_path.contains(pt)
+            ) or self.cuboid_face_hit_test(shape, pt) is not None
+
+        return canvas_geometry.hit_candidates(
+            self.shapes,
+            point,
+            epsilon,
+            self.is_visible,
+            cuboid_vertex_lookup,
+            cuboid_face_hit,
+        )
 
     def drawing(self):
         """Check if user is drawing (mode==CREATE)"""
@@ -3600,7 +3556,7 @@ class Canvas(
         """Scale rectangle from center, keeping within image bounds."""
         if self.pixmap is None:
             return
-        rectangle_geometry.scale_from_center(
+        canvas_geometry.scale_from_center(
             shape,
             scale_up,
             self.rect_scale_step,
@@ -3612,7 +3568,7 @@ class Canvas(
         """Adjust the rectangle edge closest to the cursor."""
         if self.pixmap is None:
             return
-        rectangle_geometry.adjust_edge(
+        canvas_geometry.adjust_edge(
             shape,
             cursor_pos,
             move_outward,

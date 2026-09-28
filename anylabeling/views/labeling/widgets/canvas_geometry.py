@@ -1,15 +1,18 @@
-"""Rectangle geometry constraints, independent of the canvas widget.
+"""Canvas geometry, independent of the canvas widget.
 
-Extracted from ``Canvas`` (split batch 14, the first *domain* extraction
-rather than a mechanical move): every function takes the image bounds
-and the tuning constants as explicit arguments -- the values Canvas used
-to reach for as ``self.pixmap`` / ``self.rect_scale_step`` /
-``self.rect_adjust_step`` -- so the math runs, and tests, without a
-widget, a pixmap, or an event loop.  Behaviour is identical to the
-methods it replaces; the Canvas methods are thin delegating stubs.
+Extracted from ``Canvas`` (split batches 14-15, *domain* extractions
+rather than mechanical moves): every function takes the image bounds,
+the tuning constants, and any canvas-owned lookup as explicit arguments
+-- the values Canvas used to reach for as ``self.pixmap`` /
+``self.rect_scale_step`` / ``self.is_visible`` -- so the math runs, and
+tests, without a widget, a pixmap, or an event loop.  Behaviour is
+identical to the methods it replaces; the Canvas methods are thin
+delegating stubs.
 """
 
 from PyQt6.QtCore import QPointF
+
+from .. import utils
 
 
 def clip_rectangle_to_pixmap(shape, img_width, img_height):
@@ -168,3 +171,90 @@ def adjust_edge(shape, cursor_pos, move_outward, step, img_width, img_height):
 
         if new_point is not None:
             shape.points[i] = new_point
+
+
+def hit_candidates(
+    shapes,
+    point,
+    epsilon,
+    is_visible,
+    cuboid_vertex_lookup=None,
+    cuboid_face_hit=None,
+):
+    """Shapes under ``point``, in interaction priority order.
+
+    Priority tiers, exactly as Canvas ordered them: (0) a vertex within
+    ``epsilon`` -- nearest vertex wins, then smaller area, then later
+    stack position; (1) an edge that can take a new point (or a
+    point/line/linestrip vertex at 3x epsilon); (2) the body of the
+    shape.  The two cuboid lookups are canvas-owned (the cuboid mixin
+    knows the control points and the face geometry); everything else is
+    read off the shapes themselves.
+    """
+    candidates = []
+    for stack_index, shape in enumerate(shapes):
+        if not is_visible(shape):
+            continue
+
+        rect = shape.bounding_rect()
+        area = max(0.0, rect.width()) * max(0.0, rect.height())
+        vertex_distance = None
+        if not shape.locked:
+            if shape.shape_type == "cuboid" and len(shape.points) == 8:
+                if cuboid_vertex_lookup is not None:
+                    vertex_index, vertex = cuboid_vertex_lookup(
+                        shape, point, epsilon
+                    )
+                else:
+                    vertex_index, vertex = None, None
+            else:
+                vertex_index = shape.nearest_vertex(point, epsilon)
+                vertex = (
+                    shape.points[vertex_index]
+                    if vertex_index is not None
+                    else None
+                )
+            if vertex is not None:
+                vertex_distance = utils.distance(vertex - point)
+
+        if vertex_distance is not None:
+            priority = (0, vertex_distance, area, -stack_index)
+            candidates.append((priority, shape))
+            continue
+
+        if (
+            not shape.locked
+            and len(shape.points) > 1
+            and shape.can_add_point()
+            and shape.shape_type != "quadrilateral"
+        ):
+            edge_index = shape.nearest_edge(point, epsilon)
+            if edge_index is not None:
+                line = [
+                    shape.points[edge_index - 1],
+                    shape.points[edge_index],
+                ]
+                edge_distance = utils.distance_to_line(point, line)
+                priority = (1, edge_distance, area, -stack_index)
+                candidates.append((priority, shape))
+                continue
+
+        if shape.shape_type in ["point", "line", "linestrip"]:
+            vertex_index = shape.nearest_vertex(point, epsilon * 3)
+            if vertex_index is None:
+                continue
+            distance = utils.distance(shape.points[vertex_index] - point)
+            priority = (1, distance, area, -stack_index)
+            candidates.append((priority, shape))
+            continue
+
+        if shape.shape_type == "cuboid" and len(shape.points) == 8:
+            hit = bool(cuboid_face_hit and cuboid_face_hit(shape, point))
+        else:
+            hit = len(shape.points) > 1 and shape.contains_point(point)
+        if hit:
+            priority = (2, area, 0.0, -stack_index)
+            candidates.append((priority, shape))
+
+    candidates.sort(key=lambda item: item[0])
+    return [shape for _, shape in candidates]
