@@ -479,6 +479,8 @@ def _process_method(
         marker = 'QCoreApplication.translate("%s", ' % translate_class
         if "widget.tr(" in new_func:
             new_func = new_func.replace("widget.tr(", marker)
+            # One bare import, not two: if an auto-copied line
+            # already binds QCoreApplication this would be an F811.
             tr_imports.append("from PyQt6.QtCore import QCoreApplication")
     print("  byte-compare: co_code identical")
 
@@ -487,7 +489,13 @@ def _process_method(
     import_lines = _needed_import_lines(
         report["imported"], tree, src, module_name, depth
     )
-    import_lines += [i for i in tr_imports if i not in import_lines]
+    bound_by_copies = set()
+    for line in import_lines:
+        if line.lstrip().startswith("from ") and "QCoreApplication" in line:
+            bound_by_copies.add(line)
+    import_lines += [
+        i for i in tr_imports if i not in import_lines and not bound_by_copies
+    ]
     doc = args.doc or (
         f"Methods moved out of {class_name} by " "scripts/extract_method.py."
     )

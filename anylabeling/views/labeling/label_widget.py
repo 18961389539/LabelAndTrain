@@ -143,6 +143,7 @@ from .utils.qt import new_icon_path
 from .utils import panel_visibility
 from .utils import file_lifecycle
 from .utils import file_navigation
+from .utils import file_list_ops
 from .utils.file_lifecycle import (
     _report_inherited_shapes,
     move_file_to_delete_folder,  # noqa: F401 -- test imports stay valid
@@ -1719,28 +1720,8 @@ class LabelingWidget(LabelDialog):
             self.canvas.shapes_redo_backups = redo_backups
 
     def get_label_file_list(self):
-        label_file_list = []
-        if not self.image_list and self.filename:
-            dir_path, filename = osp.split(self.filename)
-            label_file = osp.join(
-                dir_path, osp.splitext(filename)[0] + ".json"
-            )
-            if osp.exists(label_file):
-                label_file_list = [label_file]
-        elif self.image_list and not self.output_dir and self.filename:
-            file_list = os.listdir(osp.dirname(self.filename))
-            for file_name in file_list:
-                if not file_name.endswith(".json"):
-                    continue
-                label_file_list.append(
-                    osp.join(osp.dirname(self.filename), file_name)
-                )
-        if self.output_dir:
-            for file_name in os.listdir(self.output_dir):
-                if not file_name.endswith(".json"):
-                    continue
-                label_file_list.append(osp.join(self.output_dir, file_name))
-        return label_file_list
+        """Delegates to file_list_ops (wiring and tests stay)."""
+        return file_list_ops.get_label_file_list(self)
 
     def copy_shape_coordinates(self):
         item = self.current_item()
@@ -2144,58 +2125,8 @@ class LabelingWidget(LabelDialog):
         self.set_dirty()
 
     def pop_file_list_menu(self, point):
-        item = self.file_list_widget.itemAt(point)
-        if item is None:
-            return
-
-        menu = QtWidgets.QMenu(self.file_list_widget)
-        copy_name_action = menu.addAction(
-            utils.new_icon("copy", "svg"), self.tr("Copy File Name")
-        )
-        copy_path_action = menu.addAction(
-            utils.new_icon("copy", "svg"), self.tr("Copy File Path")
-        )
-        menu.addSeparator()
-        check_and_next_action = menu.addAction(self.tr("标记已检查并下一张"))
-        del_label_action = menu.addAction(
-            utils.new_icon("trash", "svg"), self.tr("删除标注文件")
-        )
-        del_image_action = menu.addAction(
-            utils.new_icon("trash", "svg"), self.tr("删除图片文件")
-        )
-        menu.addSeparator()
-        sort_menu = menu.addMenu(self.tr("排序方式"))
-        sort_name = sort_menu.addAction(self.tr("按文件名"))
-        sort_time = sort_menu.addAction(self.tr("按修改时间"))
-        sort_annotation = sort_menu.addAction(self.tr("按标注状态"))
-        current_sort = getattr(self, "_file_sort_mode", "name")
-        sort_name.setCheckable(True)
-        sort_time.setCheckable(True)
-        sort_annotation.setCheckable(True)
-        sort_name.setChecked(current_sort == "name")
-        sort_time.setChecked(current_sort == "time")
-        sort_annotation.setChecked(current_sort == "annotation")
-        action = menu.exec(self.file_list_widget.mapToGlobal(point))
-        if action == copy_name_action:
-            self.copy_file_path(osp.basename(item.text()))
-        elif action == copy_path_action:
-            self.copy_file_path(item.text())
-        elif action == check_and_next_action:
-            self.file_list_widget.setCurrentItem(item)
-            self.load_file(item.text())
-            self.mark_checked_and_next()
-        elif action == del_label_action:
-            self._delete_via_context(item, include_image=False)
-        elif action == del_image_action:
-            self._delete_via_context(item, include_image=True)
-        elif action in (sort_name, sort_time, sort_annotation):
-            mode = {
-                sort_name: "name",
-                sort_time: "time",
-                sort_annotation: "annotation",
-            }[action]
-            self._file_sort_mode = mode
-            self._apply_file_sort()
+        """Delegates to file_list_ops (wiring and tests stay)."""
+        file_list_ops.pop_file_list_menu(self, point)
 
     def _file_sort_key(self, item, mode):
         """Stable sort key for a file-list row under the given mode."""
@@ -2383,16 +2314,16 @@ class LabelingWidget(LabelDialog):
         negative=False,
         low_conf=False,
     ):
-        """Delegates to filelist.items."""
-        return filelist_items.file_item_tooltip(
+        """Delegates to file_list_ops (wiring and tests stay)."""
+        return file_list_ops._file_item_tooltip(
             self,
             file,
             label_file,
             state,
-            reviewed_at=reviewed_at,
-            counts=counts,
-            negative=negative,
-            low_conf=low_conf,
+            reviewed_at,
+            counts,
+            negative,
+            low_conf,
         )
 
     def _shape_tooltip(self, shape):
@@ -2460,47 +2391,20 @@ class LabelingWidget(LabelDialog):
         return "\n".join(lines)
 
     def _update_current_file_tooltip(self):
-        """Give the open row the counts that only the canvas knows."""
-        item = self._current_file_item()
-        if item is None or not self.filename:
-            return
-        shapes = self.canvas.shapes or []
-        counts = {
-            "total": len(shapes),
-            "model": 0,
-            "human": 0,
-            "unknown": 0,
-        }
-        for shape in shapes:
-            source = get_source(shape)
-            if source == SOURCE_MODEL:
-                counts["model"] += 1
-            elif source == SOURCE_HUMAN:
-                counts["human"] += 1
-            else:
-                counts["unknown"] += 1
-        state = self._current_review_state()
-        item.setToolTip(
-            self._file_item_tooltip(
-                self.filename,
-                self._label_path_for_image(self.filename),
-                state,
-                self.other_data.get("reviewed_at"),
-                counts=counts,
-            )
-        )
+        """Delegates to file_list_ops (wiring and tests stay)."""
+        file_list_ops._update_current_file_tooltip(self)
 
     def _label_file_checked(self, label_file):
         state = self._review_state_for_label_file(label_file)
         return state == REVIEW_CONFIRMED
 
     def _set_file_item_checked(self, item, checked):
-        state = REVIEW_CONFIRMED if checked else REVIEW_UNCHECKED
-        return self._set_file_item_review_state(item, state)
+        """Delegates to file_list_ops (wiring and tests stay)."""
+        return file_list_ops._set_file_item_checked(self, item, checked)
 
     def _set_file_item_review_state(self, item, state, reviewed_at=None):
-        """Delegates to filelist.items (async checker & tests call this)."""
-        return filelist_items.set_file_item_review_state(
+        """Delegates to file_list_ops (wiring and tests stay)."""
+        return file_list_ops._set_file_item_review_state(
             self, item, state, reviewed_at
         )
 
@@ -2567,55 +2471,26 @@ class LabelingWidget(LabelDialog):
         return self.file_quality_controller.file_item_has_low_conf(item)
 
     def _note_save_quality(self, shapes, file_item=None):
-        """Delegates to filelist.quality (save path + attribute panel call)."""
-        return self.file_quality_controller.note_save_quality(
-            shapes, file_item
-        )
+        """Delegates to file_list_ops (wiring and tests stay)."""
+        return file_list_ops._note_save_quality(self, shapes, file_item)
 
     def _maybe_focus_low_confidence_shapes(self):
         """Delegates to filelist.quality (called after a file load)."""
         self.file_quality_controller.maybe_focus_low_confidence_shapes()
 
     def mark_file_item_negative_state(self, image_file, negative):
-        """Delegates to filelist.quality (batch auto-label flags negatives)."""
-        self.file_quality_controller.mark_file_item_negative_state(
-            image_file, negative
-        )
+        """Delegates to file_list_ops (wiring and tests stay)."""
+        file_list_ops.mark_file_item_negative_state(self, image_file, negative)
 
     def _create_file_list_item(self, file, label_file, read_checked=True):
-        item = QtWidgets.QListWidgetItem(file)
-        flags = Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
-        if self._config.get("file_list_checkbox_editable", False):
-            flags |= Qt.ItemFlag.ItemIsUserCheckable
-        item.setFlags(flags)
-        has_annotation = QtCore.QFile.exists(
-            label_file
-        ) and LabelFile.is_label_file(label_file)
-        item.setData(FILE_ANNOTATION_ROLE, bool(has_annotation))
-        if self._config.get("file_list_checkbox_editable", False):
-            if has_annotation:
-                item.setCheckState(Qt.CheckState.Checked)
-            else:
-                item.setCheckState(Qt.CheckState.Unchecked)
-        # Reading the JSON is slow on large folders; batch callers pass
-        # read_checked=False and let the background checker fill the dot.
-        if read_checked:
-            state, reviewed_at = label_file_review_info(label_file)
-        else:
-            state, reviewed_at = REVIEW_UNCHECKED, None
-        item.setData(Qt.ItemDataRole.UserRole, state == REVIEW_CONFIRMED)
-        item.setData(FILE_REVIEW_ROLE, state)
-        item.setData(FILE_REVIEWED_AT_ROLE, reviewed_at)
-        self._refresh_file_item_status_icon(item)
-        item.setToolTip(
-            self._file_item_tooltip(file, label_file, state, reviewed_at)
+        """Delegates to file_list_ops (wiring and tests stay)."""
+        return file_list_ops._create_file_list_item(
+            self, file, label_file, read_checked
         )
-        return item
 
     def _current_file_item(self):
-        if str(self.filename) not in self.fn_to_index:
-            return None
-        return self.file_list_widget.item(self.fn_to_index[str(self.filename)])
+        """Delegates to file_list_ops (wiring and tests stay)."""
+        return file_list_ops._current_file_item(self)
 
     def _current_review_state(self):
         state = self.other_data.get(REVIEW_STATE_FIELD)
@@ -3082,30 +2957,8 @@ class LabelingWidget(LabelDialog):
         self.update_attributes(selected_idx)
 
     def _on_file_item_changed(self, item):
-        """Keep annotation flag in sync when the checkbox is toggled.
-
-        Note: QListWidgetItem.setData()/setIcon() emit itemChanged()
-        unconditionally (even when the value is unchanged), so this slot
-        MUST NOT mutate the item without a re-entrancy guard, otherwise a
-        programmatic data/icon update during folder load recurses into
-        itself until RecursionError crashes the app. Items that are not
-        user-checkable have no checkbox to toggle, so we skip them too
-        (their FILE_ANNOTATION_ROLE is owned by the loader).
-        """
-        if getattr(self, "_syncing_file_item", False):
-            return
-        if not (item.flags() & Qt.ItemFlag.ItemIsUserCheckable):
-            return
-        self._syncing_file_item = True
-        try:
-            item.setData(
-                FILE_ANNOTATION_ROLE,
-                item.checkState() == Qt.CheckState.Checked,
-            )
-            self._refresh_file_item_status_icon(item)
-            self._refresh_file_progress()
-        finally:
-            self._syncing_file_item = False
+        """Delegates to file_list_ops (wiring and tests stay)."""
+        file_list_ops._on_file_item_changed(self, item)
 
     def _apply_file_filter(self):
         """Hide/show file rows according to the status combo (all/annotated/unannotated)."""
@@ -5796,53 +5649,12 @@ class LabelingWidget(LabelDialog):
         self.load_file(self.filename)
 
     def update_thumbnail_pixmap(self):
-        if self.thumbnail_pixmap and not self.thumbnail_pixmap.isNull():
-            width = self.thumbnail_image_label.width()
-            if width > 0:
-                self.thumbnail_image_label.setPixmap(
-                    self.thumbnail_pixmap.scaledToWidth(
-                        width,
-                        QtCore.Qt.TransformationMode.SmoothTransformation,
-                    )
-                )
+        """Delegates to file_list_ops (wiring and tests stay)."""
+        file_list_ops.update_thumbnail_pixmap(self)
 
     def update_thumbnail_display(self):
-        self.thumbnail_pixmap = None
-        self.thumbnail_image_label.clear()
-        self.thumbnail_container.hide()
-
-        model_config = (
-            self.auto_labeling_widget.model_manager.loaded_model_config
-        )
-        supported_model_list = list(_THUMBNAIL_RENDER_MODELS.keys())
-        if not (
-            model_config
-            and model_config.get("type") in supported_model_list
-            and self.image_list
-        ):
-            return
-
-        try:
-            image_dir = osp.dirname(self.filename)
-            parent_dir = osp.dirname(image_dir)
-            base_name = osp.splitext(osp.basename(self.filename))[0]
-            save_dir, _thumbnail_file_ext = _THUMBNAIL_RENDER_MODELS[
-                model_config["type"]
-            ]
-            thumbnail_dir = osp.join(parent_dir, save_dir)
-            thumbnail_path = osp.join(
-                thumbnail_dir, base_name + _thumbnail_file_ext
-            )
-            if not osp.exists(thumbnail_path):
-                return
-
-            self.thumbnail_pixmap = QtGui.QPixmap(thumbnail_path)
-            if not self.thumbnail_pixmap.isNull():
-                self.thumbnail_container.show()
-                self.update_thumbnail_pixmap()
-
-        except Exception as e:
-            logger.error(f"Failed to load thumbnail image: {str(e)}")
+        """Delegates to file_list_ops (wiring and tests stay)."""
+        file_list_ops.update_thumbnail_display(self)
 
     def toggle_labels_visibility(self, checked):
         self.label_dock.setVisible(checked)
