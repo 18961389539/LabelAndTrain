@@ -292,23 +292,39 @@ def _stub_source(method, module_name):
     )
 
 
-def _needed_import_lines(imported_names, src_lines):
-    """Copy the import lines that bind names the moved body still needs."""
+def _needed_import_lines(
+    imported_names, module_tree, src_text, target_module, depth
+):
+    """Whole import statements that bind names the moved body needs.
+
+    Copied from the module tree, not from lines: a parenthesised
+    multi-line import is one statement and must survive as one.  A
+    relative import gains ``depth`` dots because the target lives that
+    many levels deeper in the package tree (``from .logger import
+    logger`` pasted one level deeper must become ``from ..logger ...``,
+    otherwise it resolves to a module that does not exist).  Statements
+    that mention the target module itself are skipped: the body now
+    lives *in* it, so those names are module locals.
+    """
     wanted = set(imported_names)
     lines = []
-    for line in src_lines:
-        stripped = line.strip()
-        if not (
-            stripped.startswith("import ") or stripped.startswith("from ")
-        ):
+    for node in module_tree.body:
+        if not isinstance(node, (ast.Import, ast.ImportFrom)):
             continue
-        try:
-            bound = _module_import_names(ast.parse(stripped))
-        except SyntaxError:
+        segment = ast.get_source_segment(src_text, node)
+        if segment is None or target_module in segment:
             continue
-        if wanted & bound:
-            lines.append(line)
-    return lines
+        bound = _module_import_names(ast.Module(body=[node], type_ignores=[]))
+        if not (wanted & bound):
+            continue
+        if isinstance(node, ast.ImportFrom) and node.level > 0:
+            node = ast.ImportFrom(
+                module=node.module,
+                names=node.names,
+                level=node.level + depth,
+            )
+        lines.append(ast.unparse(node))
+    return sorted(set(lines))
 
 
 def _co_code_map(code):
@@ -407,7 +423,14 @@ def _target_module_text(existing, doc, import_lines, func_text):
 
 
 def _process_method(
-    method_name, args, src, tree, class_name, target_path, target_acc
+    method_name,
+    args,
+    src,
+    tree,
+    class_name,
+    target_path,
+    target_acc,
+    translate_class=None,
 ):
     method = _find_method(tree, class_name, method_name)
     _guard(method, class_name)
@@ -437,19 +460,34 @@ def _process_method(
         line[4:] if line.startswith("    ") else line
         for line in block.splitlines()
     )
-    block_offset = sum(len(line) for line in src_lines[: start - 1]) + (
-        start - 1
-    )
-    skip_ranges = [
-        (s - block_offset, e - block_offset)
-        for s, e in _string_offset_ranges(method, src)
-    ]
+    # String ranges must be computed against the *dedented* text the
+    # rewrite runs on: offsets taken from the indented original drift by
+    # 4 chars per line, and past a docstring or two they start eating
+    # real ``self`` references (the byte-compare will catch it -- this
+    # was a real bug the guard refused).
+    dedented_fn = ast.parse(dedented).body[0]
+    skip_ranges = _string_offset_ranges(dedented_fn, dedented)
     new_func = _rewrite_body(dedented, skip_ranges)
     _byte_compare(dedented, new_func)
+    tr_imports = []
+    if translate_class:
+        # Equivalent at runtime (instance tr() resolves through the
+        # widget's own class), but pylupdate6 can only see explicit
+        # translate() calls, so moved strings stop silently dropping out
+        # of the .ts catalog.  Runs after the byte-compare on purpose:
+        # it is a behaviour-equivalent rename of the lookup, not a move.
+        marker = 'QCoreApplication.translate("%s", ' % translate_class
+        if "widget.tr(" in new_func:
+            new_func = new_func.replace("widget.tr(", marker)
+            tr_imports.append("from PyQt6.QtCore import QCoreApplication")
     print("  byte-compare: co_code identical")
 
     module_name = target_path.stem
-    import_lines = _needed_import_lines(report["imported"], src_lines)
+    depth = len(target_path.relative_to(args.file_path.parent).parts) - 1
+    import_lines = _needed_import_lines(
+        report["imported"], tree, src, module_name, depth
+    )
+    import_lines += [i for i in tr_imports if i not in import_lines]
     doc = args.doc or (
         f"Methods moved out of {class_name} by " "scripts/extract_method.py."
     )
@@ -494,6 +532,13 @@ def main(argv=None):
     ap.add_argument("--target", required=True, help="destination module path")
     ap.add_argument("--doc", default=None, help="target module docstring")
     ap.add_argument(
+        "--translate-class",
+        default=None,
+        metavar="CLASS",
+        help="rewrite widget.tr(...) as QCoreApplication.translate"
+        "('CLASS', ...) so pylupdate6 keeps the strings",
+    )
+    ap.add_argument(
         "--dry-run", action="store_true", help="report and diff, no writes"
     )
     ap.add_argument("--apply", action="store_true", help="write both files")
@@ -522,6 +567,7 @@ def main(argv=None):
             class_name,
             target_path,
             target_acc,
+            translate_class=args.translate_class,
         )
         tree = ast.parse(src)
     if args.apply:

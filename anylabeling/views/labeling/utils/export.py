@@ -209,6 +209,32 @@ def _write_classes_file(save_path, classes):
     return target
 
 
+def _write_data_yaml(save_path, classes):
+    """Drop a minimal data.yaml next to the exported labels.
+
+    ``nc``/``names`` are all the export can know; a data.yaml that
+    guesses ``train``/``val`` would point at directories that may not
+    exist, so those are left as comments for the training side to fill
+    in.  This still saves the hand-typing of the class list on every
+    run -- the part that is easy to get subtly wrong (order, spelling),
+    and the exact mistake that makes an export silently drop a class.
+    """
+    target = osp.join(save_path, "data.yaml")
+    with open(target, "w", encoding="utf-8") as handle:
+        handle.write(
+            "# Written by JLLabelingAndTrain export. Fill in path/train/val\n"
+            "# to match your dataset layout before training, e.g.:\n"
+            "#   path: <this directory>\n"
+            "#   train: images/train\n"
+            "#   val: images/val\n"
+        )
+        handle.write(f"nc: {len(classes)}\n")
+        handle.write("names:\n")
+        for name in classes:
+            handle.write(f"- {name}\n")
+    return target
+
+
 def _format_yolo_export_summary(
     widget,
     counted_files,
@@ -217,6 +243,7 @@ def _format_yolo_export_summary(
     copied_images,
     classes_target,
     skipped_unchecked=0,
+    data_yaml_target=None,
 ):
     """Human-readable recap of a YOLO export, skips included.
 
@@ -236,6 +263,10 @@ def _format_yolo_export_summary(
         lines.append(widget.tr("已复制 %d 张图片") % copied_images)
     if classes_target:
         lines.append(widget.tr("已写入 %s") % osp.basename(classes_target))
+    if data_yaml_target:
+        lines.append(
+            widget.tr("已写入 %s（train/val 需按布局补填）") % "data.yaml"
+        )
     missing = stats.get("missing_label_file", 0)
     if missing:
         lines.append(
@@ -540,11 +571,13 @@ def export_yolo_annotation(self, mode):
         os.makedirs(save_path)
 
     classes_target = None
+    data_yaml_target = None
     if (
         write_classes_checkbox is not None
         and write_classes_checkbox.isChecked()
     ):
         classes_target = _write_classes_file(save_path, classes)
+        data_yaml_target = _write_data_yaml(save_path, classes)
 
     progress_dialog = QProgressDialog(
         self.tr("Exporting..."), self.tr("Cancel"), 0, len(image_list), self
@@ -598,6 +631,7 @@ def export_yolo_annotation(self, mode):
             copied_images,
             classes_target,
             skipped_unchecked=skipped_unchecked,
+            data_yaml_target=data_yaml_target,
         )
         message_text = (
             self.tr(

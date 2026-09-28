@@ -141,6 +141,11 @@ from .utils.file_search import (
 )
 from .utils.qt import new_icon_path
 from .utils import panel_visibility
+from .utils import file_lifecycle
+from .utils.file_lifecycle import (
+    _report_inherited_shapes,
+    move_file_to_delete_folder,  # noqa: F401 -- test imports stay valid
+)
 from .widgets import (
     AutoLabelingWidget,
     BrightnessContrastDialog,
@@ -265,50 +270,12 @@ def _find_next_label_loop_shape(shapes, start_index, canvas_shapes):
     return len(shapes), None
 
 
-def _report_inherited_shapes(widget, count):
-    """Announce shapes inherited from the previous image (``keep_prev``).
-
-    Those shapes are a proposal, not an edit: they are deliberately left
-    unsaved (see ``LabelingWidget.set_dirty``), so the annotator has to be
-    told instead of finding out at training time.
-    """
-    if count <= 0:
-        return
-    message = QCoreApplication.translate(
-        "LabelingWidget",
-        "已继承上一张的 {n} 个标注，尚未写入本图"
-        "（按 Ctrl+S 保存，或直接编辑后自动保存）",
-    ).replace("{n}", str(count))
-    logger.info(
-        f"keep_prev: inherited {count} shape(s) from the previous image; "
-        "they will not be auto-saved until the annotator edits or saves."
-    )
-    status = getattr(widget, "status", None)
-    if callable(status):
-        status(message, 8000)
-
-
 def fill_progress_template(template, annotated, total, checked):
     return (
         template.replace("%1", str(annotated))
         .replace("%2", str(total))
         .replace("%3", str(checked))
     )
-
-
-def move_file_to_delete_folder(src_path, folder_hint=None):
-    """Move a file into a `_delete_` folder next to it (recoverable)."""
-    if not src_path or not osp.exists(src_path):
-        return None
-    base_dir = folder_hint or osp.dirname(src_path)
-    delete_dir = osp.join(base_dir, "_delete_")
-    os.makedirs(delete_dir, exist_ok=True)
-    dest = osp.join(delete_dir, osp.basename(src_path))
-    if osp.exists(dest):
-        stem, ext = osp.splitext(osp.basename(src_path))
-        dest = osp.join(delete_dir, f"{stem}_{int(time.time())}{ext}")
-    shutil.move(src_path, dest)
-    return dest
 
 
 def _create_file_status_icon(color, filled=True):
@@ -4475,240 +4442,9 @@ class LabelingWidget(LabelDialog):
         self.canvas.set_loading(False)
         return result.get("image"), result.get("pil")
 
-    def load_file(self, filename=None):  # noqa: C901
-        """Load the specified file, or the last opened file if None."""
-
-        # NOTE(jack): Does we need to save the config here?
-        # save_config(self._config)
-
-        # For auto labeling, clear the previous marks
-        # and inform the next files to be annotated
-        # NOTE(jack): this is not needed for now
-        # self.clear_auto_labeling_marks()
-        # self.inform_next_files(filename)
-
-        # Changing file_list_widget loads file
-        if str(filename) in self.fn_to_index and (
-            self.file_list_widget.currentRow()
-            != self.fn_to_index[str(filename)]
-        ):
-            self.file_list_widget.setCurrentRow(
-                self.fn_to_index[str(filename)]
-            )
-            current_item = self.file_list_widget.currentItem()
-            if current_item is not None:
-                self.file_list_widget.scrollToItem(
-                    current_item,
-                    QtWidgets.QAbstractItemView.ScrollHint.EnsureVisible,
-                )
-            self.file_list_widget.update()
-            return False
-
-        # A debounced auto-save belongs to the image currently open: land it
-        # before any state reset tears its target path down.
-        self.flush_pending_auto_save()
-        self.reset_state()
-        self.canvas.setEnabled(False)
-
-        if filename is None:
-            filename = self.settings.value("filename", "")
-        filename = str(filename)
-        if not QtCore.QFile.exists(filename):
-            self.error_message(
-                self.tr("Error opening file"),
-                self.tr("No such file: <b>%s</b>") % filename,
-            )
-            return False
-
-        # assumes same name, but json extension
-        label_file = osp.splitext(filename)[0] + ".json"
-        image_dir = None
-        if self.output_dir:
-            image_dir = osp.dirname(filename)
-            label_file_without_path = osp.basename(label_file)
-            label_file = self.output_dir + "/" + label_file_without_path
-
-        if QtCore.QFile.exists(label_file) and LabelFile.is_label_file(
-            label_file
-        ):
-            try:
-                self.label_file = LabelFile(label_file, image_dir)
-            except LabelFileError as e:
-                self.error_message(
-                    self.tr("Error opening file"),
-                    self.tr(
-                        "<p><b>%s</b></p>"
-                        "<p>Make sure <i>%s</i> is a valid label file."
-                    )
-                    % (e, label_file),
-                )
-                self.status(self.tr("Error reading %s") % label_file)
-                return False
-            self.image_data = self.label_file.image_data
-            self.image_path = osp.join(
-                osp.dirname(label_file),
-                self.label_file.image_path,
-            )
-            self.other_data = self.label_file.other_data
-            self.other_data[CHECKED_FIELD] = self._annotation_checked()
-            # Negative-sample badge: an on-disk json with zero shapes is a
-            # confirmed background image (YOLO negative sample). Refresh the
-            # file list marker whenever such a file is (re)opened.
-            try:
-                neg_items = self.file_list_widget.findItems(
-                    self.image_path, Qt.MatchFlag.MatchExactly
-                )
-                if len(neg_items) == 1:
-                    self._set_file_item_annotated(
-                        neg_items[0],
-                        True,
-                        negative=len(self.label_file.shapes) == 0,
-                    )
-                    self._set_file_item_low_conf(
-                        neg_items[0],
-                        self._shapes_need_review(self.label_file.shapes),
-                    )
-            except Exception:  # noqa: BLE001
-                pass
-        else:
-            self.image_data = LabelFile.load_image_file(filename)
-            if self.image_data:
-                self.image_path = filename
-            self.label_file = None
-            self.other_data = {CHECKED_FIELD: False}
-
-        # TODO(jack): icc profile issue warning
-        # - qt.gui.icc: fromIccProfile: failed minimal tag size sanity
-        # - qt.gui.icc: fromIccProfile: invalid tag offset alignment
-        # Decode large images off the UI thread so opening a big frame never
-        # hard-freezes the whole window into a "Not Responding" state.
-        image, pil_cache = self._decode_image_data(self.image_data, filename)
-
-        if image is None or image.isNull():
-            formats = [
-                f"*{ext}" for ext in utils.get_supported_image_extensions()
-            ]
-            self.error_message(
-                self.tr("Error opening file"),
-                self.tr(
-                    "<p>Make sure <i>{0}</i> is a valid image file.<br/>"
-                    "Supported image formats: {1}</p>"
-                ).format(filename, ",".join(formats)),
-            )
-            self.status(self.tr("Error reading %s") % filename)
-            return False
-        self.image = image
-        self.filename = filename
-
-        if (
-            hasattr(self, "navigator_dialog")
-            and self.navigator_dialog.isVisible()
-        ):
-            self.navigator_dialog.set_image(QtGui.QPixmap.fromImage(image))
-            self.update_navigator_shapes()
-        if (
-            hasattr(self, "_should_restore_navigator")
-            and self._should_restore_navigator
-        ):
-            self._should_restore_navigator = False
-            if self.navigator_dialog.isVisible():
-                self.update_navigator_viewport()
-        if self._config["keep_prev"]:
-            prev_shapes = self.canvas.shapes
-        self.canvas.load_pixmap(QtGui.QPixmap.fromImage(image))
-
-        # load label flags
-        flags = {k: False for k in self.image_flags or []}
-        if self.label_file:
-            for shape in self.label_file.shapes:
-                default_flags = {}
-                if self._config["label_flags"]:
-                    for pattern, keys in self._config["label_flags"].items():
-                        if re.match(pattern, shape.label):
-                            for key in keys:
-                                default_flags[key] = False
-                    shape.flags = {
-                        **default_flags,
-                        **shape.flags,
-                    }
-            self.load_shapes(self.label_file.shapes, update_last_label=False)
-            if self.label_file.flags is not None:
-                flags.update(self.label_file.flags)
-        self.load_flags(flags)
-
-        # load shapes
-        if self._config["keep_prev"] and self.no_shape():
-            self.load_shapes(
-                prev_shapes, replace=False, update_last_label=False
-            )
-            self.set_dirty(from_inherited=True)
-            _report_inherited_shapes(self, len(self.canvas.shapes))
-        else:
-            self.set_clean()
-        self.canvas.setEnabled(True)
-
-        # set zoom values
-        is_initial_load = not self.zoom_values
-        if self.filename in self.zoom_values:
-            self.zoom_mode = self.zoom_values[self.filename][0]
-            self.set_zoom(self.zoom_values[self.filename][1])
-        elif is_initial_load or not self._config["keep_prev_scale"]:
-            self.adjust_scale(initial=True)
-        # set scroll values
-        for orientation in self.scroll_values:
-            if self.filename in self.scroll_values[orientation]:
-                self.set_scroll(
-                    orientation, self.scroll_values[orientation][self.filename]
-                )
-
-        # set brightness contrast values
-        brightness, contrast = self.brightness_contrast_values.get(
-            self.filename, (None, None)
-        )
-        if self._config["keep_prev_brightness"] and self.recent_files:
-            brightness, _ = self.brightness_contrast_values.get(
-                self.recent_files[0], (None, None)
-            )
-        if self._config["keep_prev_contrast"] and self.recent_files:
-            _, contrast = self.brightness_contrast_values.get(
-                self.recent_files[0], (None, None)
-            )
-        self.brightness_contrast_values[self.filename] = (brightness, contrast)
-        # Always refresh the dialog's source image so the inline adjustment
-        # sliders can reuse its brightness/contrast pipeline (which includes
-        # 16-bit grayscale handling).  For large images this PIL copy was
-        # already produced by the background decoder (pil_cache).
-        self.brightness_contrast_dialog.update_image(
-            pil_cache
-            if pil_cache is not None
-            else utils.img_data_to_pil(self.image_data)
-        )
-        self.brightness_contrast_dialog.set_values(
-            brightness if brightness is not None else 50,
-            contrast if contrast is not None else 50,
-        )
-        if brightness is not None or contrast is not None:
-            self.brightness_contrast_dialog.on_new_value()
-        # Sync the inline adjustment sliders (50 is the neutral value).
-        self.canvas_adjustment.set_brightness_contrast(
-            brightness if brightness is not None else 50,
-            contrast if contrast is not None else 50,
-        )
-
-        self.paint_canvas()
-        self.add_recent_file(self.filename)
-        self.toggle_actions(True)
-        self.canvas.setFocus()
-        self._sync_annotation_checked_state()
-        self.update_thumbnail_display()
-
-        # Reveal the adjustment panel now that an image is loaded.
-        self.canvas_adjustment.show()
-        self._position_canvas_adjustment()
-        self._sync_empty_canvas_state()
-        self._maybe_focus_low_confidence_shapes()
-
-        return True
+    def load_file(self, filename=None):
+        """Delegates to file_lifecycle (wiring and tests stay)."""
+        return file_lifecycle.load_file(self, filename)
 
     # QT Overload
     def keyPressEvent(self, event):
@@ -5375,119 +5111,12 @@ class LabelingWidget(LabelDialog):
         return True
 
     def delete_file(self):
-        mb = QtWidgets.QMessageBox
-        if self._config.get("keep_prev", False):
-            mb.warning(
-                self,
-                self.tr("Attention"),
-                self.tr(
-                    "Please disable 'Keep Previous Annotation' before deleting the label file."
-                ),
-                mb.StandardButton.Ok,
-            )
-            return
-
-        msg = self.tr(
-            "当前标签文件将移到图片目录下的 _delete_ 文件夹，可从该目录找回。\n"
-            "确定删除吗？"
-        )
-        if not self._confirm_destructive_action(self.tr("Attention"), msg):
-            return
-
-        label_file = self.get_label_file()
-        if osp.exists(label_file):
-            image_file = None
-            try:
-                image_file = self.get_image_file()
-            except Exception:
-                image_file = None
-            folder_hint = (
-                osp.dirname(image_file)
-                if image_file
-                else osp.dirname(label_file)
-            )
-            dest = move_file_to_delete_folder(label_file, folder_hint)
-            logger.info(f"Label file is moved to: {dest}")
-
-            item = self.file_list_widget.currentItem()
-            if item is not None:
-                self._set_file_item_annotated(item, False, negative=False)
-                self._set_file_item_checked(item, False)
-
-            filename = self.filename
-            self.reset_state()
-            self.filename = filename
-            if self.filename:
-                self.load_file(self.filename)
+        """Delegates to file_lifecycle (wiring and tests stay)."""
+        file_lifecycle.delete_file(self)
 
     def delete_image_file(self):
-        if len(self.image_list) < 2:
-            self.status(
-                self.tr(
-                    "至少需要两张图片才能删除图片文件："
-                    "删除后会自动切到相邻图片。"
-                ),
-                4000,
-            )
-            return
-
-        mb = QtWidgets.QMessageBox
-        if self._config.get("keep_prev", False):
-            mb.warning(
-                self,
-                self.tr("Attention"),
-                self.tr(
-                    "Please disable 'Keep Previous Annotation' before deleting the image file."
-                ),
-                mb.StandardButton.Ok,
-            )
-            return
-
-        msg = self.tr(
-            "You are about to permanently delete this image file, "
-            "proceed anyway?"
-        )
-        if not self._confirm_destructive_action(self.tr("Attention"), msg):
-            return
-
-        image_file = self.get_image_file()
-        if osp.exists(image_file):
-            image_path, image_name = osp.split(image_file)
-            save_path = osp.join(image_path, "..", "_delete_")
-            os.makedirs(save_path, exist_ok=True)
-            save_file = osp.join(save_path, image_name)
-            shutil.move(image_file, save_file)
-            logger.info(f"Image file is moved to: {osp.realpath(save_file)}")
-
-            label_dir_path = osp.dirname(self.filename)
-            if self.output_dir:
-                label_dir_path = self.output_dir
-            label_name = osp.splitext(image_name)[0] + ".json"
-            label_file = osp.join(label_dir_path, label_name)
-            if not osp.exists(label_file):
-                label_file = osp.join(osp.dirname(image_file), label_name)
-            if osp.exists(label_file):
-                os.remove(label_file)
-                logger.info(f"Label file is removed: {image_file}")
-
-            filename = None
-            if self.filename is None:
-                filename = self.image_list[0]
-            else:
-                current_index = self.fn_to_index[str(self.filename)]
-                if current_index + 1 < len(self.image_list):
-                    filename = self.image_list[current_index + 1]
-                else:
-                    filename = self.image_list[0]
-
-            self.reset_state()
-            if osp.isfile(image_path):
-                image_path = osp.dirname(image_path)
-            self.import_image_folder(image_path)
-
-            self.filename = filename
-            if self.filename:
-                self.load_file(self.filename)
+        """Delegates to file_lifecycle (wiring and tests stay)."""
+        file_lifecycle.delete_image_file(self)
 
     # Message Dialogs. #
     def has_label_file(self):
@@ -5713,103 +5342,8 @@ class LabelingWidget(LabelDialog):
             self.async_exif_scanner.start_scan(valid_files)
 
     def import_image_folder(self, dirpath, pattern=None, load=True):
-        if not self.may_continue() or not dirpath:
-            return
-
-        self.last_open_dir = dirpath
-        self._record_recent_dir(dirpath)
-        # Per-project settings: flush the previous dataset's state, then
-        # restore this one's output dir before the scan below routes label
-        # files (an explicit output_dir always wins over the stored one).
-        project_settings.begin_project_switch(
-            self, project_settings.dataset_dir_for(filename=dirpath)
-        )
-        self.filename = None
-        self.file_list_widget.clear()
-        # Rows are renumbered below, so the old folder's entries must go too:
-        # a stale index makes _current_file_item() point at another image.
-        self.fn_to_index.clear()
-        image_files = []
-        label_files = []
-
-        search_pattern = parse_search_pattern(pattern) if pattern else None
-
-        # Populate the list first (pure fs metadata, cheap), then refresh
-        # the per-file review "checked" dots in the background so a large
-        # folder does not freeze the UI for seconds.
-        self.async_label_checker.stop()
-        self.file_list_widget.setUpdatesEnabled(False)
-        try:
-            for file_index, filename in enumerate(
-                utils.scan_all_images(dirpath), start=1
-            ):
-                if search_pattern:
-                    if search_pattern.mode == "index":
-                        if search_pattern.index != file_index:
-                            continue
-                    else:
-                        if not matches_filename(filename, search_pattern):
-                            continue
-
-                        if search_pattern.mode == "attribute":
-                            label_file = osp.splitext(filename)[0] + ".json"
-                            if self.output_dir:
-                                label_file_without_path = osp.basename(
-                                    label_file
-                                )
-                                label_file = (
-                                    self.output_dir
-                                    + "/"
-                                    + label_file_without_path
-                                )
-
-                            if not matches_label_attribute(
-                                filename, label_file, search_pattern
-                            ):
-                                continue
-
-                image_files.append(filename)
-                label_file = osp.splitext(filename)[0] + ".json"
-                if self.output_dir:
-                    label_file_without_path = osp.basename(label_file)
-                    label_file = (
-                        self.output_dir + "/" + label_file_without_path
-                    )
-                label_files.append(label_file)
-                item = self._create_file_list_item(
-                    filename, label_file, read_checked=False
-                )
-                self.file_list_widget.addItem(item)
-                self.fn_to_index[filename] = self.file_list_widget.count() - 1
-        finally:
-            self.file_list_widget.setUpdatesEnabled(True)
-
-        self.actions.open_next_image.setEnabled(True)
-        self.actions.open_prev_image.setEnabled(True)
-        self.actions.open_next_unchecked_image.setEnabled(True)
-        self.actions.open_prev_unchecked_image.setEnabled(True)
-        self.toggle_actions(True)
-        self.open_next_image(load=load)
-
-        if image_files and self._config.get("exif_scan_enabled", True):
-            self.async_exif_scanner.start_scan(image_files)
-        self._refresh_file_panel()
-        if pattern is None and image_files:
-            self._load_classes_from_folder(dirpath)
-            # classes.txt keeps precedence; the project record only fills
-            # the panel for folders whose labels were built interactively.
-            project_settings.end_project_switch(
-                self, project_settings.dataset_dir_for(filename=dirpath)
-            )
-            self._maybe_prompt_missing_labels()
-            self._maybe_show_smart_tools_guide(dirpath)
-
-        # Background "checked" dot refresh (after rows exist so the batch
-        # callback can address them by index).
-        if label_files:
-            self.async_label_checker.start(
-                label_files, on_batch=self._apply_checked_batch
-            )
+        """Delegates to file_lifecycle (wiring and tests stay)."""
+        file_lifecycle.import_image_folder(self, dirpath, pattern, load)
 
     def _apply_checked_batch(self, start_index, info_list):
         """Delegates to filelist.controller (AsyncLabelChecker callback)."""

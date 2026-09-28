@@ -15,6 +15,7 @@ from types import SimpleNamespace
 from anylabeling.views.labeling.utils.export import (
     _format_yolo_export_summary,
     _write_classes_file,
+    _write_data_yaml,
     split_images_by_review,
 )
 
@@ -32,6 +33,47 @@ class TestWriteClassesFile(unittest.TestCase):
             self.assertEqual(os.path.basename(target), "classes.txt")
             with open(target, "r", encoding="utf-8") as handle:
                 self.assertEqual(handle.read(), "plane\nship\n")
+
+
+class TestWriteDataYaml(unittest.TestCase):
+    def test_nc_and_names_match_the_class_list(self):
+        import yaml
+
+        with tempfile.TemporaryDirectory() as tmp:
+            target = _write_data_yaml(tmp, ["plane", "ship"])
+
+            self.assertEqual(os.path.basename(target), "data.yaml")
+            with open(target, "r", encoding="utf-8") as handle:
+                data = yaml.safe_load(handle)
+
+            self.assertEqual(data["nc"], 2)
+            self.assertEqual(data["names"], ["plane", "ship"])
+
+    def test_train_and_val_are_left_for_the_training_side(self):
+        # A guessed path would point at directories that may not exist;
+        # only a comment tells the reader what belongs there.
+        with tempfile.TemporaryDirectory() as tmp:
+            target = _write_data_yaml(tmp, ["plane"])
+
+            with open(target, "r", encoding="utf-8") as handle:
+                text = handle.read()
+
+            self.assertNotIn("train:", text.split("#")[0].replace("\n", " "))
+            self.assertIn("train: images/train", text)
+
+    def test_summary_names_data_yaml_when_written(self):
+        summary = _format_yolo_export_summary(
+            fake_widget(),
+            counted_files=1,
+            total_files=1,
+            stats={"exported": 1},
+            copied_images=0,
+            classes_target="C:/out/classes.txt",
+            data_yaml_target="C:/out/data.yaml",
+        )
+
+        self.assertIn("classes.txt", summary)
+        self.assertIn("data.yaml", summary)
 
 
 class TestExportSummary(unittest.TestCase):

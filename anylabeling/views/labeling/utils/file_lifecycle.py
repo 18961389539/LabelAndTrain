@@ -1,0 +1,539 @@
+"""File lifecycle: load, delete, import.
+
+Methods and helpers moved out of LabelingWidget by
+scripts/extract_method.py; the class keeps thin stubs so wiring and
+tests stay put. Every path here touches the annotator's data (loading
+replaces the canvas, deleting throws files away), which is exactly why
+they live together: the dangerous code shares one address.
+"""
+
+import os
+from ..utils.file_search import (
+    parse_search_pattern,
+    matches_filename,
+    matches_label_attribute,
+)
+from .. import project_settings
+import re
+from PyQt6.QtCore import QCoreApplication, Qt, pyqtSlot
+from PyQt6 import QtCore, QtGui, QtWidgets
+from ..label_file import LabelFile, LabelFileError
+from ..filelist.roles import (
+    CHECKED_FIELD,
+    FILE_ANNOTATION_ROLE,
+    FILE_LOW_CONF_ROLE,
+    FILE_NEGATIVE_ROLE,
+    FILE_REVIEW_ROLE,
+    FILE_REVIEWED_AT_ROLE,
+    REVIEW_STATE_FIELD,
+    REVIEWED_AT_FIELD,
+)
+from .. import utils
+import os.path as osp
+import shutil
+import time
+
+from ..logger import logger
+
+
+def _report_inherited_shapes(widget, count):
+    """Announce shapes inherited from the previous image (``keep_prev``).
+
+    Those shapes are a proposal, not an edit: they are deliberately left
+    unsaved (see ``LabelingWidget.set_dirty``), so the annotator has to be
+    told instead of finding out at training time.
+    """
+    if count <= 0:
+        return
+    message = QCoreApplication.translate(
+        "LabelingWidget",
+        "已继承上一张的 {n} 个标注，尚未写入本图"
+        "（按 Ctrl+S 保存，或直接编辑后自动保存）",
+    ).replace("{n}", str(count))
+    logger.info(
+        f"keep_prev: inherited {count} shape(s) from the previous image; "
+        "they will not be auto-saved until the annotator edits or saves."
+    )
+    status = getattr(widget, "status", None)
+    if callable(status):
+        status(message, 8000)
+
+
+def move_file_to_delete_folder(src_path, folder_hint=None):
+    """Move a file into a `_delete_` folder next to it (recoverable)."""
+    if not src_path or not osp.exists(src_path):
+        return None
+    base_dir = folder_hint or osp.dirname(src_path)
+    delete_dir = osp.join(base_dir, "_delete_")
+    os.makedirs(delete_dir, exist_ok=True)
+    dest = osp.join(delete_dir, osp.basename(src_path))
+    if osp.exists(dest):
+        stem, ext = osp.splitext(osp.basename(src_path))
+        dest = osp.join(delete_dir, f"{stem}_{int(time.time())}{ext}")
+    shutil.move(src_path, dest)
+    return dest
+
+
+def load_file(widget, filename=None):  # noqa: C901
+    """Load the specified file, or the last opened file if None."""
+
+    # NOTE(jack): Does we need to save the config here?
+    # save_config(widget._config)
+
+    # For auto labeling, clear the previous marks
+    # and inform the next files to be annotated
+    # NOTE(jack): this is not needed for now
+    # widget.clear_auto_labeling_marks()
+    # widget.inform_next_files(filename)
+
+    # Changing file_list_widget loads file
+    if str(filename) in widget.fn_to_index and (
+        widget.file_list_widget.currentRow()
+        != widget.fn_to_index[str(filename)]
+    ):
+        widget.file_list_widget.setCurrentRow(
+            widget.fn_to_index[str(filename)]
+        )
+        current_item = widget.file_list_widget.currentItem()
+        if current_item is not None:
+            widget.file_list_widget.scrollToItem(
+                current_item,
+                QtWidgets.QAbstractItemView.ScrollHint.EnsureVisible,
+            )
+        widget.file_list_widget.update()
+        return False
+
+    # A debounced auto-save belongs to the image currently open: land it
+    # before any state reset tears its target path down.
+    widget.flush_pending_auto_save()
+    widget.reset_state()
+    widget.canvas.setEnabled(False)
+
+    if filename is None:
+        filename = widget.settings.value("filename", "")
+    filename = str(filename)
+    if not QtCore.QFile.exists(filename):
+        widget.error_message(
+            QCoreApplication.translate("LabelingWidget", "Error opening file"),
+            QCoreApplication.translate(
+                "LabelingWidget", "No such file: <b>%s</b>"
+            )
+            % filename,
+        )
+        return False
+
+    # assumes same name, but json extension
+    label_file = osp.splitext(filename)[0] + ".json"
+    image_dir = None
+    if widget.output_dir:
+        image_dir = osp.dirname(filename)
+        label_file_without_path = osp.basename(label_file)
+        label_file = widget.output_dir + "/" + label_file_without_path
+
+    if QtCore.QFile.exists(label_file) and LabelFile.is_label_file(label_file):
+        try:
+            widget.label_file = LabelFile(label_file, image_dir)
+        except LabelFileError as e:
+            widget.error_message(
+                QCoreApplication.translate(
+                    "LabelingWidget", "Error opening file"
+                ),
+                QCoreApplication.translate(
+                    "LabelingWidget",
+                    "<p><b>%s</b></p>"
+                    "<p>Make sure <i>%s</i> is a valid label file.",
+                )
+                % (e, label_file),
+            )
+            widget.status(
+                QCoreApplication.translate(
+                    "LabelingWidget", "Error reading %s"
+                )
+                % label_file
+            )
+            return False
+        widget.image_data = widget.label_file.image_data
+        widget.image_path = osp.join(
+            osp.dirname(label_file),
+            widget.label_file.image_path,
+        )
+        widget.other_data = widget.label_file.other_data
+        widget.other_data[CHECKED_FIELD] = widget._annotation_checked()
+        # Negative-sample badge: an on-disk json with zero shapes is a
+        # confirmed background image (YOLO negative sample). Refresh the
+        # file list marker whenever such a file is (re)opened.
+        try:
+            neg_items = widget.file_list_widget.findItems(
+                widget.image_path, Qt.MatchFlag.MatchExactly
+            )
+            if len(neg_items) == 1:
+                widget._set_file_item_annotated(
+                    neg_items[0],
+                    True,
+                    negative=len(widget.label_file.shapes) == 0,
+                )
+                widget._set_file_item_low_conf(
+                    neg_items[0],
+                    widget._shapes_need_review(widget.label_file.shapes),
+                )
+        except Exception:  # noqa: BLE001
+            pass
+    else:
+        widget.image_data = LabelFile.load_image_file(filename)
+        if widget.image_data:
+            widget.image_path = filename
+        widget.label_file = None
+        widget.other_data = {CHECKED_FIELD: False}
+
+    # TODO(jack): icc profile issue warning
+    # - qt.gui.icc: fromIccProfile: failed minimal tag size sanity
+    # - qt.gui.icc: fromIccProfile: invalid tag offset alignment
+    # Decode large images off the UI thread so opening a big frame never
+    # hard-freezes the whole window into a "Not Responding" state.
+    image, pil_cache = widget._decode_image_data(widget.image_data, filename)
+
+    if image is None or image.isNull():
+        formats = [f"*{ext}" for ext in utils.get_supported_image_extensions()]
+        widget.error_message(
+            QCoreApplication.translate("LabelingWidget", "Error opening file"),
+            QCoreApplication.translate(
+                "LabelingWidget",
+                "<p>Make sure <i>{0}</i> is a valid image file.<br/>"
+                "Supported image formats: {1}</p>",
+            ).format(filename, ",".join(formats)),
+        )
+        widget.status(
+            QCoreApplication.translate("LabelingWidget", "Error reading %s")
+            % filename
+        )
+        return False
+    widget.image = image
+    widget.filename = filename
+
+    if (
+        hasattr(widget, "navigator_dialog")
+        and widget.navigator_dialog.isVisible()
+    ):
+        widget.navigator_dialog.set_image(QtGui.QPixmap.fromImage(image))
+        widget.update_navigator_shapes()
+    if (
+        hasattr(widget, "_should_restore_navigator")
+        and widget._should_restore_navigator
+    ):
+        widget._should_restore_navigator = False
+        if widget.navigator_dialog.isVisible():
+            widget.update_navigator_viewport()
+    if widget._config["keep_prev"]:
+        prev_shapes = widget.canvas.shapes
+    widget.canvas.load_pixmap(QtGui.QPixmap.fromImage(image))
+
+    # load label flags
+    flags = dict.fromkeys(widget.image_flags or [], False)
+    if widget.label_file:
+        for shape in widget.label_file.shapes:
+            default_flags = {}
+            if widget._config["label_flags"]:
+                for pattern, keys in widget._config["label_flags"].items():
+                    if re.match(pattern, shape.label):
+                        for key in keys:
+                            default_flags[key] = False
+                shape.flags = {
+                    **default_flags,
+                    **shape.flags,
+                }
+        widget.load_shapes(widget.label_file.shapes, update_last_label=False)
+        if widget.label_file.flags is not None:
+            flags.update(widget.label_file.flags)
+    widget.load_flags(flags)
+
+    # load shapes
+    if widget._config["keep_prev"] and widget.no_shape():
+        widget.load_shapes(prev_shapes, replace=False, update_last_label=False)
+        widget.set_dirty(from_inherited=True)
+        _report_inherited_shapes(widget, len(widget.canvas.shapes))
+    else:
+        widget.set_clean()
+    widget.canvas.setEnabled(True)
+
+    # set zoom values
+    is_initial_load = not widget.zoom_values
+    if widget.filename in widget.zoom_values:
+        widget.zoom_mode = widget.zoom_values[widget.filename][0]
+        widget.set_zoom(widget.zoom_values[widget.filename][1])
+    elif is_initial_load or not widget._config["keep_prev_scale"]:
+        widget.adjust_scale(initial=True)
+    # set scroll values
+    for orientation in widget.scroll_values:
+        if widget.filename in widget.scroll_values[orientation]:
+            widget.set_scroll(
+                orientation, widget.scroll_values[orientation][widget.filename]
+            )
+
+    # set brightness contrast values
+    brightness, contrast = widget.brightness_contrast_values.get(
+        widget.filename, (None, None)
+    )
+    if widget._config["keep_prev_brightness"] and widget.recent_files:
+        brightness, _ = widget.brightness_contrast_values.get(
+            widget.recent_files[0], (None, None)
+        )
+    if widget._config["keep_prev_contrast"] and widget.recent_files:
+        _, contrast = widget.brightness_contrast_values.get(
+            widget.recent_files[0], (None, None)
+        )
+    widget.brightness_contrast_values[widget.filename] = (brightness, contrast)
+    # Always refresh the dialog's source image so the inline adjustment
+    # sliders can reuse its brightness/contrast pipeline (which includes
+    # 16-bit grayscale handling).  For large images this PIL copy was
+    # already produced by the background decoder (pil_cache).
+    widget.brightness_contrast_dialog.update_image(
+        pil_cache
+        if pil_cache is not None
+        else utils.img_data_to_pil(widget.image_data)
+    )
+    widget.brightness_contrast_dialog.set_values(
+        brightness if brightness is not None else 50,
+        contrast if contrast is not None else 50,
+    )
+    if brightness is not None or contrast is not None:
+        widget.brightness_contrast_dialog.on_new_value()
+    # Sync the inline adjustment sliders (50 is the neutral value).
+    widget.canvas_adjustment.set_brightness_contrast(
+        brightness if brightness is not None else 50,
+        contrast if contrast is not None else 50,
+    )
+
+    widget.paint_canvas()
+    widget.add_recent_file(widget.filename)
+    widget.toggle_actions(True)
+    widget.canvas.setFocus()
+    widget._sync_annotation_checked_state()
+    widget.update_thumbnail_display()
+
+    # Reveal the adjustment panel now that an image is loaded.
+    widget.canvas_adjustment.show()
+    widget._position_canvas_adjustment()
+    widget._sync_empty_canvas_state()
+    widget._maybe_focus_low_confidence_shapes()
+
+    return True
+
+
+def import_image_folder(widget, dirpath, pattern=None, load=True):
+    if not widget.may_continue() or not dirpath:
+        return
+
+    widget.last_open_dir = dirpath
+    widget._record_recent_dir(dirpath)
+    # Per-project settings: flush the previous dataset's state, then
+    # restore this one's output dir before the scan below routes label
+    # files (an explicit output_dir always wins over the stored one).
+    project_settings.begin_project_switch(
+        widget, project_settings.dataset_dir_for(filename=dirpath)
+    )
+    widget.filename = None
+    widget.file_list_widget.clear()
+    # Rows are renumbered below, so the old folder's entries must go too:
+    # a stale index makes _current_file_item() point at another image.
+    widget.fn_to_index.clear()
+    image_files = []
+    label_files = []
+
+    search_pattern = parse_search_pattern(pattern) if pattern else None
+
+    # Populate the list first (pure fs metadata, cheap), then refresh
+    # the per-file review "checked" dots in the background so a large
+    # folder does not freeze the UI for seconds.
+    widget.async_label_checker.stop()
+    widget.file_list_widget.setUpdatesEnabled(False)
+    try:
+        for file_index, filename in enumerate(
+            utils.scan_all_images(dirpath), start=1
+        ):
+            if search_pattern:
+                if search_pattern.mode == "index":
+                    if search_pattern.index != file_index:
+                        continue
+                else:
+                    if not matches_filename(filename, search_pattern):
+                        continue
+
+                    if search_pattern.mode == "attribute":
+                        label_file = osp.splitext(filename)[0] + ".json"
+                        if widget.output_dir:
+                            label_file_without_path = osp.basename(label_file)
+                            label_file = (
+                                widget.output_dir
+                                + "/"
+                                + label_file_without_path
+                            )
+
+                        if not matches_label_attribute(
+                            filename, label_file, search_pattern
+                        ):
+                            continue
+
+            image_files.append(filename)
+            label_file = osp.splitext(filename)[0] + ".json"
+            if widget.output_dir:
+                label_file_without_path = osp.basename(label_file)
+                label_file = widget.output_dir + "/" + label_file_without_path
+            label_files.append(label_file)
+            item = widget._create_file_list_item(
+                filename, label_file, read_checked=False
+            )
+            widget.file_list_widget.addItem(item)
+            widget.fn_to_index[filename] = widget.file_list_widget.count() - 1
+    finally:
+        widget.file_list_widget.setUpdatesEnabled(True)
+
+    widget.actions.open_next_image.setEnabled(True)
+    widget.actions.open_prev_image.setEnabled(True)
+    widget.actions.open_next_unchecked_image.setEnabled(True)
+    widget.actions.open_prev_unchecked_image.setEnabled(True)
+    widget.toggle_actions(True)
+    widget.open_next_image(load=load)
+
+    if image_files and widget._config.get("exif_scan_enabled", True):
+        widget.async_exif_scanner.start_scan(image_files)
+    widget._refresh_file_panel()
+    if pattern is None and image_files:
+        widget._load_classes_from_folder(dirpath)
+        # classes.txt keeps precedence; the project record only fills
+        # the panel for folders whose labels were built interactively.
+        project_settings.end_project_switch(
+            widget, project_settings.dataset_dir_for(filename=dirpath)
+        )
+        widget._maybe_prompt_missing_labels()
+        widget._maybe_show_smart_tools_guide(dirpath)
+
+    # Background "checked" dot refresh (after rows exist so the batch
+    # callback can address them by index).
+    if label_files:
+        widget.async_label_checker.start(
+            label_files, on_batch=widget._apply_checked_batch
+        )
+
+
+def delete_file(widget):
+    mb = QtWidgets.QMessageBox
+    if widget._config.get("keep_prev", False):
+        mb.warning(
+            widget,
+            QCoreApplication.translate("LabelingWidget", "Attention"),
+            QCoreApplication.translate(
+                "LabelingWidget",
+                "Please disable 'Keep Previous Annotation' before deleting the label file.",
+            ),
+            mb.StandardButton.Ok,
+        )
+        return
+
+    msg = QCoreApplication.translate(
+        "LabelingWidget",
+        "当前标签文件将移到图片目录下的 _delete_ 文件夹，可从该目录找回。\n"
+        "确定删除吗？",
+    )
+    if not widget._confirm_destructive_action(
+        QCoreApplication.translate("LabelingWidget", "Attention"), msg
+    ):
+        return
+
+    label_file = widget.get_label_file()
+    if osp.exists(label_file):
+        image_file = None
+        try:
+            image_file = widget.get_image_file()
+        except Exception:
+            image_file = None
+        folder_hint = (
+            osp.dirname(image_file) if image_file else osp.dirname(label_file)
+        )
+        dest = move_file_to_delete_folder(label_file, folder_hint)
+        logger.info(f"Label file is moved to: {dest}")
+
+        item = widget.file_list_widget.currentItem()
+        if item is not None:
+            widget._set_file_item_annotated(item, False, negative=False)
+            widget._set_file_item_checked(item, False)
+
+        filename = widget.filename
+        widget.reset_state()
+        widget.filename = filename
+        if widget.filename:
+            widget.load_file(widget.filename)
+
+
+def delete_image_file(widget):
+    if len(widget.image_list) < 2:
+        widget.status(
+            QCoreApplication.translate(
+                "LabelingWidget",
+                "至少需要两张图片才能删除图片文件："
+                "删除后会自动切到相邻图片。",
+            ),
+            4000,
+        )
+        return
+
+    mb = QtWidgets.QMessageBox
+    if widget._config.get("keep_prev", False):
+        mb.warning(
+            widget,
+            QCoreApplication.translate("LabelingWidget", "Attention"),
+            QCoreApplication.translate(
+                "LabelingWidget",
+                "Please disable 'Keep Previous Annotation' before deleting the image file.",
+            ),
+            mb.StandardButton.Ok,
+        )
+        return
+
+    msg = QCoreApplication.translate(
+        "LabelingWidget",
+        "You are about to permanently delete this image file, "
+        "proceed anyway?",
+    )
+    if not widget._confirm_destructive_action(
+        QCoreApplication.translate("LabelingWidget", "Attention"), msg
+    ):
+        return
+
+    image_file = widget.get_image_file()
+    if osp.exists(image_file):
+        image_path, image_name = osp.split(image_file)
+        save_path = osp.join(image_path, "..", "_delete_")
+        os.makedirs(save_path, exist_ok=True)
+        save_file = osp.join(save_path, image_name)
+        shutil.move(image_file, save_file)
+        logger.info(f"Image file is moved to: {osp.realpath(save_file)}")
+
+        label_dir_path = osp.dirname(widget.filename)
+        if widget.output_dir:
+            label_dir_path = widget.output_dir
+        label_name = osp.splitext(image_name)[0] + ".json"
+        label_file = osp.join(label_dir_path, label_name)
+        if not osp.exists(label_file):
+            label_file = osp.join(osp.dirname(image_file), label_name)
+        if osp.exists(label_file):
+            os.remove(label_file)
+            logger.info(f"Label file is removed: {image_file}")
+
+        filename = None
+        if widget.filename is None:
+            filename = widget.image_list[0]
+        else:
+            current_index = widget.fn_to_index[str(widget.filename)]
+            if current_index + 1 < len(widget.image_list):
+                filename = widget.image_list[current_index + 1]
+            else:
+                filename = widget.image_list[0]
+
+        widget.reset_state()
+        if osp.isfile(image_path):
+            image_path = osp.dirname(image_path)
+        widget.import_image_folder(image_path)
+
+        widget.filename = filename
+        if widget.filename:
+            widget.load_file(widget.filename)
