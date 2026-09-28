@@ -17,6 +17,7 @@ from anylabeling.views.labeling.utils.theme import get_theme
 
 from .. import utils
 from ..shape import Shape
+from . import rectangle_geometry
 from .canvas_brush import BrushCanvasMixin
 from .canvas_cuboid import (  # noqa: F401
     CUBOID_BACK_EDGE_CENTER_INDICES,
@@ -385,35 +386,11 @@ class Canvas(
 
     def clip_rectangle_to_pixmap(self, shape):
         """Clip rectangle shape to pixmap boundaries"""
-        if self.pixmap is None or shape.shape_type != "rectangle":
+        if self.pixmap is None:
             return True
-
-        w, h = self.pixmap.width(), self.pixmap.height()
-        points = shape.points
-
-        if len(points) != 4:
-            return True
-
-        x_coords = [p.x() for p in points]
-        y_coords = [p.y() for p in points]
-        min_x, max_x = min(x_coords), max(x_coords)
-        min_y, max_y = min(y_coords), max(y_coords)
-
-        clipped_min_x = max(0, min_x)
-        clipped_min_y = max(0, min_y)
-        clipped_max_x = min(w - 1, max_x)
-        clipped_max_y = min(h - 1, max_y)
-
-        if clipped_max_x <= clipped_min_x or clipped_max_y <= clipped_min_y:
-            return False
-
-        shape.points = [
-            QtCore.QPointF(clipped_min_x, clipped_min_y),
-            QtCore.QPointF(clipped_max_x, clipped_min_y),
-            QtCore.QPointF(clipped_max_x, clipped_max_y),
-            QtCore.QPointF(clipped_min_x, clipped_max_y),
-        ]
-        return True
+        return rectangle_geometry.clip_rectangle_to_pixmap(
+            shape, self.pixmap.width(), self.pixmap.height()
+        )
 
     @property
     def is_shape_restorable(self):
@@ -3620,129 +3597,29 @@ class Canvas(
         ev.accept()
 
     def _scale_rectangle(self, shape, scale_up):
-        """Scale rectangle from center while keeping within image boundaries"""
-        if len(shape.points) < 4:
-            return
-
+        """Scale rectangle from center, keeping within image bounds."""
         if self.pixmap is None:
             return
-        img_width = self.pixmap.width()
-        img_height = self.pixmap.height()
-
-        x_coords = [p.x() for p in shape.points]
-        y_coords = [p.y() for p in shape.points]
-        center_x = sum(x_coords) / 4
-        center_y = sum(y_coords) / 4
-        center = QtCore.QPointF(center_x, center_y)
-
-        scale_factor = (
-            1.0 + self.rect_scale_step
-            if scale_up
-            else 1.0 - self.rect_scale_step
+        rectangle_geometry.scale_from_center(
+            shape,
+            scale_up,
+            self.rect_scale_step,
+            self.pixmap.width(),
+            self.pixmap.height(),
         )
-        scale_factor = max(0.1, scale_factor)
-
-        new_points = []
-        for i in range(len(shape.points)):
-            point = shape.points[i]
-            offset = point - center
-            scaled_offset = offset * scale_factor
-            new_point = center + scaled_offset
-
-            if (
-                new_point.x() < 0
-                or new_point.x() >= img_width
-                or new_point.y() < 0
-                or new_point.y() >= img_height
-            ):
-                return
-
-            new_points.append(new_point)
-
-        for i, new_point in enumerate(new_points):
-            shape.points[i] = new_point
 
     def _adjust_rectangle_edge(self, shape, cursor_pos, move_outward):
-        """Adjust the rectangle edge closest to cursor position within image boundaries"""
-        if len(shape.points) < 4:
-            return
-
-        rect = shape.bounding_rect()
-        min_x, max_x = rect.left(), rect.right()
-        min_y, max_y = rect.top(), rect.bottom()
-
-        distances = {}
-
-        if cursor_pos.x() < min_x:
-            distances["left"] = min_x - cursor_pos.x()
-        elif cursor_pos.x() > max_x:
-            distances["right"] = cursor_pos.x() - max_x
-        else:
-            distances["left"] = abs(cursor_pos.x() - min_x)
-            distances["right"] = abs(cursor_pos.x() - max_x)
-
-        if cursor_pos.y() < min_y:
-            distances["top"] = min_y - cursor_pos.y()
-        elif cursor_pos.y() > max_y:
-            distances["bottom"] = cursor_pos.y() - max_y
-        else:
-            distances["top"] = abs(cursor_pos.y() - min_y)
-            distances["bottom"] = abs(cursor_pos.y() - max_y)
-
-        if (
-            cursor_pos.x() < min_x
-            and cursor_pos.y() >= min_y
-            and cursor_pos.y() <= max_y
-        ):
-            closest_edge = "left"
-        elif (
-            cursor_pos.x() > max_x
-            and cursor_pos.y() >= min_y
-            and cursor_pos.y() <= max_y
-        ):
-            closest_edge = "right"
-        elif (
-            cursor_pos.y() < min_y
-            and cursor_pos.x() >= min_x
-            and cursor_pos.x() <= max_x
-        ):
-            closest_edge = "top"
-        elif (
-            cursor_pos.y() > max_y
-            and cursor_pos.x() >= min_x
-            and cursor_pos.x() <= max_x
-        ):
-            closest_edge = "bottom"
-        else:
-            closest_edge = min(distances, key=distances.get)
-
-        step = (
-            self.rect_adjust_step if move_outward else -self.rect_adjust_step
-        )
-
+        """Adjust the rectangle edge closest to the cursor."""
         if self.pixmap is None:
             return
-        img_width = self.pixmap.width()
-        img_height = self.pixmap.height()
-
-        for i, point in enumerate(shape.points):
-            new_point = None
-
-            if closest_edge == "left" and abs(point.x() - min_x) < 1e-6:
-                new_x = max(0, point.x() - step)
-                new_point = QtCore.QPointF(new_x, point.y())
-            elif closest_edge == "right" and abs(point.x() - max_x) < 1e-6:
-                new_x = min(img_width - 1, point.x() + step)
-                new_point = QtCore.QPointF(new_x, point.y())
-            elif closest_edge == "top" and abs(point.y() - min_y) < 1e-6:
-                new_y = max(0, point.y() - step)
-                new_point = QtCore.QPointF(point.x(), new_y)
-            elif closest_edge == "bottom" and abs(point.y() - max_y) < 1e-6:
-                new_y = min(img_height - 1, point.y() + step)
-                new_point = QtCore.QPointF(point.x(), new_y)
-
-            if new_point is not None:
-                shape.points[i] = new_point
+        rectangle_geometry.adjust_edge(
+            shape,
+            cursor_pos,
+            move_outward,
+            self.rect_adjust_step,
+            self.pixmap.width(),
+            self.pixmap.height(),
+        )
 
     def move_by_keyboard(self, offset):
         """Move selected shapes by an offset (using keyboard)"""
