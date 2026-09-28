@@ -20,13 +20,13 @@ REPO_ROOT = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..")
 )
 
-#: Frozen 2026-09-28, after split batch 9 (file lifecycle cluster).
+#: Frozen 2026-09-28, after split batch 10 (navigation cluster).
 #: label_widget.py: ~6380 lines of class + ~2000 lines of module-level
 #: assembly functions (_build_actions/_build_layout, batch 4).
 #: canvas.py already has brush/cuboid/rotation split into their own
 #: modules; the rest is the core drawing surface.
 BUDGETS = {
-    "anylabeling/views/labeling/label_widget.py": 7914,
+    "anylabeling/views/labeling/label_widget.py": 7854,
     "anylabeling/views/labeling/widgets/canvas.py": 4097,
 }
 

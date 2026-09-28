@@ -142,6 +142,7 @@ from .utils.file_search import (
 from .utils.qt import new_icon_path
 from .utils import panel_visibility
 from .utils import file_lifecycle
+from .utils import file_navigation
 from .utils.file_lifecycle import (
     _report_inherited_shapes,
     move_file_to_delete_folder,  # noqa: F401 -- test imports stay valid
@@ -4385,13 +4386,8 @@ class LabelingWidget(LabelDialog):
         return filenames
 
     def inform_next_files(self, filename):
-        """Inform the next files to be annotated.
-        This list can be used by the user to preload the next files
-        or running a background process to process them
-        """
-        next_files = self.get_next_files(filename, 5)
-        if next_files:
-            self.next_files_changed.emit(next_files)
+        """Delegates to file_navigation (wiring and tests stay)."""
+        file_navigation.inform_next_files(self, filename)
 
     def _decode_image_data(self, image_data, filename=None):
         """Decode image bytes into a QImage (and a loaded PIL copy for the
@@ -4669,57 +4665,20 @@ class LabelingWidget(LabelDialog):
         return FileReviewController(self).next_visible_row(row, delta)
 
     def open_prev_unchecked_image(self):
-        """Delegates to filelist.controller (action wiring stays)."""
-        # Built on demand: the controller is stateless, and light test
-        # stubs never carry an instance.
-        FileReviewController(self).open_prev_unchecked_image()
+        """Delegates to file_navigation (wiring and tests stay)."""
+        file_navigation.open_prev_unchecked_image(self)
 
     def open_next_unchecked_image(self, _value=False):
-        """Delegates to filelist.controller (action wiring stays)."""
-        # Built on demand: the controller is stateless, and light test
-        # stubs never carry an instance.
-        FileReviewController(self).open_next_unchecked_image(_value)
+        """Delegates to file_navigation (wiring and tests stay)."""
+        file_navigation.open_next_unchecked_image(self, _value)
 
     def open_prev_image(self, _value=False):
-        if self._paging_blocked_by_drawing():
-            return
-        if not self.may_continue(silent=True):
-            return
-        if self.file_list_widget.count() <= 0:
-            return
-        if self.filename is None:
-            return
-        current_index = self.fn_to_index[str(self.filename)]
-        target_index = self._next_visible_row(current_index, -1)
-        if target_index < 0 or target_index == current_index:
-            return
-        filename = self.file_list_widget.item(target_index).text()
-        if filename:
-            self.load_file(filename)
+        """Delegates to file_navigation (wiring and tests stay)."""
+        file_navigation.open_prev_image(self, _value)
 
     def open_next_image(self, _value=False, load=True):
-        if self._paging_blocked_by_drawing():
-            return
-        if not self.may_continue(silent=True):
-            return
-        count = self.file_list_widget.count()
-        if count <= 0:
-            return
-        filename = None
-        if self.filename is None:
-            first_row = self._first_visible_row()
-            if first_row < 0:
-                return
-            filename = self.file_list_widget.item(first_row).text()
-        else:
-            current_index = self.fn_to_index[str(self.filename)]
-            target_index = self._next_visible_row(current_index, 1)
-            if target_index < 0 or target_index == current_index:
-                return
-            filename = self.file_list_widget.item(target_index).text()
-        self.filename = filename
-        if self.filename and load:
-            self.load_file(self.filename)
+        """Delegates to file_navigation (wiring and tests stay)."""
+        file_navigation.open_next_image(self, _value, load)
 
     # File
     def open_file(self, _value=False):
@@ -5280,27 +5239,8 @@ class LabelingWidget(LabelDialog):
         self.set_dirty()
 
     def open_folder_dialog(self, _value=False, dirpath=None):
-        if not self.may_continue():
-            return
-
-        default_open_dir_path = dirpath if dirpath else "."
-        if self.last_open_dir and osp.exists(self.last_open_dir):
-            default_open_dir_path = self.last_open_dir
-        else:
-            default_open_dir_path = (
-                osp.dirname(self.filename) if self.filename else "."
-            )
-
-        target_dir_path = str(
-            QtWidgets.QFileDialog.getExistingDirectory(
-                self,
-                self.tr("%s - Open Directory") % __appname__,
-                default_open_dir_path,
-                QtWidgets.QFileDialog.Option.ShowDirsOnly
-                | QtWidgets.QFileDialog.Option.DontResolveSymlinks,
-            )
-        )
-        self.import_image_folder(target_dir_path)
+        """Delegates to file_navigation (wiring and tests stay)."""
+        file_navigation.open_folder_dialog(self, _value, dirpath)
 
     @property
     def image_list(self):
