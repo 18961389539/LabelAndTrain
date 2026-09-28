@@ -140,6 +140,7 @@ from .utils.file_search import (
     matches_label_attribute,
 )
 from .utils.qt import new_icon_path
+from .utils import panel_visibility
 from .widgets import (
     AutoLabelingWidget,
     BrightnessContrastDialog,
@@ -3295,12 +3296,12 @@ class LabelingWidget(LabelDialog):
         attributes_controller.update_attributes(self, shape_index)
 
     def show_attributes_panel(self):
-        if hasattr(self, "scroll_area"):
-            self.scroll_area.setVisible(True)
+        """Delegates to panel_visibility (wiring and tests stay)."""
+        panel_visibility.show_attributes_panel(self)
 
     def hide_attributes_panel(self):
-        if hasattr(self, "scroll_area"):
-            self.scroll_area.setVisible(False)
+        """Delegates to panel_visibility (wiring and tests stay)."""
+        panel_visibility.hide_attributes_panel(self)
 
     def save_attributes(self, _shapes):
         """Delegates to attributes_controller (wiring and tests stay)."""
@@ -6373,7 +6374,8 @@ class LabelingWidget(LabelDialog):
         self.label_dock.setVisible(checked)
 
     def toggle_shapes_visibility(self, checked):
-        self.shape_dock.setVisible(checked)
+        """Delegates to panel_visibility (wiring and tests stay)."""
+        panel_visibility.toggle_shapes_visibility(self, checked)
 
 
 def _build_actions(widget):
