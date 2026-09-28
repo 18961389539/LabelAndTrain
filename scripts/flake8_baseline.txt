@@ -30,7 +30,6 @@ anylabeling/views/labeling/label_converter.py                            C901 2
 anylabeling/views/labeling/label_converter.py                            E226 2
 anylabeling/views/labeling/label_widget.py                               C408 1
 anylabeling/views/labeling/label_widget.py                               C420 1
-anylabeling/views/labeling/label_widget.py                               C901 1
 anylabeling/views/labeling/label_widget.py                               F541 1
 anylabeling/views/labeling/label_widget.py                               F841 2
 anylabeling/views/labeling/project_settings.py                           C420 1

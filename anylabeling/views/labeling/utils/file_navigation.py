@@ -1,6 +1,7 @@
 """Image navigation: prev/next, the unchecked-queue jumps, and the next-files signal. Moved out of LabelingWidget by scripts/extract_method.py."""
 
 from ..filelist.controller import FileReviewController
+from typing import Optional
 from PyQt6.QtCore import QCoreApplication
 import os.path as osp
 from PyQt6 import QtCore, QtGui, QtWidgets
@@ -97,3 +98,125 @@ def open_folder_dialog(widget, _value=False, dirpath=None):
         )
     )
     widget.import_image_folder(target_dir_path)
+
+
+def on_navigator_zoom_changed(
+    widget, zoom_percentage: int, mouse_pos: Optional[QtCore.QPoint] = None
+) -> None:
+    """Handle zoom change from navigator controls."""
+
+    if not hasattr(widget, "image") or widget.image.isNull():
+        return
+
+    if mouse_pos is not None:
+        canvas_pos = widget._convert_navigator_pos_to_canvas(mouse_pos)
+        if canvas_pos:
+            canvas_width_old = widget.canvas.width()
+
+            widget.zoom_widget.setValue(zoom_percentage)
+            widget.zoom_mode = widget.MANUAL_ZOOM
+            widget.zoom_values[widget.filename] = (
+                widget.zoom_mode,
+                zoom_percentage,
+            )
+            widget.paint_canvas()
+
+            canvas_width_new = widget.canvas.width()
+            if canvas_width_old != canvas_width_new:
+                canvas_scale_factor = canvas_width_new / canvas_width_old
+                x_shift = round(
+                    canvas_pos.x() * canvas_scale_factor - canvas_pos.x()
+                )
+                y_shift = round(
+                    canvas_pos.y() * canvas_scale_factor - canvas_pos.y()
+                )
+                widget.set_scroll(
+                    QtCore.Qt.Orientation.Horizontal,
+                    widget.scroll_bars[
+                        QtCore.Qt.Orientation.Horizontal
+                    ].value()
+                    + x_shift,
+                )
+                widget.set_scroll(
+                    QtCore.Qt.Orientation.Vertical,
+                    widget.scroll_bars[QtCore.Qt.Orientation.Vertical].value()
+                    + y_shift,
+                )
+
+            return
+
+    # Handle direct zoom changes
+    if (
+        hasattr(widget, "canvas")
+        and hasattr(widget.canvas, "width")
+        and hasattr(widget.canvas, "height")
+    ):
+        if hasattr(widget.navigator_dialog, "navigator"):
+            nav_widget = widget.navigator_dialog.navigator
+            if (
+                hasattr(nav_widget, "viewport_rect")
+                and not nav_widget.viewport_rect.isEmpty()
+            ):
+                nav_rect_center_x = nav_widget.viewport_rect.center().x()
+                nav_rect_center_y = nav_widget.viewport_rect.center().y()
+                canvas_pos = widget._convert_navigator_pos_to_canvas(
+                    QtCore.QPoint(
+                        int(nav_rect_center_x), int(nav_rect_center_y)
+                    )
+                )
+
+                if canvas_pos:
+                    canvas_width_old = widget.canvas.width()
+
+                    widget.zoom_widget.setValue(zoom_percentage)
+                    widget.zoom_mode = widget.MANUAL_ZOOM
+                    widget.zoom_values[widget.filename] = (
+                        widget.zoom_mode,
+                        zoom_percentage,
+                    )
+                    widget.paint_canvas()
+
+                    canvas_width_new = widget.canvas.width()
+                    if canvas_width_old != canvas_width_new:
+                        canvas_scale_factor = (
+                            canvas_width_new / canvas_width_old
+                        )
+                        x_shift = round(
+                            canvas_pos.x() * canvas_scale_factor
+                            - canvas_pos.x()
+                        )
+                        y_shift = round(
+                            canvas_pos.y() * canvas_scale_factor
+                            - canvas_pos.y()
+                        )
+                        widget.set_scroll(
+                            QtCore.Qt.Orientation.Horizontal,
+                            widget.scroll_bars[
+                                QtCore.Qt.Orientation.Horizontal
+                            ].value()
+                            + x_shift,
+                        )
+                        widget.set_scroll(
+                            QtCore.Qt.Orientation.Vertical,
+                            widget.scroll_bars[
+                                QtCore.Qt.Orientation.Vertical
+                            ].value()
+                            + y_shift,
+                        )
+                    return
+
+        widget.zoom_widget.setValue(zoom_percentage)
+        widget.zoom_mode = widget.MANUAL_ZOOM
+        widget.zoom_values[widget.filename] = (
+            widget.zoom_mode,
+            zoom_percentage,
+        )
+        widget.paint_canvas()
+    else:
+        widget.zoom_widget.setValue(zoom_percentage)
+        widget.zoom_mode = widget.MANUAL_ZOOM
+        widget.zoom_values[widget.filename] = (
+            widget.zoom_mode,
+            zoom_percentage,
+        )
+        widget.paint_canvas()

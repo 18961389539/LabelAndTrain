@@ -144,9 +144,16 @@ from .utils import panel_visibility
 from .utils import file_lifecycle
 from .utils import file_navigation
 from .utils import file_list_ops
+from .utils import label_editing
 from .utils.file_lifecycle import (
     _report_inherited_shapes,
     move_file_to_delete_folder,  # noqa: F401 -- test imports stay valid
+)
+from .utils.label_editing import (  # noqa: F401 -- helpers re-shared
+    LABEL_OPACITY,
+    _find_next_label_loop_shape,
+    _format_label_list_text,
+    _shape_editable_state,
 )
 from .widgets import (
     AutoLabelingWidget,
@@ -177,7 +184,6 @@ from .widgets import (
 from anylabeling.views.common.toaster import QToaster
 
 LABEL_COLORMAP = utils.label_colormap()
-LABEL_OPACITY = 128
 # Whole-image class suggestions from a classification model. Deliberately not
 # shapes: a suggestion becomes an annotation only when a human confirms it.
 PREDICTIONS_FIELD = "predictions"
@@ -205,32 +211,8 @@ FILE_SEARCH_COMPLETIONS = (
 )
 
 
-def _format_label_list_text(label, group_id):
-    text = html.escape("" if label is None else str(label))
-    if group_id is None:
-        return text
-    return f"{text} ({group_id})"
-
-
 def _set_label_list_item_lock(item, locked):
     item.set_locked(locked)
-
-
-def _shape_editable_state(shape):
-    """Fields edited by the label dialog, as one comparable tuple.
-
-    Used to decide whether a label edit actually changed anything. Qt emits
-    change signals even when the value is identical, and an unchanged edit
-    must not consume an undo slot or invalidate the redo branch.
-    """
-    return (
-        shape.label,
-        shape.flags,
-        shape.group_id,
-        shape.description,
-        shape.difficult,
-        shape.kie_linking,
-    )
 
 
 def _apply_attribute_change(widget, shape_index, property_name, value):
@@ -261,15 +243,6 @@ def _apply_attribute_change(widget, shape_index, property_name, value):
     widget.actions.undo.setEnabled(widget.canvas.is_shape_restorable)
     widget.actions.redo.setEnabled(widget.canvas.is_shape_redoable)
     return True
-
-
-def _find_next_label_loop_shape(shapes, start_index, canvas_shapes):
-    canvas_shape_ids = {id(shape) for shape in canvas_shapes}
-    for index in range(start_index, len(shapes)):
-        shape = shapes[index]
-        if id(shape) in canvas_shape_ids:
-            return index, shape
-    return len(shapes), None
 
 
 def fill_progress_template(template, annotated, total, checked):
@@ -1893,99 +1866,8 @@ class LabelingWidget(LabelDialog):
         )
 
     def loop_thru_labels(self):
-        is_new_loop = self.label_loop_shapes is None
-        if is_new_loop:
-            self.label_loop_shapes = list(self.canvas.shapes)
-
-        self.label_loop_count, shape = _find_next_label_loop_shape(
-            self.label_loop_shapes,
-            self.label_loop_count + 1,
-            self.canvas.shapes,
-        )
-        if shape is None:
-            message = (
-                self.tr("No objects to review")
-                if is_new_loop
-                else self.tr("Review complete")
-            )
-            self._reset_label_loop()
-            if not is_new_loop:
-                self.canvas.deselect_shape()
-                self.set_zoom(int(100 * self.scale_fit_window()))
-            self._show_label_loop_popup(message)
-            return
-
-        width = self.central_widget().width() - 2.0
-        height = self.central_widget().height() - 2.0
-
-        im_width = self.canvas.pixmap.width()
-        im_height = self.canvas.pixmap.height()
-
-        zoom_scale = 4
-
-        xs = []
-        ys = []
-        # loop through all points on this label
-        for point in shape.points:
-            xs.append(point.x())
-            ys.append(point.y())
-
-        # Set minimum label width to 30px this should handle point
-        # labels and very tiny labels gracefully
-        label_width = max(int(max(xs) - min(xs)), 30)
-        x = (max(xs) + min(xs)) / 2
-        y = (max(ys) + min(ys)) / 2
-
-        zoom = int(100 * width / (zoom_scale * label_width))
-        # Don't go past the max zoom which is 1000
-        zoom = min(1000, zoom)
-
-        self.set_zoom(zoom)
-
-        x_range = self.scroll_bars[Qt.Orientation.Horizontal].maximum()
-        x_step = self.scroll_bars[Qt.Orientation.Horizontal].pageStep()
-
-        y_range = self.scroll_bars[Qt.Orientation.Vertical].maximum()
-        # QT docs says Document length = maximum() - minimum() + pageStep().
-        # so there's a weird pageStep thing we gotta add
-        y_step = self.scroll_bars[Qt.Orientation.Vertical].pageStep()
-        screen_width = width / (zoom / 100)
-        # add half a screen to this
-        x_scroll = int((x - screen_width / 2) / im_width * (x_range + x_step))
-        x_scroll = min(max(0, x_scroll), x_range)
-
-        screen_height = height / (zoom / 100)
-
-        y_scroll = int(
-            (y - screen_height / 2) / (im_height) * (y_range + y_step)
-        )
-        y_scroll = min(max(0, y_scroll), y_range)
-
-        self.set_scroll(Qt.Orientation.Horizontal, x_scroll)
-        self.set_scroll(Qt.Orientation.Vertical, y_scroll)
-        self.canvas.prev_h_shape = self.canvas.h_shape = shape
-        self.canvas.select_shapes([shape])
-
-        progress = self.tr("Reviewing {current} / {total}").format(
-            current=self.label_loop_count + 1,
-            total=len(self.label_loop_shapes),
-        )
-        font_metrics = self.fontMetrics()
-        label_width = min(
-            240,
-            max(
-                0,
-                self.central_widget().viewport().width()
-                - _measure_text_width(font_metrics, progress)
-                - 56,
-            ),
-        )
-        label = font_metrics.elidedText(
-            str(shape.label or ""), Qt.TextElideMode.ElideRight, label_width
-        )
-        if label:
-            progress = f"{progress} - {label}"
-        self._show_label_loop_popup(progress)
+        """Delegates to label_editing (wiring and tests stay)."""
+        label_editing.loop_thru_labels(self)
 
     def loop_select_labels(self):
         self.select_loop_count += 1
@@ -2767,194 +2649,12 @@ class LabelingWidget(LabelDialog):
         return False
 
     def batch_edit_labels(self, shapes):
-        if not self._batch_edit_warning_shown:
-            reply = QtWidgets.QMessageBox.question(
-                self,
-                self.tr("Batch Edit"),
-                self.tr(
-                    "You are about to edit multiple shapes in batch mode. "
-                    "You can undo this with Ctrl+Z.\n\n"
-                    "This warning will only be shown once. Do you want to continue?"
-                ),
-                QtWidgets.QMessageBox.StandardButton.Yes
-                | QtWidgets.QMessageBox.StandardButton.No,
-                QtWidgets.QMessageBox.StandardButton.No,
-            )
-
-            if reply != QtWidgets.QMessageBox.StandardButton.Yes:
-                return
-
-            self._batch_edit_warning_shown = True
-
-        first_shape = shapes[0]
-        result = self.label_dialog.pop_up(
-            text=first_shape.label,
-            flags=first_shape.flags,
-            group_id=first_shape.group_id,
-            description=first_shape.description,
-            difficult=first_shape.difficult,
-            kie_linking=first_shape.kie_linking,
-            move_mode="center",
-        )
-
-        if result[0] is None:
-            return
-
-        text, flags, group_id, description, difficult, kie_linking = result
-
-        if not self.validate_label(text):
-            self.error_message(
-                self.tr("Invalid label"),
-                self.tr("Invalid label '{}' with validation type '{}'").format(
-                    text, self._config["validate_label"]
-                ),
-            )
-            return
-
-        states_before = [_shape_editable_state(shape) for shape in shapes]
-        for shape in shapes:
-            if self.attributes and text and text != shape.label:
-                text = self.reset_attribute(text, shape)
-
-            shape.label = text
-            shape.flags = flags
-            shape.group_id = group_id
-            shape.description = description
-            shape.difficult = difficult
-            shape.kie_linking = kie_linking
-
-            self._update_shape_color(shape)
-
-            item = self.label_list.find_item_by_shape(shape)
-            if item is not None:
-                if shape.group_id is None:
-                    color = shape.fill_color.getRgb()[:3]
-                    item.setText(
-                        _format_label_list_text(shape.label, shape.group_id)
-                    )
-                    item.setBackground(QtGui.QColor(*color, LABEL_OPACITY))
-                else:
-                    item.setText(
-                        _format_label_list_text(shape.label, shape.group_id)
-                    )
-
-        self.label_dialog.add_label_history(text)
-
-        if not self.unique_label_list.find_items_by_label(text):
-            unique_label_item = self.unique_label_list.create_item_from_label(
-                text
-            )
-            self.unique_label_list.addItem(unique_label_item)
-            rgb = self._get_rgb_by_label(text)
-            self.unique_label_list.set_item_label(
-                unique_label_item, text, rgb, LABEL_OPACITY
-            )
-
-        # The confirmation dialog promises "You can undo this with Ctrl+Z";
-        # keep that promise by snapshotting the new state (see
-        # Canvas.is_shape_restorable for why this happens after the edit).
-        if any(
-            before != _shape_editable_state(shape)
-            for before, shape in zip(states_before, shapes)
-        ):
-            self.canvas.store_shapes()
-        self.set_dirty()
-        self._refresh_shape_filters()
+        """Delegates to label_editing (wiring and tests stay)."""
+        label_editing.batch_edit_labels(self, shapes)
 
     def edit_label(self, item=None):
-        if item and not isinstance(item, LabelListWidgetItem):
-            raise TypeError("item must be LabelListWidgetItem type")
-
-        if not self.canvas.editing():
-            return
-
-        selected_shapes = self.canvas.selected_shapes
-        if not selected_shapes:
-            return
-
-        if len(selected_shapes) > 1:
-            return self.batch_edit_labels(selected_shapes)
-
-        if not item:
-            item = self.current_item()
-        if item is None:
-            return
-        shape = item.shape()
-        if shape is None:
-            return
-        (
-            text,
-            flags,
-            group_id,
-            description,
-            difficult,
-            kie_linking,
-        ) = self.label_dialog.pop_up(
-            text=shape.label,
-            flags=shape.flags,
-            group_id=shape.group_id,
-            description=shape.description,
-            difficult=shape.difficult,
-            kie_linking=shape.kie_linking,
-            move_mode=self._config.get("move_mode", "auto"),
-        )
-        if text is None:
-            return
-        if not self.validate_label(text):
-            self.error_message(
-                self.tr("Invalid label"),
-                self.tr("Invalid label '{}' with validation type '{}'").format(
-                    text, self._config["validate_label"]
-                ),
-            )
-            return
-        if self.attributes and text and text != shape.label:
-            text = self.reset_attribute(text, shape)
-        state_before = _shape_editable_state(shape)
-        shape.label = text
-        shape.flags = flags
-        shape.group_id = group_id
-        shape.description = description
-        shape.difficult = difficult
-        shape.kie_linking = kie_linking
-
-        # Add to label history
-        self.label_dialog.add_label_history(shape.label)
-
-        # Update last group_id
-        if group_id is not None:
-            self.label_dialog._last_gid = group_id
-
-        # Update unique label list
-        if not self.unique_label_list.find_items_by_label(shape.label):
-            unique_label_item = self.unique_label_list.create_item_from_label(
-                shape.label
-            )
-            self.unique_label_list.addItem(unique_label_item)
-            rgb = self._get_rgb_by_label(shape.label)
-            self.unique_label_list.set_item_label(
-                unique_label_item, shape.label, rgb, LABEL_OPACITY
-            )
-
-        self._update_shape_color(shape)
-        if shape.group_id is None:
-            color = shape.fill_color.getRgb()[:3]
-            item.setText(_format_label_list_text(shape.label, shape.group_id))
-            item.setBackground(QtGui.QColor(*color, LABEL_OPACITY))
-        else:
-            item.setText(_format_label_list_text(shape.label, shape.group_id))
-        # The canvas saves the state AFTER each edit (see
-        # Canvas.is_shape_restorable), so the snapshot has to happen here --
-        # after the new values are in place. Without it a mistaken label was
-        # permanent: edit_label only marked the file dirty.
-        if state_before != _shape_editable_state(shape):
-            self.canvas.store_shapes()
-        self.set_dirty()
-        self._refresh_shape_filters()
-
-        # update top-right attributes panel
-        selected_idx = self.canvas.shapes.index(selected_shapes[0])
-        self.update_attributes(selected_idx)
+        """Delegates to label_editing (wiring and tests stay)."""
+        return label_editing.edit_label(self, item)
 
     def _on_file_item_changed(self, item):
         """Delegates to file_list_ops (wiring and tests stay)."""
@@ -3819,119 +3519,10 @@ class LabelingWidget(LabelDialog):
     def on_navigator_zoom_changed(
         self, zoom_percentage: int, mouse_pos: Optional[QtCore.QPoint] = None
     ) -> None:
-        """Handle zoom change from navigator controls."""
-
-        if not hasattr(self, "image") or self.image.isNull():
-            return
-
-        if mouse_pos is not None:
-            canvas_pos = self._convert_navigator_pos_to_canvas(mouse_pos)
-            if canvas_pos:
-                canvas_width_old = self.canvas.width()
-
-                self.zoom_widget.setValue(zoom_percentage)
-                self.zoom_mode = self.MANUAL_ZOOM
-                self.zoom_values[self.filename] = (
-                    self.zoom_mode,
-                    zoom_percentage,
-                )
-                self.paint_canvas()
-
-                canvas_width_new = self.canvas.width()
-                if canvas_width_old != canvas_width_new:
-                    canvas_scale_factor = canvas_width_new / canvas_width_old
-                    x_shift = round(
-                        canvas_pos.x() * canvas_scale_factor - canvas_pos.x()
-                    )
-                    y_shift = round(
-                        canvas_pos.y() * canvas_scale_factor - canvas_pos.y()
-                    )
-                    self.set_scroll(
-                        QtCore.Qt.Orientation.Horizontal,
-                        self.scroll_bars[
-                            QtCore.Qt.Orientation.Horizontal
-                        ].value()
-                        + x_shift,
-                    )
-                    self.set_scroll(
-                        QtCore.Qt.Orientation.Vertical,
-                        self.scroll_bars[
-                            QtCore.Qt.Orientation.Vertical
-                        ].value()
-                        + y_shift,
-                    )
-
-                return
-
-        # Handle direct zoom changes
-        if (
-            hasattr(self, "canvas")
-            and hasattr(self.canvas, "width")
-            and hasattr(self.canvas, "height")
-        ):
-            if hasattr(self.navigator_dialog, "navigator"):
-                nav_widget = self.navigator_dialog.navigator
-                if (
-                    hasattr(nav_widget, "viewport_rect")
-                    and not nav_widget.viewport_rect.isEmpty()
-                ):
-                    nav_rect_center_x = nav_widget.viewport_rect.center().x()
-                    nav_rect_center_y = nav_widget.viewport_rect.center().y()
-                    canvas_pos = self._convert_navigator_pos_to_canvas(
-                        QtCore.QPoint(
-                            int(nav_rect_center_x), int(nav_rect_center_y)
-                        )
-                    )
-
-                    if canvas_pos:
-                        canvas_width_old = self.canvas.width()
-
-                        self.zoom_widget.setValue(zoom_percentage)
-                        self.zoom_mode = self.MANUAL_ZOOM
-                        self.zoom_values[self.filename] = (
-                            self.zoom_mode,
-                            zoom_percentage,
-                        )
-                        self.paint_canvas()
-
-                        canvas_width_new = self.canvas.width()
-                        if canvas_width_old != canvas_width_new:
-                            canvas_scale_factor = (
-                                canvas_width_new / canvas_width_old
-                            )
-                            x_shift = round(
-                                canvas_pos.x() * canvas_scale_factor
-                                - canvas_pos.x()
-                            )
-                            y_shift = round(
-                                canvas_pos.y() * canvas_scale_factor
-                                - canvas_pos.y()
-                            )
-                            self.set_scroll(
-                                QtCore.Qt.Orientation.Horizontal,
-                                self.scroll_bars[
-                                    QtCore.Qt.Orientation.Horizontal
-                                ].value()
-                                + x_shift,
-                            )
-                            self.set_scroll(
-                                QtCore.Qt.Orientation.Vertical,
-                                self.scroll_bars[
-                                    QtCore.Qt.Orientation.Vertical
-                                ].value()
-                                + y_shift,
-                            )
-                        return
-
-            self.zoom_widget.setValue(zoom_percentage)
-            self.zoom_mode = self.MANUAL_ZOOM
-            self.zoom_values[self.filename] = (self.zoom_mode, zoom_percentage)
-            self.paint_canvas()
-        else:
-            self.zoom_widget.setValue(zoom_percentage)
-            self.zoom_mode = self.MANUAL_ZOOM
-            self.zoom_values[self.filename] = (self.zoom_mode, zoom_percentage)
-            self.paint_canvas()
+        """Delegates to file_navigation (wiring and tests stay)."""
+        file_navigation.on_navigator_zoom_changed(
+            self, zoom_percentage, mouse_pos
+        )
 
     def _convert_navigator_pos_to_canvas(
         self, navigator_pos: QtCore.QPoint
@@ -4637,97 +4228,8 @@ class LabelingWidget(LabelDialog):
         self._apply_unique_label_rename(old_label, new_label)
 
     def _apply_unique_label_rename(self, old_label, new_label):
-        if self.canvas.shapes:
-            self.canvas.store_shapes()
-
-        old_items = self.unique_label_list.find_items_by_label(old_label)
-        new_items = self.unique_label_list.find_items_by_label(new_label)
-        if new_items:
-            for old_item in old_items:
-                row = self.unique_label_list.row(old_item)
-                if row >= 0:
-                    self.unique_label_list.takeItem(row)
-        else:
-            for old_item in old_items:
-                old_item.setData(Qt.ItemDataRole.UserRole, new_label)
-                rgb = self._get_rgb_by_label(new_label)
-                self.unique_label_list.set_item_label(
-                    old_item, new_label, rgb, LABEL_OPACITY
-                )
-
-        if old_label in self.label_info:
-            info = self.label_info.pop(old_label)
-            if new_label not in self.label_info:
-                info["value"] = None
-                self.label_info[new_label] = info
-
-        renamed = 0
-        for shape in self.canvas.shapes:
-            if shape.label != old_label:
-                continue
-            shape.label = new_label
-            self._update_shape_color(shape)
-            renamed += 1
-            list_item = self.label_list.find_item_by_shape(shape)
-            if list_item is not None:
-                list_item.setText(
-                    _format_label_list_text(shape.label, shape.group_id)
-                )
-                color = shape.fill_color.getRgb()[:3]
-                list_item.setBackground(QtGui.QColor(*color, LABEL_OPACITY))
-
-        self.label_dialog.remove_label_history(old_label)
-        self.label_dialog.add_label_history(new_label)
-
-        labels = list(self._config.get("labels") or [])
-        if old_label in labels:
-            labels = [
-                new_label if name == old_label else name for name in labels
-            ]
-        elif new_label not in labels:
-            labels.append(new_label)
-        seen = set()
-        unique_labels = []
-        for name in labels:
-            if name in seen:
-                continue
-            seen.add(name)
-            unique_labels.append(name)
-        self._config["labels"] = unique_labels
-        save_config(self._config)
-
-        folder_changed = 0
-        label_dir = self.output_dir
-        if not label_dir and self.filename:
-            label_dir = osp.dirname(self.filename)
-        if label_dir:
-            paths = list(self.image_list or [])
-            if self.filename and self.filename not in paths:
-                paths = [self.filename, *paths]
-            folder_changed = rename_label_across_folder(
-                paths,
-                label_dir,
-                old_label,
-                new_label,
-                extra_class_names=self._yolo_class_names(),
-            )
-
-        self.canvas.update()
-        self._refresh_shape_filters()
-        self._refresh_label_panel()
-        self.set_dirty()
-        status = (
-            self.tr("已将 %1 改为 %2")
-            .replace("%1", old_label)
-            .replace("%2", new_label)
-        )
-        if renamed:
-            status += f" ({renamed})"
-        if folder_changed:
-            status += self.tr(" · 文件夹 %1 个文件").replace(
-                "%1", str(folder_changed)
-            )
-        self.status(status)
+        """Delegates to label_editing (wiring and tests stay)."""
+        label_editing._apply_unique_label_rename(self, old_label, new_label)
 
     def change_output_dir_dialog(self, _value=False):
         default_output_dir = self.output_dir
@@ -5510,133 +5012,8 @@ class LabelingWidget(LabelDialog):
         )
 
     def finish_auto_labeling_object(self):
-        """Finish auto labeling object."""
-        has_object, cache_label = False, None
-        for shape in self.canvas.shapes:
-            if shape.label == AutoLabelingMode.OBJECT:
-                cache_label = shape.cache_label
-                cache_description = shape.cache_description
-                has_object = True
-                break
-
-        # If there is no object, do nothing
-        if not has_object:
-            return
-
-        # Ask a label for the object
-        text, flags, group_id, description, difficult, kie_linking = (
-            "",
-            {},
-            None,
-            None,
-            False,
-            [],
-        )
-        last_label = self.find_last_label()
-        last_gid = (
-            self.find_last_gid() if self._config["auto_use_last_gid"] else None
-        )
-        if self._config["auto_use_last_label"] and last_label:
-            text = last_label
-            if last_gid is not None:
-                group_id = last_gid
-        elif cache_label is not None:
-            text = cache_label
-            description = cache_description
-        else:
-            previous_text = self.label_dialog.edit.text()
-            (
-                text,
-                flags,
-                group_id,
-                description,
-                difficult,
-                kie_linking,
-            ) = self.label_dialog.pop_up(
-                text=self.find_last_label(),
-                flags={},
-                group_id=last_gid,
-                description=None,
-                difficult=False,
-                kie_linking=[],
-                move_mode=self._config.get("move_mode", "auto"),
-            )
-            if not text:
-                self.label_dialog.edit.setText(previous_text)
-                return
-
-        self.cache_auto_label = text
-        self.cache_auto_label_group_id = group_id
-        if not self.validate_label(text):
-            self.error_message(
-                self.tr("Invalid label"),
-                self.tr("Invalid label '{}' with validation type '{}'").format(
-                    text, self._config["validate_label"]
-                ),
-            )
-            return
-
-        if self.attributes and text:
-            text = self.reset_attribute(text, shape)
-
-        # Add to label history
-        self.label_dialog.add_label_history(text)
-
-        # Update label for the object
-        updated_shapes = False
-        for shape in self.canvas.shapes:
-            if shape.label == AutoLabelingMode.OBJECT:
-                updated_shapes = True
-                shape.label = text
-                shape.flags = flags
-                shape.group_id = group_id
-                shape.description = description
-                shape.difficult = difficult
-                shape.kie_linking = kie_linking
-                # Update unique label list
-                if not self.unique_label_list.find_items_by_label(shape.label):
-                    unique_label_item = (
-                        self.unique_label_list.create_item_from_label(
-                            shape.label
-                        )
-                    )
-                    self.unique_label_list.addItem(unique_label_item)
-                    rgb = self._get_rgb_by_label(shape.label)
-                    self.unique_label_list.set_item_label(
-                        unique_label_item, shape.label, rgb, LABEL_OPACITY
-                    )
-
-                # Update label list
-                self._update_shape_color(shape)
-                item = self.label_list.find_item_by_shape(shape)
-                if shape.group_id is None:
-                    color = shape.fill_color.getRgb()[:3]
-                    item.setText(
-                        '{} <font color="#{:02x}{:02x}{:02x}">●</font>'.format(
-                            html.escape(shape.label), *color
-                        )
-                    )
-                else:
-                    item.setText(
-                        _format_label_list_text(shape.label, shape.group_id)
-                    )
-
-        # Clean up auto labeling objects
-        self.clear_auto_labeling_marks()
-
-        # Update shape colors
-        for shape in self.canvas.shapes:
-            self._update_shape_color(shape)
-            color = shape.fill_color.getRgb()[:3]
-            item = self.label_list.find_item_by_shape(shape)
-            item.setText(_format_label_list_text(shape.label, shape.group_id))
-            item.setBackground(QtGui.QColor(*color, LABEL_OPACITY))
-            self.unique_label_list.update_item_color(
-                shape.label, color, LABEL_OPACITY
-            )
-
-        if updated_shapes:
-            self.set_dirty()
+        """Delegates to label_editing (wiring and tests stay)."""
+        label_editing.finish_auto_labeling_object(self)
 
     def group_selected_shapes(self):
         self.canvas.group_selected_shapes()
