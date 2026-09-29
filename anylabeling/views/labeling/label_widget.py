@@ -156,6 +156,7 @@ from .utils.label_editing import (  # noqa: F401 -- helpers re-shared
     _format_label_list_text,
     _shape_editable_state,
 )
+from .widgets.thumbnail_panel import ThumbnailPanel
 from .widgets import (
     AutoLabelingWidget,
     BrightnessContrastDialog,
@@ -4767,11 +4768,11 @@ class LabelingWidget(LabelDialog):
         self.load_file(self.filename)
 
     def update_thumbnail_pixmap(self):
-        """Delegates to file_list_ops (wiring and tests stay)."""
-        file_list_ops.update_thumbnail_pixmap(self)
+        """Re-scale the thumbnail panel to the current sidebar width."""
+        self.thumbnail_panel.refresh()
 
     def update_thumbnail_display(self):
-        """Delegates to file_list_ops (wiring and tests stay)."""
+        """Pick the thumbnail for the open image and show it."""
         file_list_ops.update_thumbnail_display(self)
 
     def toggle_labels_visibility(self, checked):
@@ -6634,20 +6635,9 @@ def _build_layout(widget):
     right_sidebar_layout.setContentsMargins(0, 0, 0, 0)
     right_sidebar_layout.setSpacing(4)
 
-    # Thumbnail image display
-    widget.thumbnail_pixmap = None
-    widget.thumbnail_container = QWidget()
-    thumbnail_image_layout = QVBoxLayout()
-    thumbnail_image_layout.setContentsMargins(2, 2, 2, 2)
-    widget.thumbnail_image_label = QLabel()
-    widget.thumbnail_image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-    widget.thumbnail_image_label.mousePressEvent = utils.on_thumbnail_click(
-        widget
-    )
-    thumbnail_image_layout.addWidget(widget.thumbnail_image_label)
-    widget.thumbnail_container.setLayout(thumbnail_image_layout)
-    widget.thumbnail_container.hide()
-    right_sidebar_layout.addWidget(widget.thumbnail_container)
+    # Thumbnail image display (owns its pixmap + label since batch 18)
+    widget.thumbnail_panel = ThumbnailPanel()
+    right_sidebar_layout.addWidget(widget.thumbnail_panel)
 
     # Shape attributes
     widget.shape_attributes = QLabel(

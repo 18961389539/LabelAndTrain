@@ -216,18 +216,6 @@ def _file_item_tooltip(
     )
 
 
-def update_thumbnail_pixmap(widget):
-    if widget.thumbnail_pixmap and not widget.thumbnail_pixmap.isNull():
-        width = widget.thumbnail_image_label.width()
-        if width > 0:
-            widget.thumbnail_image_label.setPixmap(
-                widget.thumbnail_pixmap.scaledToWidth(
-                    width,
-                    QtCore.Qt.TransformationMode.SmoothTransformation,
-                )
-            )
-
-
 def mark_file_item_negative_state(widget, image_file, negative):
     """Delegates to filelist.quality (batch auto-label flags negatives)."""
     widget.file_quality_controller.mark_file_item_negative_state(
@@ -251,9 +239,8 @@ def _current_file_item(widget):
 
 
 def update_thumbnail_display(widget):
-    widget.thumbnail_pixmap = None
-    widget.thumbnail_image_label.clear()
-    widget.thumbnail_container.hide()
+    panel = widget.thumbnail_panel
+    panel.reset()
 
     model_config = (
         widget.auto_labeling_widget.model_manager.loaded_model_config
@@ -280,10 +267,7 @@ def update_thumbnail_display(widget):
         if not osp.exists(thumbnail_path):
             return
 
-        widget.thumbnail_pixmap = QtGui.QPixmap(thumbnail_path)
-        if not widget.thumbnail_pixmap.isNull():
-            widget.thumbnail_container.show()
-            widget.update_thumbnail_pixmap()
+        panel.set_pixmap(QtGui.QPixmap(thumbnail_path))
 
     except Exception as e:
         logger.error(f"Failed to load thumbnail image: {str(e)}")

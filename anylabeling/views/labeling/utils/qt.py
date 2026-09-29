@@ -436,10 +436,17 @@ def fmt_shortcut(text):
     return f"<b>{mod}</b>+<b>{key}</b>"
 
 
-def on_thumbnail_click(widget):
+def on_thumbnail_click(panel):
+    """Click handler factory for the thumbnail panel.
+
+    Takes the ``ThumbnailPanel`` itself (it owns the pixmap since split
+    batch 18), not the whole labeling widget.
+    """
+
     def _on_click(event):
-        if widget.thumbnail_pixmap and not widget.thumbnail_pixmap.isNull():
-            dialog = QtWidgets.QDialog(widget)
+        pixmap = panel.pixmap()
+        if pixmap and not pixmap.isNull():
+            dialog = QtWidgets.QDialog(panel)
             dialog.setWindowTitle(
                 QCoreApplication.translate(
                     "LabelingWidget", "Thumbnail - Click anywhere to close"
@@ -460,8 +467,8 @@ def on_thumbnail_click(widget):
             screen_size = screen.availableGeometry()
             screen_ratio = 0.35
 
-            pixmap_width = widget.thumbnail_pixmap.width()
-            pixmap_height = widget.thumbnail_pixmap.height()
+            pixmap_width = pixmap.width()
+            pixmap_height = pixmap.height()
 
             max_width = int(screen_size.width() * screen_ratio)
             max_height = int(screen_size.height() * screen_ratio)
@@ -473,7 +480,7 @@ def on_thumbnail_click(widget):
             display_width = int(pixmap_width * scale_ratio)
             display_height = int(pixmap_height * scale_ratio)
 
-            scaled_pixmap = widget.thumbnail_pixmap.scaled(
+            scaled_pixmap = pixmap.scaled(
                 display_width,
                 display_height,
                 Qt.AspectRatioMode.KeepAspectRatio,
