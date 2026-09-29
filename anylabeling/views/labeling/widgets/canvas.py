@@ -41,6 +41,7 @@ from .canvas_rotation import (  # noqa: F401
     ROTATION_HANDLE_SNAP_DEGREES,
     CanvasRotationMixin,
 )
+from .shape_history import ShapeHistoryMixin, ShapeHistoryStore
 
 AUTO_DECODE_DELAY_MS = 100
 MAX_AUTO_DECODE_MARKS = 42
@@ -53,7 +54,11 @@ LABEL_COLORMAP = label_colormap()
 
 
 class Canvas(
-    BrushCanvasMixin, CanvasRotationMixin, CuboidCanvasMixin, QtWidgets.QWidget
+    ShapeHistoryMixin,
+    BrushCanvasMixin,
+    CanvasRotationMixin,
+    CuboidCanvasMixin,
+    QtWidgets.QWidget,
 ):  # pylint: disable=too-many-public-methods, too-many-instance-attributes
     """Canvas widget to handle label drawing"""
 
@@ -131,11 +136,9 @@ class Canvas(
         self.is_move_editing = False
         self.auto_labeling_mode: AutoLabelingMode = None
         self.shapes = []
-        self.shapes_backups = []
-        # Redo stack: states discarded by undo(). Cleared whenever a new
-        # edit happens (store_shapes) or a different file is loaded, since
-        # those make the discarded branch invalid.
-        self.shapes_redo_backups = []
+        # Undo/redo, keyed by the image on screen: a detour through
+        # another file no longer throws them away.
+        self.shape_history = ShapeHistoryStore()
         self.current = None
         self.selected_shapes = []  # save the selected shapes here
         self.selected_shapes_copy = []
@@ -352,14 +355,9 @@ class Canvas(
 
     def store_shapes(self):
         """Store shapes for restoring later (Undo feature)"""
-        shapes_backup = []
-        for shape in self.shapes:
-            shapes_backup.append(shape.copy())
-        if len(self.shapes_backups) > self.num_backups:
-            self.shapes_backups = self.shapes_backups[-self.num_backups - 1 :]
-        self.shapes_backups.append(shapes_backup)
-        # A new edit invalidates any pending redo branch.
-        self.shapes_redo_backups.clear()
+        self.shape_history.push(
+            [shape.copy() for shape in self.shapes], self.num_backups
+        )
 
     def store_moving_shape(self):
         """Store a moving shape"""
@@ -395,32 +393,22 @@ class Canvas(
     @property
     def is_shape_restorable(self):
         """Check if shape can be restored from backup"""
-        # We save the state AFTER each edit (not before) so for an
-        # edit to be undoable, we expect the CURRENT and the PREVIOUS state
-        # to be in the undo stack.
-        if len(self.shapes_backups) < 2:
-            return False
-        return True
+        return self.shape_history.can_undo()
 
     @property
     def is_shape_redoable(self):
         """Check if a previously undone state can be re-applied"""
-        return len(self.shapes_redo_backups) > 0
+        return self.shape_history.can_redo()
 
     def restore_shape(self):
         """Restore/Undo a shape"""
-        # This does _part_ of the job of restoring shapes.
-        # The complete process is also done in app.py::undoShapeEdit
-        # and app.py::load_shapes and our own Canvas::load_shapes function.
-        if not self.is_shape_restorable:
+        # This does _part_ of the job of restoring shapes. The rest is
+        # done by the caller (label_widget
+        # _reload_shapes_after_history_change), and Canvas.load_shapes
+        # pushes the restored state right back onto the stack.
+        shapes_backup = self.shape_history.undo()
+        if shapes_backup is None:
             return
-        # Keep the discarded state so undo can be reversed (Redo).
-        discarded = self.shapes_backups.pop()  # latest
-        self.shapes_redo_backups.append(discarded)
-
-        # The application will eventually call Canvas.load_shapes which will
-        # push this right back onto the stack.
-        shapes_backup = self.shapes_backups.pop()
         self.shapes = [shape.copy() for shape in shapes_backup]
         self.selected_shapes = []
         self._selected_group_id = None
@@ -440,9 +428,9 @@ class Canvas(
         undo stack by the caller via Canvas.load_shapes, exactly like the
         normal edit flow.
         """
-        if not self.is_shape_redoable:
+        shapes_backup = self.shape_history.redo()
+        if shapes_backup is None:
             return
-        shapes_backup = self.shapes_redo_backups.pop()
         self.shapes = [shape.copy() for shape in shapes_backup]
         self.selected_shapes = []
         self._selected_group_id = None
@@ -3687,9 +3675,9 @@ class Canvas(
         self._clear_space_pan_state()
         self.restore_cursor()
         self.pixmap = None
-        self.shapes_backups = []
-        # Undo history does not survive a file switch; neither may redo.
-        self.shapes_redo_backups = []
+        # Bank this image's history rather than dropping it: leaving a
+        # file is not a decision to forget what was done in it.
+        self.shape_history.leave()
         self.is_move_editing = False
         self.compare_pixmap = None
         self._selected_group_id = None

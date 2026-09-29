@@ -246,6 +246,9 @@ def load_file(widget, filename=None):  # noqa: C901
         return False
     widget.image = image
     widget.filename = filename
+    # Now that the image is known, point the canvas undo history at it:
+    # the previous image's stack is banked instead of dropped.
+    widget.canvas.shape_history.enter(filename)
 
     if (
         hasattr(widget, "navigator_dialog")
@@ -291,6 +294,14 @@ def load_file(widget, filename=None):  # noqa: C901
     else:
         widget.set_clean()
     widget.canvas.setEnabled(True)
+
+    # The stacks are per image now, so the menu entries that reach them have
+    # to be re-read after a load: a restored history behind a still-disabled
+    # Ctrl+Z is no undo at all.
+    actions = getattr(widget, "actions", None)
+    if actions is not None:
+        actions.undo.setEnabled(widget.canvas.is_shape_restorable)
+        actions.redo.setEnabled(widget.canvas.is_shape_redoable)
 
     # set zoom values
     is_initial_load = widget.view_state.is_empty()

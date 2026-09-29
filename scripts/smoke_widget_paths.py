@@ -141,10 +141,19 @@ def main():
         )  # int slider values -> 1.30x / 0.70x
         assert widget.view_state.zoom[images[0]] == (widget.MANUAL_ZOOM, 150)
 
-    @step("2b. switch away and back -- view state restored")
+    @step("2b. switch away and back -- view state and undo history survive")
     def s2b():
+        # Undo needs two states before it means anything: canvas stores the
+        # state AFTER each edit, and a fresh load pushes exactly one.
+        widget.canvas.store_shapes()
+        assert (
+            widget.canvas.is_shape_restorable
+        ), "undo not armed before switch"
         widget.load_file(images[1])
         app.processEvents()
+        assert (
+            not widget.canvas.is_shape_restorable
+        ), "another image's history leaked in"
         widget.load_file(images[0])
         app.processEvents()
         assert widget.zoom_widget.value() == 150, widget.zoom_widget.value()
@@ -155,6 +164,12 @@ def main():
             == 42
         )
         assert widget.view_state.brightness_contrast[images[0]] == (65, 35)
+        # The stacks come back, and the menu entry that reaches them is live
+        # again -- a restorable stack behind a disabled action is no undo.
+        assert (
+            widget.canvas.is_shape_restorable
+        ), "undo history was dropped on the file switch"
+        assert widget.actions.undo.isEnabled(), "Ctrl+Z stayed disabled"
 
     @step("3. thumbnail panel show / reset")
     def s3():

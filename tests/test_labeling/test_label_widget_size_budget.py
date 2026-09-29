@@ -36,7 +36,11 @@ REPO_ROOT = os.path.abspath(
 #: again for anything but a documented feature.
 BUDGETS = {
     "anylabeling/views/labeling/label_widget.py": 6813,
-    "anylabeling/views/labeling/widgets/canvas.py": 3930,
+    # Lowered 3772 -> 3760 on 2026-09-29: the undo/redo stacks moved out to
+    # widgets/shape_history.py (which is also what made them survive a file
+    # switch) and the canvas reaches them through the attribute names it has
+    # always exposed, so the move is a net removal.
+    "anylabeling/views/labeling/widgets/canvas.py": 3760,
 }
 
 
