@@ -19,7 +19,7 @@
 | 1 守卫：跨图撤销 | ✅ 完成（commit `92bb707`） | 栈搬进 `widgets/shape_history.py`，按图分桶（LRU `MAX_BUCKETS=20`）；`canvas.reset_state()` 由清空改为 `leave()`、`load_file` 在 `widget.filename = filename` 后 `enter()`；旧属性名由 mixin 的 property 保住。**canvas.py 3772 → 3760（净减，预算收紧）**，13 条测试 + 冒烟 2b 步。过程中**冒烟抓到单元测试看不到的缺口**：历史回来了但 `Ctrl+Z` 仍 disabled（等于功能不可见），已补动作刷新 |
 | 3b "未绑定动作"可见 **且可绑** | ✅ 完成（commit `72bb9b9`） | 22 个键位以 `null` 进模板（快捷键字段 96 → **118**），`runtime_applier` 用通用循环按名挂进映射，F1 新增「未绑定动作」分节且**绑上一个就自动消失**；三条守卫；`label_widget.py` 反而 **−8 行**（预算收紧到 6805） |
 | 4 数字键 >9 与冷启动 | ✅ 完成（commit `5e55493`） | `DIGIT_SLOTS = 1-9 然后 0`（0 号位从死键变第十槽位）；`import_image_folder` 预分配项目标签 → 第一批框就能用；>10 类别走标签对话框的补全框（**更正**：报告原说"没有键盘路径"过强）。契约测试拦住 `digit_shortcut_controller` 未声明，已补进 `CONTRACT_MEMBERS`（123 → 124） |
-| 4 出口体检 + manifest | ⬜ 未做 | 未动 |
+| 4 出口体检 + manifest | ✅ 完成（commit `1af83d4`） | `export_check.py` 写前单遍扫描；类别不在表/文件读不出 → 先弹确认（默认取消），空/无标注只计数；`export_manifest.json` 记录类别来源+筛选+计数；冒烟新增第 7 步真导出（9/9） |
 | 5 真机摸底 | ⬜ 未做 | 需要人做 |
 | 6 门禁 | 🟡 部分 | black 全仓已进 CI；覆盖率与"键位覆盖"棘轮未动 |
 
@@ -102,6 +102,8 @@
 4c. `utils/export.py` 里 VOC/COCO 两份逐字副本：**同步加固或直接删除**。它们没有 GUI 入口（死代码），但会让后来人以为"三份都一样"。
 
 - **验收**：新增导出摘要/manifest 测试；manifest 能被二次读取并断言。
+
+**✅ 完成（`1af83d4`）**：4a/4b 落地，**4c 不再适用**——批次 19 把 VOC/COCO 那两份旧副本统一到 `output_dir.py` 后，三份已是同一实现，不再有"让后来人以为三份都一样"的问题。另有 36 条导出侧测试（16 条体检 + 20 条摘要/往返），含一条与 `data_audit` 的同夹具对拍（防两份"体检"判据漂移）。
 
 ### 步骤 5 — 真机验证（贯穿，不产出代码）
 
