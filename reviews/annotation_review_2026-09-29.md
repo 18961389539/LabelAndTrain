@@ -67,6 +67,9 @@ if osp.exists(save_path):
 
 ## 三、🟡 中（每天绕的坎）
 
+> **状态更新（2026-09-29 夜，commit `5e55493` / `72bb9b9`）**：**3、4、5 号已修**（见各条末尾），**6、7 号仍未做**。
+> 其中 4 号我要**更正自己的判断**：报告原话是"类别超过 9 个就没有直接键盘路径"，重查发现 `LabelDialog` 装了 `QCompleter`（"startswith" 内联补全），所以 `Ctrl+E` → 打字前缀 → 回车本来就是一条纯键盘路径；缺的只是"单键直达"，而这一条对 >10 类的数据集本来也不成立（只有 10 个数字键）。4 号的价值因此从"补一条通路"变成"补一个 0 号位 + 补一个冷启动"，见下。
+
 ### 3. 22 个动作仍然没有键盘入口，而且用户自己也绑不了
 
 现在"无键"是**白名单**（`tests/test_settings/test_shortcut_bindings.py` 的 `NO_SHORTCUT_BY_DESIGN`），不是缺口——但这 22 个里有几个是标注过程中真的会遇到的：`save_crop`、`save_visualization_image`、`save_with_image_data`、`use_system_clipboard`、`toggle_shape_lock`、`copy_coordinates`、`confirm_classification`（另有 8 个 export/upload 与 `save_auto`、`set_cross_line`、`run_history`、`ultralytics_train` 属一次性，确实不必绑）。
@@ -75,17 +78,23 @@ if osp.exists(save_path):
 
 **建议**：给这批加 null 键位条目（`_shortcut_fields()` 由模板派生，加进 yaml 即自动进设置页），F1 增加「未绑定动作」分节灰显 + 一句"可在设置页绑定"。
 
+**✅ 已修（`72bb9b9`）**：22 个键位以 `null` 进模板（快捷键字段 96 → **118**），`runtime_applier` 用一个通用循环按名挂进映射（apply 阶段本来就把 `None` 当"清空"，创建路径没动）；F1 末尾新增「未绑定动作（可在设置页绑键）」分节，**绑上一个就自动消失**。三条新守卫：声明的动作必须在模板里、必须在真 widget 上按名解析得到、幽灵键检查只在循环存在时才认它们被消费。另外分清了一个概念：**"无默认键"≠"不可绑"**——`NO_SHORTCUT_BY_DESIGN` 只是"不发出厂键"。
+
 ### 4. 类别超过 9 个就没有直接键盘路径
 
 `shortcuts/digit_controller.py:75`：`for digit in range(1, 10)`，且 `if len(used) >= 9: break`。第 10 个类别起只能走 `Ctrl+E` 的标签对话框，或用 `Ctrl+Shift+N` 循环——多类别数据集每天都会碰到。
 
 **建议**：数字键扩到两位序列（先按首位再按次位），或给标签对话框加前缀过滤 + 默认焦点落在输入框。
 
+**部分已修（`5e55493`）**：0 号位从"死键"变成**第十个槽位**（`DIGIT_SLOTS = 1-9 然后 0`），文档里"0–9"的说法因此成立；>10 类别的路径确认是标签对话框的补全框（见上方的判断更正）。两位序列没有做——10 个槽位 + 补全框已经覆盖，再加状态机会引入超时/视觉反馈的一整套复杂度，收益不成比例。
+
 ### 5. 空项目里按 1-9 没反应
 
 自动分配挂在 `load_shapes` 的尾部（`label_widget.py:2885 → 2887`），**没有 shape 就不分配**。所以新项目第一步仍然必须用鼠标在对话框里选一次标签（每个类别一次），而这恰恰是数字键要消除的那一步。
 
 **建议**：打开项目时若 `config.labels` 非空，直接按顺序分配给 1-9；或在状态栏给一句"按 Alt+D 配置数字键"的提示。
+
+**✅ 已修（`5e55493`）**：`import_image_folder` 在项目自己的标签恢复之后调用 `assign_label_digits`，按顺序把项目声明的标签分配进 1-9 然后 0——**第一批框就能用数字键**。已映射的标签保留自己的键，槽位满则不动，`digit_shortcuts: null` 仍然整体关闭。冒烟脚本第 1 步加了一条真 widget 断言（开一个声明了两个标签的文件夹）。
 
 ### 6. 导出前没有体检
 
@@ -102,7 +111,7 @@ if osp.exists(save_path):
 ## 四、🔵 低（收尾项）
 
 8. **VOC/COCO 两份逐字副本仍是旧行为（当前无 GUI 入口的死代码）**：~~`utils/export.py:801`（Yes/No/Cancel → `rmtree`）、`:1007`（Overwrite/Cancel → `rmtree`）~~ → **✅ 2026-09-29 已随 `fe6ca9b` 一并统一**（两份副本的行为现在与 YOLO 完全一致，`rmtree` 只剩 `output_dir.py:96` 一处，由棘轮守住）。剩下的是"三份重复代码"这个结构问题本身：现在四处调用同一个实现，重复已经消失。
-9. **`digit_shortcut_0` 是半个死键**：action 存在（字面量 `"0"`），但自动分配只填 1-9，出厂 `digit_shortcuts: {}`，所以 `0` 只有手动 `Alt+D` 映射后才可用；而 `docs/zh_cn/user_guide.md:769` 写的是"数字键（0–9）"。
+9. **`digit_shortcut_0` 是半个死键**：action 存在（字面量 `"0"`），但自动分配只填 1-9，出厂 `digit_shortcuts: {}`，所以 `0` 只有手动 `Alt+D` 映射后才可用；而 `docs/zh_cn/user_guide.md:769` 写的是"数字键（0–9）"。→ **✅ 2026-09-29 已修（`5e55493`）**：0 成为自动分配的第十个槽位，文档的说法与实现一致了。
 10. **55 个模板叶子在设置页够不到**：多数是有意排除（语言/主题/dock 显隐/flags 走菜单或对话框）。逐项确认过有其它入口的：`store_data`（`label_widget.py:5123` 菜单勾选）、`device` / `custom_models`（自动标注面板）、`startup_show_project_manager`（项目切换器）、`show_*` / `keep_prev_*`（View 菜单勾选）。**真正只能手改 `~/.xanylabelingrc` 的剩 5 个**：`canvas.attributes.background_color` / `border_color` / `text_color`、`canvas.brush.max_undo_steps`（=30）、`canvas.brush.max_undo_memory_mb`。
 11. **真机手感仍未测，且今天新加的 18 个键位一次都没按过**：`measurements_2026-09-27.md` §二 的 5 步清单没跑；另外 `Ctrl+Alt+1/2/3` 在部分输入法/系统热键下可能被截胡，`Ctrl+Alt+D/E/G/O/V` 也需要逐个实按确认（offline 测试只能证明 QAction 上挂了对应序列，证不了系统不抢）。
 
