@@ -24,6 +24,10 @@ from anylabeling.views.labeling.utils.async_label_check import (
 )
 from anylabeling.views.labeling.widgets import Popup
 from anylabeling.views.labeling.utils.qt import new_icon_path
+from anylabeling.views.labeling.utils.output_dir import (
+    CANCEL,
+    resolve_existing_output_dir,
+)
 from anylabeling.views.labeling.utils.style import *
 from anylabeling.views.labeling.utils.style import get_msg_box_style
 from anylabeling.views.labeling.utils.theme import get_theme
@@ -509,66 +513,17 @@ def export_yolo_annotation(self, mode):
             popup.show_popup(self, position="center")
             return
 
-    if osp.exists(save_path):
-        msg_box = QtWidgets.QMessageBox(self)
-        msg_box.setIcon(QtWidgets.QMessageBox.Icon.Warning)
-        msg_box.setWindowTitle(self.tr("Output Directory Exists!"))
-        msg_box.setText(self.tr("Directory already exists. Choose an action:"))
-        msg_box.setInformativeText(
-            self.tr(
-                "• Merge  - Keep what is already there and overwrite the "
-                "label files this run writes\n"
-                "• Clear  - Delete this whole directory and rebuild it "
-                "(asks again first)\n"
-                "• Cancel - Abort export"
-            )
+    protected_dirs = {
+        osp.dirname(path)
+        for path in (self.image_list if self.image_list else [self.filename])
+    }
+    if (
+        resolve_existing_output_dir(
+            self, save_path, protected_paths=protected_dirs
         )
-
-        merge_button = msg_box.addButton(
-            self.tr("Merge"), QtWidgets.QMessageBox.ButtonRole.AcceptRole
-        )
-        clear_button = msg_box.addButton(
-            self.tr("Clear"), QtWidgets.QMessageBox.ButtonRole.DestructiveRole
-        )
-        cancel_button = msg_box.addButton(
-            self.tr("Cancel"), QtWidgets.QMessageBox.ButtonRole.RejectRole
-        )
-        msg_box.setDefaultButton(merge_button)
-        msg_box.setStyleSheet(get_msg_box_style())
-        msg_box.exec()
-
-        clicked_button = msg_box.clickedButton()
-        if clicked_button == clear_button:
-            # A recursive delete of whatever the annotator typed, in a folder
-            # that may already hold the images this export copied: never one
-            # click away, and never the default button.
-            confirm = QtWidgets.QMessageBox(self)
-            confirm.setIcon(QtWidgets.QMessageBox.Icon.Critical)
-            confirm.setWindowTitle(self.tr("Delete the whole directory?"))
-            confirm.setText(
-                self.tr("即将删除并重建该目录，" "里面的内容不会进回收站：")
-            )
-            confirm.setInformativeText(save_path)
-            clear_yes = confirm.addButton(
-                self.tr("删除并重建"),
-                QtWidgets.QMessageBox.ButtonRole.DestructiveRole,
-            )
-            confirm_cancel = confirm.addButton(
-                self.tr("Cancel"),
-                QtWidgets.QMessageBox.ButtonRole.RejectRole,
-            )
-            confirm.setDefaultButton(confirm_cancel)
-            confirm.setStyleSheet(get_msg_box_style())
-            confirm.exec()
-            if confirm.clickedButton() is not clear_yes:
-                return
-            logger.warning(f"Export cleared the output directory: {save_path}")
-            shutil.rmtree(save_path)
-            os.makedirs(save_path)
-        elif clicked_button == cancel_button:
-            return
-    else:
-        os.makedirs(save_path)
+        == CANCEL
+    ):
+        return
 
     classes_target = None
     data_yaml_target = None
@@ -771,39 +726,17 @@ def export_voc_annotation(self, mode):
     skip_empty_files = skip_empty_files_checkbox.isChecked()
     save_path = path_edit.text()
 
-    if osp.exists(save_path):
-        msg_box = QtWidgets.QMessageBox(self)
-        msg_box.setIcon(QtWidgets.QMessageBox.Icon.Warning)
-        msg_box.setWindowTitle(self.tr("Output Directory Exists!"))
-        msg_box.setText(self.tr("Directory already exists. Choose an action:"))
-        msg_box.setInformativeText(
-            self.tr(
-                "• Yes    - Merge with existing files\n"
-                "• No     - Delete existing directory\n"
-                "• Cancel - Abort export"
-            )
+    protected_dirs = {
+        osp.dirname(path)
+        for path in (self.image_list if self.image_list else [self.filename])
+    }
+    if (
+        resolve_existing_output_dir(
+            self, save_path, protected_paths=protected_dirs
         )
-
-        msg_box.addButton(
-            self.tr("Yes"), QtWidgets.QMessageBox.ButtonRole.YesRole
-        )
-        no_button = msg_box.addButton(
-            self.tr("No"), QtWidgets.QMessageBox.ButtonRole.NoRole
-        )
-        cancel_button = msg_box.addButton(
-            self.tr("Cancel"), QtWidgets.QMessageBox.ButtonRole.RejectRole
-        )
-        msg_box.setStyleSheet(get_msg_box_style())
-        msg_box.exec()
-
-        clicked_button = msg_box.clickedButton()
-        if clicked_button == no_button:
-            shutil.rmtree(save_path)
-            os.makedirs(save_path)
-        elif clicked_button == cancel_button:
-            return
-    else:
-        os.makedirs(save_path)
+        == CANCEL
+    ):
+        return
 
     converter = LabelConverter()
 
@@ -979,35 +912,17 @@ def export_coco_annotation(self, mode):
         return
 
     save_path = path_edit.text()
-    if osp.exists(save_path):
-        msg_box = QtWidgets.QMessageBox(self)
-        msg_box.setIcon(QtWidgets.QMessageBox.Icon.Warning)
-        msg_box.setWindowTitle(self.tr("Output Directory Exists!"))
-        msg_box.setText(self.tr("Directory already exists. Choose an action:"))
-        msg_box.setInformativeText(
-            self.tr(
-                "• Overwrite - Overwrite existing directory\n"
-                "• Cancel - Abort export"
-            )
+    protected_dirs = {
+        osp.dirname(path)
+        for path in (self.image_list if self.image_list else [self.filename])
+    }
+    if (
+        resolve_existing_output_dir(
+            self, save_path, protected_paths=protected_dirs
         )
-
-        msg_box.addButton(
-            self.tr("Overwrite"), QtWidgets.QMessageBox.ButtonRole.YesRole
-        )
-        cancel_button = msg_box.addButton(
-            self.tr("Cancel"), QtWidgets.QMessageBox.ButtonRole.RejectRole
-        )
-        msg_box.setStyleSheet(get_msg_box_style())
-        msg_box.exec()
-
-        clicked_button = msg_box.clickedButton()
-        if clicked_button == cancel_button:
-            return
-        else:
-            shutil.rmtree(save_path)
-            os.makedirs(save_path)
-    else:
-        os.makedirs(save_path)
+        == CANCEL
+    ):
+        return
 
     image_list = self.image_list if self.image_list else [self.filename]
     progress_dialog = QProgressDialog(

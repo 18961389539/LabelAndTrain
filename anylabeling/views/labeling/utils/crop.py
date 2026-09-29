@@ -22,7 +22,6 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QSpinBox,
     QVBoxLayout,
-    QMessageBox,
 )
 
 from anylabeling.views.labeling.logger import logger
@@ -32,11 +31,14 @@ from anylabeling.views.labeling.utils.general import (
     resolve_path_within_directory,
 )
 from anylabeling.views.labeling.utils.qt import new_icon_path
+from anylabeling.views.labeling.utils.output_dir import (
+    CANCEL,
+    resolve_existing_output_dir,
+)
 from anylabeling.views.labeling.utils.style import (
     get_cancel_btn_style,
     get_export_option_style,
     get_ok_btn_style,
-    get_msg_box_style,
     get_progress_dialog_style,
     get_spinbox_style,
 )
@@ -327,33 +329,15 @@ def save_crop(self):
 
     save_path = path_edit.text()
 
-    if osp.exists(save_path):
-        msg_box = QMessageBox(self)
-        msg_box.setIcon(QMessageBox.Icon.Warning)
-        msg_box.setWindowTitle(self.tr("Output Directory Exists!"))
-        msg_box.setText(self.tr("Directory already exists. Choose an action:"))
-        msg_box.setInformativeText(
-            self.tr(
-                "• Overwrite - Overwrite existing directory\n"
-                "• Cancel - Abort export"
-            )
+    if (
+        resolve_existing_output_dir(
+            self,
+            save_path,
+            protected_paths={osp.dirname(self.filename)},
         )
-
-        msg_box.addButton(self.tr("Overwrite"), QMessageBox.ButtonRole.YesRole)
-        cancel_button = msg_box.addButton(
-            self.tr("Cancel"), QMessageBox.ButtonRole.RejectRole
-        )
-        msg_box.setStyleSheet(get_msg_box_style())
-        msg_box.exec()
-
-        clicked_button = msg_box.clickedButton()
-        if clicked_button == cancel_button:
-            return
-        else:
-            shutil.rmtree(save_path)
-            os.makedirs(save_path)
-    else:
-        os.makedirs(save_path)
+        == CANCEL
+    ):
+        return
 
     image_file_list = (
         [self.filename] if not self.image_list else self.image_list
