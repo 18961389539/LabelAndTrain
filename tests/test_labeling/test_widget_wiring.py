@@ -8,6 +8,10 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 try:
     from PyQt6 import QtCore, QtGui, QtWidgets
 
+    from anylabeling.views.labeling.utils.shortcuts_help import (
+        UNBOUND_ACTIONS,
+    )
+
     PYQT_AVAILABLE = True
 except Exception:
     PYQT_AVAILABLE = False
@@ -90,6 +94,18 @@ class TestWidgetWiring(unittest.TestCase):
         shortcuts = [s.toString() for s in action.shortcuts()]
         self.assertIn("Ctrl+Shift+K", shortcuts)
         self.assertFalse(action.isEnabled())
+
+    def test_the_digit_actions_are_registered_on_the_widget(self):
+        # Ten registrations collapsed into one loop; the loop has to keep
+        # putting each action on the widget, or the keys stop firing while
+        # the canvas has focus.
+        for index in range(10):
+            action = getattr(self.widget.actions, f"digit_shortcut_{index}")
+            self.assertIn(
+                self.widget,
+                action.associatedObjects(),
+                f"digit_shortcut_{index} is not registered on the widget",
+            )
 
     def test_every_smart_tool_entry_exists(self):
         titles = [
@@ -235,6 +251,21 @@ class TestWidgetWiring(unittest.TestCase):
 
     def test_every_template_shortcut_is_mapped_or_declared_hidden(self):
         mapped = {key.split(".", 1)[1] for key in shortcut_action_mapping()}
+        # The menu-only actions are bound by one generic loop in the applier
+        # instead of one map entry each, so they do not appear in the regex
+        # above -- but that loop resolves them by name, which means the name
+        # has to exist on the widget or the key is quietly unreachable.
+        unresolved = [
+            key
+            for key, _description in UNBOUND_ACTIONS
+            if getattr(self.widget.actions, key, None) is None
+        ]
+        self.assertEqual(
+            unresolved,
+            [],
+            "declared rebindable, but the widget has no action of that name",
+        )
+        mapped |= {key for key, _description in UNBOUND_ACTIONS}
         template = self.widget._config["shortcuts"]
         self.assertEqual(
             sorted(set(template) - mapped),

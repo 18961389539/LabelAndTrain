@@ -25,6 +25,12 @@ try:
     from anylabeling.views.labeling.settings.schema import (
         load_template_config,
     )
+    from anylabeling.views.labeling.utils.shortcuts_help import (
+        NO_KEY_TEXT,
+        UNBOUND_ACTIONS,
+        UNBOUND_GROUP_TITLE,
+        build_shortcut_rows,
+    )
 
     SCHEMA_AVAILABLE = True
 except Exception:  # pragma: no cover - import guard, mirrors test_schema
@@ -34,6 +40,7 @@ except Exception:  # pragma: no cover - import guard, mirrors test_schema
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 LABEL_WIDGET = ROOT / "anylabeling/views/labeling/label_widget.py"
 DIALOG = ROOT / "anylabeling/views/labeling/settings/dialog.py"
+APPLIER = ROOT / "anylabeling/views/labeling/settings/runtime_applier.py"
 PACKAGE = ROOT / "anylabeling"
 
 #: Actions that deliberately carry no keyboard entry.
@@ -129,6 +136,12 @@ def _config_keys_in(path):
     return keys
 
 
+def _applier_generically_binds_unbound_actions():
+    """The declared-but-unbound keys are read only by one loop."""
+    text = APPLIER.read_text(encoding="utf-8")
+    return "for config_key, _description in UNBOUND_ACTIONS" in text
+
+
 def _shortcut_consumers():
     """Every shortcut config key referenced anywhere in the package."""
     keys = set()
@@ -136,6 +149,8 @@ def _shortcut_consumers():
         if "__pycache__" in str(path):
             continue
         keys |= _config_keys_in(path)
+    if _applier_generically_binds_unbound_actions():
+        keys |= {key for key, _ in UNBOUND_ACTIONS}
     return keys
 
 
@@ -189,6 +204,42 @@ class TestShortcutBindings(unittest.TestCase):
             "these keys are editable in the settings dialog but no code "
             "reads them, so changing them does nothing",
         )
+
+    def test_the_unbound_actions_are_declared_in_the_template(self):
+        """An entry the settings dialog never sees is not rebindable."""
+        declared = [key for key, _ in UNBOUND_ACTIONS]
+        self.assertEqual(
+            sorted(set(declared) - set(self.shortcuts)),
+            [],
+            "these actions are advertised as rebindable but have no key in "
+            "the template, so the settings dialog has no row for them",
+        )
+        self.assertEqual(
+            sorted(set(declared) - _shortcut_consumers()),
+            [],
+            "the template defines these keys but nothing applies them -- the "
+            "loop in runtime_applier that puts them in the shortcut map is "
+            "what makes the binding real",
+        )
+
+    def test_the_unbound_section_empties_out_as_keys_get_bound(self):
+        rows = build_shortcut_rows(self.shortcuts)
+        unbound = [row for row in rows if row[0] == UNBOUND_GROUP_TITLE]
+        self.assertEqual(len(unbound), len(UNBOUND_ACTIONS))
+        self.assertTrue(
+            all(row[1] == NO_KEY_TEXT for row in unbound),
+            "an unbound row must not claim a key",
+        )
+        # Bind one: its row moves into the group it belongs to.
+        sample = UNBOUND_ACTIONS[0][0]
+        bound = dict(self.shortcuts)
+        bound[sample] = "Ctrl+Alt+Shift+F9"
+        groups = {
+            row[0]
+            for row in build_shortcut_rows(bound)
+            if row[2] == dict(UNBOUND_ACTIONS)[sample]
+        }
+        self.assertNotIn(UNBOUND_GROUP_TITLE, groups)
 
     def test_settings_descriptions_reference_real_shortcuts(self):
         described = _config_keys_in(DIALOG)

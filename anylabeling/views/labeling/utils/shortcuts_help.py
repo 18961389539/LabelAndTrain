@@ -152,6 +152,43 @@ SHORTCUT_GROUPS = [
 #: polygon is being drawn — undocumented in the one place a user looks for it.
 _HIDDEN_KEYS = frozenset()
 
+#: Actions with no shipped default key, and why they are listed anyway: each
+#: is a one-off menu item (a file dialog, a batch export, a training
+#: launcher) that nobody needs a key for on day one, but a run of them turns
+#: into a routine soon enough. They are rebindable in the settings dialog --
+#: the field exists as soon as the key exists in the template -- so the F1
+#: sheet names them instead of leaving the annotator to wonder whether the
+#: feature has a keyboard entry at all. Kept to what a menu actually offers;
+#: anything absent here is either bound or has no key on purpose.
+UNBOUND_ACTIONS = [
+    ("confirm_classification", "确认分类建议"),
+    ("copy_coordinates", "复制选中标注的坐标"),
+    ("export_yolo_hbb_annotation", "导出 YOLO 水平框"),
+    ("export_yolo_obb_annotation", "导出 YOLO 旋转框"),
+    ("export_yolo_pose_annotation", "导出 YOLO 姿态"),
+    ("export_yolo_seg_annotation", "导出 YOLO 分割"),
+    ("run_history", "训练历史"),
+    ("save_auto", "保存到自动命名的标注文件"),
+    ("save_crop", "保存裁剪图"),
+    ("save_visualization_image", "保存可视化图"),
+    ("save_with_image_data", "保存时内嵌图像数据"),
+    ("set_cross_line", "设置十字线"),
+    ("toggle_shape_lock", "锁定/解锁选中标注"),
+    ("ultralytics_train", "启动 Ultralytics 训练"),
+    ("upload_image_flags_file", "导入图像标志文件"),
+    ("upload_label_classes_file", "导入类别文件"),
+    ("upload_label_flags_file", "导入标签标志文件"),
+    ("upload_yolo_hbb_annotation", "回导 YOLO 水平框"),
+    ("upload_yolo_obb_annotation", "回导 YOLO 旋转框"),
+    ("upload_yolo_pose_annotation", "回导 YOLO 姿态"),
+    ("upload_yolo_seg_annotation", "回导 YOLO 分割"),
+    ("use_system_clipboard", "使用系统剪贴板"),
+]
+
+#: Heading and key column used for those entries while they have no key.
+UNBOUND_GROUP_TITLE = "未绑定动作（可在设置页绑键）"
+NO_KEY_TEXT = "（未绑定）"
+
 
 def _shortcut_to_text(value):
     """Normalize a shortcut config value (str/list/None) to display text."""
@@ -167,7 +204,11 @@ def build_shortcut_rows(shortcuts):
     """Map a shortcuts config dict to display rows.
 
     Returns a list of ``(group_title, key_text, description)``. Entries with
-    no bound shortcut (empty/None) or hidden keys are skipped.
+    no bound shortcut (empty/None) or hidden keys are skipped -- except the
+    ones in :data:`UNBOUND_ACTIONS`, which get a trailing "no key yet"
+    section instead. That section empties itself as keys are bound, so the
+    sheet never claims a key exists that does not, and never hides a feature
+    that does.
     """
     if not isinstance(shortcuts, dict):
         return []
@@ -180,6 +221,12 @@ def build_shortcut_rows(shortcuts):
             if not key_text:
                 continue
             rows.append((group_title, key_text, description))
+    rows.extend(
+        (UNBOUND_GROUP_TITLE, NO_KEY_TEXT, description)
+        for config_key, description in UNBOUND_ACTIONS
+        if config_key not in _HIDDEN_KEYS
+        and not _shortcut_to_text(shortcuts.get(config_key))
+    )
     return rows
 
 

@@ -12,6 +12,7 @@ from .. import utils
 from ..logger import logger
 from ..shape import Shape
 from ..utils.qt import apply_application_font
+from ..utils.shortcuts_help import UNBOUND_ACTIONS
 from ..widgets import LabelDialog
 
 LABEL_OPACITY = 128
@@ -219,6 +220,13 @@ class SettingsRuntimeApplier:
                 ),
             )
         )
+        # Menu-only actions that ship without a default key. They are
+        # in the map so the settings dialog can give them one, and out
+        # of the way (no key bound) until it does.
+        for config_key, _description in UNBOUND_ACTIONS:
+            action = getattr(self._widget.actions, config_key, None)
+            if action is not None:
+                shortcut_map[f"shortcuts.{config_key}"] = action
         self._shortcut_action_map = shortcut_map
         for key, action in shortcut_map.items():
             short_key = key.split(".", 1)[1]

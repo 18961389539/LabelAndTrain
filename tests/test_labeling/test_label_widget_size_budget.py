@@ -35,7 +35,11 @@ REPO_ROOT = os.path.abspath(
 #: split batch lands, freeze the lower number and never raise this one
 #: again for anything but a documented feature.
 BUDGETS = {
-    "anylabeling/views/labeling/label_widget.py": 6813,
+    # Lowered 6813 -> 6805 on 2026-09-29: three widget.actions members joined
+    # the registry for the unbound-but-rebindable menu actions, and the ten
+    # digit registrations collapsed into one loop (-11), so the feature batch
+    # still came out ahead.
+    "anylabeling/views/labeling/label_widget.py": 6805,
     # Lowered 3772 -> 3760 on 2026-09-29: the undo/redo stacks moved out to
     # widgets/shape_history.py (which is also what made them survive a file
     # switch) and the canvas reaches them through the attribute names it has

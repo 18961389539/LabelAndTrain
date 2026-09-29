@@ -6081,6 +6081,9 @@ def _build_actions(widget):
         smart_restore_backup=smart_restore_backup,
         fill_drawing=fill_drawing,
         shape_converter=shape_converter,
+        run_history=run_history,
+        save_crop=save_crop,
+        ultralytics_train=ultralytics_train,
         save_auto=save_auto,
         save_with_image_data=save_with_image_data,
         change_output_dir=change_output_dir,
@@ -6292,19 +6295,8 @@ def _build_actions(widget):
         ungroup_selected_shapes=ungroup_selected_shapes,
     )
 
-    for digit_action in (
-        widget.actions.digit_shortcut_0,
-        widget.actions.digit_shortcut_1,
-        widget.actions.digit_shortcut_2,
-        widget.actions.digit_shortcut_3,
-        widget.actions.digit_shortcut_4,
-        widget.actions.digit_shortcut_5,
-        widget.actions.digit_shortcut_6,
-        widget.actions.digit_shortcut_7,
-        widget.actions.digit_shortcut_8,
-        widget.actions.digit_shortcut_9,
-    ):
-        widget.addAction(digit_action)
+    for index in range(10):
+        widget.addAction(getattr(widget.actions, f"digit_shortcut_{index}"))
     widget.addAction(widget.actions.toggle_annotation_checked)
     widget.addAction(widget.actions.mark_checked_and_next)
     widget.addAction(widget.actions.mark_rejected_and_next)

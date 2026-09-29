@@ -58,7 +58,12 @@ class TestSettingsSchema(unittest.TestCase):
         # shape_converter, select_toggle_shapes — plus save_to, which the F1
         # sheet had listed all along while its config value stayed null, so
         # the row was silently skipped and no one could bind it.
-        self.assertEqual(len(shortcut_fields), 96)
+        # +22 keys (2026-09-29): the one-off menu items that keep no default
+        # key. They exist in the template so the settings dialog can offer
+        # them, and F1 lists them as 未绑定 until a key is chosen; what the
+        # audit found was "no key *and* no way to bind one", which is the part
+        # that made them a gap rather than a choice.
+        self.assertEqual(len(shortcut_fields), 118)
         keys = {field.key for field in shortcut_fields}
         self.assertIn("shortcuts.open_project", keys)
         self.assertIn("shortcuts.mark_checked_and_next", keys)

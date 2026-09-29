@@ -151,6 +151,8 @@ shortcuts:
   auto_run: Ctrl+B
   brightness_contrast: Ctrl+Alt+D
   close: Ctrl+W
+  confirm_classification: null
+  copy_coordinates: null
   copy_polygon: Ctrl+C
   create_brush_polygon: Ctrl+N
   create_circle: Shift+C
@@ -173,6 +175,10 @@ shortcuts:
   edit_labels: Alt+L
   edit_polygon: Ctrl+J
   edit_shapes: Alt+S
+  export_yolo_hbb_annotation: null
+  export_yolo_obb_annotation: null
+  export_yolo_pose_annotation: null
+  export_yolo_seg_annotation: null
   fill_drawing: Ctrl+Alt+Q
   fit_width: Ctrl+Shift+F
   fit_window: Ctrl+F
@@ -197,10 +203,16 @@ shortcuts:
   quit: Ctrl+Q
   redo: Ctrl+Shift+Z
   remove_selected_point: Backspace
+  run_history: null
   save: Ctrl+S
   save_as: Ctrl+Shift+S
+  save_auto: null
+  save_crop: null
   save_to: Ctrl+Shift+E
+  save_visualization_image: null
+  save_with_image_data: null
   select_toggle_shapes: Ctrl+Alt+X
+  set_cross_line: null
   shape_converter: Ctrl+Alt+Y
   show_attributes: Ctrl+Shift+L
   show_degrees: Ctrl+Alt+E
@@ -229,11 +241,21 @@ shortcuts:
   toggle_auto_use_last_gid: Ctrl+Shift+G
   toggle_auto_use_last_label: Ctrl+Y
   toggle_keep_prev_mode: Ctrl+P
+  toggle_shape_lock: null
   toggle_visibility_shapes: Ctrl+H
+  ultralytics_train: null
   undo: Ctrl+Z
   undo_last_point: Ctrl+Z
   ungroup_selected_shapes: U
   union_selected_shapes: Ctrl+Shift+M
+  upload_image_flags_file: null
+  upload_label_classes_file: null
+  upload_label_flags_file: null
+  upload_yolo_hbb_annotation: null
+  upload_yolo_obb_annotation: null
+  upload_yolo_pose_annotation: null
+  upload_yolo_seg_annotation: null
+  use_system_clipboard: null
   zoom_in:
   - Ctrl++
   zoom_out: Ctrl+-
