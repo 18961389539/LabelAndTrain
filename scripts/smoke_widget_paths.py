@@ -10,6 +10,7 @@ them -- the paths that only exist when everything is wired together:
   4. review state + quality -> filelist items / getattr path (17)
   5. canvas rectangle edits -> canvas_geometry (14-16)
   6. delete_image_file      -> file_lifecycle (batch 9)
+  7. YOLO export            -> export_check / manifest (batch 23)
 
 Run it before a machine-verification pass (or before a release) to
 catch runtime wiring breaks the unit tests cannot see:
@@ -18,10 +19,13 @@ catch runtime wiring breaks the unit tests cannot see:
 
 Exit code is 0 when every step passed. Modal confirmations are stubbed
 (a human step, covered by the machine checklist); everything else runs
-through the production code. Run with ``-u``: buffered stdout loses the
-whole report if the process dies.
+through the production code. Step 7 replaces only the two clicks the
+export dialog asks a human for -- the dialog itself is built for real,
+so its checkbox wiring is what runs. Run with ``-u``: buffered stdout
+loses the whole report if the process dies.
 """
 
+import json
 import os
 import shutil
 import sys
@@ -105,6 +109,102 @@ def build_widget(config_path, filename=None):
     widget = LabelingWidget(parent, filename=filename)
     widget.parent = type("P", (), {"parent": QtWidgets.QMainWindow()})()
     return widget
+
+
+def stub_export_dialogs(export_mod, classes, converter, out_dir, messages):
+    """Replace the two clicks a human supplies, and nothing else.
+
+    The export dialog itself is built for real, so the checkbox wiring that
+    decides whether a manifest is written is the production one. Returns a
+    callable that puts the module back the way it was.
+    """
+
+    def fake_resolve(_widget, _mode):
+        return list(classes), "smoke", converter
+
+    def auto_accept(dialog):
+        for edit in dialog.findChildren(QtWidgets.QLineEdit):
+            edit.setText(out_dir)
+        return 1
+
+    class _Popup:
+        def __init__(self, message, *a, **kw):
+            messages.append(message)
+
+        def show_popup(self, *a, **kw):
+            pass
+
+    original = {
+        "resolve": export_mod.resolve_classes_for_yolo,
+        "exec": QtWidgets.QDialog.exec,
+        "popup": export_mod.Popup,
+    }
+    export_mod.resolve_classes_for_yolo = fake_resolve
+    QtWidgets.QDialog.exec = auto_accept
+    export_mod.Popup = _Popup
+
+    def restore():
+        export_mod.resolve_classes_for_yolo = original["resolve"]
+        QtWidgets.QDialog.exec = original["exec"]
+        export_mod.Popup = original["popup"]
+
+    return restore
+
+
+def check_export_output(out_dir, classes, messages):
+    """The summary named the record, and the record matches the run."""
+    assert messages, "the export told the user nothing"
+    summary = messages[-1]
+    assert "export_manifest.json" in summary, summary
+
+    with open(
+        os.path.join(out_dir, "export_manifest.json"), encoding="utf-8"
+    ) as fh:
+        manifest = json.load(fh)
+    assert manifest["classes"]["names"] == classes, manifest["classes"]
+    assert manifest["mode"] == "hbb", manifest["mode"]
+    assert manifest["result"]["images_exported"] == 3, manifest["result"]
+    assert manifest["source_data"]["no_label_file"] == 2, manifest[
+        "source_data"
+    ]
+    assert manifest["source_data"]["labels_not_in_classes"] == {}
+
+    # The class list and the label file are what make the manifest checkable
+    # rather than decorative.
+    for name in ("classes.txt", "data.yaml", "img_0.txt"):
+        assert os.path.exists(os.path.join(out_dir, name)), os.listdir(out_dir)
+    with open(os.path.join(out_dir, "img_0.txt"), encoding="utf-8") as fh:
+        first = fh.readline().split()
+    assert first and first[0] == "0", first
+
+
+def run_yolo_export(widget, app, tmp):
+    from anylabeling.views.labeling.label_converter import LabelConverter
+    from anylabeling.views.labeling.utils import export as export_mod
+
+    # A folder of its own: two images without a label file are the point (they
+    # exercise the "no label file" count without blocking), and the default
+    # export path is derived from the folder, so keep it inside the temp tree
+    # rather than at its parent.
+    source_dir = os.path.join(tmp, "export_src")
+    out_dir = os.path.join(tmp, "export_out")
+    os.makedirs(source_dir)
+    make_images(source_dir)
+    widget.import_image_folder(source_dir)
+    app.processEvents()
+
+    classes = ["box"]
+    messages = []
+    restore = stub_export_dialogs(
+        export_mod, classes, LabelConverter(classes=classes), out_dir, messages
+    )
+    try:
+        export_mod.export_yolo_annotation(widget, "hbb")
+    finally:
+        restore()
+    app.processEvents()
+
+    check_export_output(out_dir, classes, messages)
 
 
 def main():
@@ -245,6 +345,10 @@ def main():
             os.remove(os.path.join(deleted_dir, name))
         os.rmdir(deleted_dir)
 
+    @step("7. YOLO export -- readiness check, manifest, summary")
+    def s7():
+        run_yolo_export(widget, app, tmp)
+
     s1()
     s2a()
     s2b()
@@ -253,6 +357,7 @@ def main():
     s4b()
     s5()
     s6()
+    s7()
 
     print("")
     print("=== smoke summary ===", flush=True)

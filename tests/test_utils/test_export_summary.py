@@ -91,6 +91,30 @@ class TestExportSummary(unittest.TestCase):
         self.assertIn("7", summary)
         self.assertNotIn("跳过", summary)
 
+    def test_the_record_is_named_only_when_it_was_written(self):
+        # The export record is optional; a summary that names a file which is
+        # not there would send the reader looking for it.
+        written = _format_yolo_export_summary(
+            fake_widget(),
+            counted_files=1,
+            total_files=1,
+            stats={"exported": 1},
+            copied_images=0,
+            classes_target=None,
+            manifest_target="C:/out/export_manifest.json",
+        )
+        skipped = _format_yolo_export_summary(
+            fake_widget(),
+            counted_files=1,
+            total_files=1,
+            stats={"exported": 1},
+            copied_images=0,
+            classes_target=None,
+        )
+
+        self.assertIn("export_manifest.json", written)
+        self.assertNotIn("export_manifest.json", skipped)
+
     def test_skipped_shapes_are_listed_with_their_reason(self):
         summary = _format_yolo_export_summary(
             fake_widget(),

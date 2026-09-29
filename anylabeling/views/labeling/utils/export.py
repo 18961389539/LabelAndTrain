@@ -28,6 +28,15 @@ from anylabeling.views.labeling.utils.output_dir import (
     CANCEL,
     resolve_existing_output_dir,
 )
+from anylabeling.views.labeling.utils.export_check import (
+    MANIFEST_NAME,
+    build_manifest,
+    check_export_readiness,
+    format_readiness,
+    is_blocking,
+    write_manifest,
+)
+from anylabeling.app_info import __version__
 from anylabeling.views.labeling.utils.style import *
 from anylabeling.views.labeling.utils.style import get_msg_box_style
 from anylabeling.views.labeling.utils.theme import get_theme
@@ -248,6 +257,7 @@ def _format_yolo_export_summary(
     classes_target,
     skipped_unchecked=0,
     data_yaml_target=None,
+    manifest_target=None,
 ):
     """Human-readable recap of a YOLO export, skips included.
 
@@ -270,6 +280,11 @@ def _format_yolo_export_summary(
     if data_yaml_target:
         lines.append(
             widget.tr("已写入 %s（train/val 需按布局补填）") % "data.yaml"
+        )
+    if manifest_target:
+        lines.append(
+            widget.tr("已写入 %s（本次的类别来源、筛选条件与跳过明细）")
+            % MANIFEST_NAME
         )
     missing = stats.get("missing_label_file", 0)
     if missing:
@@ -321,6 +336,7 @@ def export_yolo_annotation(self, mode):
             popup.show_popup(self, popup_height=65, position="center")
             return
         classes = list(converter.classes)
+        classes_source = osp.basename(self.yaml_file)
 
     else:
         resolved = resolve_classes_for_yolo(self, mode)
@@ -435,6 +451,25 @@ def export_yolo_annotation(self, mode):
         )
         layout.addWidget(write_classes_checkbox)
 
+    manifest_checkbox = QtWidgets.QCheckBox(
+        self.tr("写入导出记录（%s）") % MANIFEST_NAME
+    )
+    manifest_checkbox.setChecked(True)
+    manifest_checkbox.setToolTip(
+        self.tr(
+            "写入导出记录 export_manifest.json / export record\n"
+            "\n"
+            "勾选后会在导出目录生成一份 JSON，记下本次导出的类别列表及其来源、"
+            "筛选条件（仅已确认 / 跳过空标注 / 复制图片）、导出与跳过的数量，"
+            "以及源数据的检查结果（无标注 / 空标注 / 读不出的文件 / "
+            "不在类别表里的标签）。\n"
+            "\n"
+            "训练不读这个文件，删掉也不影响；它是为了几个月后还能回答"
+            "「这批标签是怎么导出来的」。"
+        )
+    )
+    layout.addWidget(manifest_checkbox)
+
     button_layout = QHBoxLayout()
     button_layout.setContentsMargins(0, 16, 0, 0)
     button_layout.setSpacing(8)
@@ -482,6 +517,7 @@ def export_yolo_annotation(self, mode):
     save_images = save_images_checkbox.isChecked()
     skip_empty_files = skip_empty_files_checkbox.isChecked()
     only_checked = only_checked_checkbox.isChecked()
+    write_manifest_record = manifest_checkbox.isChecked()
     save_path = path_edit.text()
     image_list = self.image_list if self.image_list else [self.filename]
 
@@ -511,6 +547,37 @@ def export_yolo_annotation(self, mode):
                 icon=new_icon_path("warning", "svg"),
             )
             popup.show_popup(self, position="center")
+            return
+
+    # The run reports its skips afterwards, which is too late for the two
+    # findings that cannot be undone once the first file is written: shapes
+    # whose label is outside the exported class list, and label files that
+    # cannot be read. Check the files the run will read, before it reads them.
+    readiness = check_export_readiness(image_list, get_label_file, classes)
+    if is_blocking(readiness):
+        box = QtWidgets.QMessageBox(self)
+        box.setIcon(QtWidgets.QMessageBox.Icon.Warning)
+        box.setWindowTitle(self.tr("导出前检查"))
+        box.setText(self.tr("这批数据无法完整导出。"))
+        box.setInformativeText(
+            "\n".join(format_readiness(readiness))
+            + "\n\n"
+            + self.tr(
+                "继续导出：类别不在表里的形状不会出现在结果里；"
+                "读不出来的标注文件会让本轮导出中断，留下不完整的目录。"
+            )
+        )
+        proceed_button = box.addButton(
+            self.tr("仍然导出"),
+            QtWidgets.QMessageBox.ButtonRole.DestructiveRole,
+        )
+        cancel_button = box.addButton(
+            self.tr("Cancel"), QtWidgets.QMessageBox.ButtonRole.RejectRole
+        )
+        box.setDefaultButton(cancel_button)
+        box.setStyleSheet(get_msg_box_style())
+        box.exec()
+        if box.clickedButton() is not proceed_button:
             return
 
     protected_dirs = {
@@ -578,6 +645,39 @@ def export_yolo_annotation(self, mode):
                 break
 
         progress_dialog.close()
+        manifest_target = None
+        if write_manifest_record:
+            manifest_target = write_manifest(
+                save_path,
+                build_manifest(
+                    mode=mode,
+                    version=__version__,
+                    image_dir=(
+                        osp.dirname(self.filename) if self.filename else ""
+                    ),
+                    label_dir=self.output_dir
+                    or osp.dirname(self.filename or ""),
+                    classes=classes,
+                    classes_source=classes_source,
+                    filters={
+                        "only_confirmed": only_checked,
+                        "skip_empty_labels": skip_empty_files,
+                        "save_with_images": save_images,
+                        "write_classes_txt": classes_target is not None,
+                    },
+                    result={
+                        "images_exported": exported_files,
+                        "shapes_exported": stats.get("exported", 0),
+                        "images_copied": copied_images,
+                        "skipped_unconfirmed": skipped_unchecked,
+                        "missing_label_files": stats.get(
+                            "missing_label_file", 0
+                        ),
+                        "skipped_shapes": dict(stats.get("skipped") or {}),
+                    },
+                    readiness=readiness,
+                ),
+            )
         summary = _format_yolo_export_summary(
             self,
             exported_files,
@@ -587,6 +687,7 @@ def export_yolo_annotation(self, mode):
             classes_target,
             skipped_unchecked=skipped_unchecked,
             data_yaml_target=data_yaml_target,
+            manifest_target=manifest_target,
         )
         message_text = (
             self.tr(

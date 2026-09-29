@@ -69,9 +69,11 @@
 
 | # | 操作 | 预期 | 失败回溯 |
 |---|---|---|---|
-| 5.1 | YOLO 导出一次（勾选写入 classes.txt） | 导出目录出现 `classes.txt` **和 `data.yaml`**（nc/names 正确，train/val 为注释）；完成弹窗提到两者 | data.yaml（批次 9 之前的收尾项） |
+| 5.1 | YOLO 导出一次（勾选写入 classes.txt） | 导出目录出现 `classes.txt` / `data.yaml`（nc/names 正确，train/val 为注释）**和 `export_manifest.json`**；完成弹窗提到三者 | data.yaml（批次 9 收尾）、manifest（批次 23） |
 | 5.2 | 按「仅导出已确认图片」再导一次 | 需返工的图被跳过并在弹窗计数 | 既有功能回归确认 |
 | 5.3 | 从菜单导入一份 OBB txt | 框回来且角度正确 | OBB 回写（beta.3 既有） |
+| 5.4 | **临时**把某个标签改成不在 `classes.txt` 里的名字，再导出 | 先弹「导出前检查」，列出该标签与形状数，**回车/默认按钮是取消**；选「仍然导出」则结果里出现跳过的形状 | `export_check.check_export_readiness` |
+| 5.5 | 用「用当前标签列表」导一次后，打开 `export_manifest.json` | `classes.names` 顺序与 `classes.txt` 一致；`source_data.no_label_file` 与实际无标注张数相符 | `export_check.build_manifest` |
 
 ## 6. 数字快捷键（config v2 迁移，今天上午的改动）
 
