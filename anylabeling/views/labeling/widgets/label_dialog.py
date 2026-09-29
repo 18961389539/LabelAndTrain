@@ -1359,7 +1359,7 @@ class LabelDialog(QtWidgets.QDialog):
         self.edit_group_id.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
 
         # Add difficult checkbox
-        self.edit_difficult = QtWidgets.QCheckBox(self.tr("useDifficult"))
+        self.edit_difficult = QtWidgets.QCheckBox(self.tr("困难标志"))
         self.edit_difficult.setChecked(difficult)
 
         # Add linking input

@@ -726,7 +726,7 @@ Only the registry entry is removed. The config/weight files on disk are kept:
     </message>
     <message>
         <location filename="..\..\views\labeling\widgets\label_dialog.py" line="1362" />
-        <source>useDifficult</source>
+        <source>困难标志</source>
         <translation>困难标志</translation>
     </message>
     <message>
