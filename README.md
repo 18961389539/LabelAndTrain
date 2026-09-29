@@ -84,6 +84,8 @@ above), and the interface it describes only ships `zh_CN`.
 Process documents live next to it — e.g.
 [`docs/zh_cn/split_verification_2026-09-28.md`](./docs/zh_cn/split_verification_2026-09-28.md),
 the machine-verification checklist that gated the label-widget split batches.
+[`docs/zh_cn/controller_extraction_roadmap.md`](./docs/zh_cn/controller_extraction_roadmap.md)
+maps what the contract still owns and where the next extractions would go.
 
 ## Features
 
