@@ -3,6 +3,20 @@
 Fork entries are listed first; everything below the upstream marker is
 X-AnyLabeling's own history, kept for provenance.
 
+## `v1.0.0-beta.5` (Sep 29, 2026)
+
+### 🛠 Improvements
+
+- The first *domain* extraction, as opposed to a mechanical move: canvas rectangle geometry is now `widgets/rectangle_geometry.py` — plain functions taking the image bounds and the wheel-editing constants as arguments (`clip_rectangle_to_pixmap`, `scale_from_center`, `adjust_edge`), with the Canvas methods as thin delegating stubs. The math is testable without a widget, a pixmap, or an event loop: `tests/test_widgets/test_rectangle_geometry.py` (10 tests) pins clipping, atomic scale rejection, edge choice and clamping directly. `canvas.py` drops 4097 → 3974 and its budget follows.
+- The hit test joined it: `Canvas._shape_hit_candidates` is now `canvas_geometry.hit_candidates(shapes, point, epsilon, is_visible, cuboid_vertex_lookup, cuboid_face_hit)` — the three interaction priority tiers (vertex, edge/new-point, body) and the stack-index tie-break are plain functions over the shapes, with the two canvas-owned cuboid lookups passed in as callbacks. `select_shape_point` itself stays on Canvas: it is the selection state machine, not geometry. Seven tests pin vertex-beats-body, stack-order tie-break, hidden/locked handling and the cuboid callback path. `rectangle_geometry.py` was renamed `canvas_geometry.py` to be the single home for this kind of math.
+- The drag constraints joined it. `bounded_move_vertex` / `bounded_move_shapes` / `calculate_offsets` / `rotate_point` / `intersection_point` split into `canvas_geometry.move_vertex_bounded` (rotation adjoint corners, rectangle axis shifts, border intersection), `drag_shapes_bounded` (locked filtering, out-of-pixmap refusal, the offsets clamp), `selection_offsets`, `line_image_intersection`, `rotate_point` and `out_of_bounds` — the locked/cuboid dispatch and the `prev_point` bookkeeping stay on Canvas, which is state, not math. Canvas shrinks 3930 → 3772. Thirteen tests pin the clamp behaviour, including the upstream off-by-one (the clamp uses `pixmap.width()`, so a shape can end 1px over the border — the original XXX shaky comment, now pinned as-is instead of silently fixed).
+- The god parameter got a contract. `label_widget_contract.py` declares `CONTRACT_MEMBERS` -- the exact set of 132 widget attributes and methods the five extracted modules touch, collected mechanically -- and `tests/test_labeling/test_label_widget_contract.py` locks it from both sides: a module reaching for a member that is not declared fails (the interface grows only on purpose), a declared member that no module touches fails (it cannot rot), and every declared member is proven to exist on `LabelingWidget` (methods, class names, `self.x =` and `widget.x =` assignments in the assembly helpers, module-owned scratch state, or inherited from Qt). The number is the honest size of the implicit interface the split batches created -- and the yardstick any future controller-class extraction will be measured against.
+- Stage one of the roadmap ran: eight contract members left the widget. `_apply_checked_batch`, `_maybe_focus_low_confidence_shapes`, `_record_recent_dir` and `_maybe_show_smart_tools_guide` moved into `file_lifecycle` through the extraction script (byte-compared), and three existing stubs (`_set_file_item_annotated`, `_set_file_item_low_conf`, `_shapes_need_review`) were deleted in favour of direct cross-module calls. The contract follows at 128 — the honest outcome is smaller than the roadmap's guess, because most "unused" members turned out to be live canvas/list callbacks; the roadmap document records the corrected numbers and the reason. One real catch on the way: `_note_save_quality` is called by `attributes_controller` through `getattr(widget, ...)`, so deleting its stub would have silently dropped quality notes — the deletion was reverted, the stub stays with a comment naming the blind spot (a getattr string is invisible to both the AST scan and the contract test).
+- Stage two opened with the thumbnail slice: `thumbnail_pixmap`, `thumbnail_image_label` and `thumbnail_container` were three loose members on the widget for one feature; they are `widgets/thumbnail_panel.py` now -- a `ThumbnailPanel` that owns the pixmap, the label and the show-hide policy, with `reset()` / `set_pixmap()` / `refresh()` as its surface. `file_list_ops.update_thumbnail_display` still decides *which* file gets a thumbnail (that needs the model config), but it only calls the panel now; `on_thumbnail_click` takes the panel instead of the whole widget. The contract drops to 125, and the three members that had no test at all are covered by six new `ThumbnailPanel` tests.
+- Second stage-two slice: the view memory. `zoom_values`, `brightness_contrast_values` and `scroll_values` were three dicts on the widget, keyed by filename, written from three different files and read back in `load_file` -- the "where was I on this picture" state, in three places at once. They are `widgets/view_state.py` now: a `ViewStateStore` with `zoom` / `brightness_contrast` / `scroll`, an `is_empty()` that names the first-load-of-the-session check, and `remember_scroll` / `scroll_for` helpers. Eighteen call sites across `label_widget`, `file_lifecycle` and `file_navigation` follow. Contract 125 → 123; the memory itself -- which had no test at all -- gets five.
+- The difficult checkbox reads the way the UI always looked. Its source string was the internal field name (`useDifficult`) while the catalog mapped it to 困难标志; the source is the Chinese string now and `zh_CN.ts` follows. With the source equal to the target text, `tr()` returns it unchanged -- the UI shows exactly what it showed before, and the `.qm` waits for the next `lrelease` run.
+- The extraction roadmap is in the tree: `docs/zh_cn/controller_extraction_roadmap.md` records the contract analysis (73 of 132 members single-module-exclusive, 41 unused inside the class), the three stages, and -- after execution -- the corrected numbers, the reasons the remaining members are not sliceable, and the archived original plan. The machine checklist gained a section for this batch's paths.
+
 ## `v1.0.0-beta.4` (Sep 28, 2026)
 
 ### 🛠 Improvements
@@ -14,13 +28,6 @@ X-AnyLabeling's own history, kept for provenance.
 - Digit shortcuts ship on now. The template's `digit_shortcuts: null` was the factory default, and null means "feature disabled" everywhere in `digit_controller` — so on a fresh install the 0-9 keys did nothing, with no hint that Alt+D or auto-assign even existed; "press a digit to slap the matching label on" is the cheapest efficiency win this tool has and it was off at the factory. The template now ships `{}` (auto-assign maps free digits 1-9 to labels as they are first seen) and a version-2 config migration flips only rcs still carrying the untouched null, so a deliberately configured map is never overwritten. null stays available as the off switch: once the rc is stamped version 2, a hand-edited null survives every later load. `tests/test_config_migrations.py` gained five cases pinning flip / respect-choice / off-switch behaviour.
 - Auto-save is debounced. `set_dirty()` under `auto_save: true` used to run a full mkstemp + fsync + safe_replace cycle on every single edit — each wheel-step resize, each drag frame, no content check, nothing debounced but the feedback toast. On the mechanical and network drives industrial annotation actually runs on, that is a visible stutter per gesture, and it was the amplifier behind the keep_prev pollution path. Edits now arm a 400 ms single-shot timer and one write lands after the last change; the dirty flag stays set until the write actually happens, so every path out of the image flushes or asks first — `may_continue` (both silent switching and window close), `load_file`, `reset_state`, `set_clean`, and the explicit `_save_file`, which cancels the pending write so the file is not rewritten twice. The batch-export guard already keyed off `dirty`, which is now honest about pending changes. `tests/test_labeling/test_auto_save_debounce.py` (8 tests) pins schedule / flush / burst-collapse / supersede, and the two suites that read the disk right after an edit now flush explicitly first.
 - Split batches 10-13 moved the navigation, file-list, and label-editing clusters the same way: `open_next/prev_image` and the unchecked-queue jumps to `utils/file_navigation.py`, thirteen list-item/tooltip/thumbnail/review-state operations to `utils/file_list_ops.py`, `edit_label`/`batch_edit_labels`/`loop_thru_labels`/`_apply_unique_label_rename`/`finish_auto_labeling_object`/`new_shape` to `utils/label_editing.py`, and `save_labels` to `file_lifecycle.py` — thirteen more methods, every one byte-compared instruction for instruction, `label_widget.py` down 7914 → 6832 across the four batches. Two more script bugs surfaced and were fixed at the gate: import merging compared statement text while black reshapes earlier copies into parenthesised blocks (double-inserting the roles import as 8× F811 — merging is by bound-name subset now), and nested `def` names were missing from the locals set, so every nested helper looked like an unresolved global. Cumulative for the day: 8380 → 6832 lines (−18.5%), the class's C901 count at zero, zero behaviour changes.
-- The first *domain* extraction, as opposed to a mechanical move: canvas rectangle geometry is now `widgets/rectangle_geometry.py` — plain functions taking the image bounds and the wheel-editing constants as arguments (`clip_rectangle_to_pixmap`, `scale_from_center`, `adjust_edge`), with the Canvas methods as thin delegating stubs. The math is testable without a widget, a pixmap, or an event loop: `tests/test_widgets/test_rectangle_geometry.py` (10 tests) pins clipping, atomic scale rejection, edge choice and clamping directly. `canvas.py` drops 4097 → 3974 and its budget follows.
-- The hit test joined it: `Canvas._shape_hit_candidates` is now `canvas_geometry.hit_candidates(shapes, point, epsilon, is_visible, cuboid_vertex_lookup, cuboid_face_hit)` — the three interaction priority tiers (vertex, edge/new-point, body) and the stack-index tie-break are plain functions over the shapes, with the two canvas-owned cuboid lookups passed in as callbacks. `select_shape_point` itself stays on Canvas: it is the selection state machine, not geometry. Seven tests pin vertex-beats-body, stack-order tie-break, hidden/locked handling and the cuboid callback path. `rectangle_geometry.py` was renamed `canvas_geometry.py` to be the single home for this kind of math.
-- The drag constraints joined it. `bounded_move_vertex` / `bounded_move_shapes` / `calculate_offsets` / `rotate_point` / `intersection_point` split into `canvas_geometry.move_vertex_bounded` (rotation adjoint corners, rectangle axis shifts, border intersection), `drag_shapes_bounded` (locked filtering, out-of-pixmap refusal, the offsets clamp), `selection_offsets`, `line_image_intersection`, `rotate_point` and `out_of_bounds` — the locked/cuboid dispatch and the `prev_point` bookkeeping stay on Canvas, which is state, not math. Canvas shrinks 3930 → 3772. Thirteen tests pin the clamp behaviour, including the upstream off-by-one (the clamp uses `pixmap.width()`, so a shape can end 1px over the border — the original XXX shaky comment, now pinned as-is instead of silently fixed).
-- The god parameter got a contract. `label_widget_contract.py` declares `CONTRACT_MEMBERS` -- the exact set of 132 widget attributes and methods the five extracted modules touch, collected mechanically -- and `tests/test_labeling/test_label_widget_contract.py` locks it from both sides: a module reaching for a member that is not declared fails (the interface grows only on purpose), a declared member that no module touches fails (it cannot rot), and every declared member is proven to exist on `LabelingWidget` (methods, class names, `self.x =` and `widget.x =` assignments in the assembly helpers, module-owned scratch state, or inherited from Qt). The number is the honest size of the implicit interface the split batches created -- and the yardstick any future controller-class extraction will be measured against.
-- Stage one of the roadmap ran: eight contract members left the widget. `_apply_checked_batch`, `_maybe_focus_low_confidence_shapes`, `_record_recent_dir` and `_maybe_show_smart_tools_guide` moved into `file_lifecycle` through the extraction script (byte-compared), and three existing stubs (`_set_file_item_annotated`, `_set_file_item_low_conf`, `_shapes_need_review`) were deleted in favour of direct cross-module calls. The contract follows at 128 — the honest outcome is smaller than the roadmap's guess, because most "unused" members turned out to be live canvas/list callbacks; the roadmap document records the corrected numbers and the reason. One real catch on the way: `_note_save_quality` is called by `attributes_controller` through `getattr(widget, ...)`, so deleting its stub would have silently dropped quality notes — the deletion was reverted, the stub stays with a comment naming the blind spot (a getattr string is invisible to both the AST scan and the contract test).
-- Stage two opened with the thumbnail slice: `thumbnail_pixmap`, `thumbnail_image_label` and `thumbnail_container` were three loose members on the widget for one feature; they are `widgets/thumbnail_panel.py` now -- a `ThumbnailPanel` that owns the pixmap, the label and the show-hide policy, with `reset()` / `set_pixmap()` / `refresh()` as its surface. `file_list_ops.update_thumbnail_display` still decides *which* file gets a thumbnail (that needs the model config), but it only calls the panel now; `on_thumbnail_click` takes the panel instead of the whole widget. The contract drops to 125, and the three members that had no test at all are covered by six new `ThumbnailPanel` tests.
-- Second stage-two slice: the view memory. `zoom_values`, `brightness_contrast_values` and `scroll_values` were three dicts on the widget, keyed by filename, written from three different files and read back in `load_file` -- the "where was I on this picture" state, in three places at once. They are `widgets/view_state.py` now: a `ViewStateStore` with `zoom` / `brightness_contrast` / `scroll`, an `is_empty()` that names the first-load-of-the-session check, and `remember_scroll` / `scroll_for` helpers. Eighteen call sites across `label_widget`, `file_lifecycle` and `file_navigation` follow. Contract 125 → 123; the memory itself -- which had no test at all -- gets five.
 
 ### 🔗 CI / Tooling
 
@@ -1096,7 +1103,6 @@ A total of 3 developers contributed to this release.
 
 Thank @DenDen047, @4399123, @CVHub520
 
-
 ## `v3.0.0` (May 15, 2025)
 
 ### 🚀 New Features
@@ -1139,7 +1145,6 @@ A total of 8 developers contributed to this release.
 
 Thank @Pecako2001, @liutao, @shyhyawJou, @talebolano, @urbaneman, @wangxiang0722, @Little-King2022, @CVHub520
 
-
 ## `v2.5.4` (Feb 18, 2025)
 
 ### 🚀 New Features
@@ -1162,7 +1167,6 @@ A total of 2 developers contributed to this release.
 
 Thank @aiyou9, @CVHub520
 
-
 ## `v2.5.3` (Jan 12, 2025)
 
 ### 🐛 Bug Fixes
@@ -1179,7 +1183,6 @@ Thank @aiyou9, @CVHub520
 A total of 1 developer contributed to this release.
 
 Thank @CVHub520
-
 
 ## `v2.5.2` (Jan 02, 2025)
 
@@ -1200,7 +1203,6 @@ Thank @CVHub520
 A total of 1 developer contributed to this release.
 
 Thank @CVHub520
-
 
 ## `v2.5.1` (Jan 01, 2024)
 
@@ -1226,7 +1228,6 @@ Thank @CVHub520
 A total of 2 developers contributed to this release.
 
 Thank @chevydream, @CVHub520
-
 
 ## `v2.5.0` (Oct 15, 2024)
 
@@ -1264,7 +1265,6 @@ A total of 3 developers contributed to this release.
 
 Thank @julianstirling, @CVHub520, @wpNZC
 
-
 ## `v2.4.4` (Sep 30, 2024)
 
 ### 🚀 New Features
@@ -1276,7 +1276,6 @@ Thank @julianstirling, @CVHub520, @wpNZC
 A total of 1 developer contributed to this release.
 
 Thank @CVHub520
-
 
 ## `v2.4.3` (Sep 08, 2024)
 
@@ -1303,7 +1302,6 @@ A total of 1 developer contributed to this release.
 
 Thank @CVHub520
 
-
 ## `v2.4.2` (Sep 06, 2024)
 
 ### 🚀 New Features
@@ -1325,7 +1323,6 @@ A total of 1 developer contributed to this release.
 
 Thank @CVHub520
 
-
 ## `v2.4.1` (Aug 29, 2024)
 
 ### 🚀 New Features
@@ -1343,7 +1340,6 @@ Thank @CVHub520
 A total of 1 developer contributed to this release.
 
 Thank @CVHub520
-
 
 ## `v2.4.0` (Jul 14, 2024)
 
@@ -1406,7 +1402,6 @@ A total of 3 developers contributed to this release.
 
 Thank @UnlimitedWand, @PairZhu, @CVHub520
 
-
 ## `v2.3.7` (May 29, 2024) - *Pre-release*
 
 ### 🚀 New Features
@@ -1418,7 +1413,6 @@ Thank @UnlimitedWand, @PairZhu, @CVHub520
 A total of 1 developer contributed to this release.
 
 Thank @CVHub520
-
 
 ## `v2.3.6` (May 25, 2024)
 
@@ -1437,7 +1431,6 @@ Thank @CVHub520
 A total of 1 developer contributed to this release.
 
 Thank @CVHub520
-
 
 ## `v2.3.5` (Apr 01, 2024)
 
@@ -1463,7 +1456,6 @@ A total of 1 developer contributed to this release.
 
 Thank @CVHub520
 
-
 ## `v2.3.4` (Mar 16, 2024)
 
 ### 🚀 New Features
@@ -1476,7 +1468,6 @@ Thank @CVHub520
 A total of 1 developer contributed to this release.
 
 Thank @CVHub520
-
 
 ## `v2.3.3` (Feb 27, 2024)
 
@@ -1495,7 +1486,6 @@ A total of 1 developer contributed to this release.
 
 Thank @CVHub520
 
-
 ## `v2.3.2` (Feb 24, 2024)
 
 ### 🚀 New Features
@@ -1511,7 +1501,6 @@ A total of 1 developer contributed to this release.
 
 Thank @CVHub520
 
-
 ## `v2.3.1` (Jan 31, 2024)
 
 ### 🚀 New Features
@@ -1526,7 +1515,6 @@ A total of 1 developer contributed to this release.
 
 Thank @CVHub520
 
-
 ## `v2.3.0` (Jan 13, 2024)
 
 ### 🚀 New Features
@@ -1540,7 +1528,6 @@ Thank @CVHub520
 A total of 1 developer contributed to this release.
 
 Thank @CVHub520
-
 
 ## `v2.2.0` (Dec 26, 2023)
 
@@ -1569,7 +1556,6 @@ A total of 1 developer contributed to this release.
 
 Thank @CVHub520
 
-
 ## `v2.1.0` (Nov 24, 2023)
 
 - Support `InternImage` classification model
@@ -1579,7 +1565,6 @@ Thank @CVHub520
 A total of 1 developer contributed to this release.
 
 Thank @CVHub520
-
 
 ## `v2.0.0` (Nov 13, 2023)
 
@@ -1596,7 +1581,6 @@ A total of 1 developer contributed to this release.
 
 Thank @CVHub520
 
-
 ## `v1.1.0` (Nov 06, 2023)
 
 ### 🚀 New Features
@@ -1611,7 +1595,6 @@ Thank @CVHub520
 A total of 1 developer contributed to this release.
 
 Thank @CVHub520
-
 
 ## `v1.0.0` (Oct 25, 2023)
 
@@ -1629,7 +1612,6 @@ A total of 1 developer contributed to this release.
 
 Thank @CVHub520
 
-
 ## `v0.3.0` (Oct 10, 2023)
 
 ### 🚀 New Features
@@ -1644,7 +1626,6 @@ A total of 1 developer contributed to this release.
 
 Thank @CVHub520
 
-
 ## `v0.2.4` (Sep 20, 2023)
 
 ### 🚀 New Features
@@ -1656,7 +1637,6 @@ Thank @CVHub520
 A total of 1 developer contributed to this release.
 
 Thank @CVHub520
-
 
 ## `v0.2.3` (Sep 18, 2023)
 
@@ -1674,7 +1654,6 @@ A total of 1 developer contributed to this release.
 
 Thank @CVHub520
 
-
 ## `v0.2.2` (Sep 14, 2023)
 
 ### 🚀 New Features
@@ -1688,7 +1667,6 @@ A total of 1 developer contributed to this release.
 
 Thank @CVHub520
 
-
 ## `v0.2.1` (Sep 06, 2023)
 
 *No specific changes listed for this release tag.*
@@ -1698,7 +1676,6 @@ Thank @CVHub520
 A total of 1 developer contributed to this release.
 
 Thank @CVHub520
-
 
 ## `v0.2.0` (Aug 09, 2023)
 
@@ -1720,7 +1697,6 @@ A total of 1 developer contributed to this release.
 
 Thank @CVHub520
 
-
 ## `v0.1.2` (Jun 20, 2023)
 
 ### 🚀 New Features
@@ -1734,7 +1710,6 @@ A total of 1 developer contributed to this release.
 
 Thank @CVHub520
 
-
 ## `v0.1.1` (May 25, 2023)
 
 *Update executable files.*
@@ -1744,7 +1719,6 @@ Thank @CVHub520
 A total of 1 developer contributed to this release.
 
 Thank @CVHub520
-
 
 ## `v0.1.0` (May 23, 2023)
 
