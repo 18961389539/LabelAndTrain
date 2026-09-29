@@ -14,7 +14,7 @@ attributes and methods those modules touch, collected mechanically
 * a contract entry whose member disappears from the widget fails the
   test -- the interface cannot silently rot.
 
-It also documents the real size of the "god parameter": 125 members.
+It also documents the real size of the "god parameter": 123 members.
 Any future batch that extracts a *controller class* should aim to cut
 this number by owning a slice of it.
 """
@@ -72,7 +72,6 @@ CONTRACT_MEMBERS = frozenset(
         "auto_labeling_widget",
         "batch_edit_labels",
         "brightness_contrast_dialog",
-        "brightness_contrast_values",
         "cache_auto_label",
         "cache_auto_label_group_id",
         "canvas",
@@ -126,7 +125,6 @@ CONTRACT_MEMBERS = frozenset(
         "scale_fit_window",
         "scroll_area",
         "scroll_bars",
-        "scroll_values",
         "set_clean",
         "set_dirty",
         "set_scroll",
@@ -142,9 +140,9 @@ CONTRACT_MEMBERS = frozenset(
         "update_navigator_shapes",
         "update_navigator_viewport",
         "update_thumbnail_display",
+        "view_state",
         "validate_label",
         "zoom_mode",
-        "zoom_values",
         "zoom_widget",
     }
 )

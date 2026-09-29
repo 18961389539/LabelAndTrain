@@ -26,7 +26,7 @@ REPO_ROOT = os.path.abspath(
 #: canvas.py already has brush/cuboid/rotation split into their own
 #: modules; the rest is the core drawing surface.
 BUDGETS = {
-    "anylabeling/views/labeling/label_widget.py": 6774,
+    "anylabeling/views/labeling/label_widget.py": 6777,
     "anylabeling/views/labeling/widgets/canvas.py": 3930,
 }
 

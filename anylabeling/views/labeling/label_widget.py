@@ -157,6 +157,7 @@ from .utils.label_editing import (  # noqa: F401 -- helpers re-shared
     _shape_editable_state,
 )
 from .widgets.thumbnail_panel import ThumbnailPanel
+from .widgets.view_state import ViewStateStore
 from .widgets import (
     AutoLabelingWidget,
     BrightnessContrastDialog,
@@ -740,12 +741,8 @@ class LabelingWidget(LabelDialog):
         self.other_data = {}
         self.zoom_level = 100
         self.fit_window = False
-        self.zoom_values = {}  # key=filename, value=(zoom_mode, zoom_value)
-        self.brightness_contrast_values = {}
-        self.scroll_values = {
-            Qt.Orientation.Horizontal: {},
-            Qt.Orientation.Vertical: {},
-        }  # key=filename, value=scroll_value
+        # Per-image view memory (zoom / brightness / scroll)
+        self.view_state = ViewStateStore()
 
         # XXX: Could be completely declarative.
         # Restore application settings. This happens before any folder is
@@ -3342,7 +3339,7 @@ class LabelingWidget(LabelDialog):
 
     def set_scroll(self, orientation, value):
         self.scroll_bars[orientation].setValue(round(value))
-        self.scroll_values[orientation][self.filename] = value
+        self.view_state.remember_scroll(orientation, self.filename, value)
         self.update_navigator_viewport()
 
     def set_zoom(self, value):
@@ -3350,7 +3347,7 @@ class LabelingWidget(LabelDialog):
         self.actions.fit_window.setChecked(False)
         self.zoom_mode = self.MANUAL_ZOOM
         self.zoom_widget.setValue(value)
-        self.zoom_values[self.filename] = (self.zoom_mode, value)
+        self.view_state.zoom[self.filename] = (self.zoom_mode, value)
         if hasattr(self, "navigator_dialog"):
             self.navigator_dialog.set_zoom_value(value)
 
@@ -3475,7 +3472,10 @@ class LabelingWidget(LabelDialog):
         dialog = self.brightness_contrast_dialog
         dialog.set_values(brightness, contrast)
         dialog.on_new_value()
-        self.brightness_contrast_values[self.filename] = (brightness, contrast)
+        self.view_state.brightness_contrast[self.filename] = (
+            brightness,
+            contrast,
+        )
 
     def _position_canvas_adjustment(self):
         """Keep the adjustment panel anchored to the viewport's bottom-left."""
@@ -3506,7 +3506,7 @@ class LabelingWidget(LabelDialog):
             utils.img_data_to_pil(self.image_data)
         )
 
-        brightness, contrast = self.brightness_contrast_values.get(
+        brightness, contrast = self.view_state.brightness_contrast.get(
             self.filename, (None, None)
         )
         self.brightness_contrast_dialog.set_values(
@@ -3518,7 +3518,10 @@ class LabelingWidget(LabelDialog):
 
         brightness = self.brightness_contrast_dialog.slider_brightness.value()
         contrast = self.brightness_contrast_dialog.slider_contrast.value()
-        self.brightness_contrast_values[self.filename] = (brightness, contrast)
+        self.view_state.brightness_contrast[self.filename] = (
+            brightness,
+            contrast,
+        )
         # Keep the inline adjustment sliders in sync with the dialog.
         self.canvas_adjustment.set_brightness_contrast(brightness, contrast)
 
@@ -3715,7 +3718,7 @@ class LabelingWidget(LabelDialog):
         value = self.scalers[self.FIT_WINDOW if initial else self.zoom_mode]()
         value = int(100 * value)
         self.zoom_widget.setValue(value)
-        self.zoom_values[self.filename] = (self.zoom_mode, value)
+        self.view_state.zoom[self.filename] = (self.zoom_mode, value)
         if hasattr(self, "navigator_dialog"):
             self.navigator_dialog.set_zoom_value(value)
 

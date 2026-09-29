@@ -292,32 +292,36 @@ def load_file(widget, filename=None):  # noqa: C901
     widget.canvas.setEnabled(True)
 
     # set zoom values
-    is_initial_load = not widget.zoom_values
-    if widget.filename in widget.zoom_values:
-        widget.zoom_mode = widget.zoom_values[widget.filename][0]
-        widget.set_zoom(widget.zoom_values[widget.filename][1])
+    is_initial_load = widget.view_state.is_empty()
+    if widget.filename in widget.view_state.zoom:
+        widget.zoom_mode = widget.view_state.zoom[widget.filename][0]
+        widget.set_zoom(widget.view_state.zoom[widget.filename][1])
     elif is_initial_load or not widget._config["keep_prev_scale"]:
         widget.adjust_scale(initial=True)
     # set scroll values
-    for orientation in widget.scroll_values:
-        if widget.filename in widget.scroll_values[orientation]:
+    for orientation in widget.view_state.scroll:
+        if widget.filename in widget.view_state.scroll[orientation]:
             widget.set_scroll(
-                orientation, widget.scroll_values[orientation][widget.filename]
+                orientation,
+                widget.view_state.scroll[orientation][widget.filename],
             )
 
     # set brightness contrast values
-    brightness, contrast = widget.brightness_contrast_values.get(
+    brightness, contrast = widget.view_state.brightness_contrast.get(
         widget.filename, (None, None)
     )
     if widget._config["keep_prev_brightness"] and widget.recent_files:
-        brightness, _ = widget.brightness_contrast_values.get(
+        brightness, _ = widget.view_state.brightness_contrast.get(
             widget.recent_files[0], (None, None)
         )
     if widget._config["keep_prev_contrast"] and widget.recent_files:
-        _, contrast = widget.brightness_contrast_values.get(
+        _, contrast = widget.view_state.brightness_contrast.get(
             widget.recent_files[0], (None, None)
         )
-    widget.brightness_contrast_values[widget.filename] = (brightness, contrast)
+    widget.view_state.brightness_contrast[widget.filename] = (
+        brightness,
+        contrast,
+    )
     # Always refresh the dialog's source image so the inline adjustment
     # sliders can reuse its brightness/contrast pipeline (which includes
     # 16-bit grayscale handling).  For large images this PIL copy was

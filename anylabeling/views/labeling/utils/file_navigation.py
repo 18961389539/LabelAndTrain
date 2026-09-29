@@ -115,7 +115,7 @@ def on_navigator_zoom_changed(
 
             widget.zoom_widget.setValue(zoom_percentage)
             widget.zoom_mode = widget.MANUAL_ZOOM
-            widget.zoom_values[widget.filename] = (
+            widget.view_state.zoom[widget.filename] = (
                 widget.zoom_mode,
                 zoom_percentage,
             )
@@ -170,7 +170,7 @@ def on_navigator_zoom_changed(
 
                     widget.zoom_widget.setValue(zoom_percentage)
                     widget.zoom_mode = widget.MANUAL_ZOOM
-                    widget.zoom_values[widget.filename] = (
+                    widget.view_state.zoom[widget.filename] = (
                         widget.zoom_mode,
                         zoom_percentage,
                     )
@@ -207,7 +207,7 @@ def on_navigator_zoom_changed(
 
         widget.zoom_widget.setValue(zoom_percentage)
         widget.zoom_mode = widget.MANUAL_ZOOM
-        widget.zoom_values[widget.filename] = (
+        widget.view_state.zoom[widget.filename] = (
             widget.zoom_mode,
             zoom_percentage,
         )
@@ -215,7 +215,7 @@ def on_navigator_zoom_changed(
     else:
         widget.zoom_widget.setValue(zoom_percentage)
         widget.zoom_mode = widget.MANUAL_ZOOM
-        widget.zoom_values[widget.filename] = (
+        widget.view_state.zoom[widget.filename] = (
             widget.zoom_mode,
             zoom_percentage,
         )
