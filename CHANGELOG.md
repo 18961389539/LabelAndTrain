@@ -3,6 +3,12 @@
 Fork entries are listed first; everything below the upstream marker is
 X-AnyLabeling's own history, kept for provenance.
 
+## `v1.0.0-beta.6` (unreleased)
+
+### 🔗 CI / Tooling
+
+- The split batches got an integration smoke: `scripts/smoke_widget_paths.py` builds the real `LabelingWidget` offscreen against a real image folder and walks the seams unit tests cannot see -- folder import (the file_lifecycle rewires), a load_file round trip that has to restore zoom / scroll / brightness (ViewStateStore), the thumbnail panel show-reset cycle, review-state writes and the keep-alive quality-note stub, the canvas rectangle wheel edits, and `delete_image_file` moving the image into the adjacent `_delete_` folder. Eight steps, one report, exit code 0 only when all pass; modal confirmations are stubbed because they are a human step. Run it before a machine-verification pass or a release.
+
 ## `v1.0.0-beta.5` (Sep 29, 2026)
 
 ### 🛠 Improvements
