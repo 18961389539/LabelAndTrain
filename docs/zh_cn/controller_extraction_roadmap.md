@@ -52,7 +52,33 @@
 剩 14 个有测试引用的零使用成员（`_apply_file_sort`、`shape_attributes`、
 `update_attributes` 等）逐个评估：改测试接线或保留桩。
 
-### 阶段二：两个控制器候选（契约面 92 → ~60）
+### 阶段二：内聚切片（已部分执行；132 → 123，实测记录）
+
+阶段二的形态在实操中明确了：**Qt 部件必须挂在 QWidget 上**（父子/布局关系），
+所以切片的产物是**内聚的小对象**，不是纯模块。完成的三个：
+
+| 切片 | 内容 | 契约变化 |
+|---|---|---|
+| 缩略图（batch 18） | `ThumbnailPanel` 收编 `thumbnail_pixmap`/`thumbnail_image_label`/`thumbnail_container` + 显隐策略 | −3（+1 面板 = 净 −2） |
+| 视图记忆（batch 19） | `ViewStateStore` 收编三个按 filename 索引的字典（`zoom_values`/`brightness_contrast_values`/`scroll_values`） | 净 −2 |
+| 阶段一收缩（batch 17） | 4 个实体迁入 file_lifecycle、3 个既有桩改直调 | 净 −4（+4 新引用） |
+
+**剩余成员为何不再切片**（逐簇评估过）：
+- `attributes` + `shape_attributes`：**同名不同物**（前者是标签属性配置字典、后者是标题 QLabel），不内聚；
+- 属性面板其他成员分散在左右不同区域（label_list 在左 dock、shape_attributes 在右栏），硬打包是伪造内聚；
+- `_file_sort_mode`/`_syncing_file_item`：仅 2 个字段，净收益 −1，不值一轮；
+- 其余多为**单件 Qt 部件**（`canvas`、`label_dialog`、`file_list_widget`、`zoom_widget`…）——
+  它们本身就该挂在 widget 上，契约里出现是正确的。
+
+**结论**：阶段二到此收束。契约面从 132 降到 123，剩下的 123 是"会话状态 + 单件部件 +
+跨区域共享状态"的合理混合体。继续降低数字的代价开始大于收益——除非某天要换 UI 框架
+（那时这些单件部件才需要抽象层）。
+
+### 阶段二原始计划（存档，未实施的部分）
+
+按独占成员聚类，两个切片内聚度最高：
+
+
 
 按独占成员聚类，两个切片内聚度最高：
 
