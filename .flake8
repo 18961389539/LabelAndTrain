@@ -18,6 +18,9 @@ max-complexity = 18
 select = B,C,E,F,W,T4,B9
 # resources.py is emitted by pyside6-rcc (scripts/generate_languages.py and the
 # packaging scripts); black already skips it for the same reason.
+# *_ui.py is emitted by pyuic6 from the matching .ui file and is git-ignored,
+# so CI never sees it -- linting a generated file only put findings in
+# scripts/flake8_baseline.txt that no commit could ever fix.
 exclude =
     .git,
     __pycache__,
@@ -25,4 +28,5 @@ exclude =
     dist,
     wheels_dist,
     .venv,
-    anylabeling/resources/resources.py
+    anylabeling/resources/resources.py,
+    *_ui.py

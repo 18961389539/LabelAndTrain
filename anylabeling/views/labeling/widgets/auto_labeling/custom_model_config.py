@@ -20,7 +20,6 @@ from anylabeling.config import get_work_directory
 from anylabeling.services.auto_labeling.types import AutoLabelingMode
 from anylabeling.views.labeling.logger import logger
 
-
 _UNNAMED_CLASS = "unname"
 _PLACEHOLDER_CLASS_RE = re.compile(r"^class_\d+$")
 _SKIP_UNIQUE_LABELS = {
@@ -129,6 +128,7 @@ def _parse_ultralytics_names(raw):
     if text.startswith("{") and text.endswith("}"):
         try:
             import ast
+
             obj = ast.literal_eval(text)
             if isinstance(obj, dict):
                 names = [None] * len(obj)
@@ -144,6 +144,7 @@ def _parse_ultralytics_names(raw):
             pass
         try:
             import json
+
             obj = json.loads(text)
             if isinstance(obj, dict):
                 names = [None] * len(obj)
@@ -160,6 +161,7 @@ def _parse_ultralytics_names(raw):
     if text.startswith("["):
         try:
             import ast
+
             obj = ast.literal_eval(text)
             if isinstance(obj, list):
                 return [str(n) for n in obj]
@@ -167,6 +169,7 @@ def _parse_ultralytics_names(raw):
             pass
         try:
             import json
+
             obj = json.loads(text)
             if isinstance(obj, list):
                 return [str(n) for n in obj]
@@ -245,11 +248,13 @@ def _extract_class_names_from_onnx(weights_path, model_type):
     shapes = []
     for o in model.graph.output:
         if o.type.tensor_type.shape:
-            shapes.append([
-                d.dim_value
-                for d in o.type.tensor_type.shape.dim
-                if isinstance(d.dim_value, int) and d.dim_value > 0
-            ])
+            shapes.append(
+                [
+                    d.dim_value
+                    for d in o.type.tensor_type.shape.dim
+                    if isinstance(d.dim_value, int) and d.dim_value > 0
+                ]
+            )
     has_grid = any(s and max(s) >= 1000 for s in shapes)
     nc = _derive_nc_from_outputs(model_type, shapes, has_grid)
     if nc and nc > 0:
@@ -275,7 +280,9 @@ def _first_user_label(labels):
 def _labels_from_parent(parent):
     """Collect class names from the Labels dock, then from saved config."""
     labels = []
-    unique_list = getattr(parent, "unique_label_list", None) if parent else None
+    unique_list = (
+        getattr(parent, "unique_label_list", None) if parent else None
+    )
     if unique_list is not None:
         try:
             count = unique_list.count()

@@ -149,6 +149,7 @@ shortcuts:
   auto_labeling_remove_point: E
   auto_labeling_run: I
   auto_run: Ctrl+B
+  brightness_contrast: Ctrl+Alt+D
   close: Ctrl+W
   copy_polygon: Ctrl+C
   create_brush_polygon: Ctrl+N
@@ -172,10 +173,14 @@ shortcuts:
   edit_labels: Alt+L
   edit_polygon: Ctrl+J
   edit_shapes: Alt+S
+  fill_drawing: Ctrl+Alt+Q
   fit_width: Ctrl+Shift+F
   fit_window: Ctrl+F
   group_selected_shapes: G
   hide_selected_polygons: S
+  keep_prev_brightness: Ctrl+Alt+2
+  keep_prev_contrast: Ctrl+Alt+3
+  keep_prev_scale: Ctrl+Alt+1
   loop_select_labels: Ctrl+Shift+C
   loop_thru_labels: Ctrl+Shift+N
   mark_checked_and_next: Ctrl+Shift+J
@@ -194,19 +199,32 @@ shortcuts:
   remove_selected_point: Backspace
   save: Ctrl+S
   save_as: Ctrl+Shift+S
-  save_to: null
+  save_to: Ctrl+Shift+E
+  select_toggle_shapes: Ctrl+Alt+X
+  shape_converter: Ctrl+Alt+Y
   show_attributes: Ctrl+Shift+L
+  show_degrees: Ctrl+Alt+E
+  show_groups: Ctrl+Alt+G
   show_hidden_polygons: W
   show_labels: Ctrl+L
   show_masks: Ctrl+M
   show_navigator: F9
   show_overview: Ctrl+G
+  show_scores: Ctrl+Alt+O
   show_shortcuts_help: F1
   show_texts: Ctrl+T
+  smart_advice: Ctrl+Alt+V
+  smart_analysis: Ctrl+Alt+N
+  smart_archive: Ctrl+Alt+H
+  smart_calibrate: Ctrl+Alt+C
   smart_data_audit: Ctrl+Alt+A
+  smart_iteration: Ctrl+Alt+I
+  smart_missing_scan: Ctrl+Alt+M
   smart_propagate: Ctrl+Alt+P
+  smart_restore_backup: Ctrl+Alt+B
   smart_review: Ctrl+Alt+R
   smart_stale_audit: Ctrl+Alt+S
+  smart_template: Ctrl+Alt+T
   toggle_annotation_checked: Ctrl+Alt+K
   toggle_auto_use_last_gid: Ctrl+Shift+G
   toggle_auto_use_last_label: Ctrl+Y

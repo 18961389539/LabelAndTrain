@@ -1,11 +1,12 @@
 import os
+import re
 import unittest
 from types import SimpleNamespace
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 try:
-    from PyQt6 import QtCore, QtWidgets
+    from PyQt6 import QtCore, QtGui, QtWidgets
 
     PYQT_AVAILABLE = True
 except Exception:
@@ -17,6 +18,44 @@ REPO_ROOT = os.path.abspath(
 TEMPLATE_CONFIG = os.path.join(
     REPO_ROOT, "anylabeling", "configs", "jllabeling_config.yaml"
 )
+
+#: Shortcut keys that deliberately have no action of their own: the runtime
+#: applier creates their QAction on demand (``_ensure_hidden_shortcut_action``)
+#: because they are commands rather than toolbar/menu entries.
+HIDDEN_SHORTCUT_KEYS = frozenset(
+    {
+        "add_point_to_edge",
+        "auto_labeling_add_point",
+        "auto_labeling_clear",
+        "auto_labeling_finish_object",
+        "auto_labeling_remove_point",
+        "auto_labeling_run",
+        "open_settings",
+        "quit",
+        "show_shortcuts_help",
+    }
+)
+
+
+def shortcut_action_mapping():
+    """Parse ``"shortcuts.X": self._widget.actions.Y`` out of the applier."""
+    path = os.path.join(
+        REPO_ROOT,
+        "anylabeling",
+        "views",
+        "labeling",
+        "settings",
+        "runtime_applier.py",
+    )
+    with open(path, encoding="utf-8") as handle:
+        text = handle.read()
+    return dict(
+        re.findall(
+            r'"(shortcuts\.[a-z_0-9]+)":\s*'
+            r"self\._widget\.actions\.([a-z_0-9]+)",
+            text,
+        )
+    )
 
 
 def build_labeling_widget(filename=None):
@@ -156,6 +195,52 @@ class TestWidgetWiring(unittest.TestCase):
         self.assertTrue(
             any("确认分类建议" in text for text in texts),
             texts,
+        )
+
+    def test_every_shortcut_mapping_is_realised_on_a_live_action(self):
+        """Walk yaml -> runtime map -> QAction against the real widget.
+
+        The three layers agreeing on counts proves nothing about the
+        wiring: a mapping may point at an action that never got its
+        shortcut, or keep a stale sequence after the yaml was edited. This
+        compares the configured sequence with what the live QAction carries.
+        """
+        mapping = shortcut_action_mapping()
+        self.assertGreater(len(mapping), 80)
+        template = self.widget._config["shortcuts"]
+        mismatches = []
+        for config_key, attribute in sorted(mapping.items()):
+            expected = template[config_key.split(".", 1)[1]]
+            wanted = (
+                list(expected) if isinstance(expected, list) else [expected]
+            )
+            action = getattr(self.widget.actions, attribute, None)
+            if action is None:
+                mismatches.append((config_key, attribute, "no such action"))
+                continue
+            wanted_keys = [QtGui.QKeySequence(value) for value in wanted]
+            actual_keys = list(action.shortcuts())
+            if len(wanted_keys) != len(actual_keys) or any(
+                left != right for left, right in zip(wanted_keys, actual_keys)
+            ):
+                mismatches.append(
+                    (
+                        config_key,
+                        attribute,
+                        [key.toString() for key in wanted_keys],
+                        [key.toString() for key in actual_keys],
+                    )
+                )
+        self.assertEqual(mismatches, [])
+
+    def test_every_template_shortcut_is_mapped_or_declared_hidden(self):
+        mapped = {key.split(".", 1)[1] for key in shortcut_action_mapping()}
+        template = self.widget._config["shortcuts"]
+        self.assertEqual(
+            sorted(set(template) - mapped),
+            sorted(HIDDEN_SHORTCUT_KEYS),
+            "a new shortcut key must either be mapped to an action in "
+            "runtime_applier or added to HIDDEN_SHORTCUT_KEYS with a reason",
         )
 
     def test_no_suggestion_until_predictions_are_recorded(self):

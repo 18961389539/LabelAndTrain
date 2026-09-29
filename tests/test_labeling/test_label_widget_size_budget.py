@@ -25,8 +25,17 @@ REPO_ROOT = os.path.abspath(
 #: assembly functions (_build_actions/_build_layout, batch 4).
 #: canvas.py already has brush/cuboid/rotation split into their own
 #: modules; the rest is the core drawing surface.
+#:
+#: label_widget.py raised 6777 -> 6813 on 2026-09-29 for the keyboard
+#: coverage batch: +18 shortcuts is +8 net lines in _build_actions, +10
+#: widget.actions members and +18 widget.addAction calls. That is a
+#: feature, not drift -- the ratchet exists to stop split batches from
+#: being refilled by unrelated edits. The registration tail of
+#: _build_actions is the next extraction candidate; wherever the next
+#: split batch lands, freeze the lower number and never raise this one
+#: again for anything but a documented feature.
 BUDGETS = {
-    "anylabeling/views/labeling/label_widget.py": 6777,
+    "anylabeling/views/labeling/label_widget.py": 6813,
     "anylabeling/views/labeling/widgets/canvas.py": 3930,
 }
 

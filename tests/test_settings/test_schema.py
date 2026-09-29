@@ -52,7 +52,13 @@ class TestSettingsSchema(unittest.TestCase):
         # +smart_stale_audit: the quality/review tools were menu-only, which
         # left the actions an annotator runs on every batch unreachable from
         # the keyboard.
-        self.assertEqual(len(shortcut_fields), 78)
+        # +18 keys (2026-09-29): the remaining keyless actions were audited
+        # one by one — the other 8 smart tools, brightness_contrast, the three
+        # keep_prev_* toggles, show_groups/scores/degrees, fill_drawing,
+        # shape_converter, select_toggle_shapes — plus save_to, which the F1
+        # sheet had listed all along while its config value stayed null, so
+        # the row was silently skipped and no one could bind it.
+        self.assertEqual(len(shortcut_fields), 96)
         keys = {field.key for field in shortcut_fields}
         self.assertIn("shortcuts.open_project", keys)
         self.assertIn("shortcuts.mark_checked_and_next", keys)

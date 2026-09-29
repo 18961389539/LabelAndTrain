@@ -32,6 +32,20 @@ jobs:
       - name: Compare against scripts/flake8_baseline.txt
         run: python scripts/check_flake8_baseline.py
 
+      # Pinned, not floating: black's output style changes between releases,
+      # so installing "latest" would reformat the tree without anyone editing
+      # it. The pin is mirrored by the `dev` extra in pyproject.toml and by
+      # the black hook rev in .pre-commit-config.yaml;
+      # test_black_is_pinned_to_one_version_everywhere fails when they drift.
+      - name: Install black
+        run: python -m pip install "black==26.5.1"
+
+      # Whole repository, not the changed files. Checking only what a commit
+      # touched is exactly what left three files in widgets/auto_labeling/
+      # unformatted while every gate stayed green.
+      - name: Check formatting across the repository
+        run: python -m black --check anylabeling tests scripts
+
   test:
     name: Unit tests (${{ matrix.os }})
     runs-on: ${{ matrix.os }}

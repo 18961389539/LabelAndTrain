@@ -1,6 +1,6 @@
 __appname__ = "JLLabelingAndTrain"
 __appdescription__ = "Advanced Auto Labeling Solution with Added Features"
-__version__ = "1.0.0-beta.5"
+__version__ = "1.0.0-beta.6"
 __url__ = "https://github.com/CVHub520/X-AnyLabeling"
 # Upstream identity is kept on purpose: this build is a downstream fork and the
 # GPL terms require the original brand and source to stay visible.

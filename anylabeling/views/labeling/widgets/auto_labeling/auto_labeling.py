@@ -123,6 +123,7 @@ CUSTOM_MODEL_WEIGHT_EXTS = {".onnx"}
 # auto-classify when the filename makes the task unambiguous, otherwise we
 # fall back to yolov8 (the most common detection case).
 
+
 class AutoLabelingWidget(QWidget):
     new_model_selected = pyqtSignal(str)
     new_custom_model_selected = pyqtSignal(str)
@@ -136,7 +137,6 @@ class AutoLabelingWidget(QWidget):
     cropping_mode_changed = pyqtSignal(bool)
     clear_auto_decode_requested = pyqtSignal()
     mask_fineness_changed = pyqtSignal(float)
-
 
     def __init__(self, parent):
         super().__init__()
@@ -207,7 +207,9 @@ class AutoLabelingWidget(QWidget):
         # their own signal instead of riding on new_model_status (which the
         # view freezes via _downloading).
         self.model_manager.download_stage.connect(self._on_download_stage)
-        self.model_manager.model_load_failed.connect(self._on_model_load_failed)
+        self.model_manager.model_load_failed.connect(
+            self._on_model_load_failed
+        )
 
         # Disable tools when inference is running
         def set_enable_tools(enable):
@@ -268,9 +270,7 @@ class AutoLabelingWidget(QWidget):
         )
         self.model_selection_button.clicked.connect(self.show_model_dropdown)
         combo_style = get_settings_combo_style()
-        for combo in (
-            self.output_select_combobox,
-        ):
+        for combo in (self.output_select_combobox,):
             combo.setStyleSheet(combo_style)
 
         # --- Configuration for: output_label ---
@@ -471,9 +471,7 @@ class AutoLabelingWidget(QWidget):
 
         # --- Configuration for: mask_fineness_slider ---
         self.mask_fineness_slider.setMinimumWidth(120)
-        self.mask_fineness_slider.setStyleSheet(
-            SliderStyle.get_slider_style()
-        )
+        self.mask_fineness_slider.setStyleSheet(SliderStyle.get_slider_style())
         self.mask_fineness_slider.valueChanged.connect(
             self.on_mask_fineness_changed
         )
@@ -643,9 +641,7 @@ class AutoLabelingWidget(QWidget):
                 provider_name in local_model_data
                 and model_name in local_model_data[provider_name]
             ):
-                local_model_data[provider_name][model_name][
-                    "selected"
-                ] = False
+                local_model_data[provider_name][model_name]["selected"] = False
                 # NOTE: only copy the matching model_name from the cache,
                 # NOT the entire provider dict. Using dict.update() here
                 # would leak stale entries (e.g. models that have since
@@ -733,7 +729,9 @@ class AutoLabelingWidget(QWidget):
         if model_name not in self.model_info:
             return
 
-        display_name = self.model_info[model_name].get("display_name", model_name)
+        display_name = self.model_info[model_name].get(
+            "display_name", model_name
+        )
         config_path = self.model_info[model_name].get("config_path", "")
         reply = QMessageBox.question(
             self,
@@ -780,17 +778,16 @@ class AutoLabelingWidget(QWidget):
         # If the removed model was the active one, reset the toolbar state.
         try:
             current_text = self.model_selection_button.text()
-            if current_text and current_text.lstrip("● ").strip() == display_name:
+            if (
+                current_text
+                and current_text.lstrip("● ").strip() == display_name
+            ):
                 self.model_selection_button.setText(self.tr("选择 AI 模型"))
                 self.model_selection_button.setEnabled(True)
-                self.model_selection_button.setStyleSheet(
-                    _toolbar_btn()
-                )
+                self.model_selection_button.setStyleSheet(_toolbar_btn())
         except Exception:  # noqa: BLE001
             pass
-        self._set_status_label(
-            self.tr("Model removed: %s") % display_name
-        )
+        self._set_status_label(self.tr("Model removed: %s") % display_name)
 
     def on_model_selected(self, provider, model_name):
         """Handle the model selected event"""
@@ -818,13 +815,11 @@ class AutoLabelingWidget(QWidget):
                         Path(selected_path).suffix.lower()
                         in CUSTOM_MODEL_WEIGHT_EXTS
                     ):
-                        config_file = (
-                            _build_custom_model_yaml_from_weights(
-                                selected_path,
-                                fallback_label=_first_user_label(
-                                    _labels_from_parent(self.parent)
-                                ),
-                            )
+                        config_file = _build_custom_model_yaml_from_weights(
+                            selected_path,
+                            fallback_label=_first_user_label(
+                                _labels_from_parent(self.parent)
+                            ),
                         )
                     else:
                         config_file = selected_path
@@ -834,15 +829,19 @@ class AutoLabelingWidget(QWidget):
                         f"Failed to load custom model: {selected_path}: {e}"
                     )
                     self.model_manager.new_model_status.emit(
-                        self.tr("Error in loading custom model: {error}").format(
-                            error=str(e)
-                        )
+                        self.tr(
+                            "Error in loading custom model: {error}"
+                        ).format(error=str(e))
                     )
-                    self.model_selection_button.setText(self.tr("选择 AI 模型"))
+                    self.model_selection_button.setText(
+                        self.tr("选择 AI 模型")
+                    )
                     self.model_selection_button.setEnabled(True)
                     return
                 if not flag:
-                    self.model_selection_button.setText(self.tr("选择 AI 模型"))
+                    self.model_selection_button.setText(
+                        self.tr("选择 AI 模型")
+                    )
                     self.model_selection_button.setEnabled(True)
                     return
 
@@ -869,7 +868,9 @@ class AutoLabelingWidget(QWidget):
 
                     # update model_data
                     models_data = self.init_model_data()
-                    models_data["Custom"]["load_custom_model"]["selected"] = False
+                    models_data["Custom"]["load_custom_model"][
+                        "selected"
+                    ] = False
                     models_data["Custom"][name] = {
                         "selected": True,
                         "favorite": False,
@@ -889,7 +890,9 @@ class AutoLabelingWidget(QWidget):
                             "Error in registering custom model: {error}"
                         ).format(error=str(e))
                     )
-                    self.model_selection_button.setText(self.tr("选择 AI 模型"))
+                    self.model_selection_button.setText(
+                        self.tr("选择 AI 模型")
+                    )
                     self.model_selection_button.setEnabled(True)
                     return
 
@@ -1563,14 +1566,10 @@ class AutoLabelingWidget(QWidget):
         display_name = model_config.get("display_name")
         if display_name:
             self.model_selection_button.setText(f"● {display_name}")
-            self.model_selection_button.setStyleSheet(
-                _toolbar_ready_btn()
-            )
+            self.model_selection_button.setStyleSheet(_toolbar_ready_btn())
         else:
             self.model_selection_button.setText(self.tr("选择 AI 模型"))
-            self.model_selection_button.setStyleSheet(
-                _toolbar_btn()
-            )
+            self.model_selection_button.setStyleSheet(_toolbar_btn())
 
     def _apply_loaded_model_class_fallback(self, model_config):
         """If ONNX names are missing, use the first Labels-dock class."""
@@ -1704,7 +1703,10 @@ class AutoLabelingWidget(QWidget):
         # panel, expand it so the tools are actually visible.
         if hasattr(self, "_more_panel") and self._more_panel is not None:
             panel_names = set(getattr(self, "_MORE_PANEL_WIDGETS", ()))
-            if panel_names.intersection(widgets) and not self._more_panel.isVisible():
+            if (
+                panel_names.intersection(widgets)
+                and not self._more_panel.isVisible()
+            ):
                 self._more_button.setChecked(True)
                 self._more_panel.show()
         self._update_model_selection_scroll_area_height()

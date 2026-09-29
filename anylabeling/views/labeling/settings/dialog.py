@@ -1391,7 +1391,6 @@ class SettingsDialog(QtWidgets.QDialog):
             ),
             "shortcuts.open": self.tr("Open an image or label file."),
             "shortcuts.open_dir": self.tr("Open an image directory."),
-            "shortcuts.open_video": self.tr("Open a video file."),
             "shortcuts.quit": self.tr("Quit the application."),
             "shortcuts.save": self.tr("Save labels to file."),
             "shortcuts.save_as": self.tr("Save labels to another file."),

@@ -29,9 +29,7 @@ REPO_ROOT = os.path.dirname(
 FLAKE8_CONFIG = os.path.join(REPO_ROOT, ".flake8")
 PYPROJECT = os.path.join(REPO_ROOT, "pyproject.toml")
 PRECOMMIT = os.path.join(REPO_ROOT, ".pre-commit-config.yaml")
-CI_WORKFLOW = os.path.join(
-    REPO_ROOT, ".github", "workflows", "ci.yml"
-)
+CI_WORKFLOW = os.path.join(REPO_ROOT, ".github", "workflows", "ci.yml")
 BASELINE = os.path.join(REPO_ROOT, "scripts", "flake8_baseline.txt")
 
 #: Which plugin has to be installed for a `select` token to mean anything.
@@ -111,9 +109,9 @@ def test_precommit_and_ci_install_the_same_plugins():
         for repo in precommit["repos"]
         for hook in repo.get("hooks", [])
     }
-    assert "flake8-baseline" in hooks, (
-        "the baseline gate is what makes pre-commit and CI agree"
-    )
+    assert (
+        "flake8-baseline" in hooks
+    ), "the baseline gate is what makes pre-commit and CI agree"
     hook_deps = {
         re.split(r"[<>=!~;\[]", dep, maxsplit=1)[0].strip()
         for dep in hooks["flake8-baseline"]["additional_dependencies"]
@@ -138,6 +136,57 @@ def test_ci_lint_job_runs_the_same_command_as_precommit():
     assert "scripts/check_flake8_baseline.py" in lint_steps
 
 
+def test_black_is_pinned_to_one_version_everywhere():
+    """black's style moves between releases; one version must win in all three.
+
+    A floating CI install would reformat the tree the day a new black lands,
+    and a CI pin that drifted from the dev extra would reject code that is
+    perfectly formatted locally.
+    """
+    with open(PRECOMMIT, encoding="utf-8") as handle:
+        precommit = yaml.safe_load(handle)
+    hook_rev = next(
+        repo["rev"]
+        for repo in precommit["repos"]
+        for hook in repo.get("hooks", [])
+        if hook["id"] == "black"
+    )
+
+    with open(PYPROJECT, "rb") as handle:
+        pyproject = tomllib.load(handle)
+    dev_extra = pyproject["project"]["optional-dependencies"]["dev"]
+    extra_pins = [
+        requirement.split("==", 1)[1]
+        for requirement in dev_extra
+        if requirement.startswith("black==")
+    ]
+    assert extra_pins == [
+        hook_rev
+    ], f"the dev extra pins {extra_pins} while pre-commit pins {hook_rev}"
+
+    workflow = yaml.safe_load(_read(CI_WORKFLOW))
+    lint_runs = chr(10).join(
+        step.get("run", "") for step in workflow["jobs"]["lint"]["steps"]
+    )
+    ci_pins = re.findall(r'black==([0-9][^\s"\']*)', lint_runs)
+    assert ci_pins == [
+        hook_rev
+    ], f"CI installs black {ci_pins} while pre-commit pins {hook_rev}"
+
+
+def test_ci_checks_formatting_across_the_repository():
+    """A changed-files-only check is how three files stayed unformatted."""
+    workflow = yaml.safe_load(_read(CI_WORKFLOW))
+    lint_runs = chr(10).join(
+        step.get("run", "") for step in workflow["jobs"]["lint"]["steps"]
+    )
+    assert "black --check" in lint_runs
+    assert "anylabeling tests scripts" in lint_runs, (
+        "the formatting check must name the whole tree, not the paths a "
+        "commit happened to touch"
+    )
+
+
 def test_precommit_runs_black_at_most_once():
     """It was listed twice -- once rewriting, once with --check."""
     with open(PRECOMMIT, encoding="utf-8") as handle:
@@ -149,9 +198,9 @@ def test_precommit_runs_black_at_most_once():
         for hook in repo.get("hooks", [])
         if hook["id"] == "black"
     ]
-    assert len(black_hooks) <= 1, (
-        "two black hooks disagree about whether to rewrite or check"
-    )
+    assert (
+        len(black_hooks) <= 1
+    ), "two black hooks disagree about whether to rewrite or check"
     for hook in black_hooks:
         assert "--check" not in hook.get("args", []), (
             "a hook that rewrites and a hook that only checks cannot both be "
@@ -186,9 +235,9 @@ def test_the_baseline_only_contains_codes_the_config_selects():
     for parts in entries:
         assert len(parts) == 3, f"malformed baseline line: {parts}"
         code = parts[1]
-        assert not any(code.startswith(token) for token in ignore), (
-            f"{code} is ignored by .flake8 but sits in the baseline"
-        )
+        assert not any(
+            code.startswith(token) for token in ignore
+        ), f"{code} is ignored by .flake8 but sits in the baseline"
         assert any(code.startswith(token) for token in selected), (
             f"{code} is not covered by .flake8's select, so no run would "
             "ever report it -- remove it from the baseline"

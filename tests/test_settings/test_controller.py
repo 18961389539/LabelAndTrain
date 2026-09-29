@@ -333,9 +333,13 @@ class TestSettingsController(unittest.TestCase):
         self.assertIsNone(self.controller.get_value("shortcuts.create_circle"))
 
     def test_shortcut_list_value_uses_first_entry(self):
+        # Deliberately a key the template does not bind: this test is about
+        # list values collapsing to their first entry, not about which
+        # combinations happen to be free. It used to hard-code "Ctrl+Alt+D",
+        # which brightness_contrast took over on 2026-09-29.
         self.controller.update_field(
             "shortcuts.open_next",
-            "Ctrl+Alt+D",
+            "Ctrl+Alt+F12",
             schedule_save=False,
         )
         changed = self.controller.update_field(

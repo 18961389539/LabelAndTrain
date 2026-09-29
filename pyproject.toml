@@ -258,7 +258,15 @@ exclude = '''
   | tests
 )/
 | ^/anylabeling/resources/resources\.py$
+| _ui\.py$
 '''
+# The last alternative is the pyuic6 output (``*_ui.py``).  Those modules are
+# generated from the matching .ui file and are git-ignored (.gitignore lists
+# ``*_ui.py``), so CI never sees them -- but black does not read .gitignore,
+# so without this a local ``black --check`` would fail on a freshly generated,
+# never-formatted file.  Formatting generated code buys nothing either way,
+# and the pattern is deliberately unanchored so it holds whichever form black
+# hands to re.search.
 
 # flake8 is configured in .flake8, not here.  flake8 only reads pyproject.toml
 # through the third-party Flake8-pyproject plugin, so the [tool.flake8] table

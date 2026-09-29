@@ -4924,7 +4924,7 @@ def _build_actions(widget):
     smart_calibrate = action(
         QCoreApplication.translate("LabelingWidget", "1. 阈值校准"),
         lambda: run_threshold_calibration(widget),
-        None,
+        shortcuts["smart_calibrate"],
         "settings",
         QCoreApplication.translate(
             "LabelingWidget",
@@ -4935,7 +4935,7 @@ def _build_actions(widget):
     smart_analysis = action(
         QCoreApplication.translate("LabelingWidget", "2. 数据智能分析"),
         lambda: run_smart_analysis(widget),
-        None,
+        shortcuts["smart_analysis"],
         "overview",
         QCoreApplication.translate(
             "LabelingWidget",
@@ -4946,7 +4946,7 @@ def _build_actions(widget):
     smart_missing_scan = action(
         QCoreApplication.translate("LabelingWidget", "3. 漏标扫描"),
         lambda: run_missing_scan(widget),
-        None,
+        shortcuts["smart_missing_scan"],
         "search",
         QCoreApplication.translate(
             "LabelingWidget",
@@ -4957,7 +4957,7 @@ def _build_actions(widget):
     smart_iteration = action(
         QCoreApplication.translate("LabelingWidget", "4. 迭代收益看板"),
         lambda: show_iteration_dashboard(widget),
-        None,
+        shortcuts["smart_iteration"],
         "loop",
         QCoreApplication.translate(
             "LabelingWidget", "最后查看：每轮训练→回灌的边际收益与下一步建议"
@@ -4993,7 +4993,7 @@ def _build_actions(widget):
     smart_archive = action(
         QCoreApplication.translate("LabelingWidget", "7. 一键去重归档"),
         lambda: run_duplicate_archive(widget),
-        None,
+        shortcuts["smart_archive"],
         "trash",
         QCoreApplication.translate(
             "LabelingWidget",
@@ -5004,7 +5004,7 @@ def _build_actions(widget):
     smart_advice = action(
         QCoreApplication.translate("LabelingWidget", "8. 训练建议"),
         lambda: run_training_advice(widget),
-        None,
+        shortcuts["smart_advice"],
         "brain",
         QCoreApplication.translate(
             "LabelingWidget",
@@ -5017,7 +5017,7 @@ def _build_actions(widget):
             "LabelingWidget", "9. 智能模板预标注（批量）"
         ),
         lambda: run_template_propagation(widget),
-        None,
+        shortcuts["smart_template"],
         "labels",
         QCoreApplication.translate(
             "LabelingWidget",
@@ -5041,7 +5041,7 @@ def _build_actions(widget):
             "LabelingWidget", "11. 从备份恢复标注（撤销批量删除）"
         ),
         lambda: run_backup_restore(widget),
-        None,
+        shortcuts["smart_restore_backup"],
         "undo",
         QCoreApplication.translate(
             "LabelingWidget",
@@ -5602,6 +5602,7 @@ def _build_actions(widget):
     shape_converter = action(
         QCoreApplication.translate("LabelingWidget", "Shape Converter"),
         lambda: utils.open_shape_converter(widget),
+        shortcut=shortcuts["shape_converter"],
         icon="convert",
         tip=QCoreApplication.translate(
             "LabelingWidget", "Open shape converter"
@@ -5631,6 +5632,7 @@ def _build_actions(widget):
             "LabelingWidget", "Toggle Shapes Visibility"
         ),
         widget.toggle_select_all,
+        shortcut=shortcuts["select_toggle_shapes"],
         icon="eye",
         tip=QCoreApplication.translate("LabelingWidget", "Hide all shapes"),
         enabled=False,
@@ -5694,6 +5696,7 @@ def _build_actions(widget):
     keep_prev_scale = action(
         QCoreApplication.translate("LabelingWidget", "Keep Previous Scale"),
         lambda x: widget._config.update({"keep_prev_scale": x}),
+        shortcut=shortcuts["keep_prev_scale"],
         tip=QCoreApplication.translate(
             "LabelingWidget", "Keep previous zoom scale"
         ),
@@ -5706,6 +5709,7 @@ def _build_actions(widget):
             "LabelingWidget", "Keep Previous Brightness"
         ),
         lambda x: widget._config.update({"keep_prev_brightness": x}),
+        shortcut=shortcuts["keep_prev_brightness"],
         tip=QCoreApplication.translate(
             "LabelingWidget", "Keep previous brightness"
         ),
@@ -5716,6 +5720,7 @@ def _build_actions(widget):
     keep_prev_contrast = action(
         QCoreApplication.translate("LabelingWidget", "Keep Previous Contrast"),
         lambda x: widget._config.update({"keep_prev_contrast": x}),
+        shortcut=shortcuts["keep_prev_contrast"],
         tip=QCoreApplication.translate(
             "LabelingWidget", "Keep previous contrast"
         ),
@@ -5750,7 +5755,7 @@ def _build_actions(widget):
             "LabelingWidget", "Set Brightness Contrast"
         ),
         widget.brightness_contrast,
-        None,
+        shortcuts["brightness_contrast"],
         "color",
         "Adjust brightness and contrast",
         enabled=False,
@@ -5766,6 +5771,7 @@ def _build_actions(widget):
     show_groups = action(
         QCoreApplication.translate("LabelingWidget", "Show Groups"),
         lambda x: widget.set_canvas_params("show_groups", x),
+        shortcut=shortcuts["show_groups"],
         tip=QCoreApplication.translate("LabelingWidget", "Show shape groups"),
         icon=None,
         checkable=True,
@@ -5838,6 +5844,7 @@ def _build_actions(widget):
     show_scores = action(
         QCoreApplication.translate("LabelingWidget", "Show Scores"),
         lambda x: widget.set_canvas_params("show_scores", x),
+        shortcut=shortcuts["show_scores"],
         tip=QCoreApplication.translate(
             "LabelingWidget", "Show score inside shapes"
         ),
@@ -5850,6 +5857,7 @@ def _build_actions(widget):
     show_degrees = action(
         QCoreApplication.translate("LabelingWidget", "Show Degrees"),
         lambda x: widget.set_canvas_params("show_degrees", x),
+        shortcut=shortcuts["show_degrees"],
         tip=QCoreApplication.translate(
             "LabelingWidget", "Show degrees above rotated shapes"
         ),
@@ -6021,7 +6029,7 @@ def _build_actions(widget):
     fill_drawing = action(
         QCoreApplication.translate("LabelingWidget", "Fill Drawing Polygon"),
         widget.canvas.set_fill_drawing,
-        None,
+        shortcuts["fill_drawing"],
         "color",
         QCoreApplication.translate(
             "LabelingWidget", "Fill polygon while drawing"
@@ -6063,6 +6071,16 @@ def _build_actions(widget):
         smart_review=smart_review,
         smart_propagate=smart_propagate,
         smart_stale_audit=smart_stale_audit,
+        smart_calibrate=smart_calibrate,
+        smart_analysis=smart_analysis,
+        smart_missing_scan=smart_missing_scan,
+        smart_iteration=smart_iteration,
+        smart_archive=smart_archive,
+        smart_advice=smart_advice,
+        smart_template=smart_template,
+        smart_restore_backup=smart_restore_backup,
+        fill_drawing=fill_drawing,
+        shape_converter=shape_converter,
         save_auto=save_auto,
         save_with_image_data=save_with_image_data,
         change_output_dir=change_output_dir,
@@ -6297,6 +6315,24 @@ def _build_actions(widget):
     widget.addAction(widget.actions.smart_review)
     widget.addAction(widget.actions.smart_propagate)
     widget.addAction(widget.actions.smart_stale_audit)
+    widget.addAction(widget.actions.smart_calibrate)
+    widget.addAction(widget.actions.smart_analysis)
+    widget.addAction(widget.actions.smart_missing_scan)
+    widget.addAction(widget.actions.smart_iteration)
+    widget.addAction(widget.actions.smart_archive)
+    widget.addAction(widget.actions.smart_advice)
+    widget.addAction(widget.actions.smart_template)
+    widget.addAction(widget.actions.smart_restore_backup)
+    widget.addAction(widget.actions.brightness_contrast)
+    widget.addAction(widget.actions.fill_drawing)
+    widget.addAction(widget.actions.keep_prev_scale)
+    widget.addAction(widget.actions.keep_prev_brightness)
+    widget.addAction(widget.actions.keep_prev_contrast)
+    widget.addAction(widget.actions.select_toggle_shapes)
+    widget.addAction(widget.actions.shape_converter)
+    widget.addAction(widget.actions.show_groups)
+    widget.addAction(widget.actions.show_scores)
+    widget.addAction(widget.actions.show_degrees)
 
     widget.canvas.vertex_selected.connect(
         widget.actions.remove_point.setEnabled
