@@ -14,7 +14,7 @@ attributes and methods those modules touch, collected mechanically
 * a contract entry whose member disappears from the widget fails the
   test -- the interface cannot silently rot.
 
-It also documents the real size of the "god parameter": 132 members.
+It also documents the real size of the "god parameter": 128 members.
 Any future batch that extracts a *controller class* should aim to cut
 this number by owning a slice of it.
 """
@@ -23,7 +23,6 @@ CONTRACT_MEMBERS = frozenset(
     {
         "MANUAL_ZOOM",
         "_annotation_checked",
-        "_apply_checked_batch",
         "_apply_file_sort",
         "_batch_edit_warning_shown",
         "_config",
@@ -39,26 +38,23 @@ CONTRACT_MEMBERS = frozenset(
         "_first_visible_row",
         "_get_rgb_by_label",
         "_label_path_for_image",
+        "_load_active_thresholds",
         "_load_classes_from_folder",
-        "_maybe_focus_low_confidence_shapes",
+        "_recent_dir_list",
+        "_smart_tools_guide_message",
+        "_smart_tools_guide_signature",
         "_maybe_prompt_missing_labels",
-        "_maybe_show_smart_tools_guide",
         "_next_visible_row",
-        "_note_save_quality",
         "_paging_blocked_by_drawing",
         "_position_canvas_adjustment",
-        "_record_recent_dir",
         "_refresh_file_item_status_icon",
         "_refresh_file_panel",
         "_refresh_file_progress",
         "_refresh_label_panel",
         "_refresh_shape_filters",
         "_reset_label_loop",
-        "_set_file_item_annotated",
         "_set_file_item_checked",
-        "_set_file_item_low_conf",
         "_set_file_item_review_state",
-        "_shapes_need_review",
         "_should_restore_navigator",
         "_show_label_loop_popup",
         "_sync_annotation_checked_state",

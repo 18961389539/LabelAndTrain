@@ -2106,13 +2106,6 @@ class LabelingWidget(LabelDialog):
             return [str(item) for item in raw if str(item)]
         return [str(raw)] if raw else []
 
-    def _record_recent_dir(self, directory):
-        """Push a folder to the recent list and persist it."""
-        if not directory:
-            return
-        dirs = push_recent_dir(self._recent_dir_list(), directory)
-        self.settings.setValue("recent_dirs", dirs)
-
     def _update_recent_dirs_menu(self):
         menu = self.menus.recent_dirs
         menu.clear()
@@ -2249,10 +2242,6 @@ class LabelingWidget(LabelDialog):
     def _is_confirmed(state):
         return filelist_items.is_confirmed(state)
 
-    def _set_file_item_annotated(self, item, annotated, negative=False):
-        """Delegates to filelist.items."""
-        filelist_items.set_file_item_annotated(self, item, annotated, negative)
-
     def _refresh_file_item_status_icon(self, item):
         """Delegates to filelist.items (tests call this directly)."""
         filelist_items.refresh_file_item_status_icon(self, item)
@@ -2270,10 +2259,6 @@ class LabelingWidget(LabelDialog):
         if self.output_dir:
             label_file = osp.join(self.output_dir, osp.basename(label_file))
         return label_file
-
-    def _set_file_item_low_conf(self, item, has_low_conf):
-        """Delegates to filelist.items."""
-        filelist_items.set_file_item_low_conf(self, item, has_low_conf)
 
     def _active_label_dir(self):
         """Delegates to filelist.quality (training launcher reads this)."""
@@ -2295,21 +2280,13 @@ class LabelingWidget(LabelDialog):
         """Delegates to filelist.quality (called after a calibration run)."""
         self.file_quality_controller.invalidate_active_thresholds()
 
-    def _shapes_need_review(self, shapes):
-        """Delegates to filelist.quality."""
-        return self.file_quality_controller.shapes_need_review(shapes)
+    def _note_save_quality(self, shapes, file_item=None):
+        """Kept for attributes_controller's defensive getattr call."""
+        return file_list_ops._note_save_quality(self, shapes, file_item)
 
     def _file_item_has_low_conf(self, item):
         """Delegates to filelist.quality (low_conf filter reads this)."""
         return self.file_quality_controller.file_item_has_low_conf(item)
-
-    def _note_save_quality(self, shapes, file_item=None):
-        """Delegates to file_list_ops (wiring and tests stay)."""
-        return file_list_ops._note_save_quality(self, shapes, file_item)
-
-    def _maybe_focus_low_confidence_shapes(self):
-        """Delegates to filelist.quality (called after a file load)."""
-        self.file_quality_controller.maybe_focus_low_confidence_shapes()
 
     def mark_file_item_negative_state(self, image_file, negative):
         """Delegates to file_list_ops (wiring and tests stay)."""
@@ -2693,25 +2670,6 @@ class LabelingWidget(LabelDialog):
             + "\n"
             + threshold_text
         )
-
-    def _maybe_show_smart_tools_guide(self, directory):
-        if not directory:
-            return
-        thresholds = self._load_active_thresholds()
-        signature = (
-            osp.abspath(directory),
-            "calibrated" if thresholds else "default",
-        )
-        if getattr(self, "_smart_tools_guide_signature", None) == signature:
-            return
-        self._smart_tools_guide_signature = signature
-        popup = Popup(
-            self._smart_tools_guide_message(),
-            parent=self,
-            msec=4800,
-            icon=new_icon_path("copy-green", "svg"),
-        )
-        popup.show_popup(self, popup_height=72, position="bottom")
 
     def file_search_changed(self):
         search_text = self.file_search.text()
@@ -4428,12 +4386,6 @@ class LabelingWidget(LabelDialog):
     def import_image_folder(self, dirpath, pattern=None, load=True):
         """Delegates to file_lifecycle (wiring and tests stay)."""
         file_lifecycle.import_image_folder(self, dirpath, pattern, load)
-
-    def _apply_checked_batch(self, start_index, info_list):
-        """Delegates to filelist.controller (AsyncLabelChecker callback)."""
-        # Built on demand: the controller is stateless, and light test
-        # stubs never carry an instance.
-        FileReviewController(self).apply_checked_batch(start_index, info_list)
 
     def _load_classes_from_folder(self, image_dir):
         """Make the label panel follow ``classes.txt`` of the opened folder.

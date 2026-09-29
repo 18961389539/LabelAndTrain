@@ -32,6 +32,7 @@ from PyQt6.QtWidgets import (
 
 from anylabeling.services.auto_labeling.types import AutoLabelingMode
 
+from ..filelist import items as filelist_items
 from ..filelist.roles import CHECKED_FIELD
 from ..label_file import LabelFile, LabelFileError
 from ..utils.qt import measure_text_width as _measure_text_width
@@ -423,8 +424,8 @@ def save_attributes(widget, _shapes):
         if len(items) > 0:
             if len(items) != 1:
                 raise RuntimeError("There are duplicate files.")
-            widget._set_file_item_annotated(
-                items[0], True, negative=not shapes
+            filelist_items.set_file_item_annotated(
+                widget, items[0], True, negative=not shapes
             )
             widget._set_file_item_checked(
                 items[0], widget._annotation_checked()

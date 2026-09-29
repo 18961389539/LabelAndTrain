@@ -8,6 +8,35 @@ they live together: the dangerous code shares one address.
 """
 
 import os
+from ..widgets import (
+    AutoLabelingWidget,
+    BrightnessContrastDialog,
+    Canvas,
+    CanvasAdjustmentWidget,
+    CanvasEmptyStateWidget,
+    CrosshairSettingsDialog,
+    FileDialogPreview,
+    FloatingToolPanel,
+    ShapeModifyDialog,
+    GroupIDFilterComboBox,
+    LabelDialog,
+    LabelFilterComboBox,
+    LabelListWidget,
+    LabelListWidgetItem,
+    LabelModifyDialog,
+    GroupIDModifyDialog,
+    OverviewDialog,
+    Popup,
+    copy_text_to_system_clipboard,
+    SearchBar,
+    ToolBar,
+    UniqueLabelQListWidget,
+    ZoomWidget,
+    NavigatorDialog,
+)
+from ..utils.qt import new_icon_path
+from ..utils.recent_dirs import push_recent_dir
+from ..filelist.controller import FileReviewController
 from anylabeling.services.auto_labeling.types import AutoLabelingMode
 from ..filelist.roles import (
     CHECKED_FIELD,
@@ -34,7 +63,9 @@ import os.path as osp
 import shutil
 import time
 
+from ..filelist import items as filelist_items
 from ..logger import logger
+from . import file_list_ops
 
 
 def _report_inherited_shapes(widget, count):
@@ -168,14 +199,18 @@ def load_file(widget, filename=None):  # noqa: C901
                 widget.image_path, Qt.MatchFlag.MatchExactly
             )
             if len(neg_items) == 1:
-                widget._set_file_item_annotated(
+                filelist_items.set_file_item_annotated(
+                    widget,
                     neg_items[0],
                     True,
                     negative=len(widget.label_file.shapes) == 0,
                 )
-                widget._set_file_item_low_conf(
+                filelist_items.set_file_item_low_conf(
+                    widget,
                     neg_items[0],
-                    widget._shapes_need_review(widget.label_file.shapes),
+                    widget.file_quality_controller.shapes_need_review(
+                        widget.label_file.shapes
+                    ),
                 )
         except Exception:  # noqa: BLE001
             pass
@@ -315,7 +350,7 @@ def load_file(widget, filename=None):  # noqa: C901
     widget.canvas_adjustment.show()
     widget._position_canvas_adjustment()
     widget._sync_empty_canvas_state()
-    widget._maybe_focus_low_confidence_shapes()
+    _maybe_focus_low_confidence_shapes(widget)
 
     return True
 
@@ -325,7 +360,7 @@ def import_image_folder(widget, dirpath, pattern=None, load=True):
         return
 
     widget.last_open_dir = dirpath
-    widget._record_recent_dir(dirpath)
+    _record_recent_dir(widget, dirpath)
     # Per-project settings: flush the previous dataset's state, then
     # restore this one's output dir before the scan below routes label
     # files (an explicit output_dir always wins over the stored one).
@@ -406,13 +441,14 @@ def import_image_folder(widget, dirpath, pattern=None, load=True):
             widget, project_settings.dataset_dir_for(filename=dirpath)
         )
         widget._maybe_prompt_missing_labels()
-        widget._maybe_show_smart_tools_guide(dirpath)
+        _maybe_show_smart_tools_guide(widget, dirpath)
 
     # Background "checked" dot refresh (after rows exist so the batch
     # callback can address them by index).
     if label_files:
         widget.async_label_checker.start(
-            label_files, on_batch=widget._apply_checked_batch
+            label_files,
+            on_batch=(lambda s, i: _apply_checked_batch(widget, s, i)),
         )
 
 
@@ -455,7 +491,9 @@ def delete_file(widget):
 
         item = widget.file_list_widget.currentItem()
         if item is not None:
-            widget._set_file_item_annotated(item, False, negative=False)
+            filelist_items.set_file_item_annotated(
+                widget, item, False, negative=False
+            )
             widget._set_file_item_checked(item, False)
 
         filename = widget.filename
@@ -589,15 +627,15 @@ def save_labels(widget, filename):
         if len(items) > 0:
             if len(items) != 1:
                 raise RuntimeError("There are duplicate files.")
-            widget._set_file_item_annotated(
-                items[0], True, negative=not shapes
+            filelist_items.set_file_item_annotated(
+                widget, items[0], True, negative=not shapes
             )
             widget._set_file_item_checked(
                 items[0], widget._annotation_checked()
             )
-            widget._note_save_quality(shapes, items[0])
+            file_list_ops._note_save_quality(widget, shapes, items[0])
         else:
-            widget._note_save_quality(shapes)
+            file_list_ops._note_save_quality(widget, shapes)
         # disable allows next and previous image to proceed
         # widget.filename = filename
         return True
@@ -609,3 +647,43 @@ def save_labels(widget, filename):
             QCoreApplication.translate("LabelingWidget", "<b>%s</b>") % e,
         )
         return False
+
+
+def _apply_checked_batch(widget, start_index, info_list):
+    """Delegates to filelist.controller (AsyncLabelChecker callback)."""
+    # Built on demand: the controller is stateless, and light test
+    # stubs never carry an instance.
+    FileReviewController(widget).apply_checked_batch(start_index, info_list)
+
+
+def _maybe_focus_low_confidence_shapes(widget):
+    """Delegates to filelist.quality (called after a file load)."""
+    widget.file_quality_controller.maybe_focus_low_confidence_shapes()
+
+
+def _record_recent_dir(widget, directory):
+    """Push a folder to the recent list and persist it."""
+    if not directory:
+        return
+    dirs = push_recent_dir(widget._recent_dir_list(), directory)
+    widget.settings.setValue("recent_dirs", dirs)
+
+
+def _maybe_show_smart_tools_guide(widget, directory):
+    if not directory:
+        return
+    thresholds = widget._load_active_thresholds()
+    signature = (
+        osp.abspath(directory),
+        "calibrated" if thresholds else "default",
+    )
+    if getattr(widget, "_smart_tools_guide_signature", None) == signature:
+        return
+    widget._smart_tools_guide_signature = signature
+    popup = Popup(
+        widget._smart_tools_guide_message(),
+        parent=widget,
+        msec=4800,
+        icon=new_icon_path("copy-green", "svg"),
+    )
+    popup.show_popup(widget, popup_height=72, position="bottom")
