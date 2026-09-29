@@ -17,7 +17,8 @@
 | 3c black 全仓 | ✅ 完成 | 三个 `auto_labeling` 文件格式化，CI 改为全仓 `black --check`（钉 26.5.1，与 dev extra / pre-commit 三处一致，有测试守）；生成的 `*_ui.py` 从 black 与 flake8 双双排除 |
 | **1 守卫：落盘前快照** | ✅ 完成（commit `a7f4bc5`） | `utils/session_snapshot.py`：写盘前按（会话 × 目录）为每个标注文件留一份，落在 `.label_backups` **原有命名空间**（原计划写 `_auto_<stamp>`，实现时改成普通时间戳名——这样既有的「从备份恢复标注」选择器**不用改 UI 就能到达**，保留策略也自动生效）；marker 是 `.txt` 所以不会污染选择器的文件计数；11 条测试，含"快照必须在写之前"的真 `save_labels` 断言。磁盘开销限于标注文件，且只有当前图（自动保存 / Ctrl+S / 审核态切换）走这条路径 |
 | 1 守卫：跨图撤销 | ✅ 完成（commit `92bb707`） | 栈搬进 `widgets/shape_history.py`，按图分桶（LRU `MAX_BUCKETS=20`）；`canvas.reset_state()` 由清空改为 `leave()`、`load_file` 在 `widget.filename = filename` 后 `enter()`；旧属性名由 mixin 的 property 保住。**canvas.py 3772 → 3760（净减，预算收紧）**，13 条测试 + 冒烟 2b 步。过程中**冒烟抓到单元测试看不到的缺口**：历史回来了但 `Ctrl+Z` 仍 disabled（等于功能不可见），已补动作刷新 |
-| 3b "未绑定动作"可见 | ⬜ 未做 | 需要给 22 个无键动作加 null 键位并让 F1 显示灰行 |
+| 3b "未绑定动作"可见 **且可绑** | ✅ 完成（commit `72bb9b9`） | 22 个键位以 `null` 进模板（快捷键字段 96 → **118**），`runtime_applier` 用通用循环按名挂进映射，F1 新增「未绑定动作」分节且**绑上一个就自动消失**；三条守卫；`label_widget.py` 反而 **−8 行**（预算收紧到 6805） |
+| 4 数字键 >9 与冷启动 | ✅ 完成（commit `5e55493`） | `DIGIT_SLOTS = 1-9 然后 0`（0 号位从死键变第十槽位）；`import_image_folder` 预分配项目标签 → 第一批框就能用；>10 类别走标签对话框的补全框（**更正**：报告原说"没有键盘路径"过强）。契约测试拦住 `digit_shortcut_controller` 未声明，已补进 `CONTRACT_MEMBERS`（123 → 124） |
 | 4 出口体检 + manifest | ⬜ 未做 | 未动 |
 | 5 真机摸底 | ⬜ 未做 | 需要人做 |
 | 6 门禁 | 🟡 部分 | black 全仓已进 CI；覆盖率与"键位覆盖"棘轮未动 |
