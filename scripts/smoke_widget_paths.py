@@ -121,12 +121,21 @@ def main():
 
     @step("1. folder import (file_lifecycle rewires)")
     def s1():
+        # A project that declares its labels must answer to 1-9 straight
+        # away, not only once the first box has been drawn by hand.
+        widget._config["labels"] = ["scratch", "dent"]
         widget.import_image_folder(tmp)
         app.processEvents()
         assert len(widget.image_list) == 3, widget.image_list
         assert (
             widget.file_list_widget.count() == 3
         ), widget.file_list_widget.count()
+        assert (
+            widget.drawing_digit_shortcuts.get(1, {}).get("label") == "scratch"
+        ), widget.drawing_digit_shortcuts
+        assert (
+            widget.drawing_digit_shortcuts.get(2, {}).get("label") == "dent"
+        ), widget.drawing_digit_shortcuts
 
     @step("2a. load first image + set view state")
     def s2a():

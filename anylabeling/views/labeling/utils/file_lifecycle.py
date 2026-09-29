@@ -384,6 +384,12 @@ def import_image_folder(widget, dirpath, pattern=None, load=True):
         widget, project_settings.dataset_dir_for(filename=dirpath)
     )
     widget.filename = None
+    # A fresh project answers nothing to the 1-9 keys until a shape exists --
+    # exactly the step those keys are for. Give the declared labels their
+    # slots up front; labels already mapped keep theirs.
+    widget.digit_shortcut_controller.assign_label_digits(
+        widget._config["labels"]
+    )
     widget.file_list_widget.clear()
     # Rows are renumbered below, so the old folder's entries must go too:
     # a stale index makes _current_file_item() point at another image.
