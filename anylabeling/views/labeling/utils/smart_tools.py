@@ -1032,6 +1032,16 @@ BACKUP_ROOT_NAME = ".label_backups"
 BACKUP_STAMP_PATTERN = re.compile(r"\d{8}_\d{6}(_\d+)?$")
 # Files outside the canvas undo stack can only come back from these snapshots.
 BACKUP_KEEP_RUNS = 20
+# ``.session-snapshot`` marks a run the editor wrote on its own, before it
+# overwrote a label file (see utils/session_snapshot.py). The suffix is
+# .txt on purpose: list_label_backups() counts .json files to tell the user
+# how many labels a run would put back, and the marker must not inflate it.
+SESSION_SNAPSHOT_MARKER = ".session-snapshot"
+
+
+def is_session_snapshot(run_path):
+    """True for runs the editor wrote itself before a label overwrite."""
+    return osp.isfile(osp.join(run_path, SESSION_SNAPSHOT_MARKER))
 
 
 def _prune_backup_runs(backup_root):
@@ -1878,10 +1888,14 @@ def _delete_reported_stale(parent, dialog):
 
 
 def run_backup_restore(parent):
-    """Put back the label files a bulk deletion overwrote.
+    """Put back the label files a bulk deletion -- or an edit -- overwrote.
 
-    Only the image open in the canvas has a real undo; every other file a
-    deletion touched comes back from its snapshot, which is what this lists.
+    Only the image open in the canvas has a real undo, and that undo does not
+    survive a file switch, so every other file comes back from a snapshot.
+    Two kinds end up in this list: the pre-deletion runs the batch tools
+    write, and the runs the editor writes itself before it first overwrites
+    each label file in a session (marked 自动快照), which is what answers
+    "I broke this an hour and ten images ago".
     """
     directory = label_dir_for(parent)
     if not directory:
@@ -1907,6 +1921,11 @@ def run_backup_restore(parent):
         QCoreApplication.translate("LabelingWidget", "%1（%2 个文件）")
         .replace("%1", name)
         .replace("%2", str(count))
+        + (
+            QCoreApplication.translate("LabelingWidget", " · 自动快照")
+            if is_session_snapshot(_path)
+            else ""
+        )
         for name, _path, count in runs
     ]
     choice, ok = QInputDialog.getItem(

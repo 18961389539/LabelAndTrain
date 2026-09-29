@@ -36,6 +36,7 @@ from ..widgets import (
 )
 from ..utils.qt import new_icon_path
 from ..utils.recent_dirs import push_recent_dir
+from ..utils.session_snapshot import snapshot_before_label_write
 from ..filelist.controller import FileReviewController
 from anylabeling.services.auto_labeling.types import AutoLabelingMode
 from ..filelist.roles import (
@@ -610,6 +611,14 @@ def save_labels(widget, filename):
         )
         if osp.dirname(filename) and not osp.exists(osp.dirname(filename)):
             os.makedirs(osp.dirname(filename))
+
+        # One copy of the pre-edit state per (session, file), taken here
+        # because this is the only path that writes a label file: the canvas
+        # undo stack does not survive a file switch, and the auto-save
+        # overwrites the only other copy a few hundred milliseconds after an
+        # edit. Failure is logged, never fatal -- refusing to save an
+        # annotation would be worse than losing its snapshot.
+        snapshot_before_label_write(filename)
 
         label_file.save(
             filename=filename,
