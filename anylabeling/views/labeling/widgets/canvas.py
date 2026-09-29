@@ -2025,59 +2025,12 @@ class Canvas(
 
     def calculate_offsets(self, point):
         """Calculate offsets of a point to pixmap borders"""
-        left = self.pixmap.width() - 1
-        right = 0
-        top = self.pixmap.height() - 1
-        bottom = 0
-        for s in self.selected_shapes:
-            rect = s.bounding_rect()
-            if rect.left() < left:
-                left = rect.left()
-            if rect.right() > right:
-                right = rect.right()
-            if rect.top() < top:
-                top = rect.top()
-            if rect.bottom() > bottom:
-                bottom = rect.bottom()
-
-        x1 = left - point.x()
-        y1 = top - point.y()
-        x2 = right - point.x()
-        y2 = bottom - point.y()
-        self.offsets = QtCore.QPointF(x1, y1), QtCore.QPointF(x2, y2)
-
-    def get_adjoint_points(self, theta, p3, p1, index):
-        a1 = math.tan(theta)
-        if a1 == 0:
-            if index % 2 == 0:
-                p2 = QtCore.QPointF(p3.x(), p1.y())
-                p4 = QtCore.QPointF(p1.x(), p3.y())
-            else:
-                p4 = QtCore.QPointF(p3.x(), p1.y())
-                p2 = QtCore.QPointF(p1.x(), p3.y())
-        else:
-            a3 = a1
-            a2 = -1 / a1
-            a4 = -1 / a1
-            b1 = p1.y() - a1 * p1.x()
-            b2 = p1.y() - a2 * p1.x()
-            b3 = p3.y() - a1 * p3.x()
-            b4 = p3.y() - a2 * p3.x()
-
-            if index % 2 == 0:
-                p2 = self.get_cross_point(a1, b1, a4, b4)
-                p4 = self.get_cross_point(a2, b2, a3, b3)
-            else:
-                p4 = self.get_cross_point(a1, b1, a4, b4)
-                p2 = self.get_cross_point(a2, b2, a3, b3)
-
-        return p2, p3, p4
-
-    @staticmethod
-    def get_cross_point(a1, b1, a2, b2):
-        x = (b2 - b1) / (a1 - a2)
-        y = (a1 * b2 - a2 * b1) / (a1 - a2)
-        return QtCore.QPointF(x, y)
+        self.offsets = canvas_geometry.selection_offsets(
+            self.selected_shapes,
+            point,
+            self.pixmap.width(),
+            self.pixmap.height(),
+        )
 
     def bounded_move_vertex(self, pos):
         """Move a vertex. Adjust position to be bounded by pixmap border"""
@@ -2087,97 +2040,36 @@ class Canvas(
         if shape.shape_type == "cuboid":
             self.move_cuboid_control(shape, index, pos)
             return
-        point = shape[index]
-        if (
-            self.out_off_pixmap(pos)
-            and shape.shape_type not in self.allowed_oop_shape_types
-        ):
-            pos = self.intersection_point(point, pos)
-
-        if shape.shape_type == "rotation":
-            sindex = (index + 2) % 4
-            # Get the other 3 points after transformed
-            p2, p3, p4 = self.get_adjoint_points(
-                shape.direction, shape[sindex], pos, index
-            )
-            # if (
-            #     self.out_off_pixmap(p2)
-            #     or self.out_off_pixmap(p3)
-            #     or self.out_off_pixmap(p4)
-            # ):
-            #     # No need to move if one pixal out of map
-            #     return
-            # Move 4 pixal one by one
-            shape.move_vertex_by(index, pos - point)
-            lindex = (index + 1) % 4
-            rindex = (index + 3) % 4
-            shape[lindex] = p2
-            shape[rindex] = p4
-            shape.close()
-        elif shape.shape_type == "rectangle":
-            shift_pos = pos - point
-            shape.move_vertex_by(index, shift_pos)
-            left_index = (index + 1) % 4
-            right_index = (index + 3) % 4
-            left_shift = None
-            right_shift = None
-            if index % 2 == 0:
-                right_shift = QtCore.QPointF(shift_pos.x(), 0)
-                left_shift = QtCore.QPointF(0, shift_pos.y())
-            else:
-                left_shift = QtCore.QPointF(shift_pos.x(), 0)
-                right_shift = QtCore.QPointF(0, shift_pos.y())
-            shape.move_vertex_by(right_index, right_shift)
-            shape.move_vertex_by(left_index, left_shift)
-        else:
-            shape.move_vertex_by(index, pos - point)
+        if self.pixmap is None:
+            return
+        canvas_geometry.move_vertex_bounded(
+            shape,
+            index,
+            pos,
+            self.pixmap.width(),
+            self.pixmap.height(),
+            self.allowed_oop_shape_types,
+        )
 
     def bounded_move_shapes(self, shapes, pos):
         """Move shapes. Adjust position to be bounded by pixmap border"""
-        shapes = [shape for shape in shapes if not shape.locked]
-        if not shapes:
+        if self.pixmap is None:
             return False
-        shape_types = []
-        for shape in shapes:
-            if shape.shape_type in self.allowed_oop_shape_types:
-                shape_types.append(shape.shape_type)
-
-        if self.out_off_pixmap(pos) and len(shape_types) == 0:
-            return False  # No need to move
-        if len(shape_types) > 0 and len(shapes) != len(shape_types):
-            return False
-
-        if len(shape_types) == 0:
-            o1 = pos + self.offsets[0]
-            if self.out_off_pixmap(o1):
-                pos -= QtCore.QPointF(min(0, int(o1.x())), min(0, int(o1.y())))
-            o2 = pos + self.offsets[1]
-            if self.out_off_pixmap(o2):
-                pos += QtCore.QPointF(
-                    min(0, int(self.pixmap.width() - o2.x())),
-                    min(0, int(self.pixmap.height() - o2.y())),
-                )
-        # XXX: The next line tracks the new position of the cursor
-        # relative to the shape, but also results in making it
-        # a bit "shaky" when nearing the border and allows it to
-        # go outside of the shape's area for some reason.
-        # self.calculateOffsets(self.selectedShapes, pos)
-        dp = pos - self.prev_point
-        if dp:
-            for shape in shapes:
-                shape.move_by(dp)
-            self.prev_point = pos
-            return True
-        return False
+        moved, new_pos = canvas_geometry.drag_shapes_bounded(
+            shapes,
+            pos,
+            self.prev_point,
+            self.offsets,
+            self.pixmap.width(),
+            self.pixmap.height(),
+            self.allowed_oop_shape_types,
+        )
+        if moved:
+            self.prev_point = new_pos
+        return moved
 
     def rotate_point(self, p, center, theta):
-        order = p - center
-        cosTheta = math.cos(theta)
-        sinTheta = math.sin(theta)
-        pResx = cosTheta * order.x() + sinTheta * order.y()
-        pResy = -sinTheta * order.x() + cosTheta * order.y()
-        pRes = QtCore.QPointF(center.x() + pResx, center.y() + pResy)
-        return pRes
+        return canvas_geometry.rotate_point(p, center, theta)
 
     def bounded_rotate_shapes(self, i, shape, theta):
         """Rotate shapes. Adjust position to be bounded by pixmap border"""
@@ -3406,59 +3298,9 @@ class Canvas(
         and find the one intersecting the current line segment.
         """
         size = self.pixmap.size()
-        points = [
-            (0, 0),
-            (size.width() - 1, 0),
-            (size.width() - 1, size.height() - 1),
-            (0, size.height() - 1),
-        ]
-        # x1, y1 should be in the pixmap, x2, y2 should be out of the pixmap
-        x1 = min(max(p1.x(), 0), size.width() - 1)
-        y1 = min(max(p1.y(), 0), size.height() - 1)
-        x2, y2 = p2.x(), p2.y()
-        _, i, (x, y) = min(self.intersecting_edges((x1, y1), (x2, y2), points))
-        x3, y3 = points[i]
-        x4, y4 = points[(i + 1) % 4]
-        x1, y1 = int(x1), int(y1)
-        x2, y2 = int(x2), int(y2)
-        x3, y3 = int(x3), int(y3)
-        x4, y4 = int(x4), int(y4)
-        if (x, y) == (x1, y1):
-            # Handle cases where previous point is on one of the edges.
-            if x3 == x4:
-                return QtCore.QPointF(x3, min(max(0, y2), max(y3, y4)))
-            # y3 == y4
-            return QtCore.QPointF(min(max(0, x2), max(x3, x4)), y3)
-        return QtCore.QPointF(int(x), int(y))
-
-    def intersecting_edges(self, point1, point2, points):
-        """Find intersecting edges.
-
-        For each edge formed by `points', yield the intersection
-        with the line segment `(x1,y1) - (x2,y2)`, if it exists.
-        Also return the distance of `(x2,y2)' to the middle of the
-        edge along with its index, so that the one closest can be chosen.
-        """
-        x1, y1 = point1
-        x2, y2 = point2
-        for i in range(4):
-            x3, y3 = points[i]
-            x4, y4 = points[(i + 1) % 4]
-            denom = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1)
-            nua = (x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)
-            nub = (x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)
-            if denom == 0:
-                # This covers two cases:
-                #   nua == nub == 0: Coincident
-                #   otherwise: Parallel
-                continue
-            ua, ub = nua / denom, nub / denom
-            if 0 <= ua <= 1 and 0 <= ub <= 1:
-                x = x1 + ua * (x2 - x1)
-                y = y1 + ua * (y2 - y1)
-                m = QtCore.QPointF((x3 + x4) / 2, (y3 + y4) / 2)
-                d = utils.distance(m - QtCore.QPointF(x2, y2))
-                yield d, i, (x, y)
+        return canvas_geometry.line_image_intersection(
+            p1, p2, size.width(), size.height()
+        )
 
     # These two, along with a call to adjustSize are required for the
     # scroll area.

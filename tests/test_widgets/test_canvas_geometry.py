@@ -212,5 +212,167 @@ class TestHitCandidates(unittest.TestCase):
         self.assertEqual(hits, [])
 
 
+class TestLineImageIntersection(unittest.TestCase):
+    def test_crossing_the_right_edge(self):
+        hit = canvas_geometry.line_image_intersection(
+            QPointF(50, 40), QPointF(150, 40), IMG_W, IMG_H
+        )
+        self.assertEqual((hit.x(), hit.y()), (99, 40))
+
+    def test_crossing_the_bottom_edge(self):
+        hit = canvas_geometry.line_image_intersection(
+            QPointF(50, 40), QPointF(50, 120), IMG_W, IMG_H
+        )
+        self.assertEqual((hit.x(), hit.y()), (50, 79))
+
+    def test_diagonal_segment_hits_a_corner_region(self):
+        hit = canvas_geometry.line_image_intersection(
+            QPointF(90, 70), QPointF(120, 100), IMG_W, IMG_H
+        )
+        # the closest crossing edge clamps the point inside the image
+        self.assertTrue(0 <= hit.x() < IMG_W and 0 <= hit.y() < IMG_H)
+
+
+class TestSelectionOffsetsAndDrag(unittest.TestCase):
+    def test_offsets_reach_the_image_borders(self):
+        shapes = [rectangle(10, 10, 50, 40)]
+        o1, o2 = canvas_geometry.selection_offsets(
+            shapes, QPointF(30, 25), IMG_W, IMG_H
+        )
+        self.assertEqual((o1.x(), o1.y()), (-20, -15))
+        self.assertEqual((o2.x(), o2.y()), (20, 15))
+
+    def test_drag_inside_image_moves_and_reports_position(self):
+        shape = rectangle(10, 10, 50, 40)
+        offsets = canvas_geometry.selection_offsets(
+            [shape], QPointF(30, 25), IMG_W, IMG_H
+        )
+        moved, new_pos = canvas_geometry.drag_shapes_bounded(
+            [shape],
+            QPointF(40, 35),
+            QPointF(30, 25),
+            offsets,
+            IMG_W,
+            IMG_H,
+            frozenset(),
+        )
+        self.assertTrue(moved)
+        self.assertEqual((new_pos.x(), new_pos.y()), (40, 35))
+        self.assertEqual(points_of(shape)[0], (20, 20))  # moved +10,+10
+
+    def test_drag_beyond_the_border_is_clamped(self):
+        # cursor stays inside the image, but the shape's right edge would
+        # cross it -- the drag is clamped so the shape lands on the border
+        shape = rectangle(60, 10, 90, 40)  # right edge at x=90
+        offsets = canvas_geometry.selection_offsets(
+            [shape], QPointF(75, 25), IMG_W, IMG_H
+        )
+        moved, new_pos = canvas_geometry.drag_shapes_bounded(
+            [shape],
+            QPointF(98, 25),  # would push the right edge to 113
+            QPointF(75, 25),
+            offsets,
+            IMG_W,
+            IMG_H,
+            frozenset(),
+        )
+        self.assertTrue(moved)
+        # 85, not 84: the clamp uses pixmap.width() (not width - 1), the
+        # same off-by-one the original XXX "shaky" comment in upstream
+        # describes -- the shape may end 1px over the border. Pinned as-is.
+        self.assertAlmostEqual(new_pos.x(), 85)
+        self.assertAlmostEqual(max(p.x() for p in shape.points), 100)
+
+    def test_drag_with_the_cursor_outside_the_image_is_refused(self):
+        # upstream behaviour: once the cursor itself leaves the image the
+        # drag simply stops (the clamp above only handles in-image cursors)
+        shape = rectangle(10, 10, 50, 40)
+        offsets = canvas_geometry.selection_offsets(
+            [shape], QPointF(30, 25), IMG_W, IMG_H
+        )
+        moved, _ = canvas_geometry.drag_shapes_bounded(
+            [shape],
+            QPointF(140, 25),
+            QPointF(30, 25),
+            offsets,
+            IMG_W,
+            IMG_H,
+            frozenset(),
+        )
+        self.assertFalse(moved)
+
+    def test_drag_with_locked_shape_only_is_ignored(self):
+        shape = rectangle(10, 10, 50, 40)
+        shape.locked = True
+        moved, _ = canvas_geometry.drag_shapes_bounded(
+            [shape],
+            QPointF(40, 35),
+            QPointF(30, 25),
+            ((QPointF(0, 0), QPointF(0, 0))),
+            IMG_W,
+            IMG_H,
+            frozenset(),
+        )
+        self.assertFalse(moved)
+
+    def test_oop_type_may_leave_the_image(self):
+        shape = rectangle(10, 10, 50, 40)
+        shape.shape_type = "point"
+        moved, _ = canvas_geometry.drag_shapes_bounded(
+            [shape],
+            QPointF(150, 150),  # far outside
+            QPointF(30, 25),
+            ((QPointF(0, 0), QPointF(0, 0))),
+            IMG_W,
+            IMG_H,
+            frozenset({"point"}),
+        )
+        self.assertTrue(moved)  # allowed out of pixmap
+
+
+class TestMoveVertexBounded(unittest.TestCase):
+    def test_rectangle_vertex_keeps_the_opposite_edge_axis(self):
+        shape = rectangle(10, 10, 50, 40)
+        # vertex 0 (top-left) moves diagonally
+        canvas_geometry.move_vertex_bounded(
+            shape, 0, QPointF(20, 5), IMG_W, IMG_H, frozenset()
+        )
+        pts = points_of(shape)
+        self.assertEqual(pts[0], (20, 5))
+        # top-right follows the x shift, bottom-left the y shift
+        self.assertEqual(pts[1], (50, 5))
+        self.assertEqual(pts[3], (20, 40))
+        self.assertEqual(pts[2], (50, 40))
+
+    def test_vertex_out_of_image_is_clamped_to_the_border(self):
+        shape = rectangle(10, 10, 50, 40)
+        canvas_geometry.move_vertex_bounded(
+            shape, 0, QPointF(-30, 5), IMG_W, IMG_H, frozenset()
+        )
+        # the vertex lands on the left border, not beyond it
+        self.assertGreaterEqual(min(p.x() for p in shape.points), 0)
+
+    def test_generic_shape_moves_one_vertex(self):
+        shape = polygon([(10, 10), (50, 10), (50, 40), (10, 40)])
+        canvas_geometry.move_vertex_bounded(
+            shape, 1, QPointF(60, 10), IMG_W, IMG_H, frozenset()
+        )
+        self.assertEqual(points_of(shape)[1], (60, 10))
+        self.assertEqual(points_of(shape)[0], (10, 10))  # others untouched
+
+    def test_rotation_shape_moves_its_adjacent_corners(self):
+        shape = polygon([(10, 10), (50, 10), (50, 40), (10, 40)])
+        shape.shape_type = "rotation"
+        shape.direction = 0.0
+        canvas_geometry.move_vertex_bounded(
+            shape, 0, QPointF(5, 5), IMG_W, IMG_H, frozenset()
+        )
+        pts = points_of(shape)
+        # the moved corner and its two adjoints form the rotated rect
+        self.assertEqual(pts[0], (5, 5))
+        self.assertEqual(pts[1][1], 5)  # p2 shares the moved vertex's y
+        self.assertEqual(pts[3][0], 5)  # p4 shares the moved vertex's x
+
+
 if __name__ == "__main__":
     unittest.main()

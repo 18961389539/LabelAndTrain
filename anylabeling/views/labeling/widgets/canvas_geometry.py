@@ -12,6 +12,8 @@ delegating stubs.
 
 from PyQt6.QtCore import QPointF
 
+import math
+
 from .. import utils
 
 
@@ -258,3 +260,224 @@ def hit_candidates(
 
     candidates.sort(key=lambda item: item[0])
     return [shape for _, shape in candidates]
+
+
+def out_of_bounds(p, img_width, img_height):
+    """Whether a position leaves the [0, w-1] x [0, h-1] image area."""
+    return not (0 <= p.x() <= img_width - 1 and 0 <= p.y() <= img_height - 1)
+
+
+def line_image_intersection(p1, p2, img_width, img_height):
+    """Where the segment p1->p2 crosses the image border.
+
+    ``p1`` is expected inside (it is clamped first), ``p2`` outside.
+    Clockwise edge walk, exactly as Canvas did it.
+    """
+    corners = [
+        (0, 0),
+        (img_width - 1, 0),
+        (img_width - 1, img_height - 1),
+        (0, img_height - 1),
+    ]
+    x1 = min(max(p1.x(), 0), img_width - 1)
+    y1 = min(max(p1.y(), 0), img_height - 1)
+    x2, y2 = p2.x(), p2.y()
+    _, i, (x, y) = min(_intersecting_edges((x1, y1), (x2, y2), corners))
+    x3, y3 = corners[i]
+    x4, y4 = corners[(i + 1) % 4]
+    x1, y1 = int(x1), int(y1)
+    x2, y2 = int(x2), int(y2)
+    x3, y3 = int(x3), int(y3)
+    x4, y4 = int(x4), int(y4)
+    if (x, y) == (x1, y1):
+        # Handle cases where previous point is on one of the edges.
+        if x3 == x4:
+            return QPointF(x3, min(max(0, y2), max(y3, y4)))
+        # y3 == y4
+        return QPointF(min(max(0, x2), max(x3, x4)), y3)
+    return QPointF(int(x), int(y))
+
+
+def _intersecting_edges(point1, point2, corners):
+    """Yield (distance-to-edge-middle, edge index, intersection) for each
+    image edge crossing the segment ``(point1, point2)`` -- the closest
+    one wins.  Segment-segment intersection via the parametric form; both
+    parameters must land in [0, 1] for the crossing to count.
+    """
+    x1, y1 = point1
+    x2, y2 = point2
+    for i in range(4):
+        x3, y3 = corners[i]
+        x4, y4 = corners[(i + 1) % 4]
+        denom = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1)
+        nua = (x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)
+        nub = (x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)
+        if denom == 0:
+            # This covers two cases:
+            #   nua == nub == 0: Coincident
+            #   otherwise: Parallel
+            continue
+        ua, ub = nua / denom, nub / denom
+        if 0 <= ua <= 1 and 0 <= ub <= 1:
+            x = x1 + ua * (x2 - x1)
+            y = y1 + ua * (y2 - y1)
+            middle = QPointF((x3 + x4) / 2, (y3 + y4) / 2)
+            d = utils.distance(middle - QPointF(x2, y2))
+            yield d, i, (x, y)
+
+
+def selection_offsets(shapes, point, img_width, img_height):
+    """Offsets of the selection's bounding box to the image borders --
+    what Canvas kept as ``self.offsets`` between selection and drag."""
+    left = img_width - 1
+    right = 0
+    top = img_height - 1
+    bottom = 0
+    for shape in shapes:
+        rect = shape.bounding_rect()
+        if rect.left() < left:
+            left = rect.left()
+        if rect.right() > right:
+            right = rect.right()
+        if rect.top() < top:
+            top = rect.top()
+        if rect.bottom() > bottom:
+            bottom = rect.bottom()
+
+    x1 = left - point.x()
+    y1 = top - point.y()
+    x2 = right - point.x()
+    y2 = bottom - point.y()
+    return (QPointF(x1, y1), QPointF(x2, y2))
+
+
+def drag_shapes_bounded(
+    shapes, pos, prev_point, offsets, img_width, img_height, allowed_oop
+):
+    """Move a group of unlocked shapes, clamped to the image.
+
+    Returns ``(moved, new_pos)``; ``new_pos`` is what the caller should
+    store as its previous-point.  Shapes of a type in ``allowed_oop``
+    may leave the image, but only when the whole selection is that type.
+    """
+    shapes = [shape for shape in shapes if not shape.locked]
+    if not shapes:
+        return False, pos
+    shape_types = []
+    for shape in shapes:
+        if shape.shape_type in allowed_oop:
+            shape_types.append(shape.shape_type)
+
+    if out_of_bounds(pos, img_width, img_height) and len(shape_types) == 0:
+        return False, pos
+    if len(shape_types) > 0 and len(shapes) != len(shape_types):
+        return False, pos
+
+    if len(shape_types) == 0:
+        o1 = pos + offsets[0]
+        if out_of_bounds(o1, img_width, img_height):
+            pos -= QPointF(min(0, int(o1.x())), min(0, int(o1.y())))
+        o2 = pos + offsets[1]
+        if out_of_bounds(o2, img_width, img_height):
+            pos += QPointF(
+                min(0, int(img_width - o2.x())),
+                min(0, int(img_height - o2.y())),
+            )
+    dp = pos - prev_point
+    if dp:
+        for shape in shapes:
+            shape.move_by(dp)
+        return True, pos
+    return False, pos
+
+
+def rotate_point(p, center, theta):
+    """Rotate ``p`` around ``center`` by ``theta`` radians."""
+    order = p - center
+    cos_theta = math.cos(theta)
+    sin_theta = math.sin(theta)
+    res_x = cos_theta * order.x() + sin_theta * order.y()
+    res_y = -sin_theta * order.x() + cos_theta * order.y()
+    return QPointF(center.x() + res_x, center.y() + res_y)
+
+
+def adjoint_points(theta, p3, p1, index):
+    """The two companion corners of a rotation-shape vertex being moved.
+
+    A rotation shape keeps its four points on a rectangle aligned with
+    ``theta``; moving one corner forces the two adjacent ones onto the
+    perpendicular lines through it.  Returns ``(p2, p3, p4)``.
+    """
+    a1 = math.tan(theta)
+    if a1 == 0:
+        if index % 2 == 0:
+            p2 = QPointF(p3.x(), p1.y())
+            p4 = QPointF(p1.x(), p3.y())
+        else:
+            p4 = QPointF(p3.x(), p1.y())
+            p2 = QPointF(p1.x(), p3.y())
+    else:
+        a2 = -1 / a1
+        b1 = p1.y() - a1 * p1.x()
+        b2 = p1.y() - a2 * p1.x()
+        b3 = p3.y() - a1 * p3.x()
+        b4 = p3.y() - a2 * p3.x()
+
+        if index % 2 == 0:
+            p2 = _cross_point(a1, b1, a2, b4)
+            p4 = _cross_point(a2, b2, a1, b3)
+        else:
+            p4 = _cross_point(a1, b1, a2, b4)
+            p2 = _cross_point(a2, b2, a1, b3)
+
+    return p2, p3, p4
+
+
+def _cross_point(a1, b1, a2, b2):
+    x = (b2 - b1) / (a1 - a2)
+    y = (a1 * b2 - a2 * b1) / (a1 - a2)
+    return QPointF(x, y)
+
+
+def move_vertex_bounded(shape, index, pos, img_width, img_height, allowed_oop):
+    """Move one vertex, clamped to the image -- the drag math behind
+    Canvas.bounded_move_vertex (locked and cuboid handling stay there).
+
+    Rotation shapes move their two adjacent corners along the perpendicular
+    lines; rectangle shapes keep the opposite edge's axis; everything else
+    moves the single vertex.
+    """
+    point = shape[index]
+    if out_of_bounds(pos, img_width, img_height) and (
+        shape.shape_type not in allowed_oop
+    ):
+        pos = line_image_intersection(point, pos, img_width, img_height)
+
+    if shape.shape_type == "rotation":
+        sindex = (index + 2) % 4
+        # Get the other 3 points after transformed
+        p2, p3, p4 = adjoint_points(shape.direction, shape[sindex], pos, index)
+        # Move 4 pixal one by one
+        shape.move_vertex_by(index, pos - point)
+        lindex = (index + 1) % 4
+        rindex = (index + 3) % 4
+        shape[lindex] = p2
+        shape[rindex] = p4
+        shape.close()
+    elif shape.shape_type == "rectangle":
+        shift_pos = pos - point
+        shape.move_vertex_by(index, shift_pos)
+        left_index = (index + 1) % 4
+        right_index = (index + 3) % 4
+        left_shift = None
+        right_shift = None
+        if index % 2 == 0:
+            right_shift = QPointF(shift_pos.x(), 0)
+            left_shift = QPointF(0, shift_pos.y())
+        else:
+            left_shift = QPointF(shift_pos.x(), 0)
+            right_shift = QPointF(0, shift_pos.y())
+        shape.move_vertex_by(right_index, right_shift)
+        shape.move_vertex_by(left_index, left_shift)
+    else:
+        shape.move_vertex_by(index, pos - point)
