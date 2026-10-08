@@ -3,20 +3,26 @@
 It used to start maximized unconditionally -- the geometry save was a
 commented-out line -- so a window sized for a second monitor came back
 filling the primary one on every launch.
+
+``app.py`` builds ``QSettings("anylabeling", "anylabeling")``, which on
+Windows is a registry key: the tests used to write there and snapshot/restore
+the machine's real values by hand, so a case that failed midway left a trace
+behind.  They run against a file-backed settings object in a temp directory
+now, and the only production change is that the settings factory is reached
+through the module (``QtCore.QSettings``), which is what makes it patchable.
 """
 
 import os
+import tempfile
 import unittest
+from unittest import mock
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 try:
     from PyQt6 import QtCore, QtWidgets
 
-    from anylabeling.app import (
-        restore_window_placement,
-        save_window_placement,
-    )
+    from anylabeling import app as app_module
 
     PYQT_AVAILABLE = True
 except Exception:
@@ -30,38 +36,29 @@ class TestWindowPlacement(unittest.TestCase):
         cls.app = QtWidgets.QApplication.instance()
         if cls.app is None:
             cls.app = QtWidgets.QApplication([])
-        cls.settings = QtCore.QSettings("anylabeling", "anylabeling")
-        # Snapshot whatever this machine had, so the test leaves no trace.
-        cls.saved_geometry = cls.settings.value("window/geometry")
-        cls.saved_maximized = cls.settings.value("window/maximized")
-
-    @classmethod
-    def tearDownClass(cls):
-        for key, value in (
-            ("window/geometry", cls.saved_geometry),
-            ("window/maximized", cls.saved_maximized),
-        ):
-            if value is None:
-                cls.settings.remove(key)
-            else:
-                cls.settings.setValue(key, value)
-        cls.settings.sync()
 
     def setUp(self):
-        self.settings.remove("window/geometry")
-        self.settings.remove("window/maximized")
-        self.settings.sync()
+        self._tmp = tempfile.TemporaryDirectory()
+        self.settings = QtCore.QSettings(
+            os.path.join(self._tmp.name, "window.ini"),
+            QtCore.QSettings.Format.IniFormat,
+        )
+        patcher = mock.patch.object(app_module, "QtCore")
+        fake_qtcore = patcher.start()
+        fake_qtcore.QSettings.return_value = self.settings
+        self.addCleanup(patcher.stop)
+        self.addCleanup(self._tmp.cleanup)
 
     def test_a_sized_window_comes_back_at_its_size(self):
         window = QtWidgets.QMainWindow()
         window.resize(900, 700)
         window.show()
         self.app.processEvents()
-        save_window_placement(window)
+        app_module.save_window_placement(window)
         window.close()
 
         reopened = QtWidgets.QMainWindow()
-        restore_window_placement(reopened)
+        app_module.restore_window_placement(reopened)
         self.app.processEvents()
         # The offscreen screen is smaller than 900 px, so Qt may clamp the
         # width onto it; the height and the not-maximized flag are what
@@ -73,7 +70,7 @@ class TestWindowPlacement(unittest.TestCase):
 
     def test_a_first_run_still_opens_maximized(self):
         window = QtWidgets.QMainWindow()
-        restore_window_placement(window)
+        app_module.restore_window_placement(window)
         self.app.processEvents()
         self.assertTrue(window.isMaximized())
         window.close()
@@ -82,14 +79,31 @@ class TestWindowPlacement(unittest.TestCase):
         window = QtWidgets.QMainWindow()
         window.showMaximized()
         self.app.processEvents()
-        save_window_placement(window)
+        app_module.save_window_placement(window)
         window.close()
 
         reopened = QtWidgets.QMainWindow()
-        restore_window_placement(reopened)
+        app_module.restore_window_placement(reopened)
         self.app.processEvents()
         self.assertTrue(reopened.isMaximized())
         reopened.close()
+
+    def test_nothing_is_written_to_the_machine(self):
+        """The point of the temp file: the real key must stay untouched."""
+        real = QtCore.QSettings("anylabeling", "anylabeling")
+        before = real.value("window/geometry")
+
+        window = QtWidgets.QMainWindow()
+        window.resize(800, 600)
+        window.show()
+        self.app.processEvents()
+        app_module.save_window_placement(window)
+        window.close()
+
+        after = QtCore.QSettings("anylabeling", "anylabeling").value(
+            "window/geometry"
+        )
+        self.assertEqual(before, after)
 
 
 if __name__ == "__main__":

@@ -1,20 +1,4 @@
-import os
-
-from anylabeling.config import get_work_directory
 from anylabeling.views.labeling.utils.theme import get_theme
-
-
-def get_models_config_path():
-    return os.path.join(
-        get_work_directory(), "xanylabeling_data", "ai", "models.json"
-    )
-
-
-def get_providers_config_path():
-    return os.path.join(
-        get_work_directory(), "xanylabeling_data", "ai", "providers.json"
-    )
-
 
 # Global design system
 BORDER_RADIUS = "8px"

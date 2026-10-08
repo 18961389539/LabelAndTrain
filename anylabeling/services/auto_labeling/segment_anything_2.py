@@ -510,6 +510,8 @@ class SegmentAnything2(Model):
         # holds a bound method of this instance — dropping the reference is what
         # lets the old model go on a switch.
         self.model = None
+        # The cached embeddings belong to the sessions just released.
+        self.image_embedding_cache.clear()
 
     def preload_worker(self, files):
         """

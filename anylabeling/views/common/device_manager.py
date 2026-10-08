@@ -72,30 +72,33 @@ class DeviceManager:
         return "CUDAExecutionProvider" in self._available_providers
 
     def _load_from_config(self) -> Optional[str]:
+        """The device pinned in the app config, if any.
+
+        Goes through ``get_config`` so a ``--config`` path and the template's
+        merge rules both apply — reading ``.xanylabelingrc`` directly ignored
+        both, which is how this could disagree with the settings dialog about
+        what the config says.
+        """
         try:
-            import yaml
-            from anylabeling.config import get_work_directory
+            from anylabeling.config import get_config
 
-            config_path = os.path.join(get_work_directory(), ".xanylabelingrc")
-            if os.path.exists(config_path):
-                with open(config_path) as f:
-                    config = yaml.safe_load(f)
-                    if config:
-                        device = str(config.get("device", "")).upper()
-                        if device in ["CPU", "GPU"]:
-                            return device
+            device = str(get_config().get("device") or "").upper()
         except Exception as e:
-            logger.debug(f"Failed to load config: {e}")
+            logger.debug(f"Failed to load device from config: {e}")
+            return None
 
-        return None
+        return device if device in ["CPU", "GPU"] else None
 
     def set_device(self, device: str):
-        device = device.upper()
+        device = str(device).upper()
         if device not in ["CPU", "GPU"]:
             raise ValueError(f"Invalid device: {device}")
 
-        self._preferred_device = device
-        logger.info(f"Device manually set to: {device}")
+        # Same gate as the environment and config paths: asking for a GPU that
+        # is not there falls back to CPU now, instead of failing later inside
+        # whichever library first touches the device.
+        self._validate_and_set(device)
+        logger.info(f"Device manually set to: {self._preferred_device}")
 
     def reset_device_preference(self):
         self._preferred_device = None

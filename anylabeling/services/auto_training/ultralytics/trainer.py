@@ -125,9 +125,12 @@ class TrainingManager:
                             try:
                                 self.training_process.wait(timeout=5)
                             except subprocess.TimeoutExpired:
-                                kill_training_process_tree(
-                                    self.training_process
-                                )
+                                pass
+                            # Sweep the tree unconditionally: ultralytics
+                            # spawns its dataloader workers as children, and a
+                            # parent that exits quickly orphans them instead of
+                            # taking them down with it.
+                            kill_training_process_tree(self.training_process)
                             self.is_training = False
                             self.notify_callbacks("training_stopped", {})
                             return

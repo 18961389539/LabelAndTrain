@@ -187,6 +187,22 @@ class YOLO(Model):
         if isinstance(self.classes, dict):
             self.classes = list(self.classes.values())
 
+        if self.engine.lower() == "dnn" and getattr(
+            self, "task", None
+        ) not in ("det", "seg", "track"):
+            # DnnBaseModel implements get_dnn_inference only: pose models also
+            # want ONNX metadata, and every other task falls through to
+            # get_ort_inference, which it does not have.  Refuse the pairing
+            # here, where the message can name the config, rather than raising
+            # AttributeError from inside the first prediction.
+            raise ValueError(
+                QCoreApplication.translate(
+                    "Model",
+                    "The OpenCV DNN engine handles detection, segmentation and "
+                    "tracking models only; '%1' needs an ONNX engine.",
+                ).replace("%1", str(self.config.get("type", "")))
+            )
+
     def set_auto_labeling_conf(self, value):
         """set auto labeling confidence threshold"""
         if value > 0:

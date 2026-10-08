@@ -32,3 +32,17 @@ class LRUCache:
         """Returns True if key is in cache, False otherwise."""
         with self.lock:
             return key in self._cache
+
+    def clear(self):
+        """Drop every entry.
+
+        Model unload needs this: the cached embeddings belong to the sessions
+        being released, and without a way to drop them the cache outlives the
+        model it was built for.
+        """
+        with self.lock:
+            self._cache.clear()
+
+    def __len__(self):
+        with self.lock:
+            return len(self._cache)

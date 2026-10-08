@@ -246,9 +246,12 @@ class ExportManager:
             return False, f"Model weights not found at: {weights_path}"
 
         self.is_exporting = True
+        # Daemon on purpose: closing the window during an export should not
+        # keep the process alive waiting on a call that cannot be interrupted.
         self.export_thread = threading.Thread(
             target=self._export_worker,
             args=(weights_path, export_format, allow_install),
+            daemon=True,
         )
         self.export_thread.start()
         return True, "Export started successfully"
@@ -409,12 +412,30 @@ class ExportManager:
             self.is_exporting = False
 
     def stop_export(self) -> bool:
+        """Wait briefly for the export, and say so when it cannot stop.
+
+        ``model.export()`` is a single blocking call with no cancellation
+        hook, so this cannot interrupt it.  ``is_exporting`` is deliberately
+        left alone: the worker clears it in its own ``finally``, and clearing
+        it here would let a second export start on top of the running one.
+        """
         if not self.is_exporting:
             return False
 
-        self.is_exporting = False
         if self.export_thread and self.export_thread.is_alive():
             self.export_thread.join(timeout=5)
+            if self.export_thread.is_alive():
+                self.notify_callbacks(
+                    "export_log",
+                    {
+                        "message": (
+                            "The export is inside its finalising call and "
+                            "cannot be interrupted; it will finish in the "
+                            "background."
+                        )
+                    },
+                )
+                return True
 
         self.notify_callbacks("export_stopped", {})
         return True

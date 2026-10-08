@@ -319,6 +319,8 @@ class YOLOv8SegmentAnything2(YOLO):
         # both references or the old model stays resident across a switch.
         self.pre_inference_worker = None
         self.model = None
+        # The cached embeddings belong to the sessions just released.
+        self.image_embedding_cache.clear()
 
     def preload_worker(self, files):
         """

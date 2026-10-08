@@ -1,3 +1,4 @@
+import os
 from difflib import SequenceMatcher
 
 from PyQt6.QtWidgets import (

@@ -3,7 +3,6 @@
 import csv
 import os
 import os.path as osp
-import webbrowser
 
 from PyQt6 import QtCore, QtWidgets
 
@@ -12,6 +11,7 @@ from anylabeling.services.auto_training.ultralytics.config import (
 )
 from anylabeling.views.labeling.logger import logger
 from anylabeling.views.labeling.utils.active_learning import load_history
+from anylabeling.views.training import platform_open
 from anylabeling.views.training.run_history import (
     align_with_iterations,
     collect_run_history,
@@ -149,9 +149,9 @@ class RunHistoryDialog(QtWidgets.QDialog):
             return
         run_dir = self.rows[index].get("dir") or ""
         if run_dir and osp.isdir(run_dir):
-            webbrowser.open(
-                "file:///" + os.path.abspath(run_dir).replace("\\", "/")
-            )
+            # The same WSL-aware opener the rest of the training window uses;
+            # the hand-rolled file:// URL here was a third copy of that logic.
+            platform_open.open_path(run_dir)
         else:
             QtWidgets.QMessageBox.information(
                 self,

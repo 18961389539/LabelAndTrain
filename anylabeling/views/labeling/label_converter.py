@@ -1,3 +1,4 @@
+import contextlib
 import os
 import os.path as osp
 import cv2
@@ -6,6 +7,7 @@ import jsonlines
 import json_repair
 import math
 import re
+import tempfile
 import uuid
 import yaml
 import pathlib
@@ -24,6 +26,27 @@ from anylabeling.views.labeling.logger import logger
 from anylabeling.views.labeling.schema import create_xlabel_template
 from anylabeling.views.labeling.utils.shape import rectangle_from_diagonal
 from anylabeling.views.labeling.utils.general import is_possible_rectangle
+
+
+@contextlib.contextmanager
+def _atomic_text_writer(path):
+    """Write a sibling temp file and swap it in only on success.
+
+    The YOLO/pose writers build their output line by line, so a failure part
+    way through used to leave a truncated ``.txt`` behind — which ultralytics
+    then reads as "this image has fewer objects".  A silently wrong sample is
+    worse than a visible error; ``label_file.save`` already writes this way.
+    """
+    directory = os.path.dirname(path) or "."
+    handle, temp_path = tempfile.mkstemp(dir=directory, suffix=".tmp")
+    try:
+        with os.fdopen(handle, "w", encoding="utf-8") as stream:
+            yield stream
+        os.replace(temp_path, path)
+    except BaseException:
+        with contextlib.suppress(OSError):
+            os.unlink(temp_path)
+        raise
 
 
 class LabelConverter:
@@ -991,7 +1014,7 @@ class LabelConverter:
         image_size = np.array([[image_width, image_height]])
         if mode == "pose":
             pose_data = {}
-        with open(output_file, "w", encoding="utf-8") as f:
+        with _atomic_text_writer(output_file) as f:
             for shape in data["shapes"]:
                 shape_type = shape["shape_type"]
                 if mode == "hbb" and shape_type == "rectangle":

@@ -141,15 +141,25 @@ class _RecordingThread:
         self.quit_calls += 1
 
 
+class _RecordingCache:
+    def __init__(self):
+        self.clear_calls = 0
+
+    def clear(self):
+        self.clear_calls += 1
+
+
 class TestYOLOv8Sam2Unload:
     def test_unload_quits_the_thread_and_releases_the_model(self):
         thread = _RecordingThread()
+        cache = _RecordingCache()
         stub = SimpleNamespace(
             net=object(),
             stop_inference=False,
             pre_inference_thread=thread,
             pre_inference_worker=object(),
             model=object(),
+            image_embedding_cache=cache,
         )
 
         sam2_module.YOLOv8SegmentAnything2.unload(stub)
@@ -158,6 +168,8 @@ class TestYOLOv8Sam2Unload:
         assert stub.stop_inference is True
         assert stub.model is None
         assert stub.pre_inference_worker is None
+        # The embeddings belong to the sessions that were just released.
+        assert cache.clear_calls == 1
 
     def test_unload_tolerates_a_never_started_thread(self):
         stub = SimpleNamespace(
@@ -166,8 +178,37 @@ class TestYOLOv8Sam2Unload:
             pre_inference_thread=None,
             pre_inference_worker=None,
             model=object(),
+            image_embedding_cache=_RecordingCache(),
         )
 
         sam2_module.YOLOv8SegmentAnything2.unload(stub)
 
         assert stub.model is None
+
+
+class TestLRUCache:
+    def test_clear_drops_every_entry(self):
+        from anylabeling.services.auto_labeling.lru_cache import LRUCache
+
+        cache = LRUCache(maxsize=2)
+        cache.put("a", 1)
+        cache.put("b", 2)
+        assert len(cache) == 2
+
+        cache.clear()
+
+        assert len(cache) == 0
+        assert cache.find("a") is False
+
+    def test_len_reports_the_live_entry_count(self):
+        from anylabeling.services.auto_labeling.lru_cache import LRUCache
+
+        cache = LRUCache(maxsize=2)
+        assert len(cache) == 0
+
+        cache.put("a", 1)
+        cache.put("b", 2)
+        cache.put("c", 3)  # evicts "a"
+
+        assert len(cache) == 2
+        assert cache.find("a") is False
