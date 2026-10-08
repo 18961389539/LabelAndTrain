@@ -295,13 +295,58 @@ EXCLUDED_KEYS = frozenset(
         "label_flags",
         "labels",
         "label_colors",
-        "flag_dock.show",
-        "label_dock.show",
-        "shape_dock.show",
-        "file_dock.show",
         "custom_models",
-        "digit_shortcuts",
         "config_version",
+        "digit_shortcuts",
+        # Reachable from the View menu / toolbar instead of the dialog, so a
+        # field here would be a second, drifting copy.
+        "show_attributes",
+        "startup_show_project_manager",
+        # Dock and panel geometry.  Written by the widgets themselves; a text
+        # field for them would be hostile.  The four ``.show`` keys were
+        # listed from the start and the rest simply never got added — which is
+        # exactly what ``test_template_leaves_are_accounted_for`` now catches.
+        "description_dock.show",
+        "description_dock.closable",
+        "description_dock.floatable",
+        "description_dock.movable",
+        "file_dock.show",
+        "file_dock.closable",
+        "file_dock.floatable",
+        "file_dock.movable",
+        "flag_dock.show",
+        "flag_dock.closable",
+        "flag_dock.floatable",
+        "flag_dock.movable",
+        "label_dock.show",
+        "label_dock.closable",
+        "label_dock.floatable",
+        "label_dock.movable",
+        "shape_dock.show",
+        "shape_dock.closable",
+        "shape_dock.floatable",
+        "shape_dock.movable",
+        "sidebar.collapsed",
+        "sidebar.width",
+        "sidebar.lists",
+        "tools_panel.collapsed",
+        "tools_panel.position",
+        "auto_labeling.more_panel_expanded",
+        # Canvas rendering knobs kept as rc-file only: set once, then never
+        # touched again.
+        "canvas.attributes.background_color",
+        "canvas.attributes.border_color",
+        "canvas.attributes.text_color",
+        "canvas.brush.max_undo_steps",
+        "canvas.brush.max_undo_memory_mb",
+        # Live state owned by other panels.  The device picker lives in the
+        # auto-labeling dock, ``file_search`` is the file list's search box
+        # text, and the read-only switch belongs to the training tab.  The
+        # ``apply_runtime_advanced`` branches for these stay wired for those
+        # entry points — they simply never fire from the settings dialog.
+        "device",
+        "file_search",
+        "training.ultralytics.project_readonly",
     }
 )
 

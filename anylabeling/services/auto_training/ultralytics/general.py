@@ -62,11 +62,20 @@ def collect_dataset_runs(task_root: str):
 
 
 def directory_size(path: str) -> int:
+    """Bytes actually reclaimed by deleting ``path``.
+
+    Symlinks count as zero.  On Linux/macOS the dataset is assembled from
+    ``os.symlink`` entries, so following them reports the size of the *source*
+    images and promises the user space that removing the links never frees.
+    """
     total = 0
     for root, _, files in os.walk(path):
         for name in files:
+            full = os.path.join(root, name)
+            if os.path.islink(full):
+                continue
             try:
-                total += os.path.getsize(os.path.join(root, name))
+                total += os.path.getsize(full)
             except OSError:
                 continue
     return total
@@ -115,6 +124,22 @@ def file_sha1(path: str):
     return digest.hexdigest()
 
 
+def _drop_unusable(image_path: str, label_path: str):
+    """Remove a half-built pair from the dataset being written.
+
+    A label file that fails halfway through leaves either an empty or a
+    truncated ``.txt``; both read as "this image has no objects" to
+    ultralytics, which is exactly the guess this module refuses to make. The
+    copied image goes with it, so the sample is absent rather than wrong.
+    """
+    for path in (label_path, image_path):
+        try:
+            if path and os.path.exists(path):
+                os.remove(path)
+        except OSError:
+            continue
+
+
 def _manifest_entries(pairs, split: str, label_digests: dict) -> List[dict]:
     entries = []
     for image_file, label_file in pairs:
@@ -131,6 +156,98 @@ def _manifest_entries(pairs, split: str, label_digests: dict) -> List[dict]:
     return entries
 
 
+def _read_label_info(label_file: str):
+    """``(raw_bytes, parsed_dict)`` for a label file, ``None`` when unusable.
+
+    A file that exists but cannot be parsed is reported by the caller as
+    unusable rather than being treated as an empty annotation: its presence
+    means someone annotated this image, and "unreadable" is not the same
+    statement as "there is nothing here".
+    """
+    try:
+        with open(label_file, "rb") as f:
+            label_bytes = f.read()
+        label_info = json.loads(label_bytes.decode("utf-8"))
+        if not isinstance(label_info, dict):
+            raise ValueError("label file is not a JSON object")
+    except Exception:  # noqa: BLE001
+        return None
+    return label_bytes, label_info
+
+
+def partition_images(
+    image_list: List[str],
+    task_type: str,
+    output_dir: str = None,
+    only_checked_files: bool = False,
+) -> dict:
+    """Group the image list the way a dataset build needs it.
+
+    Returns a dict with ``background`` (no label file at all - a legitimate
+    negative sample), ``valid`` (``(image, label)`` pairs with an annotation
+    this task can use), ``label_digests``, and the two groups that are *not*
+    in the dataset: ``unreadable_labels`` (present but unparsable) and
+    ``unchecked_files``. The last two used to be silently folded into
+    ``background``, which trained an annotated image as an empty one.
+    """
+    valid_shapes = TASK_SHAPE_MAPPINGS.get(task_type, [])
+    background_images = []
+    valid_images = []
+    label_digests = {}
+    unreadable_labels = []
+    unchecked_files = []
+
+    for image_file in image_list:
+        label_dir, filename = os.path.split(image_file)
+        if output_dir:
+            label_dir = output_dir
+        label_file = os.path.join(
+            label_dir, os.path.splitext(filename)[0] + ".json"
+        )
+
+        if not os.path.exists(label_file):
+            if only_checked_files:
+                unchecked_files.append(image_file)
+                continue
+            background_images.append(image_file)
+            continue
+
+        parsed = _read_label_info(label_file)
+        if parsed is None:
+            unreadable_labels.append(label_file)
+            continue
+        label_bytes, label_info = parsed
+        label_digests[label_file] = hashlib.sha1(label_bytes).hexdigest()
+
+        if only_checked_files and label_info.get("checked", False) is not True:
+            unchecked_files.append(image_file)
+            continue
+
+        if task_type == "Classify":
+            flags = label_info.get("flags", {})
+            has_valid_shape = any(flag_value for flag_value in flags.values())
+        else:
+            shapes = label_info.get("shapes", [])
+            has_valid_shape = any(
+                shape.get("shape_type") in valid_shapes
+                for shape in shapes
+                if "shape_type" in shape
+            )
+
+        if has_valid_shape:
+            valid_images.append((image_file, label_file))
+        else:
+            background_images.append(image_file)
+
+    return {
+        "background": background_images,
+        "valid": valid_images,
+        "label_digests": label_digests,
+        "unreadable_labels": unreadable_labels,
+        "unchecked_files": unchecked_files,
+    }
+
+
 def create_yolo_dataset(
     image_list: List[str],
     task_type: str,
@@ -142,6 +259,7 @@ def create_yolo_dataset(
     only_checked_files: bool = False,
     seed: int = None,
     seed_source: str = "generated",
+    report: dict = None,
 ) -> str:
     """Create YOLO dataset from image list and annotations.
 
@@ -157,15 +275,33 @@ def create_yolo_dataset(
         seed: Split seed; a random one is drawn and recorded when omitted
         seed_source: "project" when the seed is pinned per dataset, so the
             manifest says whether rounds are comparable by construction
+        report: Optional dict used as an out-parameter, filled with what the
+            build could not use: ``unreadable_labels`` (present but
+            unparsable), ``unchecked_files``, ``conversion_errors`` and
+            ``dropped_shapes``. Written to disk too, so a caller that forgets
+            the out-parameter still leaves a record.
 
     Returns:
         Path to created dataset directory. ``manifest.json`` inside it records
         the exact annotations the run was built from, so a completed training
         can be tied back to the data it actually saw.
+
+    A label file that exists but cannot be read is **left out of the dataset**
+    and reported, never trained as an empty sample: the file's presence means
+    an annotation was intended, and "we could not read it" is not the same
+    statement as "there is nothing in this image". Only images with no label
+    file at all become background samples.
     """
     if seed is None:
         seed = random.SystemRandom().randrange(1, 2**31 - 1)
     from anylabeling.views.labeling.label_converter import LabelConverter
+
+    # What the build could not use. ``unreadable_labels`` and
+    # ``conversion_errors`` both mean "this image is not in the dataset", and
+    # both are told to the caller (and written to disk) instead of being
+    # folded into the background count, where they were indistinguishable.
+    conversion_errors = []
+    conversion_stats = {}
 
     def _process_images_batch(
         image_label_pairs, images_dir, labels_dir, converter, mode, skip_empty
@@ -192,12 +328,28 @@ def create_yolo_dataset(
                 dst_label_path = os.path.join(
                     labels_dir, os.path.splitext(filename)[0] + ".txt"
                 )
-                converter.custom_to_yolo(
-                    label_file,
-                    dst_label_path,
-                    mode,
-                    skip_empty_files=skip_empty,
-                )
+                try:
+                    converter.custom_to_yolo(
+                        label_file,
+                        dst_label_path,
+                        mode,
+                        skip_empty_files=skip_empty,
+                        stats=conversion_stats,
+                    )
+                except Exception as exc:  # noqa: BLE001
+                    # One unreadable label file used to take the whole build
+                    # down with it (a KeyError on a missing imageWidth did
+                    # exactly that, on a label a converter had produced).
+                    # Drop that one image instead of the batch: a partial or
+                    # empty .txt left behind would silently train the image as
+                    # having no objects, so both files go.
+                    conversion_errors.append(
+                        {
+                            "label": label_file,
+                            "error": f"{type(exc).__name__}: {exc}",
+                        }
+                    )
+                    _drop_unusable(dst_image_path, dst_label_path)
 
     def _process_classify_images_batch(image_label_pairs, base_dir):
         used_names = set()
@@ -288,62 +440,14 @@ def create_yolo_dataset(
         ]:
             os.makedirs(dir_path, exist_ok=True)
 
-    background_images = []
-    valid_images = []
-    label_digests = {}
-    valid_shapes = TASK_SHAPE_MAPPINGS.get(task_type, [])
-
-    for image_file in image_list:
-        label_dir, filename = os.path.split(image_file)
-        if output_dir:
-            label_dir = output_dir
-        label_file = os.path.join(
-            label_dir, os.path.splitext(filename)[0] + ".json"
-        )
-
-        if not os.path.exists(label_file):
-            if only_checked_files:
-                continue
-            background_images.append(image_file)
-            continue
-
-        try:
-            with open(label_file, "rb") as f:
-                label_bytes = f.read()
-            label_info = json.loads(label_bytes.decode("utf-8"))
-            label_digests[label_file] = hashlib.sha1(label_bytes).hexdigest()
-
-            if (
-                only_checked_files
-                and label_info.get("checked", False) is not True
-            ):
-                continue
-
-            if task_type == "Classify":
-                flags = label_info.get("flags", {})
-                has_valid_flag = any(
-                    flag_value for flag_value in flags.values()
-                )
-                if has_valid_flag:
-                    valid_images.append((image_file, label_file))
-                else:
-                    background_images.append(image_file)
-            else:
-                shapes = label_info.get("shapes", [])
-                has_valid_shape = any(
-                    shape.get("shape_type") in valid_shapes
-                    for shape in shapes
-                    if "shape_type" in shape
-                )
-                if has_valid_shape:
-                    valid_images.append((image_file, label_file))
-                else:
-                    background_images.append(image_file)
-        except Exception:
-            if only_checked_files:
-                continue
-            background_images.append(image_file)
-            continue
+    partitioned = partition_images(
+        image_list, task_type, output_dir, only_checked_files
+    )
+    background_images = partitioned["background"]
+    valid_images = partitioned["valid"]
+    label_digests = partitioned["label_digests"]
+    unreadable_labels = partitioned["unreadable_labels"]
+    unchecked_files = partitioned["unchecked_files"]
 
     # ensure train/val split is randomized, but reproducible from the seed
     # recorded in the manifest
@@ -385,6 +489,7 @@ def create_yolo_dataset(
         )
 
     info_file = os.path.join(temp_dir, "dataset_info.txt")
+    dropped_shapes = conversion_stats.get("skipped", {}) or {}
     with open(info_file, "w", encoding="utf-8") as f:
         f.write(
             f"Dataset created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
@@ -402,6 +507,24 @@ def create_yolo_dataset(
             f.write(f"Only checked files: {only_checked_files}\n")
         f.write(f"Valid labeled images: {len(valid_images)}\n")
         f.write(f"Dataset ratio: {dataset_ratio}\n")
+        # What the build could not use. Without these lines a bad label file
+        # looked exactly like an image nobody had annotated yet.
+        f.write(f"Unreadable label files: {len(unreadable_labels)}\n")
+        f.write(f"Images skipped (unchecked): {len(unchecked_files)}\n")
+        f.write(
+            f"Images dropped (conversion failed): {len(conversion_errors)}\n"
+        )
+        f.write(
+            f"Shapes dropped by the converter: {sum(dropped_shapes.values())}\n"
+        )
+        for reason, count in sorted(
+            dropped_shapes.items(), key=lambda item: (-item[1], item[0])
+        ):
+            f.write(f"  {count} × {reason}\n")
+        for path in unreadable_labels:
+            f.write(f"  unreadable: {path}\n")
+        for entry in conversion_errors:
+            f.write(f"  failed: {entry['label']} ({entry['error']})\n")
 
     yaml_file = os.path.join(temp_dir, "data.yaml")
 
@@ -454,6 +577,13 @@ def create_yolo_dataset(
             "val": len(val_valid_images),
             "background": len(background_images),
         },
+        "skipped": {
+            "unreadable_labels": list(unreadable_labels),
+            "unreadable_labels_count": len(unreadable_labels),
+            "unchecked_files_count": len(unchecked_files),
+            "conversion_errors": list(conversion_errors),
+            "dropped_shapes": dict(dropped_shapes),
+        },
         "data_yaml": yaml_file,
         "data_yaml_sha1": file_sha1(yaml_file),
         "files": _manifest_entries(train_pairs, "train", label_digests)
@@ -462,6 +592,23 @@ def create_yolo_dataset(
     manifest_file = os.path.join(temp_dir, "manifest.json")
     with open(manifest_file, "w", encoding="utf-8") as f:
         json.dump(manifest, f, ensure_ascii=False, indent=2)
+
+    if report is not None:
+        report.update(
+            {
+                "dataset_dir": temp_dir,
+                "requested": len(image_list),
+                "valid": len(valid_images),
+                "train": len(train_pairs),
+                "val": len(val_valid_images),
+                "background": len(background_images),
+                "unreadable_labels": list(unreadable_labels),
+                "unreadable_labels_count": len(unreadable_labels),
+                "unchecked_files_count": len(unchecked_files),
+                "conversion_errors": list(conversion_errors),
+                "dropped_shapes": dict(dropped_shapes),
+            }
+        )
 
     return temp_dir
 

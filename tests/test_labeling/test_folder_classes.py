@@ -61,9 +61,7 @@ class TestLoadClassesFromFolder(unittest.TestCase):
             "_panel_label_names",
             "_reset_label_dialog_labels",
         ):
-            setattr(
-                widget, name, getattr(LabelWidget, name).__get__(widget)
-            )
+            setattr(widget, name, getattr(LabelWidget, name).__get__(widget))
         return widget
 
     def _write_classes(self, directory, names):
@@ -95,11 +93,22 @@ class TestLoadClassesFromFolder(unittest.TestCase):
             widget._load_classes_from_folder(tmp)
             self.assertEqual(widget.loaded, [])
 
-    def test_folder_without_classes_txt_leaves_panel_alone(self):
+    def test_folder_without_classes_txt_falls_back_to_the_config(self):
+        """Stale labels go, the configured ones keep working."""
         with tempfile.TemporaryDirectory() as tmp:
-            widget = self._widget(existing_labels=["configured"])
+            widget = self._widget(existing_labels=["stale", "configured"])
+            widget._config = {"labels": ["configured"]}
             self.assertEqual(widget._load_classes_from_folder(tmp), [])
             self.assertEqual(widget.unique_label_list.labels, ["configured"])
+
+    def test_folder_without_classes_txt_clears_when_nothing_is_configured(
+        self,
+    ):
+        with tempfile.TemporaryDirectory() as tmp:
+            widget = self._widget(existing_labels=["stale"])
+            widget._config = {"labels": []}
+            self.assertEqual(widget._load_classes_from_folder(tmp), [])
+            self.assertEqual(widget.unique_label_list.labels, [])
 
     def test_blank_lines_and_duplicates_are_dropped(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -108,10 +117,15 @@ class TestLoadClassesFromFolder(unittest.TestCase):
             ) as handle:
                 handle.write("bag\n\n  box  \nbag\n")
             widget = self._widget()
-            self.assertEqual(widget._load_classes_from_folder(tmp), ["bag", "box"])
+            self.assertEqual(
+                widget._load_classes_from_folder(tmp), ["bag", "box"]
+            )
 
     def test_output_dir_takes_priority(self):
-        with tempfile.TemporaryDirectory() as images, tempfile.TemporaryDirectory() as labels:
+        with (
+            tempfile.TemporaryDirectory() as images,
+            tempfile.TemporaryDirectory() as labels,
+        ):
             self._write_classes(images, ["from_images"])
             self._write_classes(labels, ["from_output"])
             widget = self._widget(output_dir=labels)
@@ -120,7 +134,10 @@ class TestLoadClassesFromFolder(unittest.TestCase):
             )
 
     def test_falls_back_to_image_dir_when_output_dir_has_none(self):
-        with tempfile.TemporaryDirectory() as images, tempfile.TemporaryDirectory() as labels:
+        with (
+            tempfile.TemporaryDirectory() as images,
+            tempfile.TemporaryDirectory() as labels,
+        ):
             self._write_classes(images, ["from_images"])
             widget = self._widget(output_dir=labels)
             self.assertEqual(
@@ -171,7 +188,9 @@ class TestLoadLabelsRegression(unittest.TestCase):
         }
         widget.label_info = {}
         widget._runtime_shape_color_shift = 0
-        widget._get_rgb_by_label = LabelWidget._get_rgb_by_label.__get__(widget)
+        widget._get_rgb_by_label = LabelWidget._get_rgb_by_label.__get__(
+            widget
+        )
         widget.load_labels = LabelWidget.load_labels.__get__(widget)
 
         widget.load_labels(["bag"], clear_existing=False)

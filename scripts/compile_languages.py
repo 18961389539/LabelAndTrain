@@ -59,8 +59,9 @@ def compile_resources(output: str, qrc: str) -> None:
         if needs_rewrite:
             normalize_imports(output)
         return
-    print(
-        "Error: no Qt resource compiler found. Tried python -m PyQt6.pyrcc_main, pyrcc6, pyside6-rcc, rcc -g python, and lrelease-sibling rcc."
+    raise RuntimeError(
+        "No Qt resource compiler found. Tried python -m PyQt6.pyrcc_main, "
+        "pyrcc6, pyside6-rcc, rcc -g python, and lrelease-sibling rcc."
     )
 
 

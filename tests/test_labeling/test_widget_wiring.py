@@ -37,6 +37,7 @@ HIDDEN_SHORTCUT_KEYS = frozenset(
         "open_settings",
         "quit",
         "show_shortcuts_help",
+        "toggle_sidebar",
     }
 )
 
@@ -108,20 +109,29 @@ class TestWidgetWiring(unittest.TestCase):
             )
 
     def test_every_smart_tool_entry_exists(self):
+        # Twelve tools in three submenus: nothing may go missing, and the
+        # numbers the docs and F1 refer to must survive the grouping.
+        submenus = [
+            action.menu()
+            for action in self.widget.menus.smart_tools.actions()
+            if action.menu() is not None
+        ]
+        self.assertEqual(
+            [menu.title() for menu in submenus],
+            ["检查与诊断", "复核与建议", "批量与恢复"],
+        )
         titles = [
-            menu.text()
-            for menu in self.widget.menus.smart_tools.actions()
-            if menu.text()
+            entry.text()
+            for menu in submenus
+            for entry in menu.actions()
+            if entry.text()
         ]
         self.assertEqual(len(titles), 12, titles)
-        self.assertTrue(
-            any(title.startswith("10.") for title in titles),
-            titles,
-        )
-        self.assertTrue(
-            any(title.startswith("11.") for title in titles),
-            titles,
-        )
+        for number in ("1.", "5.", "9.", "10.", "11."):
+            self.assertTrue(
+                any(title.startswith(number) for title in titles),
+                (number, titles),
+            )
 
     def test_train_menu_offers_run_history(self):
         # Like the smart-tools entries, this action is menu-only and is not

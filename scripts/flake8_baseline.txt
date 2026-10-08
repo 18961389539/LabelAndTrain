@@ -79,7 +79,6 @@ anylabeling/views/labeling/widgets/searchable_model_dropdown.py          B006 1
 anylabeling/views/labeling/widgets/searchable_model_dropdown.py          C901 1
 anylabeling/views/labeling/widgets/searchable_model_dropdown.py          F405 20
 anylabeling/views/labeling/widgets/shape_dialog.py                       C901 1
-anylabeling/views/training/ultralytics_dialog.py                         B907 1
 anylabeling/views/training/ultralytics_dialog.py                         C901 1
 anylabeling/views/training/widgets/ultralytics_widgets/custom_widgets.py F405 1
 tests/test_auto_labeling/test_batch_skip.py                              E731 1

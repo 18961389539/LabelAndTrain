@@ -242,6 +242,7 @@ shortcuts:
   toggle_auto_use_last_label: Ctrl+Y
   toggle_keep_prev_mode: Ctrl+P
   toggle_shape_lock: null
+  toggle_sidebar: Ctrl+Shift+B
   toggle_visibility_shapes: Ctrl+H
   ultralytics_train: null
   undo: Ctrl+Z
@@ -269,6 +270,10 @@ show_masks: true
 show_scores: true
 show_shapes: true
 show_texts: true
+sidebar:
+  collapsed: false
+  lists: null
+  width: null
 sort_labels: true
 startup_show_project_manager: false
 store_data: false

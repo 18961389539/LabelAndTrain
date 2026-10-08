@@ -1,5 +1,4 @@
 import functools
-import html
 import json
 import math
 import os
@@ -146,6 +145,7 @@ from .utils import file_navigation
 from .utils import file_list_ops
 from .utils import label_editing
 from .utils import shortcuts_help
+from .utils import smart_tools_menu
 from .utils.file_lifecycle import (
     _report_inherited_shapes,
     move_file_to_delete_folder,  # noqa: F401 -- test imports stay valid
@@ -452,7 +452,6 @@ class LabelingWidget(LabelDialog):
                 "已画的框不受影响"
             )
         )
-        self.label_search.setClearButtonEnabled(True)
         self.label_search.textChanged.connect(self._refresh_label_panel)
         self.load_labels(self._config["labels"])
         label_panel = QtWidgets.QWidget()
@@ -497,6 +496,14 @@ class LabelingWidget(LabelDialog):
         self.file_search.setCompleter(file_search_completer)
         self.file_search.returnPressed.connect(self.file_search_changed)
         self.file_search.returnPressed.connect(self.file_search.setFocus)
+        # Both search boxes get the same clear affordance; the built-in
+        # button carries no tooltip of its own, so it gets one here. It
+        # is the only tool button a SearchBar owns.
+        for search_box in (self.label_search, self.file_search):
+            search_box.setClearButtonEnabled(True)
+            clear_button = search_box.findChild(QtWidgets.QToolButton)
+            if clear_button is not None:
+                clear_button.setToolTip(self.tr("清除"))
         self.settings_button = QPushButton(self)
         self.settings_button.setFixedSize(32, 32)
         self.settings_button.setCursor(
@@ -512,6 +519,12 @@ class LabelingWidget(LabelDialog):
         self.file_filter_combo.addItem(self.tr("未标注"), "unannotated")
         self.file_filter_combo.addItem(self.tr("已标注"), "annotated")
         self.file_filter_combo.addItem(self.tr("已检查"), "checked")
+        self.file_filter_combo.addItem(self.tr("未复核"), "unreviewed")
+        self.file_filter_combo.setItemData(
+            self.file_filter_combo.count() - 1,
+            self.tr("还没有复核结论的图片（未检查；已打回的不算）"),
+            Qt.ItemDataRole.ToolTipRole,
+        )
         self.file_filter_combo.addItem(self.tr("需返工"), "rework")
         self.file_filter_combo.addItem(self.tr("待复核"), "low_conf")
         self.file_filter_combo.setItemData(
@@ -1122,29 +1135,24 @@ class LabelingWidget(LabelDialog):
         self.update_space_pan_tip()
 
     def _format_instruction_shortcut(self, value):
+        """Plain shortcut text for ``keycap_html`` to escape and style.
+
+        This used to emit ``<b>`` markup per key, which ``keycap_html`` then
+        escaped (its input is plain keys by contract) — so the tags reached the
+        rich-text label as literal ``<b>R</b>`` text instead of a styled keycap.
+        Styling now has exactly one owner.
+        """
         text = self._settings_runtime_applier.shortcut_value_to_text(
             value
         ).strip()
         if not text:
-            return "<b>-</b>"
+            return "-"
         sequences = [
             chunk.strip() for chunk in text.split(",") if chunk.strip()
         ]
         if not sequences:
-            return "<b>-</b>"
-        formatted = []
-        for sequence in sequences:
-            keys = [
-                part.strip() for part in sequence.split("+") if part.strip()
-            ]
-            if not keys:
-                continue
-            formatted.append(
-                "+".join(f"<b>{html.escape(key)}</b>" for key in keys)
-            )
-        if not formatted:
-            return "<b>-</b>"
-        return ", ".join(formatted)
+            return "-"
+        return ", ".join(sequences)
 
     @pyqtSlot()
     def on_auto_segmentation_requested(self):
@@ -1519,6 +1527,9 @@ class LabelingWidget(LabelDialog):
         self.label_filter_combobox.text_box.clear()
         self.gid_filter_combobox.gid_box.clear()
         self._update_select_toggle_button_tooltip()
+        # State is empty again, and the bar talks about state: re-read it or it
+        # keeps describing the image that was just torn down.
+        self.update_labeling_instruction()
 
     def toggle_select_all(self):
         if self.select_toggle_action is None:
@@ -2137,6 +2148,7 @@ class LabelingWidget(LabelDialog):
         counts=None,
         negative=False,
         low_conf=False,
+        note=None,
     ):
         """Delegates to file_list_ops (wiring and tests stay)."""
         return file_list_ops._file_item_tooltip(
@@ -2148,6 +2160,7 @@ class LabelingWidget(LabelDialog):
             counts,
             negative,
             low_conf,
+            note,
         )
 
     def _shape_tooltip(self, shape):
@@ -2226,10 +2239,12 @@ class LabelingWidget(LabelDialog):
         """Delegates to file_list_ops (wiring and tests stay)."""
         return file_list_ops._set_file_item_checked(self, item, checked)
 
-    def _set_file_item_review_state(self, item, state, reviewed_at=None):
+    def _set_file_item_review_state(
+        self, item, state, reviewed_at=None, note=None
+    ):
         """Delegates to file_list_ops (wiring and tests stay)."""
         return file_list_ops._set_file_item_review_state(
-            self, item, state, reviewed_at
+            self, item, state, reviewed_at, note
         )
 
     def _refresh_file_item_tooltip(self, item, counts=None):
@@ -2246,6 +2261,9 @@ class LabelingWidget(LabelDialog):
 
     def _file_item_annotation_checked(self, item):
         return filelist_items.file_item_annotation_checked(item)
+
+    def _file_item_is_unchecked(self, item):
+        return filelist_items.file_item_is_unchecked(item)
 
     def _label_path_for_image(self, image_file):
         """Single source of truth for "image file -> label file".
@@ -2335,16 +2353,9 @@ class LabelingWidget(LabelDialog):
         if reject_action is not None:
             reject_action.setEnabled(enabled)
 
-    def _update_current_file_checked_item(self):
-        item = self._current_file_item()
-        if item is not None:
-            self._set_file_item_review_state(
-                item, self._current_review_state()
-            )
-
     def _sync_annotation_checked_state(self):
         self._update_annotation_checked_action()
-        self._update_current_file_checked_item()
+        FileReviewController(self).update_current_file_checked_item()
         self._update_classification_action()
 
     def set_annotation_checked(self, checked):
@@ -2447,11 +2458,11 @@ class LabelingWidget(LabelDialog):
         action.setToolTip(tip)
         action.setStatusTip(tip)
 
-    def _apply_review_state(self, state):
+    def _apply_review_state(self, state, note=None):
         """Delegates to filelist.controller (tests call this directly)."""
         # Built on demand: the controller is stateless, and light test
         # stubs never carry an instance.
-        FileReviewController(self).apply_review_state(state)
+        FileReviewController(self).apply_review_state(state, note)
 
     def mark_checked_and_next(self, _value=False):
         """Delegates to filelist.controller (action wiring stays)."""
@@ -2587,7 +2598,11 @@ class LabelingWidget(LabelDialog):
         file_list_ops._on_file_item_changed(self, item)
 
     def _apply_file_filter(self):
-        """Hide/show file rows according to the status combo (all/annotated/unannotated)."""
+        """Hide/show file rows according to the status combo.
+
+        Modes: all / unannotated / annotated / checked / unreviewed /
+        rework / low_conf.
+        """
         mode = self.file_filter_combo.currentData()
         total = 0
         for row in range(self.file_list_widget.count()):
@@ -2600,6 +2615,8 @@ class LabelingWidget(LabelDialog):
                 visible = not annotated
             elif mode == "checked":
                 visible = checked
+            elif mode == "unreviewed":
+                visible = self._file_item_is_unchecked(item)
             elif mode == "rework":
                 visible = item.data(FILE_REVIEW_ROLE) == REVIEW_REJECTED
             elif mode == "low_conf":
@@ -3791,21 +3808,13 @@ class LabelingWidget(LabelDialog):
 
     # QT Overload
     def dragEnterEvent(self, event):
-        extensions = utils.get_supported_image_extensions()
-        if event.mimeData().hasUrls():
-            items = [i.toLocalFile() for i in event.mimeData().urls()]
-            if any(i.lower().endswith(tuple(extensions)) for i in items):
-                event.accept()
-        else:
-            event.ignore()
+        """Delegates to file_lifecycle (wiring and tests stay)."""
+        file_lifecycle.handle_drag_enter(self, event)
 
     # QT Overload
     def dropEvent(self, event):
-        if not self.may_continue():
-            event.ignore()
-            return
-        items = [i.toLocalFile() for i in event.mimeData().urls()]
-        self.import_dropped_image_files(items)
+        """Delegates to file_lifecycle (wiring and tests stay)."""
+        file_lifecycle.handle_drop(self, event)
 
     def load_recent(self, filename):
         if self.may_continue():
@@ -4417,6 +4426,11 @@ class LabelingWidget(LabelDialog):
             if names:
                 break
         if not names:
+            # This folder ships no classes.txt, so fall back to the configured
+            # labels rather than leaving the panel as the previous folder left
+            # it: _yolo_class_names reads that panel to build the YOLO id map,
+            # so leftovers silently remap every exported label.
+            project_settings.restore_configured_classes(self)
             return []
 
         if self._panel_label_names() == names:
@@ -4642,6 +4656,7 @@ class LabelingWidget(LabelDialog):
                 "existing annotations (empty results never erase "
                 "ground truth)."
             )
+            self.status(self.tr("本图未检测到目标，已保留原有标注"), 5000)
             return
 
         # Clear existing shapes
@@ -4660,6 +4675,15 @@ class LabelingWidget(LabelDialog):
             self.load_shapes(new_shapes, replace=False)
 
         self.set_dirty()
+        # The run used to end in silence either way: zero detections left
+        # the canvas unchanged with no word about it (only the log knew),
+        # and a hit list never said how much came back.
+        if new_shapes:
+            self.status(
+                self.tr("自动标注完成：%d 个目标") % len(new_shapes), 5000
+            )
+        else:
+            self.status(self.tr("本图未检测到目标"), 5000)
 
     def clear_auto_labeling_marks(self):
         """Clear auto labeling marks from the current image."""
@@ -4779,11 +4803,12 @@ class LabelingWidget(LabelDialog):
         file_list_ops.update_thumbnail_display(self)
 
     def toggle_labels_visibility(self, checked):
-        self.label_dock.setVisible(checked)
+        """Delegates to panel_visibility (wiring and tests stay)."""
+        panel_visibility.set_dock_shown(self, "label_dock", checked)
 
     def toggle_shapes_visibility(self, checked):
         """Delegates to panel_visibility (wiring and tests stay)."""
-        panel_visibility.toggle_shapes_visibility(self, checked)
+        panel_visibility.set_dock_shown(self, "shape_dock", checked)
 
 
 def _build_actions(widget):
@@ -6393,22 +6418,8 @@ def _build_actions(widget):
             None,
         ),
     )
-    utils.add_actions(
-        widget.menus.smart_tools,
-        (
-            data_audit,
-            smart_calibrate,
-            smart_analysis,
-            smart_missing_scan,
-            smart_iteration,
-            smart_review,
-            smart_propagate,
-            smart_archive,
-            smart_advice,
-            smart_template,
-            smart_stale_audit,
-            smart_restore_backup,
-        ),
+    smart_tools_menu.populate_smart_tools_menu(
+        widget.menus.smart_tools, widget.actions
     )
     utils.add_actions(widget.menus.train, (ultralytics_train, run_history))
     utils.add_actions(
@@ -6654,13 +6665,9 @@ def _build_layout(widget):
     central_layout.addWidget(widget.label_instruction)
     central_layout.addWidget(widget.auto_labeling_widget)
     central_layout.addWidget(widget._canvas_scroll_area)
-    layout.addLayout(central_layout)
 
     # Save central area for resize
     widget._central_widget = widget._canvas_scroll_area
-
-    # Stretch central area (image view)
-    layout.setStretch(0, 1)
 
     right_sidebar_layout = QVBoxLayout()
     right_sidebar_layout.setContentsMargins(0, 0, 0, 0)
@@ -6701,8 +6708,9 @@ def _build_layout(widget):
 
     # Labels with checkbox
     widget.labels_checkbox = QCheckBox()
-    widget.labels_checkbox.setChecked(True)
+    widget.labels_checkbox.setChecked(widget._config["label_dock"]["show"])
     widget.labels_checkbox.setStyleSheet(get_checkbox_indicator_style())
+    widget.labels_checkbox.setToolTip(widget.tr("显示/隐藏标签列表"))
     widget.labels_checkbox.toggled.connect(widget.toggle_labels_visibility)
 
     labels_header_layout = QHBoxLayout()
@@ -6730,11 +6738,11 @@ def _build_layout(widget):
     labels_panel_layout.setSpacing(0)
     labels_panel_layout.addWidget(labels_header_widget)
     labels_panel_layout.addWidget(widget.label_dock)
-    right_sidebar_layout.addWidget(labels_panel)
 
     widget.shapes_checkbox = QCheckBox()
-    widget.shapes_checkbox.setChecked(True)
+    widget.shapes_checkbox.setChecked(widget._config["shape_dock"]["show"])
     widget.shapes_checkbox.setStyleSheet(get_checkbox_indicator_style())
+    widget.shapes_checkbox.setToolTip(widget.tr("显示/隐藏对象列表"))
     widget.shapes_checkbox.toggled.connect(widget.toggle_shapes_visibility)
 
     shapes_header_layout = QHBoxLayout()
@@ -6761,14 +6769,11 @@ def _build_layout(widget):
     objects_panel_layout.setSpacing(0)
     objects_panel_layout.addWidget(shapes_header_widget)
     objects_panel_layout.addWidget(widget.shape_dock)
-    right_sidebar_layout.addWidget(objects_panel)
 
     file_search_row_layout = QHBoxLayout()
     file_search_row_layout.setContentsMargins(0, 0, 0, 0)
     file_search_row_layout.setSpacing(6)
     file_search_row_layout.addWidget(widget.file_search, 1)
-    file_search_row_layout.addWidget(widget.settings_button, 0)
-    right_sidebar_layout.addLayout(file_search_row_layout)
 
     files_panel = QFrame()
     files_panel.setObjectName("sidebarPanel")
@@ -6777,7 +6782,6 @@ def _build_layout(widget):
     files_panel_layout.setContentsMargins(0, 0, 0, 0)
     files_panel_layout.setSpacing(0)
     files_panel_layout.addWidget(widget.file_dock)
-    right_sidebar_layout.addWidget(files_panel)
     widget.file_dock.setFeatures(
         QDockWidget.DockWidgetFeature.DockWidgetFloatable
     )
@@ -6800,6 +6804,13 @@ def _build_layout(widget):
         widget.shape_dock.features() & rev_dock_features
     )
 
-    layout.addLayout(right_sidebar_layout)
+    sidebar = panel_visibility.build_main_splitter(
+        widget,
+        central_layout,
+        right_sidebar_layout,
+        (labels_panel, objects_panel, file_search_row_layout, files_panel),
+    )
+    layout.addWidget(sidebar)
+
     widget.setLayout(layout)
     QtCore.QTimer.singleShot(0, widget._restore_tools_panel_state)

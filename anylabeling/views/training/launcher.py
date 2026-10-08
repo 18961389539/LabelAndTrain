@@ -21,15 +21,11 @@ def start_training(widget, mode):
         if not check_package_installed("ultralytics"):
             widget.error_message(
                 QCoreApplication.translate(
-                    "LabelingWidget", "缺少 Ultralytics"
+                    "LabelingWidget", "Missing Ultralytics"
                 ),
                 QCoreApplication.translate(
                     "LabelingWidget",
-                    "尚未安装 ultralytics，无法打开训练窗口。<br>"
-                    "请先安装：<br>"
-                    "<code>pip install ultralytics</code><br>"
-                    "或<br>"
-                    "<code>uv pip install ultralytics --torch-backend=auto</code>",
+                    "ultralytics is not installed, so the training window cannot be opened.<br>Install it first:<br><code>pip install ultralytics</code><br>or<br><code>uv pip install ultralytics --torch-backend=auto</code>",
                 ),
             )
             return

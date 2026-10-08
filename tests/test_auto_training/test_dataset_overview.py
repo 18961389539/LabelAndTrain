@@ -85,6 +85,39 @@ def test_parse_training_metrics_reads_last_row(tmp_path):
     assert epochs == 2
 
 
+def test_parse_training_metrics_counts_epochs_not_rows(tmp_path):
+    """A resumed run writes the interrupted epoch's row twice.
+
+    Measured on a real interrupted-and-resumed run (2026-09-30): 51 rows for
+    50 epochs because epoch 7 appeared twice, and the row count went into
+    run_meta.json and the history table as the run's length.
+    """
+    csv_path = tmp_path / "results.csv"
+    with csv_path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(["epoch", "train/box_loss", "metrics/mAP50(B)"])
+        for epoch in [1, 2, 3, 3, 4]:
+            writer.writerow([str(epoch), "1.0", "0.5"])
+
+    _loss, _map50, epochs = parse_training_metrics(str(csv_path))
+
+    assert epochs == 4
+
+
+def test_parse_training_metrics_falls_back_to_row_count(tmp_path):
+    """A csv without an epoch column still reports something usable."""
+    csv_path = tmp_path / "results.csv"
+    with csv_path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(["train/box_loss", "metrics/mAP50(B)"])
+        writer.writerow(["1.2", "0.4"])
+        writer.writerow(["0.8", "0.6"])
+
+    _loss, _map50, epochs = parse_training_metrics(str(csv_path))
+
+    assert epochs == 2
+
+
 def test_write_autolabel_model_yaml(tmp_path):
     onnx_path = tmp_path / "best.onnx"
     onnx_path.write_bytes(b"")
@@ -140,8 +173,8 @@ def _dialog_with_pose_config(tmp_path, text):
         (),
         {"config_widgets": {"pose_config": _LineEdit(text)}},
     )()
-    fake._resolve_pose_classes = UltralyticsDialog._resolve_pose_classes.__get__(
-        fake
+    fake._resolve_pose_classes = (
+        UltralyticsDialog._resolve_pose_classes.__get__(fake)
     )
     return fake
 

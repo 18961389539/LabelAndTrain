@@ -14,7 +14,7 @@ attributes and methods those modules touch, collected mechanically
 * a contract entry whose member disappears from the widget fails the
   test -- the interface cannot silently rot.
 
-It also documents the real size of the "god parameter": 124 members.
+It also documents the real size of the "god parameter": 132 members.
 Any future batch that extracts a *controller class* should aim to cut
 this number by owning a slice of it.
 """
@@ -57,6 +57,7 @@ CONTRACT_MEMBERS = frozenset(
         "_set_file_item_review_state",
         "_should_restore_navigator",
         "_show_label_loop_popup",
+        "_sidebar_save_timer",
         "_sync_annotation_checked_state",
         "_sync_empty_canvas_state",
         "_syncing_file_item",
@@ -88,6 +89,7 @@ CONTRACT_MEMBERS = frozenset(
         "filename",
         "find_last_gid",
         "find_last_label",
+        "flag_dock",
         "flag_widget",
         "flush_pending_auto_save",
         "fn_to_index",
@@ -100,6 +102,7 @@ CONTRACT_MEMBERS = frozenset(
         "image_flags",
         "image_list",
         "image_path",
+        "import_dropped_image_files",
         "import_image_folder",
         "label_dialog",
         "label_file",
@@ -108,9 +111,11 @@ CONTRACT_MEMBERS = frozenset(
         "label_loop_count",
         "label_loop_shapes",
         "last_open_dir",
+        "lists_splitter",
         "load_file",
         "load_flags",
         "load_shapes",
+        "main_splitter",
         "mark_checked_and_next",
         "may_continue",
         "navigator_dialog",
@@ -123,6 +128,7 @@ CONTRACT_MEMBERS = frozenset(
         "recent_files",
         "reset_attribute",
         "reset_state",
+        "right_sidebar",
         "scale_fit_window",
         "scroll_area",
         "scroll_bars",
@@ -131,13 +137,16 @@ CONTRACT_MEMBERS = frozenset(
         "set_scroll",
         "set_zoom",
         "settings",
+        "settings_button",
         "shape_attributes",
-        "shape_dock",
+        "sidebar_collapse_button",
+        "sidebar_collapse_strip",
         "status",
         "thumbnail_panel",
         "toggle_actions",
         "unique_label_list",
         "update_attributes",
+        "update_labeling_instruction",
         "update_navigator_shapes",
         "update_navigator_viewport",
         "update_thumbnail_display",

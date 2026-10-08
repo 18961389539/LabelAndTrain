@@ -60,6 +60,7 @@ from PyQt6.QtCore import QCoreApplication, Qt, pyqtSlot
 from PyQt6 import QtCore, QtGui, QtWidgets
 from ..label_file import LabelFile, LabelFileError
 from .. import utils
+from ..schema import REVIEW_NOTE_FIELD, REVIEW_REJECTED
 import os.path as osp
 import shutil
 import time
@@ -90,6 +91,30 @@ def _report_inherited_shapes(widget, count):
     status = getattr(widget, "status", None)
     if callable(status):
         status(message, 8000)
+
+
+def _announce_rework_reason(widget):
+    """Surface the rework reason when a rejected file is opened.
+
+    The reason lives on the file-row tooltip, but the annotator works on
+    the canvas -- without this the one piece of feedback they need would
+    sit behind a hover on a list they are not looking at.
+    """
+    if widget._current_review_state() != REVIEW_REJECTED:
+        return
+    note = widget.other_data.get(REVIEW_NOTE_FIELD)
+    if note:
+        widget.status(
+            QCoreApplication.translate("LabelingWidget", "需返工：%1").replace(
+                "%1", str(note)
+            ),
+            8000,
+        )
+    else:
+        widget.status(
+            QCoreApplication.translate("LabelingWidget", "此图已打回，需返工"),
+            5000,
+        )
 
 
 def move_file_to_delete_folder(src_path, folder_hint=None):
@@ -360,6 +385,7 @@ def load_file(widget, filename=None):  # noqa: C901
     widget.toggle_actions(True)
     widget.canvas.setFocus()
     widget._sync_annotation_checked_state()
+    _announce_rework_reason(widget)
     widget.update_thumbnail_display()
 
     # Reveal the adjustment panel now that an image is loaded.
@@ -367,8 +393,54 @@ def load_file(widget, filename=None):  # noqa: C901
     widget._position_canvas_adjustment()
     widget._sync_empty_canvas_state()
     _maybe_focus_low_confidence_shapes(widget)
+    # The hint bar describes the state this file just established (how many
+    # shapes, drawing/brush modes, "no image" vs open); it used to be rendered
+    # once at construction and only refreshed by unrelated triggers such as a
+    # scroll-range change, so it kept the boot-time "尚未打开图片" line while an
+    # image was open.
+    widget.update_labeling_instruction()
 
     return True
+
+
+def handle_drag_enter(widget, event):
+    """Accept a drag that carries an image file or a folder.
+
+    Folders used to be rejected here -- only image extensions were
+    matched -- even though "打开文件夹" is the first line of the empty
+    canvas guidance, so the most natural drag (a dataset folder onto the
+    window) did nothing at all.
+    """
+    if not event.mimeData().hasUrls():
+        event.ignore()
+        return
+    extensions = tuple(utils.get_supported_image_extensions())
+    for url in event.mimeData().urls():
+        path = url.toLocalFile()
+        if not path:
+            continue
+        if path.lower().endswith(extensions) or osp.isdir(path):
+            event.accept()
+            return
+    event.ignore()
+
+
+def handle_drop(widget, event):
+    """Open the first dropped folder, else import the dropped images.
+
+    One folder at a time on purpose: merging two datasets into one list
+    is a question this drop cannot answer, and the first folder is what
+    the gesture meant.
+    """
+    items = [url.toLocalFile() for url in event.mimeData().urls()]
+    folders = [item for item in items if item and osp.isdir(item)]
+    if folders:
+        widget.import_image_folder(folders[0])
+        return
+    if not widget.may_continue():
+        event.ignore()
+        return
+    widget.import_dropped_image_files(items)
 
 
 def import_image_folder(widget, dirpath, pattern=None, load=True):

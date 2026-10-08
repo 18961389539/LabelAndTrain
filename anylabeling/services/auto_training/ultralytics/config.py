@@ -94,6 +94,45 @@ DEFAULT_TRAINING_CONFIG = {
     "resume": False,
     "cache": False,
 }
+#: Pretrained checkpoints offered as presets in the training dialog. Bare
+#: names (no path) are downloaded on demand by ``resolve_training_model_path``.
+#: Detect leads with yolov8 (the ultralytics default); the other tasks lead
+#: with yolo11, which the ModelScope mirror hosts for every variant.
+PRETRAINED_MODEL_PRESETS = {
+    "Detect": [
+        "yolov8n.pt",
+        "yolov8s.pt",
+        "yolo11n.pt",
+        "yolo11s.pt",
+        "yolov8m.pt",
+        "yolo11m.pt",
+    ],
+    "Segment": [
+        "yolo11n-seg.pt",
+        "yolo11s-seg.pt",
+        "yolov8n-seg.pt",
+        "yolov8s-seg.pt",
+    ],
+    "Pose": [
+        "yolo11n-pose.pt",
+        "yolo11s-pose.pt",
+        "yolov8n-pose.pt",
+        "yolov8s-pose.pt",
+    ],
+    "Classify": [
+        "yolo11n-cls.pt",
+        "yolo11s-cls.pt",
+        "yolov8n-cls.pt",
+        "yolov8s-cls.pt",
+    ],
+}
+
+
+def get_preset_models(task_type):
+    """Preset checkpoint names for ``task_type`` (empty list when unknown)."""
+    return list(PRETRAINED_MODEL_PRESETS.get(task_type, []))
+
+
 OPTIMIZER_OPTIONS = [
     "auto",
     "SGD",
@@ -105,12 +144,14 @@ OPTIMIZER_OPTIONS = [
 ]
 TRAINING_STATUS_COLORS = {
     "idle": "#6c757d",
+    "preparing": "#17a2b8",
     "training": "#6f42c1",
     "completed": "#28a745",
     "error": "#ffc107",
 }
 TRAINING_STATUS_TEXTS = {
     "idle": "Ready to train",
+    "preparing": "Preparing dataset",
     "training": "Training in progress",
     "completed": "Training completed",
     "error": "Training error",

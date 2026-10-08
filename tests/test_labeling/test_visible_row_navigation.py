@@ -12,6 +12,7 @@ class TestVisibleRowNavigation(unittest.TestCase):
 
     def _make_widget(self, hidden_rows):
         """Bare label-widget stand-in exposing just the navigation math."""
+
         class _Item:
             def __init__(self, row):
                 self.row = row
@@ -35,7 +36,9 @@ class TestVisibleRowNavigation(unittest.TestCase):
 
         list_widget = _List(10)
         widget = type("W", (), {"file_list_widget": list_widget})()
-        from anylabeling.views.labeling.label_widget import LabelingWidget as LabelWidget
+        from anylabeling.views.labeling.label_widget import (
+            LabelingWidget as LabelWidget,
+        )
 
         # Reuse the real helpers without constructing the whole widget.
         widget._visible_rows = LabelWidget._visible_rows.__get__(widget)
@@ -83,10 +86,10 @@ class TestVisibleRowNavigation(unittest.TestCase):
             def item(self, row):
                 return None
 
-        widget = type(
-            "W", (), {"file_list_widget": _List()}
-        )()
-        from anylabeling.views.labeling.label_widget import LabelingWidget as LabelWidget
+        widget = type("W", (), {"file_list_widget": _List()})()
+        from anylabeling.views.labeling.label_widget import (
+            LabelingWidget as LabelWidget,
+        )
 
         widget._visible_rows = LabelWidget._visible_rows.__get__(widget)
         widget._first_visible_row = LabelWidget._first_visible_row.__get__(
@@ -123,10 +126,20 @@ class TestAsyncLabelCheck(unittest.TestCase):
             self.assertFalse(_label_file_checked(missing))
 
 
+def _role_constants():
+    """(UserRole, FILE_REVIEW_ROLE) -- imported lazily, like the rest of
+    this module's Qt use, so a PyQt-less run still collects the file."""
+    from PyQt6.QtCore import Qt
+
+    user_role = Qt.ItemDataRole.UserRole
+    return user_role, user_role + 4
+
+
 class _FakeItem:
-    def __init__(self, row, checked_rows=()):
+    def __init__(self, row, state, roles):
         self.row = row
-        self.checked = row in checked_rows
+        self.state = state
+        self._user_role, self._review_role = roles
 
     def isHidden(self):
         return False
@@ -134,17 +147,24 @@ class _FakeItem:
     def text(self):
         return f"img_{self.row:04d}.png"
 
-    def data(self, _role):
-        return self.checked
+    def data(self, role):
+        if role == self._review_role:
+            return self.state
+        if role == self._user_role:
+            return self.state == "confirmed"
+        return None
 
 
 class _FakeList:
-    def __init__(self, n):
-        self.items = [_FakeItem(r) for r in range(n)]
+    def __init__(self, n, roles):
+        self.items = [_FakeItem(r, "unchecked", roles) for r in range(n)]
 
     def set_checked(self, rows):
         for item in self.items:
-            item.checked = item.row in rows
+            item.state = "confirmed" if item.row in rows else "unchecked"
+
+    def set_state(self, row, state):
+        self.items[row].state = state
 
     def count(self):
         return len(self.items)
@@ -169,7 +189,8 @@ class TestUncheckedImageNavigation(unittest.TestCase):
 
         accesses = []
         n = self.N
-        list_widget = _FakeList(n)
+        roles = _role_constants()
+        list_widget = _FakeList(n, roles)
         list_widget.set_checked(checked_rows)
 
         class _Widget:
@@ -239,6 +260,30 @@ class TestUncheckedImageNavigation(unittest.TestCase):
         widget.open_prev_unchecked_image()
         self.assertEqual(widget.loaded, ["img_0000.png"])
         self.assertEqual(accesses, [])
+
+    def test_next_unchecked_steps_over_a_rejected_row(self):
+        # Rejects used to read as "unchecked", so the loop handed a reviewer
+        # back the very file they had just sent away.
+        widget, _ = self._make_widget()
+        widget.file_list_widget.set_state(1, "rejected")
+        widget.filename = "img_0000.png"
+        widget.open_next_unchecked_image()
+        self.assertEqual(widget.loaded, ["img_0002.png"])
+
+    def test_a_rejected_row_is_never_an_unchecked_target(self):
+        widget, _ = self._make_widget()
+        for row in range(1, self.N):
+            widget.file_list_widget.set_state(row, "rejected")
+        widget.filename = "img_0000.png"
+        widget.open_next_unchecked_image()
+        self.assertEqual(widget.loaded, [])
+
+    def test_prev_unchecked_steps_over_a_rejected_row(self):
+        widget, _ = self._make_widget()
+        widget.file_list_widget.set_state(self.N - 2, "rejected")
+        widget.filename = f"img_{self.N - 1:04d}.png"
+        widget.open_prev_unchecked_image()
+        self.assertEqual(widget.loaded, [f"img_{self.N - 3:04d}.png"])
 
 
 @unittest.skipUnless(

@@ -1,3 +1,4 @@
+import functools
 import os
 import shutil
 import subprocess
@@ -13,6 +14,7 @@ from PyQt6.QtWidgets import (
     QGraphicsDropShadowEffect,
     QApplication,
     QSizePolicy,
+    QPushButton,
 )
 from PyQt6.QtCore import Qt, QTimer, QRectF, QSize, QPoint
 from PyQt6.QtGui import QPainter, QPainterPath, QColor, QIcon
@@ -98,7 +100,7 @@ def copy_text_to_system_clipboard(text):
 
 
 class Popup(QWidget):
-    def __init__(self, text, parent=None, msec=3000, icon=None):
+    def __init__(self, text, parent=None, msec=3000, icon=None, actions=()):
         super().__init__(
             parent,
             Qt.WindowType.FramelessWindowHint
@@ -116,6 +118,16 @@ class Popup(QWidget):
             QLabel {{
                 background-color: transparent;
                 color: {self._text_color};
+            }}
+            QPushButton {{
+                background-color: transparent;
+                color: {t["highlight"]};
+                border: none;
+                padding: 3px 10px;
+                border-radius: 8px;
+            }}
+            QPushButton:hover {{
+                background-color: {t["border"]};
             }}
         """)
 
@@ -145,6 +157,21 @@ class Popup(QWidget):
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addLayout(hbox)
+        if actions:
+            actions_row = QHBoxLayout()
+            actions_row.setContentsMargins(0, 0, 0, 2)
+            actions_row.addStretch(1)
+            for label, callback in actions:
+                button = QPushButton(label)
+                button.setCursor(Qt.CursorShape.PointingHandCursor)
+                button.clicked.connect(
+                    functools.partial(self._run_action, callback)
+                )
+                actions_row.addWidget(button)
+            layout.addLayout(actions_row)
+            # A button that vanishes in three seconds is a button nobody
+            # clicks: the toast waits, but still closes itself eventually.
+            msec = max(msec, 15000)
         self.setLayout(layout)
 
         # Set window properties
@@ -170,6 +197,15 @@ class Popup(QWidget):
 
     def set_text(self, text):
         self.label.setText(text)
+
+    def _run_action(self, callback):
+        """Run a button's action: close first, then act.
+
+        The action usually opens a folder on top of the app, and a toast
+        lingering above it would only be in the way.
+        """
+        self.close()
+        callback()
 
     def paintEvent(self, event):
         painter = QPainter(self)

@@ -120,8 +120,9 @@ def compile_resources(output: str, qrc: str) -> None:
         if needs_rewrite:
             normalize_imports(output)
         return
-    print(
-        "Error: no Qt resource compiler found. Tried python -m PyQt6.pyrcc_main, pyrcc6, pyside6-rcc, rcc -g python, and lrelease-sibling rcc."
+    raise RuntimeError(
+        "No Qt resource compiler found. Tried python -m PyQt6.pyrcc_main, "
+        "pyrcc6, pyside6-rcc, rcc -g python, and lrelease-sibling rcc."
     )
 
 
@@ -200,8 +201,14 @@ for language in supported_languages:
     # Create a QTranslator object to generate the .ts file
     translator = QtCore.QTranslator()
 
-    # Translate all .ui files into .py files
-    ui_files = glob.glob(os.path.join("**", "*.ui"), recursive=True)
+    # Translate all .ui files into .py files.  Same skip list as the Python
+    # scan: a bare recursive glob walks into .venv / build and writes the
+    # generated _ui.py files into the dependencies.
+    ui_files = [
+        path
+        for path in glob.glob(os.path.join("**", "*.ui"), recursive=True)
+        if not SKIP_DIRS.intersection(path.replace("\\", "/").split("/"))
+    ]
     for ui_file in ui_files:
         py_file = os.path.splitext(ui_file)[0] + "_ui.py"
         command = f"pyuic6 -x {ui_file} -o {py_file}"
@@ -212,8 +219,11 @@ for language in supported_languages:
     # stale .ts, which is how the catalog drifted out of date unnoticed.
     catalog = f"{translations_path}/{language}.ts"
     entries_before = catalog_entry_count(catalog)
-    command = f"{lupdate} --no-obsolete {' '.join(py_files)} " f"-ts {catalog}"
-    result = subprocess.run(command, shell=True)
+    # No shell: with ~175 sources the command line blows past cmd.exe's 8191
+    # character limit and comes back as a bare "命令行太长" with exit 1.
+    result = subprocess.run(
+        [lupdate, "--no-obsolete", *py_files, "-ts", catalog]
+    )
     if result.returncode != 0:
         raise RuntimeError(
             f"String extraction failed (exit {result.returncode}). Is "

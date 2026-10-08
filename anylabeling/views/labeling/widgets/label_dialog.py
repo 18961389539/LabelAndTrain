@@ -769,10 +769,32 @@ class LabelModifyDialog(RangeTableDialog):
         self.parent = parent
         self.opacity = opacity
         self.image_file_list = self.get_image_file_list()
-        self.start_index = 1
-        self.end_index = len(self.image_file_list)
+        # Default the range to the open image, not the whole folder. "Go"
+        # rewrites every file in range with no undo, so the old 1..N default
+        # meant a single stray click could strip a label from thousands of
+        # files. Widening the range is a deliberate act; editing the image
+        # you are looking at is the common case.
+        current = self._current_image_index()
+        self.start_index = current
+        self.end_index = current
         self.init_label_info()
         self.init_ui()
+
+    def _current_image_index(self):
+        """1-based row of the image open in the editor, else the first row."""
+        count = len(self.image_file_list)
+        if count <= 0:
+            return 1
+        file_list = getattr(self.parent, "file_list_widget", None)
+        row = file_list.currentRow() if file_list is not None else -1
+        return row + 1 if 0 <= row < count else 1
+
+    def _label_file_for(self, image_file):
+        """Label JSON path that ``image_file`` is written to."""
+        label_dir, filename = os.path.split(image_file)
+        if self.parent.output_dir:
+            label_dir = self.parent.output_dir
+        return os.path.join(label_dir, os.path.splitext(filename)[0] + ".json")
 
     def init_ui(self):
         """Initialize the user interface."""
@@ -841,7 +863,7 @@ class LabelModifyDialog(RangeTableDialog):
         self.to_input.setMinimum(1)
         self.to_input.setMaximum(len(self.image_file_list))
         self.to_input.setSingleStep(1)
-        self.to_input.setValue(len(self.image_file_list))
+        self.to_input.setValue(self.end_index)
         self.to_input.setStyleSheet(get_spinbox_style())
         range_layout.addWidget(to_label)
         range_layout.addWidget(self.to_input)
@@ -1101,6 +1123,12 @@ class LabelModifyDialog(RangeTableDialog):
             popup.show_popup(self.parent)
 
     def modify_label(self, start_index: int = -1, end_index: int = -1):
+        # Imported here: session_snapshot -> smart_tools -> data_audit pulls
+        # in this widgets package, so a module-level import is circular.
+        from anylabeling.views.labeling.utils.session_snapshot import (
+            snapshot_before_label_write,
+        )
+
         try:
             if start_index == -1:
                 start_index = self.start_index
@@ -1109,14 +1137,13 @@ class LabelModifyDialog(RangeTableDialog):
             for i, image_file in enumerate(self.image_file_list):
                 if i < start_index - 1 or i > end_index - 1:
                     continue
-                label_dir, filename = os.path.split(image_file)
-                if self.parent.output_dir:
-                    label_dir = self.parent.output_dir
-                label_file = os.path.join(
-                    label_dir, os.path.splitext(filename)[0] + ".json"
-                )
+                label_file = self._label_file_for(image_file)
                 if not os.path.exists(label_file):
                     continue
+                # Keep the pre-write state recoverable. The session snapshot
+                # copies each file at most once, and only files actually in
+                # range, so this stays cheap next to the rewrite itself.
+                snapshot_before_label_write(label_file)
                 with open(label_file, "r", encoding="utf-8") as f:
                     data = json.load(f)
                 src_shapes, dst_shapes = data["shapes"], []
@@ -1228,6 +1255,88 @@ class LabelModifyDialog(RangeTableDialog):
                 visible=visible,
             )
 
+    def _table_verdicts(self):
+        """``label -> (delete, new_value)`` exactly as set in the table.
+
+        The table is the source of truth here, not ``label_info``: the
+        latter is only synced from the widgets inside ``confirm_changes``,
+        so reading it before the write would report last-run values.
+        """
+        verdicts = {}
+        for i in range(self.table_widget.rowCount()):
+            label = self.table_widget.item(i, 0).text()
+            delete_checkbox = self.table_widget.cellWidget(i, 1)
+            value_edit = self._get_value_edit(i)
+            verdicts[label] = (
+                bool(delete_checkbox.isChecked()),
+                (value_edit.text() or None),
+            )
+        return verdicts
+
+    def _impact_counts(self, start_index, end_index):
+        """Files rewritten and shapes deleted/renamed across the range.
+
+        Read from disk, because that is the state the write is about to
+        change: the table shows the verdict, not how many boxes it lands on.
+        """
+        verdicts = self._table_verdicts()
+        files_rewritten = 0
+        shapes_deleted = 0
+        shapes_renamed = 0
+        for i, image_file in enumerate(self.image_file_list):
+            if i < start_index - 1 or i > end_index - 1:
+                continue
+            label_file = self._label_file_for(image_file)
+            if not os.path.exists(label_file):
+                continue
+            try:
+                with open(label_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+            except (OSError, ValueError):
+                continue
+            files_rewritten += 1
+            for shape in data.get("shapes", []):
+                delete, value = verdicts.get(shape.get("label"), (False, None))
+                if delete and not shape.get("locked", False):
+                    shapes_deleted += 1
+                elif value:
+                    shapes_renamed += 1
+        return files_rewritten, shapes_deleted, shapes_renamed
+
+    def _confirm_scope(self, start_index, end_index):
+        """Show what the bulk write will touch; ``False`` cancels it.
+
+        Renaming or deleting a label rewrites every file in range and has
+        no undo, and the range is the one input that is easy to get wrong
+        without noticing -- so the count is shown before anything is
+        written, and only an explicit yes proceeds.
+        """
+        files, deleted, renamed = self._impact_counts(start_index, end_index)
+        total = len(self.image_file_list)
+        summary = self.tr(
+            "将重写 %1 个标注文件，删除 %2 个标注框，重命名 %3 个标注框。"
+        )
+        summary = (
+            summary.replace("%1", str(files))
+            .replace("%2", str(deleted))
+            .replace("%3", str(renamed))
+        )
+        scope = self.tr("范围：第 %1–%2 张，共 %3 张。")
+        scope = (
+            scope.replace("%1", str(start_index))
+            .replace("%2", str(end_index))
+            .replace("%3", str(total))
+        )
+        answer = QtWidgets.QMessageBox.warning(
+            self,
+            self.tr("确认批量修改"),
+            "\n".join([summary, scope, self.tr("此操作不可撤销，是否继续？")]),
+            QtWidgets.QMessageBox.StandardButton.Yes
+            | QtWidgets.QMessageBox.StandardButton.No,
+            QtWidgets.QMessageBox.StandardButton.No,
+        )
+        return answer == QtWidgets.QMessageBox.StandardButton.Yes
+
     def update_range(self):
         from_value = (
             int(self.from_input.text())
@@ -1244,8 +1353,9 @@ class LabelModifyDialog(RangeTableDialog):
             or (from_value < 1)
             or (to_value > len(self.image_file_list))
         ):
-            self.from_input.setValue(1)
-            self.to_input.setValue(len(self.image_file_list))
+            current = self._current_image_index()
+            self.from_input.setValue(current)
+            self.to_input.setValue(current)
             QtWidgets.QMessageBox.information(
                 self,
                 self.tr("Invalid Range"),
@@ -1254,6 +1364,8 @@ class LabelModifyDialog(RangeTableDialog):
         else:
             self.start_index = from_value
             self.end_index = to_value
+            if not self._confirm_scope(self.start_index, self.end_index):
+                return
             self.confirm_changes(self.start_index, self.end_index)
 
 

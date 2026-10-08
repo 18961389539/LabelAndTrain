@@ -7,12 +7,17 @@ the item roles (``filelist.roles``); the widget keeps thin delegates so
 the menu wiring, the async callbacks and the tests stay untouched.
 """
 
-from PyQt6 import QtCore
+from PyQt6 import QtCore, QtWidgets
 
 from ..logger import logger
 from ..schema import REVIEW_CONFIRMED, REVIEW_REJECTED, REVIEW_UNCHECKED
 from . import items as filelist_items
-from .roles import CHECKED_FIELD, REVIEW_STATE_FIELD, REVIEWED_AT_FIELD
+from .roles import (
+    CHECKED_FIELD,
+    REVIEW_NOTE_FIELD,
+    REVIEW_STATE_FIELD,
+    REVIEWED_AT_FIELD,
+)
 
 
 class FileReviewController:
@@ -25,8 +30,13 @@ class FileReviewController:
         state = REVIEW_CONFIRMED if checked else REVIEW_UNCHECKED
         self.apply_review_state(state)
 
-    def apply_review_state(self, state):
-        """Record a review verdict on the current file and save it."""
+    def apply_review_state(self, state, note=None):
+        """Record a review verdict on the current file and save it.
+
+        ``note`` is the rework reason. It is kept only for ``rejected``:
+        confirming or unchecking drops it, so a stale reason cannot survive
+        the verdict it belonged to and resurface on a later row tooltip.
+        """
         widget = self._widget
         if widget.filename is None or widget.image.isNull():
             return
@@ -42,6 +52,10 @@ class FileReviewController:
             ] = QtCore.QDateTime.currentDateTime().toString(
                 QtCore.Qt.DateFormat.ISODate
             )
+        if state == REVIEW_REJECTED and note:
+            widget.other_data[REVIEW_NOTE_FIELD] = note
+        else:
+            widget.other_data.pop(REVIEW_NOTE_FIELD, None)
         widget._sync_annotation_checked_state()
         label_file = widget.get_label_file()
         if widget.save_labels(label_file):
@@ -63,13 +77,60 @@ class FileReviewController:
         if str(widget.filename) == current_filename:
             widget.open_next_image()
 
+    def update_current_file_checked_item(self):
+        """Push the open file's review state (and reason) onto its row."""
+        widget = self._widget
+        item = widget._current_file_item()
+        if item is not None:
+            widget._set_file_item_review_state(
+                item,
+                widget._current_review_state(),
+                note=widget.other_data.get(REVIEW_NOTE_FIELD),
+            )
+
+    def ask_review_note(self):
+        """Ask why a file is being sent back; ``None`` means "cancelled".
+
+        Presets first because a team re-reads these reasons in aggregate, and
+        free text is one keystroke away for everything the presets miss. The
+        default entry is empty, so rejecting without a reason stays a single
+        Enter -- the reason is useful, not mandatory.
+        """
+        widget = self._widget
+        presets = [
+            "",
+            widget.tr("漏标"),
+            widget.tr("类别错误"),
+            widget.tr("框不准"),
+            widget.tr("多标/误标"),
+        ]
+        text, accepted = QtWidgets.QInputDialog.getItem(
+            widget,
+            widget.tr("打回并下一张"),
+            widget.tr("说明需要返工的地方（可留空）："),
+            presets,
+            0,
+            True,
+        )
+        if not accepted:
+            return None
+        return text.strip()
+
     def mark_rejected_and_next(self, _value=False):
-        """Send the current image back for rework and keep moving."""
+        """Send the current image back for rework and keep moving.
+
+        Asks for a reason first. A cancelled prompt means "never mind" and
+        leaves the verdict untouched -- rejecting is destructive enough that
+        it should not happen on a stray keypress with no way to say why.
+        """
         widget = self._widget
         if widget.filename is None or widget.image.isNull():
             return
+        note = self.ask_review_note()
+        if note is None:
+            return
         current_filename = str(widget.filename)
-        widget._apply_review_state(REVIEW_REJECTED)
+        widget._apply_review_state(REVIEW_REJECTED, note=note)
         if widget.filename is None:
             return
         widget.open_next_unchecked_image()
@@ -117,6 +178,12 @@ class FileReviewController:
         return visible[0]
 
     def open_prev_unchecked_image(self):
+        """Step to the previous row that has no verdict yet.
+
+        "Unchecked" means ``review_state == unchecked``: rejects and
+        confirms are both skipped, so the reviewer never circles back onto
+        a file they just sent back.
+        """
         widget = self._widget
         if widget._paging_blocked_by_drawing():
             return
@@ -132,11 +199,12 @@ class FileReviewController:
             item = widget.file_list_widget.item(i)
             if item.isHidden():
                 continue
-            if not filelist_items.file_item_annotation_checked(item):
-                filename = item.text()
-                if filename:
-                    widget.load_file(filename)
-                break
+            if not filelist_items.file_item_is_unchecked(item):
+                continue
+            filename = item.text()
+            if filename:
+                widget.load_file(filename)
+            break
 
     def open_next_unchecked_image(self, _value=False):
         widget = self._widget
@@ -154,11 +222,12 @@ class FileReviewController:
             item = widget.file_list_widget.item(i)
             if item.isHidden():
                 continue
-            if not filelist_items.file_item_annotation_checked(item):
-                filename = item.text()
-                if filename:
-                    widget.load_file(filename)
-                break
+            if not filelist_items.file_item_is_unchecked(item):
+                continue
+            filename = item.text()
+            if filename:
+                widget.load_file(filename)
+            break
 
     def apply_checked_batch(self, start_index, info_list):
         """Apply a batch of review-state results to file rows by index."""
@@ -168,9 +237,9 @@ class FileReviewController:
                 row = start_index + offset
                 item = widget.file_list_widget.item(row)
                 if item is not None:
-                    state, reviewed_at = info
+                    state, reviewed_at, note = info
                     widget._set_file_item_review_state(
-                        item, state, reviewed_at
+                        item, state, reviewed_at, note
                     )
             widget._refresh_file_progress()
         except Exception as e:  # noqa: BLE001

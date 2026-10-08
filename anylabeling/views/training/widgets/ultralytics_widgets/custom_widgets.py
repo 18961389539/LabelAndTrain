@@ -467,12 +467,12 @@ class TrainingStepBar(QWidget):
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 8)
         layout.setSpacing(8)
-        titles = [
-            self.tr("1. 数据"),
-            self.tr("2. 配置"),
-            self.tr("3. 训练"),
+        self._titles = [
+            self.tr("1. Data"),
+            self.tr("2. Config"),
+            self.tr("3. Train"),
         ]
-        for index, title in enumerate(titles):
+        for index, title in enumerate(self._titles):
             column = QVBoxLayout()
             button = QPushButton(title)
             button.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -491,25 +491,23 @@ class TrainingStepBar(QWidget):
 
     def set_state(self, current, hints):
         t = get_theme()
-        titles = ["1. 数据", "2. 配置", "3. 训练"]
-        done_titles = ["1. 数据 ✓", "2. 配置 ✓", "3. 训练 ✓"]
         for index, button in enumerate(self._buttons):
             hint = hints[index] if index < len(hints) else ""
             self._hints[index].setText(hint)
             if index < current:
-                button.setText(done_titles[index])
+                button.setText(f"{self._titles[index]} ✓")
                 button.setStyleSheet(
                     f"QPushButton {{ background: {t.get('success', '#22A06B')}; "
                     f"color: white; border: none; border-radius: 8px; height: 32px; }}"
                 )
             elif index == current:
-                button.setText(titles[index])
+                button.setText(self._titles[index])
                 button.setStyleSheet(
                     f"QPushButton {{ background: {t['primary']}; color: white; "
                     f"border: none; border-radius: 8px; height: 32px; font-weight: 700; }}"
                 )
             else:
-                button.setText(titles[index])
+                button.setText(self._titles[index])
                 button.setStyleSheet(
                     f"QPushButton {{ background: {t['surface']}; color: {t['text']}; "
                     f"border: 1px solid {t['border']}; border-radius: 8px; height: 32px; }}"

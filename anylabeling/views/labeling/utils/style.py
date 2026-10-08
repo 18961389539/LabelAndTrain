@@ -729,6 +729,36 @@ def get_panel_style() -> str:
     )
 
 
+def get_sidebar_collapse_strip_style() -> str:
+    """
+    Returns a stylesheet for the strip that collapses the right sidebar.
+
+    The strip itself stays transparent so it reads as a gutter rather than
+    another panel; only the caret button carries a surface, which is what
+    keeps the one-click affordance findable next to the canvas edge.
+
+    Returns:
+        str: QSS stylesheet string for the strip and its toggle button.
+    """
+    t = get_theme()
+    return f"""
+        QFrame#SidebarCollapseStrip {{
+            background: transparent;
+            border: none;
+        }}
+        QToolButton#SidebarCollapseButton {{
+            border: 1px solid {t["border"]};
+            background: {t["surface"]};
+            border-radius: 6px;
+            padding: 0px;
+        }}
+        QToolButton#SidebarCollapseButton:hover {{
+            background: {t["background_hover"]};
+            border-color: {t["border_light"]};
+        }}
+    """
+
+
 def get_instruction_bar_style() -> str:
     """
     Returns a stylesheet for the shortcut hint bar above the canvas.

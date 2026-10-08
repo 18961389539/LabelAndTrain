@@ -506,6 +506,10 @@ class SegmentAnything2(Model):
         self.stop_inference = True
         if self.pre_inference_thread:
             self.pre_inference_thread.quit()
+        # The encoder/decoder sessions live on ``model`` and the preload worker
+        # holds a bound method of this instance — dropping the reference is what
+        # lets the old model go on a switch.
+        self.model = None
 
     def preload_worker(self, files):
         """

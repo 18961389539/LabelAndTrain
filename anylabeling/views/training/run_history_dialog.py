@@ -19,7 +19,11 @@ from anylabeling.views.training.run_history import (
     summarize_history,
 )
 
-COLUMNS = 15
+#: Must match ``len(format_history_rows([])[0])`` - the header comes from the
+#: row formatter, while the table is built with a fixed column count, so a new
+#: field silently loses its column otherwise (pinned by
+#: ``test_run_history.test_table_width_matches_the_row_layout``).
+COLUMNS = 16
 
 
 class RunHistoryDialog(QtWidgets.QDialog):
@@ -33,7 +37,7 @@ class RunHistoryDialog(QtWidgets.QDialog):
     def __init__(self, parent, label_dir=None):
         super().__init__(parent)
         self.label_dir = label_dir
-        self.setWindowTitle(self.tr("实验历史"))
+        self.setWindowTitle(self.tr("Run History"))
         self.resize(1080, 560)
         self.rows = []
 
@@ -61,10 +65,10 @@ class RunHistoryDialog(QtWidgets.QDialog):
         layout.addWidget(self.table, 1)
 
         buttons = QtWidgets.QHBoxLayout()
-        export_button = QtWidgets.QPushButton(self.tr("导出 CSV"))
-        open_button = QtWidgets.QPushButton(self.tr("打开运行目录"))
-        refresh_button = QtWidgets.QPushButton(self.tr("刷新"))
-        close_button = QtWidgets.QPushButton(self.tr("关闭"))
+        export_button = QtWidgets.QPushButton(self.tr("Export CSV"))
+        open_button = QtWidgets.QPushButton(self.tr("Open Run Directory"))
+        refresh_button = QtWidgets.QPushButton(self.tr("Refresh"))
+        close_button = QtWidgets.QPushButton(self.tr("Close"))
         for button in (export_button, open_button, refresh_button):
             buttons.addWidget(button)
         buttons.addStretch()
@@ -97,24 +101,24 @@ class RunHistoryDialog(QtWidgets.QDialog):
 
         summary = summarize_history(self.rows)
         parts = [
-            self.tr("已记录运行 %1 个").replace("%1", str(summary["runs"]))
+            self.tr("%1 recorded runs").replace("%1", str(summary["runs"]))
         ]
         if data["unrecorded"]:
             parts.append(
-                self.tr("另有 %1 个运行早于元数据功能，未列入").replace(
-                    "%1", str(data["unrecorded"])
-                )
+                self.tr(
+                    "%1 more runs predate the metadata feature and are not listed"
+                ).replace("%1", str(data["unrecorded"]))
             )
         if summary["best_map50"] is not None:
             parts.append(
-                self.tr("最佳 mAP50 %1（%2）")
+                self.tr("Best mAP50 %1 (%2)")
                 .replace("%1", f"{summary['best_map50']:.4f}")
                 .replace("%2", summary["best_name"])
             )
         if summary["trend"] is not None:
             arrow = "↑" if summary["trend"] >= 0 else "↓"
             parts.append(
-                self.tr("最近两轮 {arrow} {delta}（{from_} → {to}）")
+                self.tr("Last two runs {arrow} {delta} ({from_} → {to})")
                 .replace("{arrow}", arrow)
                 .replace("{delta}", f"{abs(summary['trend']):.4f}")
                 .replace("{from_}", summary.get("trend_from") or "")
@@ -124,9 +128,7 @@ class RunHistoryDialog(QtWidgets.QDialog):
         if not self.rows and not data["unrecorded"]:
             self.summary_label.setText(
                 self.tr(
-                    "没有在 %1 下找到带元数据的训练运行。完成一次训练后，"
-                    "运行目录里会生成 run_meta.json 并出现在此表中；"
-                    "若训练的 Project 指向了别处，这里看不到那些运行。"
+                    "No training runs with metadata found under %1. After a training run finishes, run_meta.json appears in the run directory and shows up in this table; runs whose Project points elsewhere are not visible here."
                 ).replace("%1", runs_root or "")
             )
 
@@ -140,7 +142,9 @@ class RunHistoryDialog(QtWidgets.QDialog):
         index = self.selected_row_index()
         if index is None or index >= len(self.rows):
             QtWidgets.QMessageBox.information(
-                self, self.tr("实验历史"), self.tr("请先选中一行运行。")
+                self,
+                self.tr("Run History"),
+                self.tr("Select a run row first."),
             )
             return
         run_dir = self.rows[index].get("dir") or ""
@@ -150,13 +154,17 @@ class RunHistoryDialog(QtWidgets.QDialog):
             )
         else:
             QtWidgets.QMessageBox.information(
-                self, self.tr("实验历史"), self.tr("该运行目录已不存在。")
+                self,
+                self.tr("Run History"),
+                self.tr("That run directory no longer exists."),
             )
 
     def export_to_csv(self):
         if not self.rows:
             QtWidgets.QMessageBox.information(
-                self, self.tr("实验历史"), self.tr("当前没有可导出的运行。")
+                self,
+                self.tr("Run History"),
+                self.tr("There are no runs to export."),
             )
             return
         directory = self.label_dir or get_default_project_dir()
@@ -165,7 +173,7 @@ class RunHistoryDialog(QtWidgets.QDialog):
             f"run_history_{QtCore.QDateTime.currentDateTime().toString('yyyyMMdd_HHmmss')}.csv",
         )
         path, _ = QtWidgets.QFileDialog.getSaveFileName(
-            self, self.tr("导出实验历史"), suggested, "CSV (*.csv)"
+            self, self.tr("Export Run History"), suggested, "CSV (*.csv)"
         )
         if not path:
             return
@@ -176,10 +184,12 @@ class RunHistoryDialog(QtWidgets.QDialog):
                     writer.writerow(row)
         except OSError as exc:
             logger.error(f"Failed to export run history: {exc}")
-            QtWidgets.QMessageBox.warning(self, self.tr("导出失败"), str(exc))
+            QtWidgets.QMessageBox.warning(
+                self, self.tr("Export Failed"), str(exc)
+            )
             return
         QtWidgets.QMessageBox.information(
             self,
-            self.tr("导出完成"),
-            self.tr("实验历史已导出到：%1").replace("%1", path),
+            self.tr("Export Complete"),
+            self.tr("Run history exported to: %1").replace("%1", path),
         )

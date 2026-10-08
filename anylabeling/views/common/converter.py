@@ -748,7 +748,6 @@ def run_conversion(
                     image_files, labels, output, coco_mode
                 )
 
-                output_files = glob(osp.join(output, "*.json"))
                 print(
                     colored(
                         f"✓ Converted XLABEL to COCO {mode} format: {output}",
@@ -765,4 +764,10 @@ def run_conversion(
 
 
 if __name__ == "__main__":
-    run_conversion()
+    # The real CLI lives in app.py (``--convert``), which imports
+    # ``handle_convert_command`` and hands it parsed arguments.  Calling
+    # ``run_conversion`` bare only ever raised TypeError.
+    raise SystemExit(
+        "This module has no standalone CLI. Use the application's --convert "
+        "entry point instead."
+    )

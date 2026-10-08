@@ -105,11 +105,23 @@ X-AnyLabeling 提供数据删除功能，具体操作如下：
 | Ctrl+Shift+A | 跳转到上一张未检查的标注 |
 | Ctrl+Shift+D | 跳转到下一张未检查的标注 |
 
+这里的「未检查」等于「未复核」：已检查与已打回的图片都会被跳过，审核员不会绕回自己刚打回的那张。
 
-检查状态保存在标注 JSON 的顶层 `checked` 字段中，右下角文件列表会用圆点展示该状态：绿色表示已检查，灰色表示未检查。可以在画布右键菜单中选择 `Mark as Checked` / `Mark as Unchecked`，也可以按 `Ctrl+Alt+K` 切换当前图像的检查状态。
+
+复核状态保存在标注 JSON 的顶层 `review_state` 字段中（`unchecked` / `confirmed` / `rejected`；旧文件的布尔 `checked` 仍兼容读取），右下角文件列表用圆点图标展示：
+
+| 图标 | 含义 |
+| --- | --- |
+| 灰色空心圆点 | 未标注（尚无标注文件，或图中没有对象） |
+| 蓝色圆点 | 已标注（有对象，尚未复核） |
+| 橙色圆点 | 负样本（确认无目标，空标注） |
+| 绿色圆点 | 已检查（复核通过） |
+| 红色圆点 | 需返工（被打回，待修正） |
+
+文件列表上方的筛选下拉框提供「未标注 / 已标注 / 已检查 / 未复核 / 需返工 / 待复核」；其中「未复核」只列出还没有复核结论的图片（已打回的不算）。可以在画布右键菜单中选择 `Mark as Checked` / `Mark as Unchecked`，也可以按 `Ctrl+Alt+K` 切换当前图像的检查状态。
 
 文件列表中的复选框默认不可编辑，如需启用编辑功能，可通过 `Settings`（`Ctrl+0`）在 `General` 中开启 `File List Checkbox Editable`，或在配置文件中将 `file_list_checkbox_editable` 设置为 `true`。
-该复选框表示是否存在标注文件，与圆点展示的检查状态相互独立。
+该复选框表示是否存在标注文件，与圆点展示的复核状态相互独立。
 
 ### 1.4 保存标签数据
 
@@ -1132,7 +1144,7 @@ font_family: null  # null 表示使用系统默认字体，也可填写字体名
 ## 10. 高级功能
 
 - 本分支独有功能（项目管理、检查状态、智能工具、训练迭代、溯源信息）：[链接](./fork_features.md)
-- Ultralytics 训练平台：[链接](../../examples/training/ultralytics/README.md)
+- Ultralytics 训练平台：[链接](../../examples/training/ultralytics/README_zh-CN.md)
 
 以下条目属于**上游**功能，本构建已移除对应面板，链接仅作归档参考：
 

@@ -137,6 +137,42 @@ def _restore_output_dir(widget, dataset_dir):
         pass
 
 
+def restore_configured_classes(widget):
+    """Reset the label panel to the configured classes.
+
+    Runs when the folder being opened ships no ``classes.txt``.  The panel
+    would otherwise keep the *previous* folder's list, and
+    ``_yolo_class_names`` reads it to build the YOLO id map — an unrelated
+    list silently remaps every exported label.  Falling back to
+    ``config.labels`` keeps the documented behaviour ("labels from the config
+    keep working") without the leak.
+
+    Returns True when the panel actually changed.
+    """
+    panel = getattr(widget, "unique_label_list", None)
+    if panel is None:
+        return False
+    config = getattr(widget, "_config", None) or {}
+    names = [str(name) for name in (config.get("labels") or [])]
+    if _panel_label_names(widget) == names:
+        return False
+    panel.clear()
+    if names:
+        load_labels = getattr(widget, "load_labels", None)
+        if callable(load_labels):
+            load_labels(names, clear_existing=False)
+        reset_dialog = getattr(widget, "_reset_label_dialog_labels", None)
+        if callable(reset_dialog):
+            reset_dialog(names)
+    else:
+        dialog = getattr(widget, "label_dialog", None)
+        label_list = getattr(dialog, "label_list", None) if dialog else None
+        if label_list is not None:
+            label_list.clear()
+    _logger().info("Reset the class panel to the configured labels")
+    return True
+
+
 def _restore_labels(widget, dataset_dir):
     """Seed the label panel from the project record as a fallback.
 

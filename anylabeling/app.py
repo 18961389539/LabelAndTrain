@@ -71,6 +71,33 @@ def get_default_qt_platform():
     return None
 
 
+def restore_window_placement(win):
+    """Put the window back where it was; maximize on a first run.
+
+    The app used to start maximized unconditionally, and the geometry was
+    only ever saved by a commented-out line: a window the user had sized
+    for a second monitor (or deliberately left small) came back filling
+    the primary one every launch. The maximized flag rides along, so a
+    maximized close reopens maximized.
+    """
+    settings = QtCore.QSettings("anylabeling", "anylabeling")
+    geometry = settings.value("window/geometry")
+    if geometry is not None and win.restoreGeometry(geometry):
+        if settings.value("window/maximized", False, type=bool):
+            win.showMaximized()
+        else:
+            win.show()
+        return
+    win.showMaximized()
+
+
+def save_window_placement(win):
+    """Remember the window's geometry for the next start."""
+    settings = QtCore.QSettings("anylabeling", "anylabeling")
+    settings.setValue("window/geometry", win.saveGeometry())
+    settings.setValue("window/maximized", win.isMaximized())
+
+
 def main():
     """Entry point with a top-level safety net.
 
@@ -571,7 +598,7 @@ def _main():
         output_dir=output_dir,
     )
 
-    win.showMaximized()
+    restore_window_placement(win)
     win.raise_()
 
     # Resume the last session or hand the choice to the project manager,
@@ -598,6 +625,7 @@ def _main():
             logger.warning(f"Session resume prompt skipped: {e}")
 
     QtCore.QTimer.singleShot(500, _offer_session_resume)
+    app.aboutToQuit.connect(lambda: save_window_placement(win))
     sys.exit(app.exec())
 
 

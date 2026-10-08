@@ -1,5 +1,7 @@
 from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot
 
+from anylabeling.views.labeling.logger import logger
+
 
 class GenericWorker(QObject):
     finished = pyqtSignal()
@@ -12,5 +14,12 @@ class GenericWorker(QObject):
 
     @pyqtSlot()
     def run(self):
-        self.func(*self.args, **self.kwargs)
-        self.finished.emit()
+        # ``finished`` must fire even when the payload raises.  Callers clear
+        # their "a model operation is running" flag from that signal, so a
+        # missed emit leaves the rest of the session unable to load anything.
+        try:
+            self.func(*self.args, **self.kwargs)
+        except Exception as e:  # noqa
+            logger.warning(f"Background worker failed: {e}")
+        finally:
+            self.finished.emit()

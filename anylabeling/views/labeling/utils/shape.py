@@ -7,7 +7,7 @@ import PIL.Image
 import PIL.ImageDraw
 
 from PyQt6 import QtWidgets
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QCoreApplication, Qt
 from PyQt6.QtWidgets import QDialog, QProgressDialog
 
 from anylabeling.views.labeling.logger import logger
@@ -347,10 +347,19 @@ def shape_conversion(self, mode):
 
     response = QtWidgets.QMessageBox()
     response.setIcon(QtWidgets.QMessageBox.Icon.Warning)
-    response.setWindowTitle(self.tr("Warning"))
-    response.setText(self.tr("Current annotation will be changed"))
+    response.setWindowTitle(
+        QCoreApplication.translate("LabelingWidget", "Warning")
+    )
+    response.setText(
+        QCoreApplication.translate(
+            "LabelingWidget", "Current annotation will be changed"
+        )
+    )
     response.setInformativeText(
-        self.tr("Are you sure you want to perform this conversion?")
+        QCoreApplication.translate(
+            "LabelingWidget",
+            "Are you sure you want to perform this conversion?",
+        )
     )
     response.setStandardButtons(
         QtWidgets.QMessageBox.StandardButton.Cancel
@@ -362,10 +371,16 @@ def shape_conversion(self, mode):
         return
 
     progress_dialog = QProgressDialog(
-        self.tr("Converting..."), self.tr("Cancel"), 0, 0, self
+        QCoreApplication.translate("LabelingWidget", "Converting..."),
+        QCoreApplication.translate("LabelingWidget", "Cancel"),
+        0,
+        0,
+        self,
     )
     progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
-    progress_dialog.setWindowTitle(self.tr("Progress"))
+    progress_dialog.setWindowTitle(
+        QCoreApplication.translate("LabelingWidget", "Progress")
+    )
     progress_dialog.setMinimumWidth(400)
     progress_dialog.setMinimumHeight(150)
     progress_dialog.setStyleSheet(get_progress_dialog_style())
@@ -386,7 +401,9 @@ def shape_conversion(self, mode):
 
         progress_dialog.close()
         popup = Popup(
-            self.tr("Conversion completed successfully!"),
+            QCoreApplication.translate(
+                "LabelingWidget", "Conversion completed successfully!"
+            ),
             self,
             msec=1000,
             icon=new_icon_path("copy-green", "svg"),
@@ -398,7 +415,9 @@ def shape_conversion(self, mode):
     except Exception as e:
         logger.error(f"Error occurred while converting shapes: {e}")
         popup = Popup(
-            self.tr("Error occurred while converting shapes!"),
+            QCoreApplication.translate(
+                "LabelingWidget", "Error occurred while converting shapes!"
+            ),
             self,
             msec=1000,
             icon=new_icon_path("error", "svg"),

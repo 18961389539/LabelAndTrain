@@ -225,8 +225,19 @@ class ExportManager:
                 print(f"Error in export callback: {e}")
 
     def start_export(
-        self, project_path: str, export_format: str = "onnx"
+        self,
+        project_path: str,
+        export_format: str = "onnx",
+        allow_install: bool = False,
     ) -> Tuple[bool, str]:
+        """Start the export worker.
+
+        ``allow_install`` is consent to run pip for missing packages. It
+        defaults to off: the worker used to install into the user's
+        environment on its own, unprompted, with a 30s timeout a real wheel
+        download does not fit in — so the "automatic" path could only fail
+        slowly. The caller owns the UI, asks first, and passes True.
+        """
         if self.is_exporting:
             return False, "Export already in progress"
 
@@ -236,12 +247,18 @@ class ExportManager:
 
         self.is_exporting = True
         self.export_thread = threading.Thread(
-            target=self._export_worker, args=(weights_path, export_format)
+            target=self._export_worker,
+            args=(weights_path, export_format, allow_install),
         )
         self.export_thread.start()
         return True, "Export started successfully"
 
-    def _export_worker(self, weights_path: str, export_format: str):
+    def _export_worker(
+        self,
+        weights_path: str,
+        export_format: str,
+        allow_install: bool = False,
+    ):
         try:
             self.notify_callbacks(
                 "export_started",
@@ -252,21 +269,40 @@ class ExportManager:
             )
             missing_packages = get_export_validator(export_format)()
             if missing_packages:
+                missing_text = ", ".join(missing_packages)
+                manual = f"pip install {missing_text}"
                 self.notify_callbacks(
                     "export_log",
-                    {
-                        "message": f"Missing required packages: {', '.join(missing_packages)}"
-                    },
+                    {"message": f"Missing required packages: {missing_text}"},
                 )
+                if not allow_install:
+                    self.notify_callbacks(
+                        "export_error",
+                        {
+                            "error": (
+                                f"Exporting to {export_format} needs: "
+                                f"{missing_text}.\n\n"
+                                f"Install them first:\n{manual}\n\n"
+                                "Nothing was installed automatically."
+                            )
+                        },
+                    )
+                    return
                 self.notify_callbacks(
                     "export_log",
-                    {"message": "Attempting to install missing packages..."},
+                    {"message": "Installing the missing packages..."},
                 )
                 success, stdout, stderr = install_packages_with_timeout(
-                    missing_packages, timeout=30
+                    missing_packages
                 )
                 if not success:
-                    error_msg = f"Failed to install required packages: {', '.join(missing_packages)}. Please manually install these packages and restart the application."
+                    detail = stderr.strip() if stderr else ""
+                    error_msg = (
+                        f"Failed to install required packages: {missing_text}."
+                        f"{chr(10) + detail if detail else ''}"
+                        "\n\nInstall them manually and restart the "
+                        f"application:\n{manual}"
+                    )
                     self.notify_callbacks("export_error", {"error": error_msg})
                     return
                 self.notify_callbacks(
@@ -358,7 +394,10 @@ class ExportManager:
                 sys.stdout = original_stdout
                 sys.stderr = original_stderr
 
-                if os.environ.get("CUDA_VISIBLE_DEVICES") == "":
+                # The training dialog parks a disabled GPU as "-1"; an empty
+                # string turns up when something else pinned it.  Both mean
+                # "nothing selected", so both are cleared before exporting.
+                if os.environ.get("CUDA_VISIBLE_DEVICES") in ("", "-1"):
                     del os.environ["CUDA_VISIBLE_DEVICES"]
 
         except Exception as e:

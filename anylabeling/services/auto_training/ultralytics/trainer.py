@@ -262,27 +262,43 @@ def build_training_worker_command(payload_path: str):
 
 
 def create_training_payload(train_args: Dict) -> str:
-    payload_train_args = dict(train_args)
-    payload_train_args["model"] = resolve_training_model_path(
-        payload_train_args["model"]
-    )
+    """Persist the run arguments for the worker process.
+
+    The model name is NOT resolved here: resolving may download a pretrained
+    checkpoint, and doing that on the UI thread would freeze the dialog with
+    no visible feedback. The worker resolves it instead, where the download
+    progress lands in the training log.
+    """
     fd, payload_path = tempfile.mkstemp(
         prefix="jllabeling-train-", suffix=".json"
     )
     with os.fdopen(fd, "w", encoding="utf-8") as f:
-        json.dump(payload_train_args, f, ensure_ascii=False)
+        json.dump(dict(train_args), f, ensure_ascii=False)
     return payload_path
 
 
 def emit_training_worker_event(event_type: str, output_stream=None, **data):
     payload = {"event": event_type}
     payload.update(data)
-    stream = output_stream or sys.__stdout__ or sys.stdout
-    stream.write(
+    line = (
         f"{TRAINING_WORKER_EVENT_PREFIX}"
         f"{json.dumps(payload, ensure_ascii=False)}\n"
     )
-    stream.flush()
+    # sys.stdout is deliberately not a fallback: while training runs it is
+    # replaced by TrainingWorkerLogStream, which routes back into this
+    # function. A windowed (console=False) frozen build can also hand us a
+    # stream whose handle is invalid, where flush() raises OSError. Reporting
+    # an event must never crash the worker, or the real error is replaced by
+    # a confusing startup-crash dialog.
+    for stream in (output_stream, sys.__stdout__):
+        if stream is None:
+            continue
+        try:
+            stream.write(line)
+            stream.flush()
+            return
+        except (OSError, ValueError):
+            continue
 
 
 def handle_training_worker_output(output: str, notify_callbacks) -> bool:
@@ -515,6 +531,10 @@ def run_training_worker_command(args):
 
         from ultralytics import YOLO
 
+        # Resolve (and possibly download) the checkpoint here, in the worker:
+        # bare asset names like "yolov8n.pt" are fetched on demand, and the
+        # output stream is already routed into the training log.
+        train_args["model"] = resolve_training_model_path(train_args["model"])
         model = YOLO(train_args.pop("model"))
         train_args["verbose"] = False
         train_args["show"] = False

@@ -11,6 +11,7 @@ try:
     from anylabeling.views.labeling.label_widget import LabelingWidget
     from anylabeling.views.labeling.utils.async_label_check import (
         _label_file_review_state,
+        label_file_review_info,
     )
 
     QT_AVAILABLE = True
@@ -22,6 +23,7 @@ ANNOTATED_ROLE = QtCore.Qt.ItemDataRole.UserRole + 1
 NEGATIVE_ROLE = QtCore.Qt.ItemDataRole.UserRole + 2
 LOW_CONF_ROLE = QtCore.Qt.ItemDataRole.UserRole + 3
 FILE_REVIEW_ROLE = QtCore.Qt.ItemDataRole.UserRole + 4
+FILE_REVIEW_NOTE_ROLE = QtCore.Qt.ItemDataRole.UserRole + 6
 
 
 def _bind(widget, *names):
@@ -124,6 +126,7 @@ def make_widget(modes=("img_1.png", "img_2.png"), filter_mode="all"):
         "_label_path_for_image",
         "_review_state_name",
         "_file_item_annotation_checked",
+        "_file_item_is_unchecked",
         "_apply_file_filter",
     )
     widget._file_sort_key = None
@@ -174,6 +177,33 @@ class TestReviewStateRows(unittest.TestCase):
         widget._apply_file_filter()
         self.assertTrue(items[0].hidden)
         self.assertFalse(items[1].hidden)
+
+    def test_unreviewed_filter_hides_every_row_that_has_a_verdict(self):
+        widget, items = make_widget(filter_mode="unreviewed")
+        widget._set_file_item_review_state(items[0], "rejected")
+        widget._set_file_item_review_state(items[1], "unchecked")
+        widget._apply_file_filter()
+        self.assertTrue(items[0].hidden)
+        self.assertFalse(items[1].hidden)
+
+    def test_rejected_row_is_not_unchecked(self):
+        widget, items = make_widget()
+        widget._set_file_item_review_state(items[0], "rejected")
+        self.assertFalse(widget._file_item_is_unchecked(items[0]))
+        self.assertTrue(widget._file_item_is_unchecked(items[1]))
+
+    def test_rejected_row_tooltip_shows_the_rework_reason(self):
+        widget, items = make_widget()
+        widget._set_file_item_review_state(items[0], "rejected", note="漏标")
+        self.assertEqual(items[0].data(FILE_REVIEW_NOTE_ROLE), "漏标")
+        self.assertIn("返工原因：漏标", items[0].tooltip)
+
+    def test_note_clears_once_the_row_is_no_longer_rejected(self):
+        widget, items = make_widget()
+        widget._set_file_item_review_state(items[0], "rejected", note="漏标")
+        widget._set_file_item_review_state(items[0], "confirmed")
+        self.assertIsNone(items[0].data(FILE_REVIEW_NOTE_ROLE))
+        self.assertNotIn("返工原因", items[0].tooltip)
 
 
 @unittest.skipUnless(QT_AVAILABLE, "PyQt6 is required")
@@ -235,9 +265,7 @@ class TestReviewStatePersistence(unittest.TestCase):
             self.assertEqual(data["review_state"], "rejected")
             self.assertIs(data["checked"], False)
             self.assertTrue(data["reviewed_at"])
-            self.assertEqual(
-                _label_file_review_state(filename), "rejected"
-            )
+            self.assertEqual(_label_file_review_state(filename), "rejected")
             self.assertEqual(widget._current_review_state(), "rejected")
 
     def test_confirm_then_uncheck_drops_the_timestamp(self):
@@ -257,6 +285,50 @@ class TestReviewStatePersistence(unittest.TestCase):
             self.assertIsNone(data["reviewed_at"])
             self.assertEqual(data["review_state"], "unchecked")
             self.assertIs(data["checked"], False)
+
+    def test_reject_writes_the_rework_reason_and_scanner_reads_it(self):
+        with tempfile.TemporaryDirectory() as directory:
+            _write_png(os.path.join(directory, "img_1.png"))
+            filename = os.path.join(directory, "img_1.json")
+            widget = self._widget(directory, filename)
+            widget._apply_review_state("rejected", note="类别错误")
+
+            with open(filename, "r", encoding="utf-8") as stream:
+                data = json.load(stream)
+            self.assertEqual(data["review_note"], "类别错误")
+            state, _reviewed_at, note = label_file_review_info(filename)
+            self.assertEqual(state, "rejected")
+            self.assertEqual(note, "类别错误")
+
+    def test_confirming_drops_a_previous_rework_reason(self):
+        with tempfile.TemporaryDirectory() as directory:
+            _write_png(os.path.join(directory, "img_1.png"))
+            filename = os.path.join(directory, "img_1.json")
+            widget = self._widget(directory, filename)
+            widget._apply_review_state("rejected", note="漏标")
+            widget._apply_review_state("confirmed")
+
+            with open(filename, "r", encoding="utf-8") as stream:
+                data = json.load(stream)
+            self.assertIsNone(data["review_note"])
+            self.assertIsNone(label_file_review_info(filename)[2])
+
+    def test_scanner_ignores_a_stale_note_on_a_confirmed_file(self):
+        # A hand-edited JSON must not leak a reason onto a confirmed row.
+        with tempfile.TemporaryDirectory() as directory:
+            filename = os.path.join(directory, "img_1.json")
+            with open(filename, "w", encoding="utf-8") as stream:
+                json.dump(
+                    {
+                        "review_state": "confirmed",
+                        "review_note": "漏标",
+                        "shapes": [],
+                    },
+                    stream,
+                )
+            state, _reviewed_at, note = label_file_review_info(filename)
+            self.assertEqual(state, "confirmed")
+            self.assertIsNone(note)
 
 
 if __name__ == "__main__":

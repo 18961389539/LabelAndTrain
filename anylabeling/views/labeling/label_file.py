@@ -13,6 +13,8 @@ from .label_converter import LabelConverter
 from .logger import logger
 from .schema import (
     REVIEW_CONFIRMED,
+    REVIEW_NOTE_FIELD,
+    REVIEW_REJECTED,
     REVIEW_STATES,
     REVIEW_UNCHECKED,
     XLABEL_BASIC_FIELDS,
@@ -128,6 +130,7 @@ class LabelFile:
         review_state = review_state_of(data)
         other_data["review_state"] = review_state
         other_data["reviewed_at"] = data.get("reviewed_at")
+        other_data[REVIEW_NOTE_FIELD] = data.get(REVIEW_NOTE_FIELD)
         # `checked` always mirrors the state: existing consumers, including
         # the "train on checked files only" filter, keep reading it.
         other_data["checked"] = is_review_confirmed(review_state)
@@ -167,6 +170,12 @@ class LabelFile:
             review_state = REVIEW_CONFIRMED if checked else REVIEW_UNCHECKED
         reviewed_at = other_data.get("reviewed_at")
         checked = is_review_confirmed(review_state)
+        # The reason only means something while the file is rejected; a
+        # confirm or uncheck must not leave a stale one behind, whatever
+        # the caller passed in.
+        review_note = other_data.get(REVIEW_NOTE_FIELD)
+        if review_state != REVIEW_REJECTED:
+            review_note = None
         for i, shape in enumerate(shapes):
             if shape["shape_type"] == "rectangle":
                 sorted_box = LabelConverter.calculate_bounding_box(
@@ -186,6 +195,7 @@ class LabelFile:
             checked=checked,
             review_state=review_state,
             reviewed_at=reviewed_at,
+            review_note=review_note,
             shapes=shapes,
             image_path=image_path,
             image_data=image_data,
@@ -194,7 +204,12 @@ class LabelFile:
         )
 
         for key, value in other_data.items():
-            if key in ("checked", "review_state", "reviewed_at"):
+            if key in (
+                "checked",
+                "review_state",
+                "reviewed_at",
+                REVIEW_NOTE_FIELD,
+            ):
                 continue
             assert key not in data
             data[key] = value

@@ -10,7 +10,7 @@ calling ``canvas._rotation_handle_*`` unchanged. The drag state
 import math
 
 from PyQt6 import QtCore, QtGui
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QCoreApplication, Qt
 
 from .. import utils
 from ..shape import Shape
@@ -180,8 +180,15 @@ class CanvasRotationMixin:
         self.prev_h_rotation_shape = self.h_rotation_shape
         self.h_rotation_shape = shape
         self.override_cursor(CURSOR_POINT)
+        # Explicit context on purpose.  The receiver at runtime is ``Canvas``
+        # (the derived class), so the ``CanvasRotationMixin`` context that
+        # pylupdate derives for this file never matches at lookup time and the
+        # tooltip silently stayed English.
         self.setToolTip(
-            self.tr("Click & drag to rotate shape '%s'") % shape.label
+            QCoreApplication.translate(
+                "Canvas", "Click & drag to rotate shape '%s'"
+            )
+            % shape.label
         )
         self.setStatusTip(self.toolTip())
         self.update()
@@ -242,7 +249,7 @@ class CanvasRotationMixin:
             self.rotating_shape = True
             self.h_shape = shape
             self.h_rotation_shape = shape
-            self.repaint()
+            self.update()
 
     def _store_rotated_shape(self, shape):
         if shape is None or shape not in self.shapes:

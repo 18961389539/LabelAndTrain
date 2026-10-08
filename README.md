@@ -50,9 +50,9 @@ annotation engine, canvas and model plug-in architecture. It is deliberately
 no server, no accounts, no task assignment.
 
 What the fork adds is the loop around annotation: review state per image,
-provenance per shape, threshold calibration, active-learning sample ranking, a
+provenance per shape, threshold calibration, active-learning sample ranking, an
 Ultralytics training panel, and a one-click path that feeds the freshly trained
-weights back into auto labeling - then reports what the previous round's model
+weights back into auto labeling — then reports what the previous round's model
 left behind.
 
 The command is `jllabelingandtrain`, and nothing else: there is no
@@ -62,15 +62,44 @@ The command is `jllabelingandtrain`, and nothing else: there is no
 training runs), `xanylabeling_logs/`, the Qt settings domain, and the Python
 package `anylabeling` itself.
 
+The interface ships one language: Simplified Chinese (`zh_CN` is the only
+catalog and it is always loaded). Upstream text is English source translated by
+that catalog; text this fork adds is written in Chinese directly.
+
+## Quick start
+
+Installation is source-only — see [Installation & Quickstart](./docs/en/get_started.md).
+
+1. **Open a folder** (`Ctrl+U`; `Ctrl+I` opens a single image). Images are read
+   from the folder, and each label JSON lives beside its image under the same
+   stem.
+2. **Annotate or let a model do it.** Pick an auto-labeling model in the
+   panel on the right (SAM2 wants a click or two, YOLO just runs), or use
+   `一键推理` to run the current model over the whole open folder.
+3. **Review.** Mark every image 已检查 (confirmed) or 需返工 (needs rework) —
+   `Ctrl+Shift+J` / `Ctrl+Shift+K` — and let the review filters walk you
+   through what is left.
+4. **Train** (`Training → Ultralytics`). Pick the task on the Data tab, keep the
+   defaults on the Config tab (weights download on first use), and press
+   `Start Training`. See the [training guide](./examples/training/ultralytics/README.md).
+5. **Feed it back.** `用于自动标注` exports the run's `best.pt` to ONNX, loads it
+   as an auto-label model and offers to re-predict the folder; the iteration
+   dashboard then reports what the previous round's boxes cost you.
+6. **Repeat.** The train/val split is pinned per dataset, so the next round's
+   mAP is comparable with this one.
+
+Every screen explains itself on hover — field labels, buttons, filters and rows
+carry a tooltip saying what they do.
+
 ## Fork scope
 
 This is a trimmed build. Compared with upstream it does **not** include:
 
-- Remote inference service (X-AnyLabeling-Server), video, audio or point-cloud input — **images only**.
+- Remote inference service (X-AnyLabeling-Server), video, audio or point-cloud input — **images only** (any format Qt can read, plus HEIC).
 - The ~90-model upstream zoo. This build ships **8 loadable model types** and **two** built-in config files (SAM2 tiny/base); everything else is registered by you as a custom model YAML.
 - Pruned task panels: OCR / PPOCR / KIE, VQA, chatbot, document parsing (PaddleOCR-VL), tagging & captioning, face estimation, depth, counting, grounding, matting, lane detection, multi-object tracking, interactive video segmentation.
-- Most exchange formats: `DOTA`, `MOT`, `MASK`, `PPOCR`, `MMGD`, `VLM-R1`, `ShareGPT` are gone. See [Formats](#formats).
-- Japanese / Korean UI, and no English interface either: the only catalog is `zh_CN` and it is always the one loaded. Upstream text is English source translated by that catalog, while text this fork adds is written in Chinese directly - so Chinese is the source language for everything the fork owns.
+- Most exchange formats: `DOTA`, `MOT`, `MASK`, `PPOCR`, `MMGD`, `VLM-R1`, `ShareGPT` are gone. See [Formats](#label-formats).
+- A translatable UI: only `zh_CN` ships.
 
 Docs and examples for pruned features are still in the tree (`docs/en/chatbot.md`,
 `examples/grounding/`, …). They describe **upstream**, not this build.
@@ -89,19 +118,85 @@ maps what the contract still owns and where the next extractions would go.
 
 ## Features
 
-- Auto-labeling: SAM2 interactive prompts, prompt-free automatic mask generation, YOLO detection / segmentation / pose / classification.
-- One-click inference over the whole open folder, cancellable, with skip-existing and a failure report.
-- Custom models without editing source: point the UI at a model YAML (up to 30 stored, iteration models are pinned and never evicted).
+### Annotation
+
+- Shapes: `rectangle`, `polygon` (with brush painting), `rotation` (OBB),
+  `cuboid`, `quadrilateral`, `circle`, `line`, `linestrip`, `point`.
+- Per shape: label, group id, description, difficulty flag, free-form flags,
+  attributes, and a lock that keeps it out of the way while you edit.
+- Canvas: zoom/pan, brightness & contrast, crosshair, vertex editing with
+  keyboard nudges, per-image undo that survives switching files (up to 20
+  images), keep-previous-image overlays, and a thumbnail strip.
+- Label list: search, class filters, group-id filters, visibility/lock toggles,
+  and a per-object hover card (class, shape, producer, confidence, vertex
+  count, bounding box, attributes, description, protection state).
+
+### Auto-labeling
+
+- **SAM2** as an interactive prompt model (click/box prompts, one object at a
+  time) and as prompt-free automatic mask generation over a whole image.
+- **YOLO** detection, instance segmentation, pose and classification, plus a
+  `yolov8_sam2` combination model.
+- `一键推理` runs the current model over every image in the open folder — it can
+  be cancelled, can skip images that already have labels, and ends with a
+  failure report listing whatever it could not process.
+- Custom models without touching source: point the UI at a model YAML (up to 30
+  stored; models produced by an iteration are pinned and never evicted).
 - Backends: ONNX Runtime (CPU / CUDA), TensorRT, OpenCV DNN.
-- Annotation shapes: `rectangle`, `polygon` (with brush painting), `rotation` (OBB), `cuboid`, `quadrilateral`, `circle`, `line`, `linestrip`, `point`; per-shape lock, group id, description, difficulty, flags.
-- Review workflow: every image carries `review_state` (`unchecked` / `confirmed` / `rejected`) plus a timestamp; filter and progress counts follow.
-- Provenance: every shape records whether a human or a model drew it, and which model — plus a content digest of that model's weights, so retraining over `best.onnx` under the same name does not hide the previous round's boxes. "Send back for rework" and "clear the old round's boxes" stay answerable questions rather than guesses.
-- Training: Ultralytics only, four tasks (Detect / Segment / Pose / Classify), ~40 tunable parameters, runs in a separate process that can be stopped or resumed, 14 export formats.
-- Reproducibility: each build writes a dataset `manifest.json` (every label file with its content hash, split assignment, class list, seed) and each finished run writes `run_meta.json` (weights hash, exact arguments, manifest hash, metrics).
-- Recovery: deleting boxes on the image currently open is an ordinary Ctrl+Z (one press undoes the whole batch). Files the canvas is not holding are snapshotted to `.label_backups/<stamp>/` before the write, and 智能工具 → 11. 从备份恢复标注 writes a chosen snapshot back after snapshotting what it replaces.
-- Hover detail: an object row shows its class, shape, producer (model name + weight digest), confidence, vertex count and bounding box, attributes, description and what protects it (locked / difficult / hidden); a file row shows its path, label file, review state with timestamp and, for the open image, the model/human/unknown split. The floating panel's grip and collapse button, the zoom box, both filters and the preview sliders explain themselves the same way.
-- Smart-tools set (Chinese-labelled menu 智能工具): threshold calibration, dataset analysis, missed-label scan, iteration dashboard, review-jump queue, label propagation, duplicate archiving, training advice, template pre-labeling, stale model-box audit. The review-jump queue holds every uncertain image; only the audit dialog limits what it lists (100 per category, with the real total in the heading).
-- Settings survive restarts through a `Settings` dialog; per-dataset choices live in `.jllabel/project.json`.
+
+### Review & quality
+
+- Every image carries `review_state` (`unchecked` / `confirmed` / `rejected` —
+  未检查 / 已检查 / 需返工) plus `reviewed_at`; the legacy `checked` field is
+  still written so older tools keep working.
+- Filters and progress counts follow the review state; `Ctrl+Shift+D` opens the
+  next unchecked image, `Ctrl+Shift+J`/`Ctrl+Shift+K` confirm or send back and
+  move on.
+- 智能复核 walks the images ranked by uncertainty (low confidence, few shapes,
+  model disagreement), so the review session starts where it matters.
+
+### Provenance & rework
+
+- Every shape records whether a human or a model drew it, which model, and a
+  content digest of that model's weights (`model_version`) — so retraining over
+  `best.onnx` under the same name does not hide the previous round's boxes.
+- 旧轮模型框盘点 lists boxes by producing model with stale ones ticked for
+  removal; locked and unattributed shapes never participate, and affected files
+  are snapshotted before the write.
+
+### Smart tools
+
+The 智能工具 menu (Chinese-labelled, like every fork-added surface):
+threshold calibration, dataset analysis, missed-label scan, iteration dashboard,
+review-jump queue, label propagation, duplicate archiving, training advice,
+template pre-labeling, stale model-box audit, and restore-from-backup. The
+review-jump queue holds every uncertain image; only the audit dialog limits what
+it lists (100 per category, with the real total in the heading).
+
+### Project management & settings
+
+- Per-dataset record in `.jllabel/project.json`: class list, review counts,
+  train/val split seed, last training tuning, and other choices that belong to
+  *this* folder rather than to the machine.
+- A project switcher to move between datasets without hunting for folders, and
+  per-dataset filters that survive restarts.
+- Settings dialog for global behaviour (auto-save, model hub, thresholds,
+  paths) — and for **shortcuts**: 118 keys ship, 96 bound and 22 deliberately
+  unbound and rebindable; `F1` shows a cheat sheet that includes a 未绑定动作
+  section while a key is unassigned.
+
+### Reproducibility & recovery
+
+- Each dataset build writes a `manifest.json` (every label file with its content
+  hash, split assignment, class list and seed) and each finished run writes
+  `run_meta.json` (weights hash, exact arguments, manifest hash, metrics), so a
+  result can be tied back to the annotations and arguments that produced it.
+- The split seed is pinned per dataset, so round N and round N+1 are comparable.
+- Deleting boxes on the image currently open is an ordinary Ctrl+Z (one press
+  undoes the whole batch). Files the canvas is not holding are snapshotted to
+  `.label_backups/<stamp>/` before the write, a session snapshot is kept for the
+  first write to each label file, and 智能工具 → 11. 从备份恢复标注 writes a
+  chosen snapshot back after snapshotting what it replaces.
 
 ## Auto-labeling model types
 
@@ -116,7 +211,7 @@ maps what the contract still owns and where the next extractions would go.
 Built-in configs: `sam2_hiera_base`, `sam2_hiera_tiny`. Add your own through
 [Customize a model](./docs/en/custom_model.md).
 
-## Formats
+## Label formats
 
 | Direction | YOLO (hbb / seg / obb / pose) | VOC | COCO |
 | :--- | :--- | :--- | :--- |
@@ -126,6 +221,12 @@ Built-in configs: `sam2_hiera_base`, `sam2_hiera_tiny`. Add your own through
 Native format is the XLABEL JSON (`*.json` per image, `checked` /
 `review_state` / `shapes[]` with `source` and `model`).
 
+A batch export writes an `export_manifest.json` next to its output: the class
+list *and where it came from*, the mode, which filters were on (仅已确认 /
+跳过空标注 / 复制图片 / `classes.txt`), the counts the run reported, and what the
+pre-export check found. It exists so "how was this batch exported" is answerable
+months later.
+
 ## Training loop
 
 ```
@@ -134,11 +235,71 @@ annotate → review (confirmed / rejected) → train on checked files
         → re-predict folder → report the previous round's boxes
 ```
 
-- Only checked images enter the dataset; negatives (empty JSONs) are kept as background samples.
-- Split seed is pinned per dataset in `.jllabel/project.json`, so round N and round N+1 are comparable.
-- `用于自动标注` covers detection, segmentation, pose (needs the same pose config as training) and classification; a classifier returns confirmable suggestions rather than shapes.
-- Runs live under `<work_dir>/xanylabeling_data/trainer/ultralytics/runs/<task>/`; after a run the app offers to reclaim old dataset copies.
-- `Training → 实验历史` (run history) tables every run that wrote `run_meta.json`, newest first, with the iteration round that produced it, and exports to CSV. Runs trained into a custom `Project` path are not listed, and the dialog says which folder it scanned.
+- Ultralytics only, four tasks (Detect / Segment / Pose / Classify), ~40 tunable
+  parameters, runs in a separate process that can be stopped and **resumed from
+  its checkpoint**, with three one-click presets (快速验证 / 标准 / 高精度).
+- On a CPU-only machine the form adapts: AMP is switched off, untouched
+  epochs/batch/imgsz are filled with a CPU-friendly preset, and the status area
+  reports the dataset build and an estimated time left.
+- Only checked images enter the dataset; negatives (empty JSONs) are kept as
+  background samples. The dataset is rebuilt per run from a pinned seed.
+- `用于自动标注` covers detection, segmentation, pose (needs the same pose config
+  as training) and classification; a classifier returns confirmable suggestions
+  rather than shapes.
+- 14 export formats (ONNX, TorchScript, OpenVINO, TensorRT, CoreML, TF
+  SavedModel / Lite / Edge TPU / TF.js, PaddlePaddle, MNN, NCNN, IMX500, RKNN).
+- Runs live under `<work_dir>/xanylabeling_data/trainer/ultralytics/runs/<task>/`;
+  after a run the app offers to reclaim old dataset copies.
+- `Training → 实验历史` (run history) tables every run that wrote `run_meta.json`,
+  newest first, with the iteration round that produced it, and exports to CSV.
+  Runs trained into a custom `Project` path are not listed, and the dialog says
+  which folder it scanned.
+
+The full walkthrough — data requirements, every setting, resume rules, CPU
+training, error remedies and where the outputs land — is in the
+[training guide](./examples/training/ultralytics/README.md)
+([中文](./examples/training/ultralytics/README_zh-CN.md)).
+
+## Where the files live
+
+```
+<work_dir>/                          ~ by default; --work-dir overrides it
+├── .xanylabelingrc                  application settings
+├── xanylabeling_logs/               rotating application log
+└── xanylabeling_data/
+    ├── models/                      downloaded auto-labeling weights
+    └── trainer/ultralytics/
+        ├── weights/                 downloaded pretrained .pt for training
+        ├── data/                    generated class-list YAMLs
+        ├── datasets/<task>/         one dataset build per training run
+        └── runs/<task>/<name>/      weights/, results.csv, run_meta.json, logs/
+```
+
+Your images and label JSONs stay where you put them; the only thing written
+beside them is the optional `.jllabel/` project record and `.label_backups/`.
+
+## What's new in this fork
+
+Recent, user-visible changes; the full history is in [CHANGELOG.md](./CHANGELOG.md).
+
+- Training is a usable loop end to end: resume from a stopped run's checkpoint,
+  one-click presets, CPU-aware defaults, an estimated time left, a failure
+  dialog that offers the fix (halve the batch / reset workers / switch to CPU),
+  an in-dialog pager over every training image, and logs written to disk when a
+  run ends instead of only when the window closes.
+- Training reproducibility: dataset `manifest.json` and per-run `run_meta.json`,
+  plus a per-dataset split seed; `Training → 实验历史` tables the runs.
+- Review as a first-class state: `未检查 / 已检查 / 需返工` with timestamps,
+  filters, and a queue ranked by uncertainty.
+- Provenance per shape (`source`, model name, weight digest) and the stale-box
+  audit that uses it.
+- Recovery: Ctrl+Z across images, `.label_backups` snapshots, session snapshots
+  and 从备份恢复标注.
+- Smart tools (11), hover detail nearly everywhere, rebindable shortcuts with an
+  F1 cheat sheet, and a Chinese-only interface whose fork-added text is Chinese
+  at the source.
+- A CPU-only training build (`win-cpu-train`) that bundles CPU torch and
+  Ultralytics.
 
 ## Docs
 
@@ -146,14 +307,29 @@ annotate → review (confirmed / rejected) → train on checked files
 2. [Usage](./docs/en/user_guide.md)
 3. [Command Line Interface](./docs/en/cli.md)
 4. [Customize a model](./docs/en/custom_model.md)
-5. [Model zoo (upstream)](./docs/en/model_zoo.md)
+5. [Training guide](./examples/training/ultralytics/README.md)
+
+Fork-only features are documented in Chinese in
+[`docs/zh_cn/fork_features.md`](./docs/zh_cn/fork_features.md), with
+[FAQ](./docs/zh_cn/faq.md) beside it. The pages below describe **upstream**
+features this build does not ship — they remain in the tree for reference:
+[Chatbot](./docs/en/chatbot.md), [VQA](./docs/en/vqa.md),
+[Image classifier](./docs/en/image_classifier.md),
+[Document parsing](./docs/en/paddle_ocr.md),
+[Model zoo](./docs/en/model_zoo.md).
 
 ## Examples
 
+What this build can actually do end to end:
+
 - [Classification](./examples/classification/) — image-level and shape-level
-- [Detection](./examples/detection/) — HBB and OBB
+- [Detection](./examples/detection/) — [HBB](./examples/detection/hbb/README.md) and [OBB](./examples/detection/obb/README.md)
 - [Segmentation](./examples/segmentation/) — instance, binary and multiclass semantic
-- [Training](./examples/training/ultralytics/README.md)
+- [Training](./examples/training/ultralytics/README.md) — the Ultralytics panel, in English and Chinese
+
+The other directories under `examples/` (OCR, tracking, video segmentation,
+matting, estimation, counting, grounding, vision-language, description) come
+from upstream; their models and panels are not part of this build.
 
 ## Development
 
@@ -163,9 +339,30 @@ uv pip install -e ".[cpu]" pytest
 QT_QPA_PLATFORM=offscreen .venv/Scripts/python.exe -m pytest tests
 ```
 
+Extras: `cpu`, `gpu` (CUDA 12), `gpu-cu11`, `gpu-cu13`, `dev`. Python 3.11+.
+
+Packaging goes through `scripts/build_executable.sh`, one PyInstaller spec per
+target: `win-cpu`, `win-cpu-train` (bundles CPU torch + Ultralytics so training
+works in the frozen app), `win-gpu`, `linux-cpu`, `linux-gpu`, `macos`.
+
 `.github/workflows/ci.yml` runs the suite on every push to `main` and on pull
 requests. Formatting and lint run through [pre-commit](./CONTRIBUTING.md); lint
-is not a blocking CI job because the repo carries pre-existing findings.
+is a **baseline** gate — the repo carries inherited findings in
+`scripts/flake8_baseline.txt` and fails only when a change adds new ones.
+
+## Contributing
+
+Bug reports, documentation fixes and features are all welcome. Please read the
+[contribution guide](./CONTRIBUTING.md) and confirm the
+[CLA](./CLA.md) before opening a pull request. If this project helps you, a ⭐
+on the repository is appreciated; issues about upstream behaviour belong in the
+[X-AnyLabeling tracker](https://github.com/CVHub520/X-AnyLabeling/issues).
+
+## Sponsor
+
+| **WeChat Pay** | **Alipay** |
+| :---: | :---: |
+| <img src="https://github.com/user-attachments/assets/0178cf76-3627-426e-8432-ec031c9278ae" width="400px" height="400px" style="object-fit: contain;" /> | <img src="https://github.com/user-attachments/assets/87544ff8-3560-4696-b035-1fd26ecd162b" width="400px" height="400px" style="object-fit: contain;" /> |
 
 ## License
 
@@ -173,6 +370,10 @@ This project is licensed under the [GPL-3.0 license](./LICENSE). It is a
 derivative work of [X-AnyLabeling](https://github.com/CVHub520/X-AnyLabeling)
 by Wei Wang / CVHub, and per its terms the upstream brand and source address
 must stay credited — here and in the about/status text of the application.
+
+Upstream also asks academic, research, teaching and enterprise users to fill in
+its [registration form](https://forms.gle/MZCKhU7UJ4TRSWxR7) (statistics only,
+no cost).
 
 ## Acknowledgement
 

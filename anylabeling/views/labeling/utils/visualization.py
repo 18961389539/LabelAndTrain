@@ -4,7 +4,7 @@ import os.path as osp
 import zipfile
 
 from PyQt6 import QtCore, QtGui
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QCoreApplication, Qt
 from PyQt6.QtWidgets import (
     QApplication,
     QButtonGroup,
@@ -76,7 +76,10 @@ def _check_filename_exist(self):
     if not self.filename:
         _show_popup(
             self,
-            self.tr("Please load an image folder before proceeding!"),
+            QCoreApplication.translate(
+                "LabelingWidget",
+                "Please load an image folder before proceeding!",
+            ),
             "warning",
         )
         return False
@@ -86,7 +89,9 @@ def _check_filename_exist(self):
 
 def _show_visualization_dialog(self):
     dialog = QDialog(self)
-    title = self.tr("Visualization Image Options")
+    title = QCoreApplication.translate(
+        "LabelingWidget", "Visualization Image Options"
+    )
     dialog.setWindowTitle(title)
     dialog.setMinimumWidth(520)
     dialog.setStyleSheet(get_export_option_style())
@@ -99,11 +104,17 @@ def _show_visualization_dialog(self):
     all_files_radio = None
 
     # image export range
-    layout.addWidget(QLabel(self.tr("Export Range")))
+    layout.addWidget(
+        QLabel(QCoreApplication.translate("LabelingWidget", "Export Range"))
+    )
     range_layout = QHBoxLayout()
     range_layout.setSpacing(16)
-    current_frame_radio = QRadioButton(self.tr("Current Frame"))
-    all_files_radio = QRadioButton(self.tr("All Files"))
+    current_frame_radio = QRadioButton(
+        QCoreApplication.translate("LabelingWidget", "Current Frame")
+    )
+    all_files_radio = QRadioButton(
+        QCoreApplication.translate("LabelingWidget", "All Files")
+    )
     current_frame_radio.setChecked(True)
     range_group = QButtonGroup(dialog)
     range_group.addButton(current_frame_radio)
@@ -112,7 +123,9 @@ def _show_visualization_dialog(self):
     range_layout.addWidget(all_files_radio)
     range_layout.addStretch()
     layout.addLayout(range_layout)
-    layout.addWidget(QLabel(self.tr("Shape Types")))
+    layout.addWidget(
+        QLabel(QCoreApplication.translate("LabelingWidget", "Shape Types"))
+    )
     shape_grid = QGridLayout()
     shape_grid.setHorizontalSpacing(12)
     shape_grid.setVerticalSpacing(8)
@@ -125,22 +138,42 @@ def _show_visualization_dialog(self):
         shape_grid.addWidget(checkbox, index // 3, index % 3)
     layout.addLayout(shape_grid)
 
-    layout.addWidget(QLabel(self.tr("Visualization Options")))
+    layout.addWidget(
+        QLabel(
+            QCoreApplication.translate(
+                "LabelingWidget", "Visualization Options"
+            )
+        )
+    )
     options_grid = QGridLayout()
     options_grid.setHorizontalSpacing(12)
     options_grid.setVerticalSpacing(8)
 
-    save_labels_checkbox = QCheckBox(self.tr("Save Labels"))
+    save_labels_checkbox = QCheckBox(
+        QCoreApplication.translate("LabelingWidget", "Save Labels")
+    )
     save_labels_checkbox.setChecked(self.canvas.show_labels)
-    save_scores_checkbox = QCheckBox(self.tr("Save Scores"))
+    save_scores_checkbox = QCheckBox(
+        QCoreApplication.translate("LabelingWidget", "Save Scores")
+    )
     save_scores_checkbox.setChecked(self.canvas.show_scores)
-    save_groups_checkbox = QCheckBox(self.tr("Save Group IDs"))
+    save_groups_checkbox = QCheckBox(
+        QCoreApplication.translate("LabelingWidget", "Save Group IDs")
+    )
     save_groups_checkbox.setChecked(self.canvas.show_groups)
-    save_texts_checkbox = QCheckBox(self.tr("Save Texts"))
+    save_texts_checkbox = QCheckBox(
+        QCoreApplication.translate("LabelingWidget", "Save Texts")
+    )
     save_texts_checkbox.setChecked(self.canvas.show_texts)
-    save_masks_checkbox = QCheckBox(self.tr("Save Semi-transparent Masks"))
+    save_masks_checkbox = QCheckBox(
+        QCoreApplication.translate(
+            "LabelingWidget", "Save Semi-transparent Masks"
+        )
+    )
     save_masks_checkbox.setChecked(self.canvas.show_masks)
-    skip_empty_files_checkbox = QCheckBox(self.tr("Skip Empty Files"))
+    skip_empty_files_checkbox = QCheckBox(
+        QCoreApplication.translate("LabelingWidget", "Skip Empty Files")
+    )
     skip_empty_files_checkbox.setChecked(False)
 
     option_widgets = [
@@ -159,21 +192,28 @@ def _show_visualization_dialog(self):
     button_layout.setContentsMargins(0, 8, 0, 0)
     button_layout.setSpacing(8)
 
-    cancel_button = QPushButton(self.tr("Cancel"))
+    cancel_button = QPushButton(
+        QCoreApplication.translate("LabelingWidget", "Cancel")
+    )
     cancel_button.clicked.connect(dialog.reject)
     cancel_button.setStyleSheet(get_cancel_btn_style())
 
-    ok_button = QPushButton(self.tr("OK"))
+    ok_button = QPushButton(QCoreApplication.translate("LabelingWidget", "OK"))
     ok_button.setStyleSheet(get_ok_btn_style())
 
     def accept_dialog():
         if not any(checkbox.isChecked() for checkbox in shape_checkboxes):
             msg_box = QMessageBox(dialog)
             msg_box.setIcon(QMessageBox.Icon.Warning)
-            msg_box.setWindowTitle(self.tr("Shape Types Required"))
+            msg_box.setWindowTitle(
+                QCoreApplication.translate(
+                    "LabelingWidget", "Shape Types Required"
+                )
+            )
             msg_box.setText(
-                self.tr(
-                    "No shape types selected. Please select at least one shape type before exporting."
+                QCoreApplication.translate(
+                    "LabelingWidget",
+                    "No shape types selected. Please select at least one shape type before exporting.",
                 )
             )
             msg_box.setStyleSheet(get_msg_box_style())
@@ -221,8 +261,9 @@ def _save_visualization_image(self, options):
     if image_range == "all" and not _has_single_directory(image_files):
         _show_popup(
             self,
-            self.tr(
-                "Batch zip export does not support nested or mixed directories yet."
+            QCoreApplication.translate(
+                "LabelingWidget",
+                "Batch zip export does not support nested or mixed directories yet.",
             ),
             "warning",
             popup_height=65,
@@ -233,18 +274,26 @@ def _save_visualization_image(self, options):
     if image_range == "current":
         save_path, _ = QFileDialog.getSaveFileName(
             self,
-            self.tr("Save Visualization Image"),
+            QCoreApplication.translate(
+                "LabelingWidget", "Save Visualization Image"
+            ),
             default_path,
-            self.tr("PNG Image (*.png);;All Files (*)"),
+            QCoreApplication.translate(
+                "LabelingWidget", "PNG Image (*.png);;All Files (*)"
+            ),
             options=QFileDialog.Option.DontUseNativeDialog,
         )
         save_path = _ensure_extension(save_path, ".png") if save_path else ""
     else:
         save_path, _ = QFileDialog.getSaveFileName(
             self,
-            self.tr("Save Visualization Images"),
+            QCoreApplication.translate(
+                "LabelingWidget", "Save Visualization Images"
+            ),
             default_path,
-            self.tr("Zip Archive (*.zip);;All Files (*)"),
+            QCoreApplication.translate(
+                "LabelingWidget", "Zip Archive (*.zip);;All Files (*)"
+            ),
             options=QFileDialog.Option.DontUseNativeDialog,
         )
         save_path = _ensure_extension(save_path, ".zip") if save_path else ""
@@ -272,7 +321,10 @@ def _export_current_image(self, save_path, options):
         )
         _show_popup(
             self,
-            self.tr("Error occurred while exporting visualization image!"),
+            QCoreApplication.translate(
+                "LabelingWidget",
+                "Error occurred while exporting visualization image!",
+            ),
             "error",
             popup_height=65,
         )
@@ -280,7 +332,10 @@ def _export_current_image(self, save_path, options):
 
     _show_popup(
         self,
-        self.tr("Visualization image saved to:\n%s") % save_path,
+        QCoreApplication.translate(
+            "LabelingWidget", "Visualization image saved to:\n%s"
+        )
+        % save_path,
         "copy-green",
         popup_height=65,
     )
@@ -288,7 +343,9 @@ def _export_current_image(self, save_path, options):
 
 def _export_image_zip(self, save_path, image_files, options):
     progress_dialog = _create_progress_dialog(
-        self, self.tr("Exporting..."), len(image_files)
+        self,
+        QCoreApplication.translate("LabelingWidget", "Exporting..."),
+        len(image_files),
     )
     canceled = False
     exported_count = 0
@@ -322,7 +379,10 @@ def _export_image_zip(self, save_path, image_files, options):
         )
         _show_popup(
             self,
-            self.tr("Error occurred while exporting visualization images!"),
+            QCoreApplication.translate(
+                "LabelingWidget",
+                "Error occurred while exporting visualization images!",
+            ),
             "error",
             popup_height=65,
         )
@@ -333,12 +393,21 @@ def _export_image_zip(self, save_path, image_files, options):
     if canceled or exported_count == 0:
         _remove_file(save_path)
         if exported_count == 0 and not canceled:
-            _show_popup(self, self.tr("No files to export."), "warning")
+            _show_popup(
+                self,
+                QCoreApplication.translate(
+                    "LabelingWidget", "No files to export."
+                ),
+                "warning",
+            )
         return
 
     _show_popup(
         self,
-        self.tr("Visualization images saved to:\n%s") % save_path,
+        QCoreApplication.translate(
+            "LabelingWidget", "Visualization images saved to:\n%s"
+        )
+        % save_path,
         "copy-green",
         popup_height=65,
     )
@@ -563,16 +632,28 @@ def _confirm_overwrite(self, save_path):
 
     msg_box = QMessageBox(self)
     msg_box.setIcon(QMessageBox.Icon.Warning)
-    msg_box.setWindowTitle(self.tr("Output File Exists!"))
-    msg_box.setText(self.tr("File already exists. Choose an action:"))
-    msg_box.setInformativeText(
-        self.tr(
-            "• Overwrite - Overwrite existing file\n" "• Cancel - Abort export"
+    msg_box.setWindowTitle(
+        QCoreApplication.translate("LabelingWidget", "Output File Exists!")
+    )
+    msg_box.setText(
+        QCoreApplication.translate(
+            "LabelingWidget", "File already exists. Choose an action:"
         )
     )
-    msg_box.addButton(self.tr("Overwrite"), QMessageBox.ButtonRole.YesRole)
+    msg_box.setInformativeText(
+        QCoreApplication.translate(
+            "LabelingWidget",
+            "• Overwrite - Overwrite existing file\n"
+            "• Cancel - Abort export",
+        )
+    )
+    msg_box.addButton(
+        QCoreApplication.translate("LabelingWidget", "Overwrite"),
+        QMessageBox.ButtonRole.YesRole,
+    )
     cancel_button = msg_box.addButton(
-        self.tr("Cancel"), QMessageBox.ButtonRole.RejectRole
+        QCoreApplication.translate("LabelingWidget", "Cancel"),
+        QMessageBox.ButtonRole.RejectRole,
     )
     msg_box.setStyleSheet(get_msg_box_style())
     msg_box.exec()
@@ -581,10 +662,16 @@ def _confirm_overwrite(self, save_path):
 
 def _create_progress_dialog(self, label_text, maximum):
     progress_dialog = QProgressDialog(
-        label_text, self.tr("Cancel"), 0, maximum, self
+        label_text,
+        QCoreApplication.translate("LabelingWidget", "Cancel"),
+        0,
+        maximum,
+        self,
     )
     progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
-    progress_dialog.setWindowTitle(self.tr("Progress"))
+    progress_dialog.setWindowTitle(
+        QCoreApplication.translate("LabelingWidget", "Progress")
+    )
     progress_dialog.setMinimumWidth(500)
     progress_dialog.setMinimumHeight(150)
     progress_dialog.setStyleSheet(

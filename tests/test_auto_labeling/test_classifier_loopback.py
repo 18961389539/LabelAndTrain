@@ -5,6 +5,7 @@ import os
 
 import numpy as np
 import pytest
+from PyQt6 import QtGui
 
 from anylabeling.services.auto_labeling.types import AutoLabelingResult
 
@@ -93,13 +94,27 @@ def _adapter(onnx_path, **overrides):
 
 
 def _solid_image(value_per_channel):
-    """BGR image where each channel is a flat intensity."""
-    blue, green, red = value_per_channel
+    """RGB array where each channel is a flat intensity.
+
+    This is what ``preprocess`` takes.  ``predict_shapes`` normalises the
+    incoming QImage into this form with ``qt_img_to_rgb_cv_img`` first — the
+    conversion used to be missing outright, which made every classification
+    attempt raise inside ``cv2.cvtColor``.
+    """
+    red, green, blue = value_per_channel
     array = np.zeros((SIZE, SIZE, 3), dtype=np.uint8)
-    array[:, :, 0] = blue
+    array[:, :, 0] = red
     array[:, :, 1] = green
-    array[:, :, 2] = red
+    array[:, :, 2] = blue
     return array
+
+
+def _solid_qimage(value_per_channel):
+    """The same solid colour as a QImage — what callers actually hand over."""
+    red, green, blue = value_per_channel
+    image = QtGui.QImage(SIZE, SIZE, QtGui.QImage.Format.Format_RGB32)
+    image.fill(QtGui.QColor(red, green, blue))
+    return image
 
 
 def test_softmax_is_a_distribution():
@@ -111,7 +126,7 @@ def test_softmax_is_a_distribution():
 def test_adapter_reports_shapes_free_predictions(model_dir):
     _tmp, onnx_path = model_dir
     adapter = _adapter(onnx_path)
-    result = adapter.predict_shapes(_solid_image((10, 10, 200)))
+    result = adapter.predict_shapes(_solid_qimage((200, 10, 10)))
 
     assert isinstance(result, AutoLabelingResult)
     # A suggestion must never masquerade as an annotation.
@@ -132,23 +147,29 @@ def test_channel_order_decides_the_winner(model_dir):
     _tmp, onnx_path = model_dir
     adapter = _adapter(onnx_path)
     # Green-dominant input must rank index 1 ("dog") first.
-    result = adapter.predict_shapes(_solid_image((10, 220, 10)))
+    result = adapter.predict_shapes(_solid_qimage((10, 220, 10)))
     assert result.predictions[0]["label"] == "dog"
 
 
 def test_topk_and_confidence_floor_are_honoured(model_dir):
     _tmp, onnx_path = model_dir
     top_only = _adapter(onnx_path, topk=1)
-    assert len(top_only.predict_shapes(_solid_image((5, 5, 9))).predictions) == 1
+    assert (
+        len(top_only.predict_shapes(_solid_qimage((5, 5, 9))).predictions) == 1
+    )
 
     floored = _adapter(onnx_path, conf_threshold=0.999)
-    assert floored.predict_shapes(_solid_image((50, 50, 50))).predictions == []
+    assert (
+        floored.predict_shapes(_solid_qimage((50, 50, 50))).predictions == []
+    )
 
 
 def test_missing_class_names_fall_back_to_indexes(model_dir):
     _tmp, onnx_path = model_dir
     adapter = _adapter(onnx_path, classes=[])
-    predictions = adapter.predict_shapes(_solid_image((1, 2, 200))).predictions
+    predictions = adapter.predict_shapes(
+        _solid_qimage((200, 2, 1))
+    ).predictions
     # The blob is channel-first RGB, so the red channel is logit 0.
     assert predictions[0]["label"] == "0"
 
@@ -302,7 +323,9 @@ def test_reader_accepts_both_recorded_shapes():
     assert model is None
 
     assert widget_with({})._classification_suggestions() == ([], None)
-    assert widget_with({"predictions": None})._classification_suggestions() == (
+    assert widget_with(
+        {"predictions": None}
+    )._classification_suggestions() == (
         [],
         None,
     )

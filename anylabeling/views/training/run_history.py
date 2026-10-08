@@ -72,6 +72,10 @@ def collect_run_history(runs_root, task=None):
                     "name": meta.get("name") or run_name,
                     "project": meta.get("project") or "",
                     "dir": run_dir,
+                    # "completed" for a finished run, "stopped" for one the
+                    # user interrupted (empty in records written before the
+                    # field existed, which the table shows as a blank).
+                    "status": meta.get("status") or "",
                     "started_at": meta.get("started_at") or "",
                     "finished_at": meta.get("finished_at") or "",
                     "map50": _as_float(metrics.get("map50")),
@@ -213,6 +217,7 @@ def format_history_rows(rows):
     header = [
         "任务",
         "运行",
+        "状态",
         "轮次",
         "完成时间",
         "mAP50",
@@ -234,6 +239,7 @@ def format_history_rows(rows):
             [
                 str(row.get("task") or ""),
                 str(row.get("name") or ""),
+                str(row.get("status") or ""),
                 str(iteration.get("round") or ""),
                 str(row.get("finished_at") or ""),
                 _fmt_float(row.get("map50")),

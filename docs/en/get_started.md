@@ -269,7 +269,7 @@ set PYTHONPATH=C:\path\to\X-AnyLabeling
 
 This fork publishes **no** prebuilt installers. If you need a distributable
 executable, build it following section 3; the artifact comes out as
-`JLLabelingAndTrain-v<version>-CPU` (or `-GPU`).
+`JLLabelingAndTrain-v<version>-CPU` (or `-GPU`, or `-CPU-Train`).
 
 Upstream's [GitHub Releases](https://github.com/CVHub520/X-AnyLabeling/releases)
 are builds of a different program and are not a substitute for this fork.
@@ -295,11 +295,16 @@ To facilitate users running `X-AnyLabeling` on different platforms, this tool pr
 
 - **GPU Compilation**: The GPU specifications automatically collect the ONNX Runtime provider libraries. Install `gpu-cu11`, `gpu`, or `gpu-cu13` before building to select CUDA 11, 12, or 13. For detailed compatibility information, refer to the [official documentation](https://onnxruntime.ai/docs/execution-providers/CUDA-ExecutionProvider.html).
 
+- **CPU Training Build**: The `win-cpu-train` target bundles the CPU-only torch + Ultralytics so the built-in training panel works in the packaged app. Install the training dependencies first (`uv pip install ultralytics --torch-backend=cpu`). It uses an onedir layout because torch is too large for a onefile. The plain `win-cpu` target stays labeling-only and much smaller.
+
 ### 3.2 Build Commands
 
 ```bash
 # Windows-CPU
 bash scripts/build_executable.sh win-cpu
+
+# Windows-CPU with training (bundles CPU torch + Ultralytics, onedir)
+bash scripts/build_executable.sh win-cpu-train
 
 # Windows-GPU
 bash scripts/build_executable.sh win-gpu
@@ -318,6 +323,7 @@ bash scripts/build_executable.sh macos
 > If you encounter permission issues when executing the above commands on Windows, after ensuring the above preparation steps are completed, you can directly execute the following commands:
 > ```bash
 > pyinstaller --noconfirm packaging/pyinstaller/specs/x-anylabeling-win-cpu.spec
+> pyinstaller --noconfirm packaging/pyinstaller/specs/x-anylabeling-win-cpu-train.spec
 > pyinstaller --noconfirm packaging/pyinstaller/specs/x-anylabeling-win-gpu.spec
 > ```
 

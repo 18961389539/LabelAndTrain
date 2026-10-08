@@ -6,6 +6,8 @@ checkers agree on the slot numbers.
 
 from PyQt6.QtCore import Qt
 
+from ..schema import REVIEW_NOTE_FIELD
+
 FILE_ANNOTATION_ROLE = Qt.ItemDataRole.UserRole + 1
 # Distinguishes "confirmed empty (negative sample, no objects)" from
 # ordinary annotated files; negative samples are exported as empty .txt so
@@ -17,6 +19,9 @@ FILE_REVIEW_ROLE = Qt.ItemDataRole.UserRole + 4
 # When that state was last set, carried in from the label JSON for the row
 # tooltip only -- nothing branches on it.
 FILE_REVIEWED_AT_ROLE = Qt.ItemDataRole.UserRole + 5
+# Why a rejected row was sent back. Same deal as the timestamp: tooltip
+# cargo, read from the label JSON head by the background scanner.
+FILE_REVIEW_NOTE_ROLE = Qt.ItemDataRole.UserRole + 6
 
 # Field names the label JSON records the review verdict under.
 CHECKED_FIELD = "checked"

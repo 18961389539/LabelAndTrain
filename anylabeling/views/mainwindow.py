@@ -61,9 +61,17 @@ class MainWindow(QMainWindow):
         self.settings = self.labeling_widget.view.settings
         self._is_wsl_environment = _is_wsl_environment()
         if self._is_wsl_environment:
-            self.settings.remove("window/size")
-            self.settings.remove("window/position")
-            self.settings.remove("window/state")
+            # WSLg has no stable geometry to restore.  Drop app.py's keys too
+            # (``window/geometry`` / ``window/maximized``) — otherwise app.py
+            # puts the window back anyway and this branch is cosmetic.
+            for key in (
+                "window/size",
+                "window/position",
+                "window/state",
+                "window/geometry",
+                "window/maximized",
+            ):
+                self.settings.remove(key)
             self.settings.sync()
 
         status_bar = QStatusBar()
@@ -73,35 +81,26 @@ class MainWindow(QMainWindow):
             f" - {__appdescription__}"
         )
         self.setStatusBar(status_bar)
-        self._restore_window_geometry()
+        self._restore_window_state()
 
     def closeEvent(self, event):
         self.labeling_widget.closeEvent(event)
         if not event.isAccepted():
             return
         if self._is_wsl_environment:
-            self.settings.remove("window/size")
-            self.settings.remove("window/position")
             self.settings.remove("window/state")
+            self.settings.remove("window/geometry")
+            self.settings.remove("window/maximized")
         else:
-            self.settings.setValue("window/size", self.size())
-            self.settings.setValue("window/position", self.pos())
+            # Window *geometry* belongs to app.py (``window/geometry`` +
+            # ``window/maximized``).  This side only remembers the dock
+            # layout, so the two stop overwriting each other on startup.
             self.settings.setValue("window/state", self.saveState())
         super().closeEvent(event)
 
-    def _restore_window_geometry(self):
+    def _restore_window_state(self):
         if self._is_wsl_environment:
             return
-        if self.settings.contains("window/size"):
-            size = self.settings.value("window/size", type=QtCore.QSize)
-            if isinstance(size, QtCore.QSize) and size.isValid():
-                self.resize(size)
-        if self.settings.contains("window/position"):
-            position = self.settings.value(
-                "window/position", type=QtCore.QPoint
-            )
-            if isinstance(position, QtCore.QPoint):
-                self.move(position)
         if self.settings.contains("window/state"):
             state = self.settings.value("window/state", type=QtCore.QByteArray)
             if state:

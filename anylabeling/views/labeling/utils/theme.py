@@ -703,6 +703,18 @@ def get_app_stylesheet() -> str:
         QSplitter::handle:vertical {{
             height: 1px;
         }}
+        QSplitter#MainSplitter::handle:horizontal {{
+            width: 6px;
+            background-color: {t["border_light"]};
+        }}
+        QSplitter#SidebarListsSplitter::handle:vertical {{
+            height: 6px;
+            background-color: {t["border_light"]};
+        }}
+        QSplitter#MainSplitter::handle:hover,
+        QSplitter#SidebarListsSplitter::handle:hover {{
+            background-color: {t["primary_soft"]};
+        }}
 
         QToolTip {{
             background-color: {t["tooltip_bg"]};

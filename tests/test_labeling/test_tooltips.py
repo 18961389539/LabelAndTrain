@@ -127,6 +127,29 @@ class TestFileRowTooltips(_WidgetCase):
 
 
 @unittest.skipUnless(PYQT_AVAILABLE, "PyQt6 is required")
+class TestButtonTooltipCoverage(_WidgetCase):
+    """Every button the user can see has to say what it does.
+
+    The audit that found the two section checkboxes was this walk: a
+    checkbox without a label is a blue square, and an icon-only button
+    without a tooltip is a guess. ``qt_``-prefixed buttons are Qt's own
+    (dock close/float handles), and every title bar in this window is
+    replaced by an empty widget, so those are never on screen.
+    """
+
+    def test_no_textless_button_lacks_a_tooltip(self):
+        silent = []
+        for button in self.widget.findChildren(QtWidgets.QAbstractButton):
+            if button.text().strip():
+                continue
+            if button.objectName().startswith("qt_"):
+                continue
+            if not button.toolTip().strip():
+                silent.append((type(button).__name__, button.objectName()))
+        self.assertEqual(silent, [])
+
+
+@unittest.skipUnless(PYQT_AVAILABLE, "PyQt6 is required")
 class TestObjectRowTooltips(_WidgetCase):
 
     with_label = False

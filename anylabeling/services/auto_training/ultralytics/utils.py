@@ -329,8 +329,69 @@ def write_autolabel_model_yaml(
     return yaml_path
 
 
+#: How many recent epoch deltas the ETA averages over: enough to smooth the
+#: (slow) first epochs out without lagging far behind a changing pace.
+ETA_SAMPLE_ROWS = 5
+
+
+def estimate_remaining_seconds(results_csv_path, total_epochs):
+    """Seconds left before ``total_epochs``, or ``None`` when unknowable.
+
+    Ultralytics writes ``time`` as *cumulative* seconds for the current
+    session, so a per-epoch duration is the delta between rows. Dividing the
+    total by the epoch count would be wrong twice over: the first epochs are
+    the slowest (model load, cache build), and a resumed run restarts the
+    clock while the epoch counter continues. The last few deltas are averaged
+    for the same reason, and the epoch column (not the row count) decides how
+    much is left — a resumed run can repeat a row.
+    """
+    if not results_csv_path or not os.path.exists(results_csv_path):
+        return None
+    if not total_epochs or total_epochs <= 0:
+        return None
+    try:
+        with open(results_csv_path, "r", encoding="utf-8") as handle:
+            rows = list(csv.DictReader(handle))
+    except Exception:
+        return None
+    if len(rows) < 2:
+        return None
+
+    try:
+        done = int(float(rows[-1].get("epoch") or 0))
+    except (TypeError, ValueError):
+        done = len(rows)
+    todo = total_epochs - done
+    if todo <= 0:
+        return None
+
+    samples = []
+    for row in rows[-(ETA_SAMPLE_ROWS + 1) :]:
+        try:
+            samples.append(float(row.get("time") or 0.0))
+        except (TypeError, ValueError):
+            return None
+    deltas = [
+        later - earlier
+        for earlier, later in zip(samples, samples[1:])
+        if later > earlier
+    ]
+    if not deltas:
+        return None
+    return todo * (sum(deltas) / len(deltas))
+
+
 def parse_training_metrics(results_csv_path):
-    """Read the last row of ultralytics results.csv as (loss, map50, epochs)."""
+    """Read the last row of ultralytics results.csv as (loss, map50, epochs).
+
+    ``epochs`` comes from the ``epoch`` column, not from the row count: a
+    resumed run repeats one row, because the interrupted epoch is written
+    again when the run picks up from the checkpoint. Counting rows therefore
+    reported 51 epochs for a 50-epoch run — measured on a real interrupted and
+    resumed run on 2026-09-30 (epoch 7 appears twice) — and that number is
+    what ``run_meta.json`` records and the experiment history displays, i.e.
+    the field a run's length is compared on across rounds.
+    """
     if not results_csv_path or not os.path.exists(results_csv_path):
         return None
     try:
@@ -365,4 +426,11 @@ def parse_training_metrics(results_csv_path):
             map50 = value
     if loss is None:
         loss = fallback_loss
-    return loss, map50, len(rows)
+
+    epochs = len(rows)
+    try:
+        if last.get("epoch"):
+            epochs = int(float(last["epoch"]))
+    except (TypeError, ValueError):
+        pass
+    return loss, map50, epochs

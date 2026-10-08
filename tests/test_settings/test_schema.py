@@ -15,6 +15,7 @@ try:
         SETTINGS_SHORTCUT_KEYS_CORE,
         defaults_map,
         fields_for_primary,
+        load_template_config,
     )
 
     SCHEMA_AVAILABLE = True
@@ -22,10 +23,47 @@ except Exception:
     SCHEMA_AVAILABLE = False
 
 
+def _leaf_keys(node, prefix=""):
+    """Dotted paths of every non-dict value, i.e. every settable leaf."""
+    if not isinstance(node, dict):
+        return [prefix]
+    out = []
+    for key, value in node.items():
+        path = f"{prefix}.{key}" if prefix else key
+        out.extend(_leaf_keys(value, path))
+    return out
+
+
 @unittest.skipUnless(
     SCHEMA_AVAILABLE, "Settings schema dependencies are unavailable"
 )
 class TestSettingsSchema(unittest.TestCase):
+
+    def test_template_leaves_are_accounted_for(self):
+        """Every template leaf is either a field or deliberately excluded.
+
+        A leaf that is neither reachable from the dialog nor listed in
+        EXCLUDED_KEYS can only be changed by hand-editing the rc file, and
+        nothing surfaces that until a user asks why the knob does nothing.
+        This is the guard that was missing while ``device``, ``file_search``
+        and the dock/panel geometry keys sat outside both sets.
+        """
+        leaves = sorted(_leaf_keys(load_template_config()))
+        orphans = [
+            leaf
+            for leaf in leaves
+            if leaf not in EXCLUDED_KEYS
+            and not any(
+                key == leaf or key.startswith(leaf + ".")
+                for key in SETTINGS_KEYS
+            )
+        ]
+        self.assertEqual(
+            orphans,
+            [],
+            "template keys neither settable nor explicitly excluded: "
+            f"{orphans}",
+        )
 
     def test_field_count(self):
         # No exact count: the schema is derived from the template yaml, so a
@@ -63,7 +101,10 @@ class TestSettingsSchema(unittest.TestCase):
         # them, and F1 lists them as 未绑定 until a key is chosen; what the
         # audit found was "no key *and* no way to bind one", which is the part
         # that made them a gap rather than a choice.
-        self.assertEqual(len(shortcut_fields), 118)
+        # +toggle_sidebar (2026-10-08): the one-click collapse of the whole
+        # right sidebar, wired as a hidden action with a default key
+        # (Ctrl+Shift+B) so the mouse-only strip is not its only entry.
+        self.assertEqual(len(shortcut_fields), 119)
         keys = {field.key for field in shortcut_fields}
         self.assertIn("shortcuts.open_project", keys)
         self.assertIn("shortcuts.mark_checked_and_next", keys)

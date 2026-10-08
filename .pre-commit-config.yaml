@@ -41,6 +41,10 @@ repos:
     rev: 26.5.1
     hooks:
     -   id: black
+        # Emitted by pyside6-rcc.  The codespell comment below claims black
+        # skips it too; it did not, so any commit touching it reformatted the
+        # resource blob and rcc wrote it straight back.
+        exclude: ^anylabeling/resources/resources\.py$
 
 -   repo: local
     hooks:

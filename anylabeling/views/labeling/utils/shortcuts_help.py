@@ -94,6 +94,7 @@ SHORTCUT_GROUPS = [
             ("show_scores", "显示/隐藏置信度"),
             ("show_degrees", "显示/隐藏旋转角度"),
             ("select_toggle_shapes", "全部标注显隐"),
+            ("toggle_sidebar", "收起/展开右侧面板"),
             ("brightness_contrast", "调整亮度与对比度"),
             ("keep_prev_scale", "记忆上一张的缩放"),
             ("keep_prev_brightness", "记忆上一张的亮度"),

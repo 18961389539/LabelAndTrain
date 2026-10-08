@@ -6,7 +6,7 @@ import shutil
 import time
 
 from PyQt6 import QtWidgets
-from PyQt6.QtCore import Qt, QThread, pyqtSignal
+from PyQt6.QtCore import QCoreApplication, Qt, QThread, pyqtSignal
 from PyQt6.QtWidgets import (
     QHBoxLayout,
     QVBoxLayout,
@@ -22,7 +22,11 @@ from anylabeling.views.labeling.schema import (
 from anylabeling.views.labeling.utils.async_label_check import (
     label_file_review_info,
 )
-from anylabeling.views.labeling.widgets import Popup
+from anylabeling.views.labeling.widgets import (
+    Popup,
+    copy_text_to_system_clipboard,
+)
+from anylabeling.views.training.platform_open import open_path
 from anylabeling.views.labeling.utils.qt import new_icon_path
 from anylabeling.views.labeling.utils.output_dir import (
     CANCEL,
@@ -103,7 +107,10 @@ def _check_filename_exist(self):
 
     if not self.filename:
         popup = Popup(
-            self.tr("Please load an image folder before proceeding!"),
+            QCoreApplication.translate(
+                "LabelingWidget",
+                "Please load an image folder before proceeding!",
+            ),
             self,
             icon=new_icon_path("warning", "svg"),
         )
@@ -307,6 +314,41 @@ def _format_yolo_export_summary(
     return "\n".join(lines)
 
 
+def _copy_export_path(widget, save_path):
+    """Copy the export path and say whether it worked."""
+    if copy_text_to_system_clipboard(save_path):
+        widget.status(widget.tr("已复制输出路径"))
+    else:
+        widget.status(widget.tr("复制输出路径失败"))
+
+
+def _show_export_done_popup(widget, message, save_path, icon, height):
+    """Completion toast with "open the folder" / "copy the path" buttons.
+
+    The recap used to be a three-second toast whose only output was the
+    path printed in its text: nothing to click, nothing to copy, and
+    gone before it could be read.
+    """
+    actions = []
+    if save_path and osp.isdir(save_path):
+        actions.append(
+            (widget.tr("打开输出目录"), lambda: open_path(save_path))
+        )
+        actions.append(
+            (
+                widget.tr("复制输出路径"),
+                lambda: _copy_export_path(widget, save_path),
+            )
+        )
+    popup = Popup(message, widget, icon=icon, actions=actions)
+    popup.show_popup(
+        widget,
+        popup_height=height + (34 if actions else 0),
+        position="center",
+    )
+    return popup
+
+
 def export_yolo_annotation(self, mode):
     if not _check_filename_exist(self):
         return
@@ -318,7 +360,9 @@ def export_yolo_annotation(self, mode):
         filter = "Classes Files (*.yaml);;All Files (*)"
         self.yaml_file, _ = QtWidgets.QFileDialog.getOpenFileName(
             self,
-            self.tr("Select a specific yolo-pose config file"),
+            QCoreApplication.translate(
+                "LabelingWidget", "Select a specific yolo-pose config file"
+            ),
             "",
             filter,
         )
@@ -329,7 +373,10 @@ def export_yolo_annotation(self, mode):
         except Exception as e:
             logger.error(f"Failed to load pose config: {self.yaml_file}: {e}")
             popup = Popup(
-                self.tr("Invalid pose config file:\n%s") % str(e),
+                QCoreApplication.translate(
+                    "LabelingWidget", "Invalid pose config file:\n%s"
+                )
+                % str(e),
                 self,
                 icon=new_icon_path("error", "svg"),
             )
@@ -345,7 +392,10 @@ def export_yolo_annotation(self, mode):
         classes, classes_source, converter = resolved
         if not classes:
             popup = Popup(
-                self.tr("The class list is empty - nothing can be exported."),
+                QCoreApplication.translate(
+                    "LabelingWidget",
+                    "The class list is empty - nothing can be exported.",
+                ),
                 self,
                 icon=new_icon_path("warning", "svg"),
             )
@@ -353,7 +403,9 @@ def export_yolo_annotation(self, mode):
             return
 
     dialog = QtWidgets.QDialog(self)
-    dialog.setWindowTitle(self.tr("Export options"))
+    dialog.setWindowTitle(
+        QCoreApplication.translate("LabelingWidget", "Export options")
+    )
     dialog.setMinimumWidth(500)
     dialog.setStyleSheet(get_export_option_style())
 
@@ -362,7 +414,9 @@ def export_yolo_annotation(self, mode):
     layout.setSpacing(16)
 
     path_layout = QVBoxLayout()
-    path_label = QtWidgets.QLabel(self.tr("Export path"))
+    path_label = QtWidgets.QLabel(
+        QCoreApplication.translate("LabelingWidget", "Export path")
+    )
     path_layout.addWidget(path_label)
 
     path_input_layout = QHBoxLayout()
@@ -372,19 +426,25 @@ def export_yolo_annotation(self, mode):
     path_edit.setText(
         osp.realpath(osp.join(osp.dirname(self.filename), "..", "labels"))
     )
-    path_edit.setPlaceholderText(self.tr("Select Export Directory"))
+    path_edit.setPlaceholderText(
+        QCoreApplication.translate("LabelingWidget", "Select Export Directory")
+    )
 
     def browse_export_path():
         path = QtWidgets.QFileDialog.getExistingDirectory(
             self,
-            self.tr("Select Export Directory"),
+            QCoreApplication.translate(
+                "LabelingWidget", "Select Export Directory"
+            ),
             path_edit.text(),
             QtWidgets.QFileDialog.Option.DontUseNativeDialog,
         )
         if path:
             path_edit.setText(path)
 
-    path_button = QtWidgets.QPushButton(self.tr("Browse"))
+    path_button = QtWidgets.QPushButton(
+        QCoreApplication.translate("LabelingWidget", "Browse")
+    )
     path_button.clicked.connect(browse_export_path)
     path_button.setStyleSheet(get_cancel_btn_style())
 
@@ -393,36 +453,42 @@ def export_yolo_annotation(self, mode):
     path_layout.addLayout(path_input_layout)
     layout.addLayout(path_layout)
 
-    options_label = QtWidgets.QLabel(self.tr("Export Options"))
+    options_label = QtWidgets.QLabel(
+        QCoreApplication.translate("LabelingWidget", "Export Options")
+    )
     layout.addWidget(options_label)
 
-    save_images_checkbox = QtWidgets.QCheckBox(self.tr("Save with images?"))
+    save_images_checkbox = QtWidgets.QCheckBox(
+        QCoreApplication.translate("LabelingWidget", "Save with images?")
+    )
     save_images_checkbox.setChecked(False)
     layout.addWidget(save_images_checkbox)
 
     skip_empty_files_checkbox = QtWidgets.QCheckBox(
-        self.tr("Skip empty labels?")
+        QCoreApplication.translate("LabelingWidget", "Skip empty labels?")
     )
     skip_empty_files_checkbox.setChecked(False)
     skip_empty_files_checkbox.setToolTip(
-        self.tr(
+        QCoreApplication.translate(
+            "LabelingWidget",
             "Skip empty labels / 跳过空标注\n"
             "\n"
             "默认关闭：空标注（确认无目标的负样本图）会导出为空文件，"
             "作为背景样本参与 YOLO 训练。\n"
             "\n"
             "勾选后：空标注的图片不会导出对应标签文件，这些负样本将从"
-            "训练数据中排除（通常不建议，除非你确实不要背景样本）。"
+            "训练数据中排除（通常不建议，除非你确实不要背景样本）。",
         )
     )
     layout.addWidget(skip_empty_files_checkbox)
 
     only_checked_checkbox = QtWidgets.QCheckBox(
-        self.tr("仅导出「已确认」的图片")
+        QCoreApplication.translate("LabelingWidget", "仅导出「已确认」的图片")
     )
     only_checked_checkbox.setChecked(False)
     only_checked_checkbox.setToolTip(
-        self.tr(
+        QCoreApplication.translate(
+            "LabelingWidget",
             "Only export confirmed images / 仅导出已确认的图片\n"
             "\n"
             "默认关闭：导出当前文件夹里的全部图片，含未检查与「需返工」的。\n"
@@ -430,7 +496,7 @@ def export_yolo_annotation(self, mode):
             "勾选后：只导出在文件列表里标记为「已确认」的图片，"
             "未检查与需返工的一律跳过（数量会在导出结果里报出来）。\n"
             "训练侧本来就有同样的过滤（只用已检查的图片），"
-            "勾上它可以让导出与训练集合保持一致。"
+            "勾上它可以让导出与训练集合保持一致。",
         )
     )
     layout.addWidget(only_checked_checkbox)
@@ -438,25 +504,34 @@ def export_yolo_annotation(self, mode):
     write_classes_checkbox = None
     if classes:
         write_classes_checkbox = QtWidgets.QCheckBox(
-            self.tr("在导出目录写入 classes.txt（%d 个类别）") % len(classes)
+            QCoreApplication.translate(
+                "LabelingWidget", "在导出目录写入 classes.txt（%d 个类别）"
+            )
+            % len(classes)
         )
         write_classes_checkbox.setChecked(True)
         write_classes_checkbox.setToolTip(
-            self.tr(
+            QCoreApplication.translate(
+                "LabelingWidget",
                 "勾选后会在导出目录生成 classes.txt，类别顺序与本次导出"
                 "所用的列表一致；训练前不必再手工摆一份。\n"
-                "类别来源：%s"
+                "类别来源：%s",
             )
-            % (classes_source or self.tr("项目标签列表"))
+            % (
+                classes_source
+                or QCoreApplication.translate("LabelingWidget", "项目标签列表")
+            )
         )
         layout.addWidget(write_classes_checkbox)
 
     manifest_checkbox = QtWidgets.QCheckBox(
-        self.tr("写入导出记录（%s）") % MANIFEST_NAME
+        QCoreApplication.translate("LabelingWidget", "写入导出记录（%s）")
+        % MANIFEST_NAME
     )
     manifest_checkbox.setChecked(True)
     manifest_checkbox.setToolTip(
-        self.tr(
+        QCoreApplication.translate(
+            "LabelingWidget",
             "写入导出记录 export_manifest.json / export record\n"
             "\n"
             "勾选后会在导出目录生成一份 JSON，记下本次导出的类别列表及其来源、"
@@ -465,7 +540,7 @@ def export_yolo_annotation(self, mode):
             "不在类别表里的标签）。\n"
             "\n"
             "训练不读这个文件，删掉也不影响；它是为了几个月后还能回答"
-            "「这批标签是怎么导出来的」。"
+            "「这批标签是怎么导出来的」。",
         )
     )
     layout.addWidget(manifest_checkbox)
@@ -474,11 +549,15 @@ def export_yolo_annotation(self, mode):
     button_layout.setContentsMargins(0, 16, 0, 0)
     button_layout.setSpacing(8)
 
-    cancel_button = QtWidgets.QPushButton(self.tr("Cancel"))
+    cancel_button = QtWidgets.QPushButton(
+        QCoreApplication.translate("LabelingWidget", "Cancel")
+    )
     cancel_button.clicked.connect(dialog.reject)
     cancel_button.setStyleSheet(get_cancel_btn_style())
 
-    ok_button = QtWidgets.QPushButton(self.tr("OK"))
+    ok_button = QtWidgets.QPushButton(
+        QCoreApplication.translate("LabelingWidget", "OK")
+    )
     ok_button.clicked.connect(dialog.accept)
     ok_button.setStyleSheet(get_ok_btn_style())
 
@@ -504,9 +583,10 @@ def export_yolo_annotation(self, mode):
                 "Export aborted: current labels were not saved on disk"
             )
             popup = Popup(
-                self.tr(
+                QCoreApplication.translate(
+                    "LabelingWidget",
                     "Export cancelled.\n"
-                    "The current labels could not be saved first."
+                    "The current labels could not be saved first.",
                 ),
                 self,
                 icon=new_icon_path("error", "svg"),
@@ -537,10 +617,11 @@ def export_yolo_annotation(self, mode):
         )
         if not image_list:
             popup = Popup(
-                self.tr(
+                QCoreApplication.translate(
+                    "LabelingWidget",
                     "没有「已确认」的图片可导出（共 %d 张未确认）。\n"
                     "先在文件列表里把要看过的图标成「已检查」，"
-                    "或取消勾选「仅导出已确认的图片」。"
+                    "或取消勾选「仅导出已确认的图片」。",
                 )
                 % skipped_unchecked,
                 self,
@@ -557,22 +638,30 @@ def export_yolo_annotation(self, mode):
     if is_blocking(readiness):
         box = QtWidgets.QMessageBox(self)
         box.setIcon(QtWidgets.QMessageBox.Icon.Warning)
-        box.setWindowTitle(self.tr("导出前检查"))
-        box.setText(self.tr("这批数据无法完整导出。"))
+        box.setWindowTitle(
+            QCoreApplication.translate("LabelingWidget", "导出前检查")
+        )
+        box.setText(
+            QCoreApplication.translate(
+                "LabelingWidget", "这批数据无法完整导出。"
+            )
+        )
         box.setInformativeText(
             "\n".join(format_readiness(readiness))
             + "\n\n"
-            + self.tr(
+            + QCoreApplication.translate(
+                "LabelingWidget",
                 "继续导出：类别不在表里的形状不会出现在结果里；"
-                "读不出来的标注文件会让本轮导出中断，留下不完整的目录。"
+                "读不出来的标注文件会让本轮导出中断，留下不完整的目录。",
             )
         )
         proceed_button = box.addButton(
-            self.tr("仍然导出"),
+            QCoreApplication.translate("LabelingWidget", "仍然导出"),
             QtWidgets.QMessageBox.ButtonRole.DestructiveRole,
         )
         cancel_button = box.addButton(
-            self.tr("Cancel"), QtWidgets.QMessageBox.ButtonRole.RejectRole
+            QCoreApplication.translate("LabelingWidget", "Cancel"),
+            QtWidgets.QMessageBox.ButtonRole.RejectRole,
         )
         box.setDefaultButton(cancel_button)
         box.setStyleSheet(get_msg_box_style())
@@ -602,10 +691,16 @@ def export_yolo_annotation(self, mode):
         data_yaml_target = _write_data_yaml(save_path, classes)
 
     progress_dialog = QProgressDialog(
-        self.tr("Exporting..."), self.tr("Cancel"), 0, len(image_list), self
+        QCoreApplication.translate("LabelingWidget", "Exporting..."),
+        QCoreApplication.translate("LabelingWidget", "Cancel"),
+        0,
+        len(image_list),
+        self,
     )
     progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
-    progress_dialog.setWindowTitle(self.tr("Progress"))
+    progress_dialog.setWindowTitle(
+        QCoreApplication.translate("LabelingWidget", "Progress")
+    )
     progress_dialog.setMinimumWidth(500)
     progress_dialog.setMinimumHeight(150)
     progress_dialog.setStyleSheet(
@@ -690,10 +785,11 @@ def export_yolo_annotation(self, mode):
             manifest_target=manifest_target,
         )
         message_text = (
-            self.tr(
+            QCoreApplication.translate(
+                "LabelingWidget",
                 "Exporting annotations successfully!\n"
                 "Results have been saved to:\n"
-                "%s"
+                "%s",
             )
             % save_path
         )
@@ -706,17 +802,12 @@ def export_yolo_annotation(self, mode):
                 f"skipped={stats.get('skipped') or {}} "
                 f"missing_label_file={stats.get('missing_label_file', 0)}"
             )
-        popup = Popup(
+        _show_export_done_popup(
+            self,
             message_text,
-            self,
-            icon=new_icon_path(
-                "warning" if skipped_total else "copy-green", "svg"
-            ),
-        )
-        popup.show_popup(
-            self,
-            popup_height=95 + 18 * summary.count("\n"),
-            position="center",
+            save_path,
+            new_icon_path("warning" if skipped_total else "copy-green", "svg"),
+            95 + 18 * summary.count("\n"),
         )
 
     except Exception as e:
@@ -736,7 +827,9 @@ def export_voc_annotation(self, mode):
         return
 
     dialog = QtWidgets.QDialog(self)
-    dialog.setWindowTitle(self.tr("Export options"))
+    dialog.setWindowTitle(
+        QCoreApplication.translate("LabelingWidget", "Export options")
+    )
     dialog.setMinimumWidth(500)
     dialog.setStyleSheet(get_export_option_style())
 
@@ -745,7 +838,9 @@ def export_voc_annotation(self, mode):
     layout.setSpacing(16)
 
     path_layout = QVBoxLayout()
-    path_label = QtWidgets.QLabel(self.tr("Export path"))
+    path_label = QtWidgets.QLabel(
+        QCoreApplication.translate("LabelingWidget", "Export path")
+    )
     path_layout.addWidget(path_label)
 
     path_input_layout = QHBoxLayout()
@@ -755,19 +850,25 @@ def export_voc_annotation(self, mode):
     path_edit.setText(
         osp.realpath(osp.join(osp.dirname(self.filename), "..", "Annotations"))
     )
-    path_edit.setPlaceholderText(self.tr("Select Export Directory"))
+    path_edit.setPlaceholderText(
+        QCoreApplication.translate("LabelingWidget", "Select Export Directory")
+    )
 
     def browse_export_path():
         path = QtWidgets.QFileDialog.getExistingDirectory(
             self,
-            self.tr("Select Export Directory"),
+            QCoreApplication.translate(
+                "LabelingWidget", "Select Export Directory"
+            ),
             path_edit.text(),
             QtWidgets.QFileDialog.Option.DontUseNativeDialog,
         )
         if path:
             path_edit.setText(path)
 
-    path_button = QtWidgets.QPushButton(self.tr("Browse"))
+    path_button = QtWidgets.QPushButton(
+        QCoreApplication.translate("LabelingWidget", "Browse")
+    )
     path_button.clicked.connect(browse_export_path)
     path_button.setStyleSheet(get_cancel_btn_style())
 
@@ -776,26 +877,31 @@ def export_voc_annotation(self, mode):
     path_layout.addLayout(path_input_layout)
     layout.addLayout(path_layout)
 
-    options_label = QtWidgets.QLabel(self.tr("Export Options"))
+    options_label = QtWidgets.QLabel(
+        QCoreApplication.translate("LabelingWidget", "Export Options")
+    )
     layout.addWidget(options_label)
 
-    save_images_checkbox = QtWidgets.QCheckBox(self.tr("Save with images?"))
+    save_images_checkbox = QtWidgets.QCheckBox(
+        QCoreApplication.translate("LabelingWidget", "Save with images?")
+    )
     save_images_checkbox.setChecked(False)
     layout.addWidget(save_images_checkbox)
 
     skip_empty_files_checkbox = QtWidgets.QCheckBox(
-        self.tr("Skip empty labels?")
+        QCoreApplication.translate("LabelingWidget", "Skip empty labels?")
     )
     skip_empty_files_checkbox.setChecked(False)
     skip_empty_files_checkbox.setToolTip(
-        self.tr(
+        QCoreApplication.translate(
+            "LabelingWidget",
             "Skip empty labels / 跳过空标注\n"
             "\n"
             "默认关闭：空标注（确认无目标的负样本图）会导出为空文件，"
             "作为背景样本参与 YOLO 训练。\n"
             "\n"
             "勾选后：空标注的图片不会导出对应标签文件，这些负样本将从"
-            "训练数据中排除（通常不建议，除非你确实不要背景样本）。"
+            "训练数据中排除（通常不建议，除非你确实不要背景样本）。",
         )
     )
     layout.addWidget(skip_empty_files_checkbox)
@@ -804,11 +910,15 @@ def export_voc_annotation(self, mode):
     button_layout.setContentsMargins(0, 16, 0, 0)
     button_layout.setSpacing(8)
 
-    cancel_button = QtWidgets.QPushButton(self.tr("Cancel"))
+    cancel_button = QtWidgets.QPushButton(
+        QCoreApplication.translate("LabelingWidget", "Cancel")
+    )
     cancel_button.clicked.connect(dialog.reject)
     cancel_button.setStyleSheet(get_cancel_btn_style())
 
-    ok_button = QtWidgets.QPushButton(self.tr("OK"))
+    ok_button = QtWidgets.QPushButton(
+        QCoreApplication.translate("LabelingWidget", "OK")
+    )
     ok_button.clicked.connect(dialog.accept)
     ok_button.setStyleSheet(get_ok_btn_style())
 
@@ -844,10 +954,16 @@ def export_voc_annotation(self, mode):
     image_list = self.image_list if self.image_list else [self.filename]
 
     progress_dialog = QProgressDialog(
-        self.tr("Exporting..."), self.tr("Cancel"), 0, len(image_list), self
+        QCoreApplication.translate("LabelingWidget", "Exporting..."),
+        QCoreApplication.translate("LabelingWidget", "Cancel"),
+        0,
+        len(image_list),
+        self,
     )
     progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
-    progress_dialog.setWindowTitle(self.tr("Progress"))
+    progress_dialog.setWindowTitle(
+        QCoreApplication.translate("LabelingWidget", "Progress")
+    )
     progress_dialog.setMinimumWidth(500)
     progress_dialog.setMinimumHeight(150)
     progress_dialog.setStyleSheet(
@@ -882,18 +998,20 @@ def export_voc_annotation(self, mode):
                 break
 
         progress_dialog.close()
-        template = self.tr(
+        template = QCoreApplication.translate(
+            "LabelingWidget",
             "Exporting annotations successfully!\n"
             "Results have been saved to:\n"
-            "%s"
+            "%s",
         )
         message_text = template % save_path
-        popup = Popup(
-            message_text,
+        _show_export_done_popup(
             self,
-            icon=new_icon_path("copy-green", "svg"),
+            message_text,
+            save_path,
+            new_icon_path("copy-green", "svg"),
+            65,
         )
-        popup.show_popup(self, popup_height=65, position="center")
 
     except Exception as e:
         message = f"Error occurred while exporting annotations: {str(e)}"
@@ -915,7 +1033,9 @@ def export_coco_annotation(self, mode):
         filter = "Classes Files (*.yaml);;All Files (*)"
         self.yaml_file, _ = QtWidgets.QFileDialog.getOpenFileName(
             self,
-            self.tr("Select a specific coco-pose config file"),
+            QCoreApplication.translate(
+                "LabelingWidget", "Select a specific coco-pose config file"
+            ),
             "",
             filter,
         )
@@ -926,7 +1046,10 @@ def export_coco_annotation(self, mode):
         except Exception as e:
             logger.error(f"Failed to load pose config: {self.yaml_file}: {e}")
             popup = Popup(
-                self.tr("Invalid pose config file:\n%s") % str(e),
+                QCoreApplication.translate(
+                    "LabelingWidget", "Invalid pose config file:\n%s"
+                )
+                % str(e),
                 self,
                 icon=new_icon_path("error", "svg"),
             )
@@ -936,7 +1059,9 @@ def export_coco_annotation(self, mode):
         filter = "Classes Files (*.txt);;All Files (*)"
         self.classes_file, _ = QtWidgets.QFileDialog.getOpenFileName(
             self,
-            self.tr("Select a specific classes file"),
+            QCoreApplication.translate(
+                "LabelingWidget", "Select a specific classes file"
+            ),
             "",
             filter,
         )
@@ -945,7 +1070,9 @@ def export_coco_annotation(self, mode):
         converter = LabelConverter(classes_file=self.classes_file)
 
     dialog = QtWidgets.QDialog(self)
-    dialog.setWindowTitle(self.tr("Export options"))
+    dialog.setWindowTitle(
+        QCoreApplication.translate("LabelingWidget", "Export options")
+    )
     dialog.setMinimumWidth(500)
     dialog.setStyleSheet(get_export_option_style())
 
@@ -954,7 +1081,9 @@ def export_coco_annotation(self, mode):
     layout.setSpacing(16)
 
     path_layout = QVBoxLayout()
-    path_label = QtWidgets.QLabel(self.tr("Export path"))
+    path_label = QtWidgets.QLabel(
+        QCoreApplication.translate("LabelingWidget", "Export path")
+    )
     path_layout.addWidget(path_label)
 
     path_input_layout = QHBoxLayout()
@@ -968,19 +1097,25 @@ def export_coco_annotation(self, mode):
     path_edit.setText(
         osp.realpath(osp.join(label_dir_path, "..", "annotations"))
     )
-    path_edit.setPlaceholderText(self.tr("Select Export Directory"))
+    path_edit.setPlaceholderText(
+        QCoreApplication.translate("LabelingWidget", "Select Export Directory")
+    )
 
     def browse_export_path():
         path = QtWidgets.QFileDialog.getExistingDirectory(
             self,
-            self.tr("Select Export Directory"),
+            QCoreApplication.translate(
+                "LabelingWidget", "Select Export Directory"
+            ),
             path_edit.text(),
             QtWidgets.QFileDialog.Option.DontUseNativeDialog,
         )
         if path:
             path_edit.setText(path)
 
-    path_button = QtWidgets.QPushButton(self.tr("Browse"))
+    path_button = QtWidgets.QPushButton(
+        QCoreApplication.translate("LabelingWidget", "Browse")
+    )
     path_button.clicked.connect(browse_export_path)
     path_button.setStyleSheet(get_cancel_btn_style())
 
@@ -993,11 +1128,15 @@ def export_coco_annotation(self, mode):
     button_layout.setContentsMargins(0, 16, 0, 0)
     button_layout.setSpacing(8)
 
-    cancel_button = QtWidgets.QPushButton(self.tr("Cancel"))
+    cancel_button = QtWidgets.QPushButton(
+        QCoreApplication.translate("LabelingWidget", "Cancel")
+    )
     cancel_button.clicked.connect(dialog.reject)
     cancel_button.setStyleSheet(get_cancel_btn_style())
 
-    ok_button = QtWidgets.QPushButton(self.tr("OK"))
+    ok_button = QtWidgets.QPushButton(
+        QCoreApplication.translate("LabelingWidget", "OK")
+    )
     ok_button.clicked.connect(dialog.accept)
     ok_button.setStyleSheet(get_ok_btn_style())
 
@@ -1027,10 +1166,16 @@ def export_coco_annotation(self, mode):
 
     image_list = self.image_list if self.image_list else [self.filename]
     progress_dialog = QProgressDialog(
-        self.tr("Exporting..."), self.tr("Cancel"), 0, 0, self
+        QCoreApplication.translate("LabelingWidget", "Exporting..."),
+        QCoreApplication.translate("LabelingWidget", "Cancel"),
+        0,
+        0,
+        self,
     )
     progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
-    progress_dialog.setWindowTitle(self.tr("Progress"))
+    progress_dialog.setWindowTitle(
+        QCoreApplication.translate("LabelingWidget", "Progress")
+    )
     progress_dialog.setMinimumWidth(500)
     progress_dialog.setMinimumHeight(150)
     progress_dialog.setRange(0, 0)
@@ -1043,18 +1188,20 @@ def export_coco_annotation(self, mode):
     def on_export_finished(success, error_msg):
         progress_dialog.close()
         if success:
-            template = self.tr(
+            template = QCoreApplication.translate(
+                "LabelingWidget",
                 "Exporting annotations successfully!\n"
                 "Results have been saved to:\n"
-                "%s"
+                "%s",
             )
             message_text = template % save_path
-            popup = Popup(
-                message_text,
+            _show_export_done_popup(
                 self,
-                icon=new_icon_path("copy-green", "svg"),
+                message_text,
+                save_path,
+                new_icon_path("copy-green", "svg"),
+                65,
             )
-            popup.show_popup(self, popup_height=65, position="center")
         else:
             message = (
                 f"Error occurred while exporting annotations: {str(error_msg)}"

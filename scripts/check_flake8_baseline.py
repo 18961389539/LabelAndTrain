@@ -175,13 +175,19 @@ def main(argv=None):
         )
         return 0
 
-    baseline = load_baseline()
-    if not baseline:
+    if not os.path.isfile(BASELINE_PATH):
+        # A missing baseline used to exit 0, which quietly switched the gate
+        # off for anyone who deleted the file.  Recreating it is a deliberate
+        # act (--update); anything else is a failure.
         print(
-            "No baseline yet -- create one with "
-            "python scripts/check_flake8_baseline.py --update"
+            f"Missing baseline: {os.path.relpath(BASELINE_PATH, REPO_ROOT)}. "
+            "Recreate it with "
+            "python scripts/check_flake8_baseline.py --update",
+            file=sys.stderr,
         )
-        return 0
+        return 1
+
+    baseline = load_baseline()
 
     regressions, improvements = compare(current, baseline)
 

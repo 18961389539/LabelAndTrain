@@ -9,7 +9,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QCoreApplication, Qt
 from PyQt6.QtWidgets import (
     QApplication,
     QDialog,
@@ -235,7 +235,10 @@ def save_crop(self):
 
     if not self.filename:
         popup = Popup(
-            self.tr("Please load an image folder before proceeding!"),
+            QCoreApplication.translate(
+                "LabelingWidget",
+                "Please load an image folder before proceeding!",
+            ),
             self,
             msec=1000,
             icon=new_icon_path("warning", "svg"),
@@ -244,7 +247,9 @@ def save_crop(self):
         return
 
     dialog = QDialog(self)
-    dialog.setWindowTitle(self.tr("Cropped Image Options"))
+    dialog.setWindowTitle(
+        QCoreApplication.translate("LabelingWidget", "Cropped Image Options")
+    )
     dialog.setMinimumWidth(500)
     dialog.setStyleSheet(get_export_option_style())
 
@@ -252,7 +257,9 @@ def save_crop(self):
     layout.setContentsMargins(24, 24, 24, 24)
     layout.setSpacing(16)
 
-    path_label = QLabel(self.tr("Save Path"))
+    path_label = QLabel(
+        QCoreApplication.translate("LabelingWidget", "Save Path")
+    )
     layout.addWidget(path_label)
 
     path_input_layout = QHBoxLayout()
@@ -262,19 +269,25 @@ def save_crop(self):
     path_edit.setText(
         osp.realpath(osp.join(osp.dirname(self.filename), "..", "crops"))
     )
-    path_edit.setPlaceholderText(self.tr("Select Save Directory"))
+    path_edit.setPlaceholderText(
+        QCoreApplication.translate("LabelingWidget", "Select Save Directory")
+    )
 
     def browse_export_path():
         path = QFileDialog.getExistingDirectory(
             self,
-            self.tr("Select Save Directory"),
+            QCoreApplication.translate(
+                "LabelingWidget", "Select Save Directory"
+            ),
             path_edit.text(),
             QFileDialog.Option.DontUseNativeDialog,
         )
         if path:
             path_edit.setText(path)
 
-    path_button = QPushButton(self.tr("Browse"))
+    path_button = QPushButton(
+        QCoreApplication.translate("LabelingWidget", "Browse")
+    )
     path_button.clicked.connect(browse_export_path)
     path_button.setStyleSheet(get_cancel_btn_style())
 
@@ -288,7 +301,9 @@ def save_crop(self):
     grid.setVerticalSpacing(12)
     grid.setColumnStretch(0, 1)
 
-    min_width_label = QLabel(self.tr("Minimum width:"))
+    min_width_label = QLabel(
+        QCoreApplication.translate("LabelingWidget", "Minimum width:")
+    )
     min_width_spin = QSpinBox()
     min_width_spin.setRange(0, 10000)
     min_width_spin.setValue(0)
@@ -296,7 +311,9 @@ def save_crop(self):
     grid.addWidget(min_width_label, 0, 0)
     grid.addWidget(min_width_spin, 0, 1)
 
-    min_height_label = QLabel(self.tr("Minimum height:"))
+    min_height_label = QLabel(
+        QCoreApplication.translate("LabelingWidget", "Minimum height:")
+    )
     min_height_spin = QSpinBox()
     min_height_spin.setRange(0, 10000)
     min_height_spin.setValue(0)
@@ -304,11 +321,13 @@ def save_crop(self):
     grid.addWidget(min_height_label, 1, 0)
     grid.addWidget(min_height_spin, 1, 1)
 
-    cancel_button = QPushButton(self.tr("Cancel"))
+    cancel_button = QPushButton(
+        QCoreApplication.translate("LabelingWidget", "Cancel")
+    )
     cancel_button.clicked.connect(dialog.reject)
     cancel_button.setStyleSheet(get_cancel_btn_style())
 
-    ok_button = QPushButton(self.tr("OK"))
+    ok_button = QPushButton(QCoreApplication.translate("LabelingWidget", "OK"))
     ok_button.clicked.connect(dialog.accept)
     ok_button.setStyleSheet(get_ok_btn_style())
 
@@ -345,14 +364,16 @@ def save_crop(self):
     label_dir_path = self.output_dir or osp.dirname(self.filename)
 
     progress_dialog = QProgressDialog(
-        self.tr("Processing..."),
-        self.tr("Cancel"),
+        QCoreApplication.translate("LabelingWidget", "Processing..."),
+        QCoreApplication.translate("LabelingWidget", "Cancel"),
         0,
         len(image_file_list),
         self,
     )
     progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
-    progress_dialog.setWindowTitle(self.tr("Progress"))
+    progress_dialog.setWindowTitle(
+        QCoreApplication.translate("LabelingWidget", "Progress")
+    )
     progress_dialog.setMinimumWidth(400)
     progress_dialog.setMinimumHeight(150)
     progress_dialog.setStyleSheet(
@@ -428,8 +449,9 @@ def save_crop(self):
 
         progress_dialog.close()
         popup = Popup(
-            self.tr(
-                f"Cropped images successfully!\nResults have been saved to:\n{save_path}"
+            QCoreApplication.translate(
+                "LabelingWidget",
+                f"Cropped images successfully!\nResults have been saved to:\n{save_path}",
             ),
             self,
             msec=3000,
@@ -440,7 +462,10 @@ def save_crop(self):
     except Exception as e:
         logger.error(f"Error occurred while exporting cropped images: {e}")
         popup = Popup(
-            self.tr(f"Error occurred while exporting cropped images!"),
+            QCoreApplication.translate(
+                "LabelingWidget",
+                f"Error occurred while exporting cropped images!",
+            ),
             self,
             msec=3000,
             icon=new_icon_path("error", "svg"),

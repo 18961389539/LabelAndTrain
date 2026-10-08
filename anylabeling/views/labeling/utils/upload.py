@@ -6,7 +6,7 @@ import time
 import yaml
 
 from PyQt6 import QtWidgets
-from PyQt6.QtCore import Qt, QThread, pyqtSignal
+from PyQt6.QtCore import QCoreApplication, Qt, QThread, pyqtSignal
 from PyQt6.QtWidgets import (
     QHBoxLayout,
     QVBoxLayout,
@@ -58,7 +58,9 @@ def upload_coco_annotation(self, mode):
     filter = "Attribute Files (*.json);;All Files (*)"
     input_file, _ = QtWidgets.QFileDialog.getOpenFileName(
         self,
-        self.tr("Select a custom coco annotation file"),
+        QCoreApplication.translate(
+            "LabelingWidget", "Select a custom coco annotation file"
+        ),
         "",
         filter,
     )
@@ -72,11 +74,18 @@ def upload_coco_annotation(self, mode):
 
     response = QtWidgets.QMessageBox()
     response.setIcon(QtWidgets.QMessageBox.Icon.Warning)
-    response.setWindowTitle(self.tr("Warning"))
-    response.setText(self.tr("Current annotation will be lost"))
+    response.setWindowTitle(
+        QCoreApplication.translate("LabelingWidget", "Warning")
+    )
+    response.setText(
+        QCoreApplication.translate(
+            "LabelingWidget", "Current annotation will be lost"
+        )
+    )
     response.setInformativeText(
-        self.tr(
-            "You are going to upload new annotations to this task. Continue?"
+        QCoreApplication.translate(
+            "LabelingWidget",
+            "You are going to upload new annotations to this task. Continue?",
         )
     )
     response.setStandardButtons(
@@ -89,10 +98,16 @@ def upload_coco_annotation(self, mode):
         return
 
     progress_dialog = QProgressDialog(
-        self.tr("Uploading..."), self.tr("Cancel"), 0, 0, self
+        QCoreApplication.translate("LabelingWidget", "Uploading..."),
+        QCoreApplication.translate("LabelingWidget", "Cancel"),
+        0,
+        0,
+        self,
     )
     progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
-    progress_dialog.setWindowTitle(self.tr("Progress"))
+    progress_dialog.setWindowTitle(
+        QCoreApplication.translate("LabelingWidget", "Progress")
+    )
     progress_dialog.setMinimumWidth(500)
     progress_dialog.setMinimumHeight(150)
     progress_dialog.setRange(0, 0)
@@ -109,7 +124,9 @@ def upload_coco_annotation(self, mode):
             self.load_file(self.filename)
 
             popup = Popup(
-                self.tr(f"Uploading annotations successfully!"),
+                QCoreApplication.translate(
+                    "LabelingWidget", f"Uploading annotations successfully!"
+                ),
                 self,
                 icon=new_icon_path("copy-green", "svg"),
             )
@@ -139,7 +156,9 @@ def upload_voc_annotation(self, mode):
         return
 
     dialog = QtWidgets.QDialog(self)
-    dialog.setWindowTitle(self.tr("Upload Options"))
+    dialog.setWindowTitle(
+        QCoreApplication.translate("LabelingWidget", "Upload Options")
+    )
     dialog.setMinimumWidth(500)
     dialog.setStyleSheet(get_export_option_style())
 
@@ -148,7 +167,9 @@ def upload_voc_annotation(self, mode):
     layout.setSpacing(16)
 
     path_layout = QVBoxLayout()
-    path_label = QtWidgets.QLabel(self.tr("Select Upload Folder"))
+    path_label = QtWidgets.QLabel(
+        QCoreApplication.translate("LabelingWidget", "Select Upload Folder")
+    )
     path_layout.addWidget(path_label)
 
     path_input_layout = QHBoxLayout()
@@ -160,7 +181,9 @@ def upload_voc_annotation(self, mode):
     def browse_upload_folder():
         path = QtWidgets.QFileDialog.getExistingDirectory(
             self,
-            self.tr("Select Upload Folder"),
+            QCoreApplication.translate(
+                "LabelingWidget", "Select Upload Folder"
+            ),
             path_edit.text(),
             QtWidgets.QFileDialog.Option.ShowDirsOnly
             | QtWidgets.QFileDialog.Option.DontResolveSymlinks
@@ -169,7 +192,9 @@ def upload_voc_annotation(self, mode):
         if path:
             path_edit.setText(path)
 
-    path_button = QtWidgets.QPushButton(self.tr("Browse"))
+    path_button = QtWidgets.QPushButton(
+        QCoreApplication.translate("LabelingWidget", "Browse")
+    )
     path_button.clicked.connect(browse_upload_folder)
     path_button.setStyleSheet(get_cancel_btn_style())
 
@@ -182,11 +207,15 @@ def upload_voc_annotation(self, mode):
     button_layout.setContentsMargins(0, 16, 0, 0)
     button_layout.setSpacing(8)
 
-    cancel_button = QtWidgets.QPushButton(self.tr("Cancel"))
+    cancel_button = QtWidgets.QPushButton(
+        QCoreApplication.translate("LabelingWidget", "Cancel")
+    )
     cancel_button.clicked.connect(dialog.reject)
     cancel_button.setStyleSheet(get_cancel_btn_style())
 
-    ok_button = QtWidgets.QPushButton(self.tr("OK"))
+    ok_button = QtWidgets.QPushButton(
+        QCoreApplication.translate("LabelingWidget", "OK")
+    )
     ok_button.clicked.connect(dialog.accept)
     ok_button.setStyleSheet(get_ok_btn_style())
 
@@ -209,11 +238,18 @@ def upload_voc_annotation(self, mode):
 
     response = QtWidgets.QMessageBox()
     response.setIcon(QtWidgets.QMessageBox.Icon.Warning)
-    response.setWindowTitle(self.tr("Warning"))
-    response.setText(self.tr("Current annotation will be lost"))
+    response.setWindowTitle(
+        QCoreApplication.translate("LabelingWidget", "Warning")
+    )
+    response.setText(
+        QCoreApplication.translate(
+            "LabelingWidget", "Current annotation will be lost"
+        )
+    )
     response.setInformativeText(
-        self.tr(
-            "You are going to upload new annotations to this task. Continue?"
+        QCoreApplication.translate(
+            "LabelingWidget",
+            "You are going to upload new annotations to this task. Continue?",
         )
     )
     response.setStandardButtons(
@@ -227,10 +263,16 @@ def upload_voc_annotation(self, mode):
 
     image_list = self.image_list if self.image_list else [self.filename]
     progress_dialog = QProgressDialog(
-        self.tr("Uploading..."), self.tr("Cancel"), 0, len(image_list), self
+        QCoreApplication.translate("LabelingWidget", "Uploading..."),
+        QCoreApplication.translate("LabelingWidget", "Cancel"),
+        0,
+        len(image_list),
+        self,
     )
     progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
-    progress_dialog.setWindowTitle(self.tr("Progress"))
+    progress_dialog.setWindowTitle(
+        QCoreApplication.translate("LabelingWidget", "Progress")
+    )
     progress_dialog.setMinimumWidth(500)
     progress_dialog.setMinimumHeight(150)
     progress_dialog.setStyleSheet(
@@ -260,10 +302,11 @@ def upload_voc_annotation(self, mode):
                 break
 
         progress_dialog.close()
-        template = self.tr(
+        template = QCoreApplication.translate(
+            "LabelingWidget",
             "Uploading annotations successfully!\n"
             "Results have been saved to:\n"
-            "%s"
+            "%s",
         )
         message_text = template % output_dir_path
         popup = Popup(
@@ -297,7 +340,9 @@ def upload_yolo_annotation(self, mode, LABEL_OPACITY):
         filter = "Classes Files (*.yaml);;All Files (*)"
         self.yaml_file, _ = QtWidgets.QFileDialog.getOpenFileName(
             self,
-            self.tr("Select a specific yolo-pose config file"),
+            QCoreApplication.translate(
+                "LabelingWidget", "Select a specific yolo-pose config file"
+            ),
             "",
             filter,
         )
@@ -309,7 +354,10 @@ def upload_yolo_annotation(self, mode, LABEL_OPACITY):
         except Exception as e:
             logger.error(f"Failed to load pose config: {self.yaml_file}: {e}")
             popup = Popup(
-                self.tr("Invalid pose config file:\n%s") % str(e),
+                QCoreApplication.translate(
+                    "LabelingWidget", "Invalid pose config file:\n%s"
+                )
+                % str(e),
                 self,
                 icon=new_icon_path("error", "svg"),
             )
@@ -328,7 +376,10 @@ def upload_yolo_annotation(self, mode, LABEL_OPACITY):
         labels, _, converter = resolved
         if not labels:
             popup = Popup(
-                self.tr("The class list is empty - nothing can be imported."),
+                QCoreApplication.translate(
+                    "LabelingWidget",
+                    "The class list is empty - nothing can be imported.",
+                ),
                 self,
                 icon=new_icon_path("warning", "svg"),
             )
@@ -336,7 +387,9 @@ def upload_yolo_annotation(self, mode, LABEL_OPACITY):
             return
 
     dialog = QtWidgets.QDialog(self)
-    dialog.setWindowTitle(self.tr("Upload Options"))
+    dialog.setWindowTitle(
+        QCoreApplication.translate("LabelingWidget", "Upload Options")
+    )
     dialog.setMinimumWidth(500)
     dialog.setStyleSheet(get_export_option_style())
 
@@ -345,7 +398,9 @@ def upload_yolo_annotation(self, mode, LABEL_OPACITY):
     layout.setSpacing(16)
 
     path_layout = QVBoxLayout()
-    path_label = QtWidgets.QLabel(self.tr("Select Upload Folder"))
+    path_label = QtWidgets.QLabel(
+        QCoreApplication.translate("LabelingWidget", "Select Upload Folder")
+    )
     path_layout.addWidget(path_label)
 
     path_input_layout = QHBoxLayout()
@@ -357,7 +412,9 @@ def upload_yolo_annotation(self, mode, LABEL_OPACITY):
     def browse_upload_folder():
         path = QtWidgets.QFileDialog.getExistingDirectory(
             self,
-            self.tr("Select Upload Folder"),
+            QCoreApplication.translate(
+                "LabelingWidget", "Select Upload Folder"
+            ),
             path_edit.text(),
             QtWidgets.QFileDialog.Option.ShowDirsOnly
             | QtWidgets.QFileDialog.Option.DontResolveSymlinks
@@ -366,7 +423,9 @@ def upload_yolo_annotation(self, mode, LABEL_OPACITY):
         if path:
             path_edit.setText(path)
 
-    path_button = QtWidgets.QPushButton(self.tr("Browse"))
+    path_button = QtWidgets.QPushButton(
+        QCoreApplication.translate("LabelingWidget", "Browse")
+    )
     path_button.clicked.connect(browse_upload_folder)
     path_button.setStyleSheet(get_cancel_btn_style())
 
@@ -376,7 +435,9 @@ def upload_yolo_annotation(self, mode, LABEL_OPACITY):
     layout.addLayout(path_layout)
 
     preserve_checkbox = QtWidgets.QCheckBox(
-        self.tr("Preserve existing annotations")
+        QCoreApplication.translate(
+            "LabelingWidget", "Preserve existing annotations"
+        )
     )
     preserve_checkbox.setChecked(False)
     layout.addWidget(preserve_checkbox)
@@ -385,11 +446,15 @@ def upload_yolo_annotation(self, mode, LABEL_OPACITY):
     button_layout.setContentsMargins(0, 16, 0, 0)
     button_layout.setSpacing(8)
 
-    cancel_button = QtWidgets.QPushButton(self.tr("Cancel"))
+    cancel_button = QtWidgets.QPushButton(
+        QCoreApplication.translate("LabelingWidget", "Cancel")
+    )
     cancel_button.clicked.connect(dialog.reject)
     cancel_button.setStyleSheet(get_cancel_btn_style())
 
-    ok_button = QtWidgets.QPushButton(self.tr("OK"))
+    ok_button = QtWidgets.QPushButton(
+        QCoreApplication.translate("LabelingWidget", "OK")
+    )
     ok_button.clicked.connect(dialog.accept)
     ok_button.setStyleSheet(get_ok_btn_style())
 
@@ -413,21 +478,32 @@ def upload_yolo_annotation(self, mode, LABEL_OPACITY):
 
     response = QtWidgets.QMessageBox()
     response.setIcon(QtWidgets.QMessageBox.Icon.Warning)
-    response.setWindowTitle(self.tr("Warning"))
+    response.setWindowTitle(
+        QCoreApplication.translate("LabelingWidget", "Warning")
+    )
     if preserve_existing:
         response.setText(
-            self.tr("New annotations will be merged with existing ones")
+            QCoreApplication.translate(
+                "LabelingWidget",
+                "New annotations will be merged with existing ones",
+            )
         )
         response.setInformativeText(
-            self.tr(
-                "You are going to add new annotations to this task. Existing annotations will be preserved. Continue?"
+            QCoreApplication.translate(
+                "LabelingWidget",
+                "You are going to add new annotations to this task. Existing annotations will be preserved. Continue?",
             )
         )
     else:
-        response.setText(self.tr("Current annotation will be lost"))
+        response.setText(
+            QCoreApplication.translate(
+                "LabelingWidget", "Current annotation will be lost"
+            )
+        )
         response.setInformativeText(
-            self.tr(
-                "You are going to upload new annotations to this task. Continue?"
+            QCoreApplication.translate(
+                "LabelingWidget",
+                "You are going to upload new annotations to this task. Continue?",
             )
         )
     response.setStandardButtons(
@@ -440,14 +516,16 @@ def upload_yolo_annotation(self, mode, LABEL_OPACITY):
         return
 
     progress_dialog = QProgressDialog(
-        self.tr("Uploading..."),
-        self.tr("Cancel"),
+        QCoreApplication.translate("LabelingWidget", "Uploading..."),
+        QCoreApplication.translate("LabelingWidget", "Cancel"),
         0,
         len(image_file_list),
         self,
     )
     progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
-    progress_dialog.setWindowTitle(self.tr("Progress"))
+    progress_dialog.setWindowTitle(
+        QCoreApplication.translate("LabelingWidget", "Progress")
+    )
     progress_dialog.setMinimumWidth(500)
     progress_dialog.setMinimumHeight(150)
     progress_dialog.setStyleSheet(
@@ -509,7 +587,9 @@ def upload_yolo_annotation(self, mode, LABEL_OPACITY):
         progress_dialog.close()
         self.load_file(self.filename)
         popup = Popup(
-            self.tr("Upload completed successfully!"),
+            QCoreApplication.translate(
+                "LabelingWidget", "Upload completed successfully!"
+            ),
             self,
             icon=new_icon_path("copy-green", "svg"),
         )
@@ -542,7 +622,9 @@ def upload_label_classes_file(self):
     filter = "Label Files (*.txt);;All Files (*)"
     file_path, _ = QtWidgets.QFileDialog.getOpenFileName(
         self,
-        self.tr("Select a specific label classes file"),
+        QCoreApplication.translate(
+            "LabelingWidget", "Select a specific label classes file"
+        ),
         "",
         filter,
     )
@@ -555,7 +637,9 @@ def upload_label_classes_file(self):
 
         if not labels:
             popup = Popup(
-                self.tr("No labels found in the file!"),
+                QCoreApplication.translate(
+                    "LabelingWidget", "No labels found in the file!"
+                ),
                 self,
                 icon=new_icon_path("error", "svg"),
             )
@@ -564,11 +648,18 @@ def upload_label_classes_file(self):
 
         response = QtWidgets.QMessageBox()
         response.setIcon(QtWidgets.QMessageBox.Icon.Warning)
-        response.setWindowTitle(self.tr("Warning"))
-        response.setText(self.tr("Current labels will be lost"))
+        response.setWindowTitle(
+            QCoreApplication.translate("LabelingWidget", "Warning")
+        )
+        response.setText(
+            QCoreApplication.translate(
+                "LabelingWidget", "Current labels will be lost"
+            )
+        )
         response.setInformativeText(
-            self.tr(
-                "You are going to upload new labels to this task. Continue?"
+            QCoreApplication.translate(
+                "LabelingWidget",
+                "You are going to upload new labels to this task. Continue?",
             )
         )
         response.setStandardButtons(
@@ -591,7 +682,10 @@ def upload_label_classes_file(self):
             self.label_dialog.sort_labels()
 
         popup = Popup(
-            self.tr(f"Successfully loaded {len(set(labels))} labels!"),
+            QCoreApplication.translate(
+                "LabelingWidget",
+                f"Successfully loaded {len(set(labels))} labels!",
+            ),
             self,
             icon=new_icon_path("copy-green", "svg"),
         )
@@ -753,7 +847,9 @@ def upload_shape_attrs_file(self, LABEL_OPACITY):
     filter = "Shape Attributes Files (*.json);;All Files (*)"
     file_path, _ = QtWidgets.QFileDialog.getOpenFileName(
         self,
-        self.tr("Select a specific shape attributes file"),
+        QCoreApplication.translate(
+            "LabelingWidget", "Select a specific shape attributes file"
+        ),
         "",
         filter,
     )
@@ -798,7 +894,10 @@ def upload_shape_attrs_file(self, LABEL_OPACITY):
         self._settings_runtime_applier.set_auto_switch_to_edit_mode(False)
 
         popup = Popup(
-            self.tr(f"Uploading shape attributes file successfully!"),
+            QCoreApplication.translate(
+                "LabelingWidget",
+                f"Uploading shape attributes file successfully!",
+            ),
             self,
             icon=new_icon_path("copy-green", "svg"),
         )
@@ -822,7 +921,9 @@ def upload_label_flags_file(self, LABEL_OPACITY):
     filter = "Label Flags Files (*.yaml);;All Files (*)"
     file_path, _ = QtWidgets.QFileDialog.getOpenFileName(
         self,
-        self.tr("Select a specific flags file"),
+        QCoreApplication.translate(
+            "LabelingWidget", "Select a specific flags file"
+        ),
         "",
         filter,
     )
@@ -846,7 +947,9 @@ def upload_label_flags_file(self, LABEL_OPACITY):
         self.label_dialog.upload_flags(self.label_flags)
 
         popup = Popup(
-            self.tr(f"Uploading flags file successfully!"),
+            QCoreApplication.translate(
+                "LabelingWidget", f"Uploading flags file successfully!"
+            ),
             self,
             icon=new_icon_path("copy-green", "svg"),
         )
@@ -868,7 +971,9 @@ def upload_image_flags_file(self):
     filter = "Image Flags Files (*.txt);;All Files (*)"
     file_path, _ = QtWidgets.QFileDialog.getOpenFileName(
         self,
-        self.tr("Select a specific flags file"),
+        QCoreApplication.translate(
+            "LabelingWidget", "Select a specific flags file"
+        ),
         "",
         filter,
     )
@@ -886,7 +991,9 @@ def upload_image_flags_file(self):
         self.load_file(self.filename)
 
         popup = Popup(
-            self.tr(f"Uploading flags file successfully!"),
+            QCoreApplication.translate(
+                "LabelingWidget", f"Uploading flags file successfully!"
+            ),
             self,
             icon=new_icon_path("copy-green", "svg"),
         )

@@ -33,8 +33,10 @@ from ..filelist.roles import (
     FILE_ANNOTATION_ROLE,
     FILE_LOW_CONF_ROLE,
     FILE_NEGATIVE_ROLE,
-    FILE_REVIEW_ROLE,
     FILE_REVIEWED_AT_ROLE,
+    FILE_REVIEW_NOTE_ROLE,
+    FILE_REVIEW_ROLE,
+    REVIEW_NOTE_FIELD,
     REVIEW_STATE_FIELD,
     REVIEWED_AT_FIELD,
 )
@@ -43,32 +45,98 @@ import os
 import os.path as osp
 
 
+def _checked_targets(widget):
+    """The rows a bulk checkbox action applies to: the visible ones."""
+    targets = []
+    for row in range(widget.file_list_widget.count()):
+        item = widget.file_list_widget.item(row)
+        if item.isHidden():
+            continue
+        if item.flags() & Qt.ItemFlag.ItemIsUserCheckable:
+            targets.append(item)
+    return targets
+
+
+def set_all_items_checked(widget, mode):
+    """Bulk-toggle the checkbox column: ``all`` / ``none`` / ``invert``.
+
+    The checkbox is the row's "has labels" marker -- the same item data a
+    click edits, nothing is written to disk, and reopening the folder
+    recomputes it -- so this needs no confirmation step. It only ever
+    touches rows the current filter is showing, and it edits them with
+    the re-entrancy guard up, so the itemChanged slot does not recurse.
+    """
+    widget._syncing_file_item = True
+    try:
+        for item in _checked_targets(widget):
+            checked = item.checkState() == Qt.CheckState.Checked
+            if mode == "all":
+                wanted = True
+            elif mode == "none":
+                wanted = False
+            else:
+                wanted = not checked
+            item.setCheckState(
+                Qt.CheckState.Checked if wanted else Qt.CheckState.Unchecked
+            )
+            item.setData(FILE_ANNOTATION_ROLE, wanted)
+            widget._refresh_file_item_status_icon(item)
+    finally:
+        widget._syncing_file_item = False
+    widget._refresh_file_progress()
+
+
 def pop_file_list_menu(widget, point):
     item = widget.file_list_widget.itemAt(point)
-    if item is None:
-        return
 
     menu = QtWidgets.QMenu(widget.file_list_widget)
-    copy_name_action = menu.addAction(
-        utils.new_icon("copy", "svg"),
-        QCoreApplication.translate("LabelingWidget", "Copy File Name"),
+    copy_name_action = None
+    copy_path_action = None
+    check_and_next_action = None
+    del_label_action = None
+    del_image_action = None
+    if item is not None:
+        copy_name_action = menu.addAction(
+            utils.new_icon("copy", "svg"),
+            QCoreApplication.translate("LabelingWidget", "Copy File Name"),
+        )
+        copy_path_action = menu.addAction(
+            utils.new_icon("copy", "svg"),
+            QCoreApplication.translate("LabelingWidget", "Copy File Path"),
+        )
+        menu.addSeparator()
+        check_and_next_action = menu.addAction(
+            QCoreApplication.translate("LabelingWidget", "标记已检查并下一张")
+        )
+        del_label_action = menu.addAction(
+            utils.new_icon("trash", "svg"),
+            QCoreApplication.translate("LabelingWidget", "删除标注文件"),
+        )
+        del_image_action = menu.addAction(
+            utils.new_icon("trash", "svg"),
+            QCoreApplication.translate("LabelingWidget", "删除图片文件"),
+        )
+        menu.addSeparator()
+
+    # The bulk entries live outside the item branch on purpose: they are
+    # about the list, and a right-click on the empty area below the rows
+    # used to do nothing at all.
+    check_menu = menu.addMenu(
+        QCoreApplication.translate("LabelingWidget", "勾选")
     )
-    copy_path_action = menu.addAction(
-        utils.new_icon("copy", "svg"),
-        QCoreApplication.translate("LabelingWidget", "Copy File Path"),
+    check_all_action = check_menu.addAction(
+        QCoreApplication.translate("LabelingWidget", "全部勾选")
     )
-    menu.addSeparator()
-    check_and_next_action = menu.addAction(
-        QCoreApplication.translate("LabelingWidget", "标记已检查并下一张")
+    check_none_action = check_menu.addAction(
+        QCoreApplication.translate("LabelingWidget", "全部取消勾选")
     )
-    del_label_action = menu.addAction(
-        utils.new_icon("trash", "svg"),
-        QCoreApplication.translate("LabelingWidget", "删除标注文件"),
+    check_invert_action = check_menu.addAction(
+        QCoreApplication.translate("LabelingWidget", "反选")
     )
-    del_image_action = menu.addAction(
-        utils.new_icon("trash", "svg"),
-        QCoreApplication.translate("LabelingWidget", "删除图片文件"),
-    )
+    has_targets = bool(_checked_targets(widget))
+    for entry in (check_all_action, check_none_action, check_invert_action):
+        entry.setEnabled(has_targets)
+
     menu.addSeparator()
     sort_menu = menu.addMenu(
         QCoreApplication.translate("LabelingWidget", "排序方式")
@@ -90,6 +158,8 @@ def pop_file_list_menu(widget, point):
     sort_time.setChecked(current_sort == "time")
     sort_annotation.setChecked(current_sort == "annotation")
     action = menu.exec(widget.file_list_widget.mapToGlobal(point))
+    if action is None:
+        return
     if action == copy_name_action:
         widget.copy_file_path(osp.basename(item.text()))
     elif action == copy_path_action:
@@ -102,6 +172,12 @@ def pop_file_list_menu(widget, point):
         widget._delete_via_context(item, include_image=False)
     elif action == del_image_action:
         widget._delete_via_context(item, include_image=True)
+    elif action == check_all_action:
+        set_all_items_checked(widget, "all")
+    elif action == check_none_action:
+        set_all_items_checked(widget, "none")
+    elif action == check_invert_action:
+        set_all_items_checked(widget, "invert")
     elif action in (sort_name, sort_time, sort_annotation):
         mode = {
             sort_name: "name",
@@ -130,15 +206,18 @@ def _create_file_list_item(widget, file, label_file, read_checked=True):
     # Reading the JSON is slow on large folders; batch callers pass
     # read_checked=False and let the background checker fill the dot.
     if read_checked:
-        state, reviewed_at = label_file_review_info(label_file)
+        state, reviewed_at, note = label_file_review_info(label_file)
     else:
-        state, reviewed_at = REVIEW_UNCHECKED, None
+        state, reviewed_at, note = REVIEW_UNCHECKED, None, None
     item.setData(Qt.ItemDataRole.UserRole, state == REVIEW_CONFIRMED)
     item.setData(FILE_REVIEW_ROLE, state)
     item.setData(FILE_REVIEWED_AT_ROLE, reviewed_at)
+    item.setData(FILE_REVIEW_NOTE_ROLE, note)
     widget._refresh_file_item_status_icon(item)
     item.setToolTip(
-        widget._file_item_tooltip(file, label_file, state, reviewed_at)
+        widget._file_item_tooltip(
+            file, label_file, state, reviewed_at, note=note
+        )
     )
     return item
 
@@ -202,6 +281,7 @@ def _file_item_tooltip(
     counts=None,
     negative=False,
     low_conf=False,
+    note=None,
 ):
     """Delegates to filelist.items."""
     return filelist_items.file_item_tooltip(
@@ -213,6 +293,7 @@ def _file_item_tooltip(
         counts=counts,
         negative=negative,
         low_conf=low_conf,
+        note=note,
     )
 
 
@@ -223,10 +304,12 @@ def mark_file_item_negative_state(widget, image_file, negative):
     )
 
 
-def _set_file_item_review_state(widget, item, state, reviewed_at=None):
+def _set_file_item_review_state(
+    widget, item, state, reviewed_at=None, note=None
+):
     """Delegates to filelist.items (async checker & tests call this)."""
     return filelist_items.set_file_item_review_state(
-        widget, item, state, reviewed_at
+        widget, item, state, reviewed_at, note
     )
 
 
@@ -306,6 +389,7 @@ def _update_current_file_tooltip(widget):
             state,
             widget.other_data.get("reviewed_at"),
             counts=counts,
+            note=widget.other_data.get(REVIEW_NOTE_FIELD),
         )
     )
 

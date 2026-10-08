@@ -40,11 +40,22 @@ class CanvasEmptyStateWidget(QtWidgets.QWidget):
             self.tr(
                 "1. 打开图片文件夹\n"
                 "2. 需要时在自动标注面板选择模型\n"
-                "3. 画框或修正结果，切图时自动保存"
+                "3. 画框或修正结果，切图时自动保存\n"
+                "4. 标注完成后可一键训练，训练结果能直接用于自动标注"
             )
         )
         steps.setObjectName("EmptyStep")
         steps.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        # Ctrl+Y is off by default and its only other surface is a group in
+        # the F1 sheet, so a new annotator never finds the one action that
+        # saves the most clicks on a single-class or block-wise dataset.
+        hint = QtWidgets.QLabel(
+            self.tr("提示：按 Ctrl+Y 可自动沿用上一标签，成片同类时更省手")
+        )
+        hint.setObjectName("EmptyStep")
+        hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        hint.setWordWrap(True)
 
         self.open_button = QtWidgets.QPushButton(
             self.tr("打开文件夹（Ctrl+U）")
@@ -60,6 +71,7 @@ class CanvasEmptyStateWidget(QtWidgets.QWidget):
         card_layout.setSpacing(14)
         card_layout.addWidget(title)
         card_layout.addWidget(steps)
+        card_layout.addWidget(hint)
         card_layout.addWidget(
             self.open_button, 0, Qt.AlignmentFlag.AlignCenter
         )

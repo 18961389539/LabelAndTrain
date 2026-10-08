@@ -14,8 +14,9 @@ from .roles import (
     FILE_ANNOTATION_ROLE,
     FILE_LOW_CONF_ROLE,
     FILE_NEGATIVE_ROLE,
-    FILE_REVIEW_ROLE,
     FILE_REVIEWED_AT_ROLE,
+    FILE_REVIEW_NOTE_ROLE,
+    FILE_REVIEW_ROLE,
 )
 
 
@@ -23,7 +24,9 @@ def is_confirmed(state):
     return state == REVIEW_CONFIRMED
 
 
-def set_file_item_review_state(widget, item, state, reviewed_at=None):
+def set_file_item_review_state(
+    widget, item, state, reviewed_at=None, note=None
+):
     changed = (
         item.data(Qt.ItemDataRole.UserRole) is not is_confirmed(state)
         or item.data(FILE_REVIEW_ROLE) != state
@@ -34,6 +37,14 @@ def set_file_item_review_state(widget, item, state, reviewed_at=None):
     refresh_file_item_status_icon(widget, item)
     if reviewed_at is not None:
         item.setData(FILE_REVIEWED_AT_ROLE, reviewed_at)
+    # The reason is only meaningful while rejected. An explicit note always
+    # wins; a caller that does not carry one (a plain reject) leaves whatever
+    # the row already had, and any other verdict clears it.
+    if state == REVIEW_REJECTED:
+        if note is not None:
+            item.setData(FILE_REVIEW_NOTE_ROLE, note)
+    else:
+        item.setData(FILE_REVIEW_NOTE_ROLE, None)
     refresh_file_item_tooltip(widget, item)
     return changed
 
@@ -52,6 +63,7 @@ def refresh_file_item_tooltip(widget, item, counts=None):
             counts=counts,
             negative=bool(item.data(FILE_NEGATIVE_ROLE)),
             low_conf=bool(item.data(FILE_LOW_CONF_ROLE)),
+            note=item.data(FILE_REVIEW_NOTE_ROLE),
         )
     )
 
@@ -96,6 +108,31 @@ def file_item_annotation_checked(item):
     return item.data(Qt.ItemDataRole.UserRole) is True
 
 
+def file_item_review_state(item):
+    """The row's review verdict, falling back on the legacy boolean.
+
+    Mirrors ``refresh_file_item_status_icon``: a row written before the
+    three-state field existed only carries the boolean ``UserRole``.
+    """
+    state = item.data(FILE_REVIEW_ROLE)
+    if state:
+        return state
+    if item.data(Qt.ItemDataRole.UserRole) is True:
+        return REVIEW_CONFIRMED
+    return REVIEW_UNCHECKED
+
+
+def file_item_is_unchecked(item):
+    """A row still awaiting a first look -- "next unchecked" targets these.
+
+    ``rejected`` is excluded on purpose. The predicate used to be "not
+    confirmed", which folded rejects into "unchecked", so a reviewer
+    pressing "next unchecked" right after sending a file back landed on
+    their own rejects again.
+    """
+    return file_item_review_state(item) == REVIEW_UNCHECKED
+
+
 def set_file_item_low_conf(widget, item, has_low_conf):
     value = bool(has_low_conf)
     if item.data(FILE_LOW_CONF_ROLE) is value:
@@ -131,6 +168,7 @@ def file_item_tooltip(
     counts=None,
     negative=False,
     low_conf=False,
+    note=None,
 ):
     """Hover text for one file row: what it is, and where it stands.
 
@@ -169,6 +207,12 @@ def file_item_tooltip(
             .replace("%4", str(counts["unknown"]))
         )
     if state == REVIEW_REJECTED:
+        if note:
+            lines.append(
+                QCoreApplication.translate(
+                    "LabelingWidget", "返工原因：%1"
+                ).replace("%1", str(note))
+            )
         lines.append(
             QCoreApplication.translate(
                 "LabelingWidget", "图标含义：已打回，待人工返工"

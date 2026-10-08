@@ -139,16 +139,51 @@ def test_format_rows_has_a_header_and_one_line_per_run():
     assert lines[1][1] == "exp"
 
 
+def _column(name):
+    """Column index by header name.
+
+    Magic indices broke the moment a column was inserted (the 状态 field),
+    so the assertions ask the header where a field lives instead.
+    """
+    return rh.format_history_rows([])[0].index(name)
+
+
 class TestRunHistoryDialog:
     """Keeps the QApplication at module scope.
 
     A locally-created QApplication is collected when the helper returns, and
     taking the application down destroys every widget with it - which shows up
     as 'wrapped C/C++ object has been deleted' on a perfectly good table.
+
+    The dialog is built from English sources, so the assertions below are about
+    what a user actually sees: the shipped zh_CN catalog is installed for the
+    duration of the class.
     """
 
     _app = None
     _parents = []
+    _translator = None
+
+    @classmethod
+    def setup_class(cls):
+        os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+        from PyQt6 import QtCore, QtWidgets
+
+        import anylabeling.resources.resources  # noqa: F401
+
+        cls._app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(
+            []
+        )
+        translator = QtCore.QTranslator()
+        if translator.load(":/languages/translations/zh_CN.qm"):
+            cls._app.installTranslator(translator)
+            cls._translator = translator
+
+    @classmethod
+    def teardown_class(cls):
+        if cls._translator is not None:
+            cls._app.removeTranslator(cls._translator)
+            cls._translator = None
 
     def _dialog(self, tmp_path, rows_meta, with_label_dir=False):
         os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -227,8 +262,8 @@ class TestRunHistoryDialog:
             },
         )
         assert dialog.table.rowCount() == 2
-        assert dialog.table.item(0, 1).text() == "exp3"
-        assert dialog.table.item(0, 4).text() == "0.8100"
+        assert dialog.table.item(0, _column("运行")).text() == "exp3"
+        assert dialog.table.item(0, _column("mAP50")).text() == "0.8100"
         text = dialog.summary_label.text()
         assert "0.8100" in text
         assert "exp2" in text  # the trend names both rounds
@@ -245,11 +280,11 @@ class TestRunHistoryDialog:
             with_label_dir=True,
         )
         rows = {
-            dialog.table.item(i, 1).text(): i
+            dialog.table.item(i, _column("运行")).text(): i
             for i in range(dialog.table.rowCount())
         }
-        assert dialog.table.item(rows["exp2"], 2).text() == "2"
-        assert dialog.table.item(rows["exp1"], 2).text() == "1"
+        assert dialog.table.item(rows["exp2"], _column("轮次")).text() == "2"
+        assert dialog.table.item(rows["exp1"], _column("轮次")).text() == "1"
 
     def test_empty_state_explains_what_is_missing(self, tmp_path):
         dialog = self._dialog(tmp_path, {})

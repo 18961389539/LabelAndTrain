@@ -538,7 +538,13 @@ class ModelManager(QObject):
             if old_config is not None:
                 self.loaded_model_config = None
         if old_config is not None:
-            old_config["model"].unload()
+            # An unload that raises must not take the next model down with
+            # it: log it and carry on, otherwise one bad model locks the
+            # whole switcher for the rest of the session.
+            try:
+                old_config["model"].unload()
+            except Exception as e:  # noqa
+                logger.warning(f"Failed to unload the previous model: {e}")
             self.auto_segmentation_model_unselected.emit()
 
         model_config = copy.deepcopy(self.model_configs[model_id])

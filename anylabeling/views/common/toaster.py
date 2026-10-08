@@ -239,7 +239,9 @@ class QToaster(QtWidgets.QFrame):
         label.setStyleSheet(f"color: {color or self._fg_color};")
         font = QtGui.QFont()
         font.setPointSize(10)
-        font.setWeight(100)
+        # 100 is QFont.Weight.Thin, not "normal": a toast is meant to read like
+        # ordinary body text.
+        font.setWeight(QtGui.QFont.Weight.Normal)
         label.setFont(font)
         self.layout().addWidget(label)
 

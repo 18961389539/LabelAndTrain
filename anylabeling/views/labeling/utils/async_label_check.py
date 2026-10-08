@@ -18,6 +18,7 @@ from PyQt6.QtCore import QObject, pyqtSignal
 from anylabeling.views.labeling.logger import logger
 from anylabeling.views.labeling.schema import (
     REVIEW_CONFIRMED,
+    REVIEW_REJECTED,
     REVIEW_UNCHECKED,
 )
 
@@ -26,50 +27,59 @@ REVIEW_STATE_PATTERN = re.compile(
     r'"review_state"\s*:\s*"(unchecked|confirmed|rejected)"'
 )
 REVIEWED_AT_PATTERN = re.compile(r'"reviewed_at"\s*:\s*"([^"]*)"')
+REVIEW_NOTE_PATTERN = re.compile(
+    r'"review_note"\s*:\s*(?:"((?:[^"\\]|\\.)*)"|null)'
+)
+
+#: The review header (state / timestamp / reason) is written before
+#: ``shapes``, so a bounded head read always holds all three.
+HEAD_SCAN_BYTES = 8192
+HEAD_SCAN_LIMIT = 65536
 
 
 def label_file_review_info(label_file):
-    """``(review_state, reviewed_at)`` from one cheap scan of the JSON head.
+    """``(review_state, reviewed_at, review_note)`` from one head read.
 
-    The row tooltip needs the timestamp as well as the state, and ``reviewed_at``
-    is written next to ``review_state`` in the template -- so a few extra bytes
-    of the same stream is all it costs. A full parse per row is what the
+    All three fields sit together at the top of the template, ahead of
+    ``shapes``, so a bounded read of the head answers every question the
+    file row has -- and that bound is what keeps this affordable on a
+    folder of thousands of rows. A full parse per row is the cost the
     background checker exists to avoid.
     """
     if not osp.exists(label_file):
-        return REVIEW_UNCHECKED, None
+        return REVIEW_UNCHECKED, None, None
     try:
-        buffer = ""
-        state = None
-        reviewed_at = None
         with open(label_file, "r", encoding="utf-8") as f:
-            while True:
-                chunk = f.read(8192)
+            head = ""
+            while len(head) < HEAD_SCAN_LIMIT:
+                chunk = f.read(HEAD_SCAN_BYTES)
                 if not chunk:
                     break
-                buffer = buffer[-32:] + chunk
-                if state is None:
-                    match = REVIEW_STATE_PATTERN.search(buffer)
-                    if match:
-                        state = match.group(1)
-                    else:
-                        match = CHECKED_FIELD_PATTERN.search(buffer)
-                        if match:
-                            state = (
-                                REVIEW_CONFIRMED
-                                if match.group(1) == "true"
-                                else REVIEW_UNCHECKED
-                            )
-                if state is not None:
-                    match = REVIEWED_AT_PATTERN.search(buffer)
-                    if match:
-                        reviewed_at = match.group(1) or None
-                        break
-                if state is not None and len(buffer) > 24576:
+                head += chunk
+                if '"shapes"' in head:
                     break
     except Exception:  # noqa: BLE001
-        return REVIEW_UNCHECKED, None
-    return state or REVIEW_UNCHECKED, reviewed_at
+        return REVIEW_UNCHECKED, None, None
+
+    match = REVIEW_STATE_PATTERN.search(head)
+    if match:
+        state = match.group(1)
+    else:
+        match = CHECKED_FIELD_PATTERN.search(head)
+        state = (
+            REVIEW_CONFIRMED
+            if match and match.group(1) == "true"
+            else REVIEW_UNCHECKED
+        )
+    match = REVIEWED_AT_PATTERN.search(head)
+    reviewed_at = (match.group(1) or None) if match else None
+    match = REVIEW_NOTE_PATTERN.search(head)
+    note = (match.group(1) or None) if match else None
+    if state != REVIEW_REJECTED:
+        # A reason only means something on a rejected file; a hand-edited
+        # JSON must not leak one onto a confirmed row's tooltip.
+        note = None
+    return state, reviewed_at, note
 
 
 def _label_file_review_state(label_file: str) -> str:
@@ -90,7 +100,9 @@ def _label_file_checked(label_file: str) -> bool:
 class LabelCheckWorker(QObject):
     """Checks label files on a background thread, in batches."""
 
-    batch_ready = pyqtSignal(int, list)  # (start_index, [(state, ts), ...])
+    batch_ready = pyqtSignal(
+        int, list
+    )  # (start_index, [(state, ts, note), ...])
     finished = pyqtSignal()
 
     def __init__(

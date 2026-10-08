@@ -313,7 +313,12 @@ class YOLOv8SegmentAnything2(YOLO):
         del self.net
         self.stop_inference = True
         if self.pre_inference_thread:
-            self.pre_inference_thread.quit
+            self.pre_inference_thread.quit()
+        # The SAM2 encoder/decoder sessions live on ``model``, not on ``net``,
+        # and the preload worker holds a bound method of this instance — drop
+        # both references or the old model stays resident across a switch.
+        self.pre_inference_worker = None
+        self.model = None
 
     def preload_worker(self, files):
         """

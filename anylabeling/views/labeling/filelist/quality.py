@@ -14,6 +14,7 @@ import os.path as osp
 
 from PyQt6 import QtCore
 
+from ..logger import logger
 from ..utils.active_learning import (
     load_thresholds,
     needs_review,
@@ -86,7 +87,11 @@ class FileQualityController:
                 has_low_conf = self.shapes_need_review(
                     data.get("shapes") if isinstance(data, dict) else None
                 )
-            except Exception:  # noqa: BLE001
+            except Exception as e:  # noqa: BLE001
+                # Unreadable is not "clean".  data_audit and export_check call
+                # the same file corrupted, so at the very least leave a trace
+                # rather than silently stamping the row as fine.
+                logger.warning(f"Could not read {label_file}: {e}")
                 has_low_conf = False
         filelist_items.set_file_item_low_conf(self._widget, item, has_low_conf)
         return has_low_conf

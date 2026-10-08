@@ -11,6 +11,7 @@ from anylabeling.views.common.device_manager import device_manager
 from .. import utils
 from ..logger import logger
 from ..shape import Shape
+from ..utils import panel_visibility
 from ..utils.qt import apply_application_font
 from ..utils.shortcuts_help import UNBOUND_ACTIONS
 from ..widgets import LabelDialog
@@ -162,6 +163,13 @@ class SettingsRuntimeApplier:
                 self._widget.show_shortcuts_help,
             )
         )
+        shortcut_map["shortcuts.toggle_sidebar"] = (
+            self._ensure_hidden_shortcut_action(
+                "toggle_sidebar",
+                QCoreApplication.translate("LabelingWidget", "Toggle Sidebar"),
+                lambda: panel_visibility.toggle_sidebar_collapse(self._widget),
+            )
+        )
         shortcut_map["shortcuts.add_point_to_edge"] = (
             self._ensure_hidden_shortcut_action(
                 "add_point_to_edge",
@@ -305,6 +313,8 @@ class SettingsRuntimeApplier:
             or key.startswith("file_dock.")
         ):
             self.apply_dock_features()
+            if key.endswith(".show"):
+                self.apply_dock_visibility(key.split(".", 1)[0])
             return
         if key in {
             "display_label_popup",
@@ -331,7 +341,6 @@ class SettingsRuntimeApplier:
             "model_hub",
             "device",
             "logger_level",
-            "training.ultralytics.project_readonly",
             "file_search",
         }:
             self.apply_runtime_advanced(key, value)
@@ -479,6 +488,19 @@ class SettingsRuntimeApplier:
                     QtWidgets.QDockWidget.DockWidgetFeature.DockWidgetMovable
                 )
             getattr(self._widget, dock_name).setFeatures(features)
+
+    def apply_dock_visibility(self, dock_name: str) -> None:
+        """Apply a dock's ``show`` key without waiting for a restart.
+
+        The section checkboxes read the same key, so they are pointed at
+        the new state too -- silently, or the sync would write the config
+        again for a change the settings page already made.
+        """
+        dock = getattr(self._widget, dock_name, None)
+        if dock is None:
+            return
+        dock.setVisible(bool(self._widget._config[dock_name]["show"]))
+        panel_visibility.sync_dock_checkbox(self._widget, dock_name)
 
     def apply_behavior_flags(self, key: str) -> None:
         if key == "auto_highlight_shape":

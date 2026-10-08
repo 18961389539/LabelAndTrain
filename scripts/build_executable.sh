@@ -17,7 +17,7 @@ export X_ANYLABELING_ROOT="${ROOT_DIR}"
 
 usage() {
     cat <<EOF
-Usage: $(basename "$0") {win-cpu|win-gpu|linux-cpu|linux-gpu|macos}
+Usage: $(basename "$0") {win-cpu|win-cpu-train|win-gpu|linux-cpu|linux-gpu|macos}
 
 Build JLLabelingAndTrain executable artifacts with PyInstaller.
 EOF
@@ -111,6 +111,9 @@ package_macos_release_zip() {
 case "${system}" in
     win-cpu)
         build_with_spec "Windows CPU" "CPU" "${SPEC_DIR}/x-anylabeling-win-cpu.spec"
+        ;;
+    win-cpu-train)
+        build_with_spec "Windows CPU (training)" "CPU" "${SPEC_DIR}/x-anylabeling-win-cpu-train.spec"
         ;;
     win-gpu)
         build_with_spec "Windows GPU" "GPU" "${SPEC_DIR}/x-anylabeling-win-gpu.spec"

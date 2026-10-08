@@ -4,7 +4,7 @@ import os.path as osp
 from PIL import Image
 
 from PyQt6 import QtWidgets
-from PyQt6.QtCore import Qt, QThread, QTimer, pyqtSignal
+from PyQt6.QtCore import QCoreApplication, Qt, QThread, QTimer, pyqtSignal
 from PyQt6.QtWidgets import (
     QVBoxLayout,
     QHBoxLayout,
@@ -299,19 +299,23 @@ def finish_processing(
 
     if succeeded == 0 and failed == 0:
         # Legacy callers without stats: keep the historical message.
-        message = self.tr("Processing completed successfully!")
+        message = QCoreApplication.translate(
+            "LabelingWidget", "Processing completed successfully!"
+        )
     else:
         total = succeeded + failed
         if failed > 0:
-            message = self.tr(
+            message = QCoreApplication.translate(
+                "LabelingWidget",
                 "Processing finished: %d succeeded, %d failed "
-                "(of %d total)."
+                "(of %d total).",
             ) % (succeeded, failed, total)
         else:
             message = (
-                self.tr(
+                QCoreApplication.translate(
+                    "LabelingWidget",
                     "Processing completed successfully! "
-                    "(%d images processed)"
+                    "(%d images processed)",
                 )
                 % total
             )
@@ -708,7 +712,9 @@ def process_next_image(self, progress_dialog, batch=True):
         progress_dialog.close()
         logger.error(f"Error occurred while processing images: {msg}")
         popup = Popup(
-            self.tr("Error occurred while processing images!"),
+            QCoreApplication.translate(
+                "LabelingWidget", "Error occurred while processing images!"
+            ),
             self,
             icon=new_icon_path("error", "svg"),
         )
@@ -729,14 +735,16 @@ def show_progress_dialog_and_process(self):
     self.cancel_processing = False
 
     progress_dialog = QProgressDialog(
-        self.tr("Processing..."),
-        self.tr("暂停"),
+        QCoreApplication.translate("LabelingWidget", "Processing..."),
+        QCoreApplication.translate("LabelingWidget", "暂停"),
         0,
         len(self.image_list),
         self,
     )
     progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
-    progress_dialog.setWindowTitle(self.tr("Batch Processing"))
+    progress_dialog.setWindowTitle(
+        QCoreApplication.translate("LabelingWidget", "Batch Processing")
+    )
     progress_dialog.setMinimumWidth(400)
     progress_dialog.setMinimumHeight(150)
     progress_dialog.setAutoClose(False)
@@ -831,7 +839,10 @@ def run_all_images(
 
     if self.auto_labeling_widget.model_manager.loaded_model_config is None:
         self.auto_labeling_widget.model_manager.new_model_status.emit(
-            self.tr("Model is not loaded. Choose a mode to continue.")
+            QCoreApplication.translate(
+                "LabelingWidget",
+                "Model is not loaded. Choose a mode to continue.",
+            )
         )
         return
 
@@ -845,8 +856,9 @@ def run_all_images(
             f" Please choose a valid model to execute."
         )
         self.auto_labeling_widget.model_manager.new_model_status.emit(
-            self.tr(
-                "Invalid model type, please choose a valid model_type to run."
+            QCoreApplication.translate(
+                "LabelingWidget",
+                "Invalid model type, please choose a valid model_type to run.",
             )
         )
         return

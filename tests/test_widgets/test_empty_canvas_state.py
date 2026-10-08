@@ -43,6 +43,16 @@ class TestCanvasEmptyStateWidget(unittest.TestCase):
     def test_copy_describes_three_steps(self):
         self.assertIn("打开文件夹", self.widget.open_button.text())
 
+    def test_the_steps_teach_the_whole_loop(self):
+        """Annotating is not the end of the loop this build is for."""
+        steps = next(
+            child.text()
+            for child in self.widget.findChildren(QtWidgets.QLabel)
+            if child.text().startswith("1. ")
+        )
+        self.assertIn("训练", steps)
+        self.assertIn("自动标注", steps)
+
 
 class TestFileListHelpers(unittest.TestCase):
     def test_fill_progress_template(self):
@@ -66,7 +76,9 @@ class TestFileListHelpers(unittest.TestCase):
             self.assertIsNotNone(dest)
             self.assertFalse(os.path.exists(src))
             self.assertTrue(os.path.exists(dest))
-            self.assertEqual(os.path.basename(os.path.dirname(dest)), "_delete_")
+            self.assertEqual(
+                os.path.basename(os.path.dirname(dest)), "_delete_"
+            )
 
 
 if __name__ == "__main__":

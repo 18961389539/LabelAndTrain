@@ -10,6 +10,8 @@ from .engines import OnnxBaseModel
 from .model import Model
 from .types import AutoLabelingResult
 from anylabeling.views.common.device_manager import get_preferred_device
+from anylabeling.views.labeling.logger import logger
+from anylabeling.views.labeling.utils.opencv import qt_img_to_rgb_cv_img
 
 
 def softmax(scores):
@@ -75,9 +77,12 @@ class YOLOv8Cls(Model):
             self.conf_thres = value
 
     def preprocess(self, image):
-        rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        # ``image`` is RGB already — predict_shapes normalises the incoming
+        # QImage with qt_img_to_rgb_cv_img first, exactly like the detection
+        # adapters do. Converting again here would swap the red and blue
+        # channels and quietly degrade every classification.
         resized = cv2.resize(
-            rgb,
+            image,
             (self.input_width, self.input_height),
             interpolation=cv2.INTER_LINEAR,
         )
@@ -122,6 +127,12 @@ class YOLOv8Cls(Model):
 
     def predict_shapes(self, image, image_path=None):
         if image is None:
+            return AutoLabelingResult([], replace=False)
+        try:
+            image = qt_img_to_rgb_cv_img(image, image_path)
+        except Exception as e:  # noqa
+            logger.warning("Could not inference model")
+            logger.warning(e)
             return AutoLabelingResult([], replace=False)
         blob = self.preprocess(image)
         output = self.net.get_ort_inference(blob)

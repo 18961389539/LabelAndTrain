@@ -788,7 +788,7 @@ class Canvas(
             Qt.Orientation.Vertical,
             1,
         )
-        self.repaint()
+        self.update()
         return True
 
     # QT Overload
@@ -833,13 +833,13 @@ class Canvas(
             if QtCore.Qt.MouseButton.LeftButton & ev.buttons():
                 self._vertex_erasing = True
                 self.erase_selected_vertex_at(pos)
-                self.repaint()
+                self.update()
             ev.accept()
             return
 
         prev_hover_shape = self.h_shape
         self.prev_move_point = pos
-        self.repaint()
+        self.update()
 
         # Handle auto decode mode
         if (
@@ -942,7 +942,7 @@ class Canvas(
                 if point_dist * self.scale >= self.brush_point_distance:
                     self.current.add_point(pos)
                     self.line[0] = self.current[-1]
-            self.repaint()
+            self.update()
             self.current.highlight_clear()
             return
 
@@ -951,12 +951,12 @@ class Canvas(
             if self.selected_shapes_copy and self.prev_point:
                 self.override_cursor(CURSOR_MOVE)
                 self.bounded_move_shapes(self.selected_shapes_copy, pos)
-                self.repaint()
+                self.update()
             elif self.selected_shapes:
                 self.selected_shapes_copy = [
                     s.copy() for s in self.selected_shapes
                 ]
-                self.repaint()
+                self.update()
             return
 
         if self._rotation_drag_shape is not None:
@@ -974,7 +974,7 @@ class Canvas(
                 self.is_move_editing = False
                 try:
                     self.bounded_move_vertex(pos)
-                    self.repaint()
+                    self.update()
                     self.moving_shape = True
                 except IndexError:
                     return
@@ -1005,7 +1005,7 @@ class Canvas(
                     self.h_shape, self.h_cuboid_face, offset
                 )
                 self.prev_point = pos
-                self.repaint()
+                self.update()
                 self.moving_shape = True
                 p1 = self.h_shape[0]
                 p2 = self.h_shape[2]
@@ -1021,7 +1021,7 @@ class Canvas(
                     return
                 self.override_cursor(CURSOR_MOVE)
                 self.bounded_move_shapes(self.selected_shapes, pos)
-                self.repaint()
+                self.update()
                 self.moving_shape = True
                 if self.selected_shapes[-1].shape_type == "rectangle":
                     p1 = self.selected_shapes[-1][0]
@@ -1056,7 +1056,7 @@ class Canvas(
                         Qt.Orientation.Vertical,
                         1,
                     )
-                    self.repaint()
+                    self.update()
             return
 
         if self.editing() and self.is_move_editing:
@@ -1065,7 +1065,7 @@ class Canvas(
                 self.h_cuboid_face = None
                 try:
                     self.bounded_move_vertex(pos)
-                    self.repaint()
+                    self.update()
                     self.moving_shape = True
                 except IndexError:
                     return
@@ -1095,7 +1095,7 @@ class Canvas(
                     self.h_shape, self.h_cuboid_face, offset
                 )
                 self.prev_point = pos
-                self.repaint()
+                self.update()
                 self.moving_shape = True
                 p1 = self.h_shape[0]
                 p2 = self.h_shape[2]
@@ -1593,7 +1593,7 @@ class Canvas(
                     self.erase_selected_vertex_at(pos)
                     self.prev_point = pos
                     self.prev_pan_point = ev.position()
-                    self.repaint()
+                    self.update()
                     ev.accept()
                     return
                 rotation_handle_shape = self._rotation_handle_shape_at(pos)
@@ -1610,7 +1610,7 @@ class Canvas(
                     )
                     self.prev_point = pos
                     self.prev_pan_point = ev.position()
-                    self.repaint()
+                    self.update()
                     ev.accept()
                     return
                 if self.selected_edge():
@@ -1652,7 +1652,7 @@ class Canvas(
                 )
                 self.prev_point = pos
                 self.prev_pan_point = ev.position()
-                self.repaint()
+                self.update()
         elif (
             ev.button() == QtCore.Qt.MouseButton.RightButton and self.editing()
         ):
@@ -1666,7 +1666,7 @@ class Canvas(
                 self.select_shape_point(
                     pos, multiple_selection_mode=group_mode
                 )
-                self.repaint()
+                self.update()
             self.prev_point = pos
 
     # QT Overload
@@ -1697,7 +1697,7 @@ class Canvas(
             ):
                 # Cancel the move by deleting the shadow copy.
                 self.selected_shapes_copy = []
-                self.repaint()
+                self.update()
         elif ev.button() == QtCore.Qt.MouseButton.LeftButton:
             if self._rotation_drag_shape is not None:
                 self._finish_rotation_handle_drag()
@@ -1733,7 +1733,7 @@ class Canvas(
             for i, shape in enumerate(self.selected_shapes_copy):
                 self.selected_shapes[i].points = shape.points
         self.selected_shapes_copy = []
-        self.repaint()
+        self.update()
         self.store_shapes()
         return True
 
@@ -3416,7 +3416,7 @@ class Canvas(
             self.bounded_move_shapes(
                 self.selected_shapes, self.prev_point + offset
             )
-            self.repaint()
+            self.update()
             self.moving_shape = True
 
     def rotate_by_keyboard(self, theta):
@@ -3428,7 +3428,7 @@ class Canvas(
                     self.bounded_rotate_shapes(i, shape, theta)
                     rotating_shape = True
             if rotating_shape:
-                self.repaint()
+                self.update()
                 self.rotating_shape = True
 
     # QT Overload
