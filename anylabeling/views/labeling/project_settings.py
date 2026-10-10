@@ -23,11 +23,65 @@ light test stubs survive.
 
 import os.path as osp
 
+from PyQt6 import QtCore, QtWidgets
+
 from anylabeling.views.labeling import project as project_store
 from anylabeling.views.labeling.project import label_dir_for_dataset
 
 #: Keys this module owns inside ``project.json`` (beside ``split_seed``).
 UI_KEYS = ("labels", "output_dir")
+
+#: Datasets whose settings already failed to save this session. One
+#: warning per dataset: a run of folder switches would otherwise stack
+#: dialogs the annotator can do nothing about.
+_WRITE_WARNED = set()
+
+
+def _show_write_warning(widget, dataset_dir):
+    """The one visible surface for a failed project-settings write.
+
+    A module-level function so a test can replace it: what matters is
+    that the failure is surfaced at all, not how it is rendered.
+    """
+    box = QtWidgets.QMessageBox(widget)
+    box.setIcon(QtWidgets.QMessageBox.Icon.Warning)
+    box.setWindowTitle(
+        QtCore.QCoreApplication.translate("LabelingWidget", "项目设置无法保存")
+    )
+    box.setText(
+        QtCore.QCoreApplication.translate(
+            "LabelingWidget",
+            "无法把项目设置写入下面的目录（只读盘或没有写入权限）：\n%s\n\n"
+            "本次会话中这个项目的标签列表与标注输出目录不会被记住。",
+        )
+        % dataset_dir
+    )
+    box.exec()
+
+
+def report_write_failure(widget, dataset_dir, action=""):
+    """Tell the user once per dataset that its settings did not stick.
+
+    Until this existed, a failed write was silent: on a read-only or
+    network drive the annotator watched the label panel accept a new
+    list and found it gone after a restart. Project settings are the
+    promise a project makes, so the failure is surfaced — once per
+    dataset per session, with the detail logged every time.
+    """
+    if not dataset_dir:
+        return
+    _logger().warning(
+        "Could not save project settings "
+        f"({action or 'write'}): {dataset_dir}"
+    )
+    key = osp.normcase(osp.normpath(str(dataset_dir)))
+    if key in _WRITE_WARNED:
+        return
+    _WRITE_WARNED.add(key)
+    try:
+        _show_write_warning(widget, dataset_dir)
+    except Exception as e:  # noqa: BLE001 - never break a save path
+        _logger().warning(f"Could not show the write-failure warning: {e}")
 
 
 def dataset_dir_for(output_dir=None, image_list=None, filename=None):
@@ -105,7 +159,10 @@ def save_current_labels(widget, dataset_dir):
     names = _panel_label_names(widget)
     if not names:
         return False
-    return update_values(dataset_dir, labels=names)
+    ok = update_values(dataset_dir, labels=names)
+    if not ok:
+        report_write_failure(widget, dataset_dir, "labels")
+    return ok
 
 
 def _previous_dataset_dir(widget):
@@ -252,4 +309,5 @@ def record_output_dir_change(widget, output_dir):
     ) or _previous_dataset_dir(widget)
     if not dataset_dir:
         return
-    update_values(dataset_dir, output_dir=output_dir)
+    if not update_values(dataset_dir, output_dir=output_dir):
+        report_write_failure(widget, dataset_dir, "output_dir")

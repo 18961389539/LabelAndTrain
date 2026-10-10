@@ -16,7 +16,11 @@ import subprocess
 from PyQt6 import QtCore, QtWidgets
 
 from anylabeling.views.labeling.logger import logger
-from anylabeling.views.labeling import project_registry, project_settings
+from anylabeling.views.labeling import (
+    project_model,
+    project_registry,
+    project_settings,
+)
 
 
 class ProjectSwitcherDialog(QtWidgets.QDialog):
@@ -26,17 +30,18 @@ class ProjectSwitcherDialog(QtWidgets.QDialog):
         super().__init__(parent)
         self.widget = parent
         self.setWindowTitle(self.tr("切换项目"))
-        self.resize(640, 400)
+        self.resize(780, 420)
 
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(16, 16, 16, 16)
         layout.setSpacing(10)
 
         self.list = QtWidgets.QTreeWidget(self)
-        self.list.setColumnCount(4)
+        self.list.setColumnCount(5)
         self.list.setHeaderLabels(
             [
                 self.tr("项目"),
+                self.tr("任务"),
                 self.tr("上次打开"),
                 self.tr("训练"),
                 self.tr("最近训练"),
@@ -49,7 +54,7 @@ class ProjectSwitcherDialog(QtWidgets.QDialog):
         header.setSectionResizeMode(
             0, QtWidgets.QHeaderView.ResizeMode.Stretch
         )
-        for column in (1, 2, 3):
+        for column in (1, 2, 3, 4):
             header.setSectionResizeMode(
                 column, QtWidgets.QHeaderView.ResizeMode.ResizeToContents
             )
@@ -67,6 +72,7 @@ class ProjectSwitcherDialog(QtWidgets.QDialog):
 
         buttons = QtWidgets.QHBoxLayout()
         open_button = QtWidgets.QPushButton(self.tr("打开"))
+        new_button = QtWidgets.QPushButton(self.tr("新建项目…"))
         browse_button = QtWidgets.QPushButton(self.tr("打开其他文件夹…"))
         reveal_button = QtWidgets.QPushButton(self.tr("打开项目设置文件夹"))
         reset_button = QtWidgets.QPushButton(self.tr("重置本项目设置"))
@@ -74,6 +80,7 @@ class ProjectSwitcherDialog(QtWidgets.QDialog):
         close_button = QtWidgets.QPushButton(self.tr("关闭"))
         for button in (
             open_button,
+            new_button,
             browse_button,
             reveal_button,
             reset_button,
@@ -85,6 +92,7 @@ class ProjectSwitcherDialog(QtWidgets.QDialog):
         layout.addLayout(buttons)
 
         open_button.clicked.connect(self.open_selected)
+        new_button.clicked.connect(self._new_project)
         browse_button.clicked.connect(self._browse_other_folder)
         reveal_button.clicked.connect(self._reveal_settings)
         reset_button.clicked.connect(self._reset_settings)
@@ -108,7 +116,7 @@ class ProjectSwitcherDialog(QtWidgets.QDialog):
         entries = project_registry.recent_projects()
         if not entries:
             empty = QtWidgets.QTreeWidgetItem(
-                [self.tr("（还没有项目记录）"), "", "", ""]
+                [self.tr("（还没有项目记录）"), "", "", "", ""]
             )
             empty.setFlags(QtCore.Qt.ItemFlag.NoItemFlags)
             self.list.addTopLevelItem(empty)
@@ -116,12 +124,13 @@ class ProjectSwitcherDialog(QtWidgets.QDialog):
         stats = self._training_stats(entries)
         for entry in entries:
             root = entry["root"]
-            name = osp.basename(osp.normpath(root)) or root
+            described = project_model.describe(root)
             stat = stats.get(root) or {}
             runs = stat.get("runs") or 0
             item = QtWidgets.QTreeWidgetItem(
                 [
-                    name,
+                    described["name"],
+                    project_model.task_label(described["task"]),
                     entry.get("last_opened") or "",
                     str(runs) if runs else "—",
                     stat.get("last") or "",
@@ -129,6 +138,9 @@ class ProjectSwitcherDialog(QtWidgets.QDialog):
             )
             item.setData(0, QtCore.Qt.ItemDataRole.UserRole, root)
             tooltip = root
+            if not described["has_record"]:
+                # 名字与任务都是兜底值：说清楚，免得用户以为设置丢了。
+                tooltip += f"\n{self.tr('（还没有项目设置文件）')}"
             if entry.get("label_dir"):
                 tooltip += f"\n{self.tr('标注目录')}: {entry['label_dir']}"
             item.setToolTip(0, tooltip)
@@ -172,6 +184,17 @@ class ProjectSwitcherDialog(QtWidgets.QDialog):
         browse = getattr(self.widget, "open_folder_dialog", None)
         if callable(browse):
             browse()
+
+    def _new_project(self):
+        """先关掉本对话框再走新建流程：新建的最后一步是打开另一个目录。
+
+        直接调 ``project_view``（不走 widget 上的薄委托）：这两个动作
+        没有快捷键、没有别处引用，多一层转发只会让 God Object 再长两行。
+        """
+        from anylabeling.views.labeling.utils import project_view
+
+        self.accept()
+        project_view.new_project(self.widget)
 
     def _reveal_settings(self):
         root = self._selected_root()

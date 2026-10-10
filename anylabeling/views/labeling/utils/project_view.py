@@ -22,7 +22,7 @@ import os.path as osp
 
 from PyQt6 import QtCore, QtGui, QtWidgets
 
-from anylabeling.views.labeling import project_registry
+from anylabeling.views.labeling import project_model, project_registry
 from anylabeling.views.labeling.logger import logger
 
 #: 老版本存放"最近文件夹"的 QSettings 键。读取时会被迁移进 registry，
@@ -38,14 +38,18 @@ def _tr(text):
 
 
 def project_name(root):
-    """项目的显示名：数据集目录名。
+    """项目的显示名：清单里记的名字，缺清单时回退目录名。
 
-    路径即身份，所以显示名直接取目录名 —— 不做可编辑别名，避免同一
-    个项目在不同机器上叫不同名字。
+    名字只是显示标签，不参与任何路径拼接（身份始终是目录路径），所以
+    改名、截断、缺失都不会让磁盘上的东西失联。
+
+    没有清单时 :func:`project_model.describe` 只 stat 一次、不读文件：
+    标题栏每次切图都会重建，"这个文件夹只是个打开过的目录"是常态，
+    不该为它付一次 IO。
     """
     if not root:
         return ""
-    return osp.basename(osp.normpath(str(root))) or str(root)
+    return project_model.describe(root)["name"]
 
 
 def current_root(widget):
@@ -165,18 +169,135 @@ def populate_recent_menu(widget, menu):
         return
     current = current_root(widget)
     for path in dirs:
-        # 路径即身份，所以目录名就是项目名；重名时靠 tooltip 的完整
-        # 路径区分，不去改显示名。
-        label = project_name(path)
+        described = project_model.describe(path)
+        label = described["name"]
         if current and osp.normcase(osp.normpath(path)) == osp.normcase(
             osp.normpath(current)
         ):
             label = _tr("%s（当前）") % label
         action = menu.addAction(label)
-        action.setToolTip(path)
+        # 显示名可以重复，路径不会：重名时靠 tooltip 里的完整路径区分。
+        action.setToolTip(
+            "%s\n%s：%s"
+            % (path, _tr("任务"), project_model.task_label(described["task"]))
+        )
         action.triggered.connect(
             lambda _checked=False, p=path: widget.load_recent_dir(p)
         )
+
+
+def new_project(widget):
+    """新建项目：选文件夹 → 起名/选任务 → 打开它。
+
+    目标文件夹已经有项目清单时**不覆盖** —— 那是别人攒下来的设置；
+    这里只提供"打开它"，换个目录由用户决定。（``project_model.create``
+    拒绝覆盖，正好把"已存在"和"写失败"这两种 False 留给调用方分辨。）
+    """
+    from anylabeling.views.labeling.widgets.project_dialog import (
+        ProjectPropertiesDialog,
+    )
+
+    start_dir = getattr(widget, "last_open_dir", None) or ""
+    root = QtWidgets.QFileDialog.getExistingDirectory(
+        widget, _tr("选择项目文件夹"), start_dir
+    )
+    if not root:
+        return False
+    root = osp.normpath(str(root))
+
+    if project_model.has_record(root):
+        answer = QtWidgets.QMessageBox.question(
+            widget,
+            _tr("已经是项目"),
+            _tr("这个文件夹已经是一个项目了，直接打开它吗？\n%s") % root,
+        )
+        if answer != QtWidgets.QMessageBox.StandardButton.Yes:
+            return False
+        widget.import_image_folder(root)
+        return True
+
+    dialog = ProjectPropertiesDialog(
+        widget,
+        name=project_model.default_name(root),
+        root=root,
+        title=_tr("新建项目"),
+    )
+    if dialog.exec() != QtWidgets.QDialog.DialogCode.Accepted:
+        return False
+
+    values = dialog.values()
+    if not project_model.create(
+        root, name=values["name"], task=values["task"]
+    ):
+        QtWidgets.QMessageBox.warning(
+            widget,
+            _tr("新建项目失败"),
+            _tr("无法写入项目设置，请检查该目录是否可写：\n%s") % root,
+        )
+        return False
+
+    logger.info(f"Created project: {root} ({values['task']})")
+    widget.import_image_folder(root)
+    return True
+
+
+def edit_project(widget):
+    """改当前项目的名字与任务类型。
+
+    还不是正式项目（没有清单）时顺手建一个：这条路径是用户第一次
+    明确表达"把当前这个文件夹当成一个项目"，比默默等某次保存更清楚。
+    """
+    from anylabeling.views.labeling.widgets.project_dialog import (
+        ProjectPropertiesDialog,
+    )
+
+    root = current_root(widget)
+    if not root:
+        QtWidgets.QMessageBox.information(
+            widget,
+            _tr("没有打开的项目"),
+            _tr("先打开一个文件夹，再来设置项目属性。"),
+        )
+        return False
+
+    described = project_model.describe(root)
+    note = None
+    if not described["has_record"]:
+        note = _tr(
+            "这个文件夹还不是正式项目；保存后会在其中创建 "
+            ".jllabel/project.json（只是多一个隐藏目录）。"
+        )
+    dialog = ProjectPropertiesDialog(
+        widget,
+        name=described["name"],
+        task=described["task"],
+        root=root,
+        title=_tr("项目属性"),
+        note=note,
+    )
+    if dialog.exec() != QtWidgets.QDialog.DialogCode.Accepted:
+        return False
+
+    values = dialog.values()
+    if described["has_record"]:
+        ok = project_model.rename(root, values["name"])
+        if not project_model.set_task(root, values["task"]):
+            ok = False
+    else:
+        ok = project_model.create(
+            root, name=values["name"], task=values["task"]
+        )
+    if not ok:
+        QtWidgets.QMessageBox.warning(
+            widget,
+            _tr("保存失败"),
+            _tr("无法写入项目设置，请检查该目录是否可写：\n%s") % root,
+        )
+        return False
+
+    widget.update_progress_title()
+    widget.status(_tr("已更新项目：%s") % values["name"], 3000)
+    return True
 
 
 def open_settings_folder(widget):
@@ -237,9 +358,10 @@ def close_project(widget):
 def build_project_menu(widget):
     """创建「项目」菜单，插到 File 菜单最前面，并返回它。
 
-    菜单项刻意保持少而稳：后续批次会在这里加"新建项目"与"项目设置"，
-    但那些需要先有项目实体（L2）；现在放进去只会是个改了名字的
-    "打开文件夹"。
+    三段式：先是对项目本身做的两件事（新建 / 属性），再是在项目之间
+    走动（切换 / 最近项目），最后是两个收尾动作（打开设置目录 / 关闭
+    项目）。不加自建快捷键 —— 键位是四层同步的活儿（yaml / 启动绑定 /
+    运行时改键 / F1 表），值得单独一批，不该顺手塞进来。
     """
     from anylabeling.views.labeling.utils import new_action
 
@@ -259,6 +381,22 @@ def build_project_menu(widget):
             tip=_tr("在最近打开的项目之间切换"),
         )
         widget.actions.open_project = switch
+    new_action_item = new_action(
+        widget,
+        _tr("新建项目…"),
+        slot=lambda: new_project(widget),
+        tip=_tr("选一个文件夹，为它起名并指定任务类型"),
+    )
+    properties_action = new_action(
+        widget,
+        _tr("项目属性…"),
+        slot=lambda: edit_project(widget),
+        tip=_tr("修改当前项目的名字与任务类型"),
+    )
+    menu.addAction(new_action_item)
+    menu.addAction(properties_action)
+
+    menu.addSeparator()
     menu.addAction(switch)
 
     recent_menu = QtWidgets.QMenu(_tr("打开最近项目"), menu)
@@ -286,6 +424,8 @@ def build_project_menu(widget):
     menu.addAction(settings_action)
     menu.addAction(close_action)
 
+    widget.actions.new_project = new_action_item
+    widget.actions.project_properties = properties_action
     widget.actions.close_project = close_action
     widget.actions.open_project_settings_folder = settings_action
 
@@ -304,6 +444,8 @@ __all__ = [
     "close_project",
     "current_name",
     "current_root",
+    "edit_project",
+    "new_project",
     "open_settings_folder",
     "populate_recent_menu",
     "project_name",

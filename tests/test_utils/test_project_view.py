@@ -59,6 +59,20 @@ def test_project_name_is_the_folder_name(tmp_path):
     assert project_view.project_name("") == ""
 
 
+def test_project_name_prefers_the_record_and_falls_back(tmp_path):
+    """有清单就用项目名；没有就回退目录名 —— 两者都不为空。"""
+    from anylabeling.views.labeling import project_model
+
+    root = tmp_path / "螺丝"
+    root.mkdir()
+    assert project_view.project_name(str(root)) == "螺丝"
+
+    assert project_model.create(str(root), name="螺丝划痕") is True
+    assert project_view.project_name(str(root)) == "螺丝划痕"
+    # 改的是显示名，目录没有跟着动。
+    assert root.is_dir()
+
+
 def test_current_root_prefers_the_dataset_dir(tmp_path):
     root = tmp_path / "proj"
     root.mkdir()

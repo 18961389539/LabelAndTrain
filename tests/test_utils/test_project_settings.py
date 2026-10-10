@@ -12,7 +12,9 @@ import pytest
 from anylabeling.views.labeling import project, project_registry
 from anylabeling.views.labeling import project_settings
 
-PROJECT_FILE = os.path.join(project.PROJECT_DIR_NAME, project.PROJECT_FILE_NAME)
+PROJECT_FILE = os.path.join(
+    project.PROJECT_DIR_NAME, project.PROJECT_FILE_NAME
+)
 
 
 # --- anchor ---------------------------------------------------------------
@@ -25,7 +27,9 @@ def test_dataset_dir_is_the_image_folder_not_the_output_dir():
         )
         == "/imgs"
     )
-    assert project_settings.dataset_dir_for(filename="/other/x.jpg") == "/other"
+    assert (
+        project_settings.dataset_dir_for(filename="/other/x.jpg") == "/other"
+    )
     assert project_settings.dataset_dir_for() is None
 
 
@@ -38,7 +42,9 @@ def test_update_values_merges_and_preserves_split_seed(tmp_path):
         str(tmp_path), labels=["cat", "dog"], output_dir=None
     )
     data = json.loads(
-        open(os.path.join(str(tmp_path), PROJECT_FILE), encoding="utf-8").read()
+        open(
+            os.path.join(str(tmp_path), PROJECT_FILE), encoding="utf-8"
+        ).read()
     )
     assert data["labels"] == ["cat", "dog"]
     assert "output_dir" not in data
@@ -165,9 +171,7 @@ def test_switch_flushes_previous_and_tracks_the_current(tmp_path):
 @pytest.fixture()
 def registry_file(tmp_path, monkeypatch):
     path = tmp_path / "projects.json"
-    monkeypatch.setattr(
-        project_registry, "registry_path", lambda: str(path)
-    )
+    monkeypatch.setattr(project_registry, "registry_path", lambda: str(path))
     return path
 
 
@@ -191,9 +195,9 @@ def test_registry_skips_vanished_folders(registry_file, tmp_path):
     a.mkdir()
     project_registry.record_project(str(a))
     project_registry.record_project(str(tmp_path / "ghost"))
-    assert [
-        entry["root"] for entry in project_registry.recent_projects()
-    ] == [str(a)]
+    assert [entry["root"] for entry in project_registry.recent_projects()] == [
+        str(a)
+    ]
 
 
 def test_registry_forget_keeps_the_dataset(registry_file, tmp_path):
@@ -263,9 +267,7 @@ def _write_run_meta(runs_root, task, name, label_dir, finished_at):
         "finished_at": finished_at,
         "dataset": {"label_dir": label_dir},
     }
-    (run_dir / "run_meta.json").write_text(
-        json.dumps(meta), encoding="utf-8"
-    )
+    (run_dir / "run_meta.json").write_text(json.dumps(meta), encoding="utf-8")
 
 
 def test_project_training_stats_match_by_closest_anchor(tmp_path):
@@ -330,6 +332,70 @@ def test_project_training_stats_without_runs_root_is_all_zero(tmp_path):
     projects = [{"root": str(tmp_path / "ds"), "label_dir": None}]
     stats = run_history.project_training_stats(projects, "")
     assert stats == {str(tmp_path / "ds"): {"runs": 0, "last": ""}}
+
+
+# --- a failed write must be visible ---------------------------------------
+
+
+class _PanelStub:
+    """Just enough widget for the label-panel read in save_current_labels."""
+
+    def __init__(self, names):
+        self._names = list(names)
+
+    def _panel_label_names(self):
+        return list(self._names)
+
+
+def test_a_failed_write_warns_once_per_dataset(tmp_path, monkeypatch):
+    """只读盘上写不进去要出声，但同一个目录一次会话只出一声。"""
+    calls = []
+    monkeypatch.setattr(
+        project_settings,
+        "_show_write_warning",
+        lambda widget, dataset_dir: calls.append(dataset_dir),
+    )
+    project_settings._WRITE_WARNED.clear()
+    blocked = tmp_path / "blocked"
+    blocked.write_text("i am a file, not a directory", encoding="utf-8")
+
+    project_settings.report_write_failure(None, str(blocked), "labels")
+    project_settings.report_write_failure(None, str(blocked), "labels")
+    project_settings.report_write_failure(None, str(blocked), "output_dir")
+
+    assert calls == [str(blocked)]
+    project_settings._WRITE_WARNED.clear()
+
+
+def test_save_current_labels_reports_a_failed_write(tmp_path, monkeypatch):
+    calls = []
+    monkeypatch.setattr(
+        project_settings,
+        "_show_write_warning",
+        lambda widget, dataset_dir: calls.append(dataset_dir),
+    )
+    project_settings._WRITE_WARNED.clear()
+    blocked = tmp_path / "blocked"
+    blocked.write_text("i am a file, not a directory", encoding="utf-8")
+
+    widget = _PanelStub(["cat"])
+    assert project_settings.save_current_labels(widget, str(blocked)) is False
+    assert calls == [str(blocked)]
+    project_settings._WRITE_WARNED.clear()
+
+
+def test_a_successful_write_produces_no_warning(tmp_path, monkeypatch):
+    calls = []
+    monkeypatch.setattr(
+        project_settings,
+        "_show_write_warning",
+        lambda widget, dataset_dir: calls.append(dataset_dir),
+    )
+    project_settings._WRITE_WARNED.clear()
+
+    widget = _PanelStub(["cat"])
+    assert project_settings.save_current_labels(widget, str(tmp_path)) is True
+    assert calls == []
 
 
 # --- startup flow ---------------------------------------------------------
@@ -430,9 +496,10 @@ def test_train_prefs_without_a_dataset_dir_is_a_no_op():
     stub = SimpleNamespace(image_list=[])
     assert UltralyticsDialog._project_train_prefs.__get__(stub)() == {}
     config = {"basic": {"model": "x.pt"}}
-    assert UltralyticsDialog._save_project_train_prefs.__get__(stub)(
-        config
-    ) is False
+    assert (
+        UltralyticsDialog._save_project_train_prefs.__get__(stub)(config)
+        is False
+    )
 
 
 def test_train_prefs_damaged_record_falls_back_to_empty(tmp_path):
