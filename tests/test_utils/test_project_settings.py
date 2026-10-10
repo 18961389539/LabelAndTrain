@@ -398,6 +398,121 @@ def test_a_successful_write_produces_no_warning(tmp_path, monkeypatch):
     assert calls == []
 
 
+# --- the auto-labeling model a project remembers --------------------------
+
+
+class _ModelPanelStub:
+    """Just enough panel for restore_model's one call and its contract."""
+
+    def __init__(self, result=True, boom=False):
+        self.calls = []
+        self._result = result
+        self._boom = boom
+
+    def restore_project_model(self, provider, model):
+        self.calls.append((provider, model))
+        if self._boom:
+            raise RuntimeError("panel exploded")
+        return self._result
+
+
+class _WidgetStub:
+    """A widget whose only job is to carry the panel."""
+
+    __slots__ = ("auto_labeling_widget",)
+
+    def __init__(self, panel):
+        self.auto_labeling_widget = panel
+
+
+def test_remember_model_round_trips(tmp_path):
+    dataset = str(tmp_path)
+    assert (
+        project_settings.remember_model(None, dataset, "YOLO", "yolov8n")
+        is True
+    )
+    assert project_settings.get_value(dataset, project_settings.MODEL_KEY) == {
+        "provider": "YOLO",
+        "model": "yolov8n",
+    }
+
+
+def test_remember_model_needs_a_provider_and_a_model(tmp_path):
+    dataset = str(tmp_path)
+    assert project_settings.remember_model(None, dataset, "", "x") is False
+    assert project_settings.remember_model(None, dataset, "YOLO", "") is False
+    assert project_settings.remember_model(None, "", "YOLO", "x") is False
+    assert project_settings.get_value(dataset, project_settings.MODEL_KEY) is (
+        None
+    )
+
+
+def test_remember_model_reports_a_failed_write(tmp_path, monkeypatch):
+    calls = []
+    monkeypatch.setattr(
+        project_settings,
+        "_show_write_warning",
+        lambda widget, dataset_dir: calls.append(dataset_dir),
+    )
+    project_settings._WRITE_WARNED.clear()
+    blocked = tmp_path / "blocked"
+    blocked.write_text("i am a file, not a directory", encoding="utf-8")
+
+    assert (
+        project_settings.remember_model(None, str(blocked), "YOLO", "yolov8n")
+        is False
+    )
+    assert calls == [str(blocked)]
+    project_settings._WRITE_WARNED.clear()
+
+
+def test_restore_model_asks_the_panel_for_the_remembered_one(tmp_path):
+    dataset = str(tmp_path)
+    project_settings.remember_model(None, dataset, "YOLO", "yolov8n")
+    panel = _ModelPanelStub()
+
+    assert project_settings.restore_model(_WidgetStub(panel), dataset) is True
+    assert panel.calls == [("YOLO", "yolov8n")]
+
+
+def test_restore_model_without_a_memory_selects_nothing(tmp_path):
+    panel = _ModelPanelStub()
+    assert project_settings.restore_model(
+        _WidgetStub(panel), str(tmp_path)
+    ) is (False)
+    assert panel.calls == []
+
+
+def test_restore_model_survives_a_panel_that_raises(tmp_path):
+    """一次记忆不该成为打开项目失败的理由。"""
+    dataset = str(tmp_path)
+    project_settings.remember_model(None, dataset, "YOLO", "yolov8n")
+    panel = _ModelPanelStub(boom=True)
+
+    assert project_settings.restore_model(_WidgetStub(panel), dataset) is False
+    assert panel.calls == [("YOLO", "yolov8n")]
+
+
+def test_restore_model_needs_a_panel(tmp_path):
+    """widget 上没有自动标注面板时（比如桩/早期构造）什么都不做。"""
+    dataset = str(tmp_path)
+    project_settings.remember_model(None, dataset, "YOLO", "yolov8n")
+    assert project_settings.restore_model(object(), dataset) is False
+
+
+def test_reset_drops_the_remembered_model(tmp_path):
+    """「重置本项目设置」应当连模型记忆一起忘掉，但保留 split_seed。"""
+    dataset = str(tmp_path)
+    project_settings.remember_model(None, dataset, "YOLO", "yolov8n")
+    project_settings.update_values(dataset, split_seed=7)
+
+    assert project_settings.reset_ui_settings(dataset) is True
+    assert project_settings.get_value(dataset, project_settings.MODEL_KEY) is (
+        None
+    )
+    assert project_settings.get_value(dataset, "split_seed") == 7
+
+
 # --- startup flow ---------------------------------------------------------
 
 

@@ -28,8 +28,16 @@ from PyQt6 import QtCore, QtWidgets
 from anylabeling.views.labeling import project as project_store
 from anylabeling.views.labeling.project import label_dir_for_dataset
 
+#: The auto-labeling model a project last used: ``{"provider", "model"}``.
+#: Only those two facts are stored -- the config path is the panel's own
+#: registry's business, and persisting it would leave a dead reference
+#: behind the first time a model file moves or is renamed.
+MODEL_KEY = "last_model"
+
 #: Keys this module owns inside ``project.json`` (beside ``split_seed``).
-UI_KEYS = ("labels", "output_dir")
+#: ``reset_ui_settings`` drops these, so a project can be put back to its
+#: defaults without disturbing the train/validation split.
+UI_KEYS = ("labels", "output_dir", MODEL_KEY)
 
 #: Datasets whose settings already failed to save this session. One
 #: warning per dataset: a run of folder switches would otherwise stack
@@ -163,6 +171,52 @@ def save_current_labels(widget, dataset_dir):
     if not ok:
         report_write_failure(widget, dataset_dir, "labels")
     return ok
+
+
+def remember_model(widget, dataset_dir, provider, model):
+    """Record the auto-labeling model ``dataset_dir`` just used.
+
+    Called when the panel switches models, so a project ends up carrying
+    what its annotator actually reached for. A failed write is surfaced
+    the same way the label list and the output directory are: "this
+    project remembers your model" is the whole point of the feature, and
+    a promise that quietly expires is worse than no promise.
+    """
+    if not dataset_dir or not provider or not model:
+        return False
+    ok = update_values(
+        dataset_dir, **{MODEL_KEY: {"provider": provider, "model": model}}
+    )
+    if not ok:
+        report_write_failure(widget, dataset_dir, "model")
+    return ok
+
+
+def restore_model(widget, dataset_dir):
+    """Put the auto-labeling panel back on the model this project used.
+
+    The remembered model is one the annotator already ran here, so it is
+    local -- restoring it cannot pull a new download. A missing panel, no
+    memory, or a model that is no longer available (deleted, or dropped
+    from the registry) all end in "nothing happens": a memory must never
+    be the reason a project fails to open.
+    """
+    remembered = get_value(dataset_dir, MODEL_KEY)
+    if not isinstance(remembered, dict):
+        return False
+    provider = remembered.get("provider")
+    model = remembered.get("model")
+    if not provider or not model:
+        return False
+    panel = getattr(widget, "auto_labeling_widget", None)
+    restore = getattr(panel, "restore_project_model", None)
+    if not callable(restore):
+        return False
+    try:
+        return bool(restore(provider, model))
+    except Exception as e:  # noqa: BLE001 - opening a project must not raise
+        _logger().warning(f"Could not restore the project's model: {e}")
+        return False
 
 
 def _previous_dataset_dir(widget):
@@ -341,10 +395,11 @@ def begin_project_switch(widget, dataset_dir):
 
 
 def end_project_switch(widget, dataset_dir):
-    """Second half: label-panel fallback plus registry bookkeeping."""
+    """Second half: label panel, auto-labeling model, registry."""
     if not dataset_dir:
         return
     _restore_labels(widget, dataset_dir)
+    restore_model(widget, dataset_dir)
     try:
         from anylabeling.views.labeling.project_registry import (
             record_project,

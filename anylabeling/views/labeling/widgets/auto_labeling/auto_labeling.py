@@ -124,6 +124,32 @@ CUSTOM_MODEL_WEIGHT_EXTS = {".onnx"}
 # fall back to yolov8 (the most common detection case).
 
 
+def _dataset_dir_for(panel):
+    """The dataset folder identifying this panel's project, or ``""``.
+
+    Module-level and taking the panel, like the other helpers in this
+    file: the tests drive them with a stand-in parent, and a ``self.``
+    reach would demand one carrying the whole widget. The folder is
+    derived the way the annotation side derives it, so "which project is
+    this" gets the same answer on both sides of the loop.
+    """
+    parent = getattr(panel, "parent", None)
+    if parent is None:
+        return ""
+    from anylabeling.views.labeling import project_settings
+
+    opened = getattr(parent, "_project_dataset_dir", None)
+    if opened and os.path.isdir(str(opened)):
+        return str(opened)
+    return (
+        project_settings.dataset_dir_for(
+            image_list=getattr(parent, "image_list", None),
+            filename=getattr(parent, "filename", None),
+        )
+        or ""
+    )
+
+
 class AutoLabelingWidget(QWidget):
     new_model_selected = pyqtSignal(str)
     new_custom_model_selected = pyqtSignal(str)
@@ -941,11 +967,53 @@ class AutoLabelingWidget(QWidget):
 
         config_path = self.model_info[model_name]["config_path"]
         self._last_model_selection = (provider, model_name, config_path)
+        self._remember_model(provider, model_name)
 
         if provider == "Custom":
             self.model_manager.load_custom_model(config_path)
         else:
             self.new_model_selected.emit(config_path)
+
+    def _remember_model(self, provider, model_name):
+        """Note this choice on the project, when a project is open."""
+        from anylabeling.views.labeling import project_settings
+
+        dataset_dir = _dataset_dir_for(self)
+        if not dataset_dir:
+            return
+        project_settings.remember_model(
+            self, dataset_dir, provider, model_name
+        )
+
+    def restore_project_model(self, provider, model_name):
+        """Switch to the model this project last used, as if just clicked.
+
+        Restoring goes through ``on_model_selected`` instead of emitting
+        the load signal directly: that path is what sets the button, hides
+        the labeling widgets and records ``_last_model_selection``, so a
+        model restored around it would leave the panel claiming nothing
+        is selected while a model is loaded.
+
+        It declines quietly in the two cases that do not deserve a dialog:
+        the model is already the selected one (switching away and back),
+        or the registry no longer knows it -- deleted, or dropped from the
+        model list while this project was closed.
+        """
+        if not provider or not model_name:
+            return False
+        current = self._last_model_selection
+        if current and current[0] == provider and current[1] == model_name:
+            return True
+        if model_name not in self.model_info:
+            logger.info(
+                "Project remembered model %r (%s), which is no longer "
+                "available; nothing selected.",
+                model_name,
+                provider,
+            )
+            return False
+        self.on_model_selected(provider, model_name)
+        return True
 
     def update_button_colors(self):
         """Update button colors"""
