@@ -141,6 +141,14 @@ class ProjectSwitcherDialog(QtWidgets.QDialog):
             if not described["has_record"]:
                 # 名字与任务都是兜底值：说清楚，免得用户以为设置丢了。
                 tooltip += f"\n{self.tr('（还没有项目设置文件）')}"
+            if described["created_at"]:
+                tooltip += f"\n{self.tr('创建于')}: {described['created_at']}"
+            remembered = project_settings.remembered_file(root)
+            if remembered:
+                # 打开这个项目会回到哪张图 —— 续点写下来的意义就在这里。
+                tooltip += (
+                    f"\n{self.tr('上次看到')}: {osp.basename(remembered)}"
+                )
             if entry.get("label_dir"):
                 tooltip += f"\n{self.tr('标注目录')}: {entry['label_dir']}"
             item.setToolTip(0, tooltip)

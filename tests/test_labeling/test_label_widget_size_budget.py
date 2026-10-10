@@ -49,7 +49,12 @@ BUDGETS = {
     # utils/project_view.py -- the two retired methods were 22 lines, the
     # delegations, the project-name prefix and the menu call add 13, so
     # the widget delegates its way to a smaller file instead of growing.
-    "anylabeling/views/labeling/label_widget.py": 6808,
+    #
+    # Lowered 6808 -> 6781 the same day, one batch later: session resume
+    # (which project, and which image inside it) moved to project_view too,
+    # so session_resume_path and continue_last_session left the widget and
+    # nothing took their place -- callers reach project_view directly.
+    "anylabeling/views/labeling/label_widget.py": 6781,
     # Lowered 3772 -> 3760 on 2026-09-29: the undo/redo stacks moved out to
     # widgets/shape_history.py (which is also what made them survive a file
     # switch) and the canvas reaches them through the attribute names it has

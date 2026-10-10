@@ -22,7 +22,11 @@ import os.path as osp
 
 from PyQt6 import QtCore, QtGui, QtWidgets
 
-from anylabeling.views.labeling import project_model, project_registry
+from anylabeling.views.labeling import (
+    project_model,
+    project_registry,
+    project_settings,
+)
 from anylabeling.views.labeling.logger import logger
 
 #: 老版本存放"最近文件夹"的 QSettings 键。读取时会被迁移进 registry，
@@ -186,6 +190,56 @@ def populate_recent_menu(widget, menu):
         )
 
 
+def session_resume_path(widget):
+    """上次工作过的目录，不可用时返回 None。
+
+    这是"上次打开过什么"的**全局**记忆（QSettings），只用来决定启动
+    时该动哪个项目；项目内部的续点由项目清单里的 ``last_file`` 负责，
+    两者刻意分开 —— 一个是"哪个项目"，一个是"项目里的哪张图"。
+    """
+    try:
+        directory = widget.settings.value("last_open_dir", None)
+        if directory and osp.isdir(str(directory)):
+            return str(directory)
+    except Exception as e:  # noqa: BLE001 - 坏设置不该挡住启动
+        logger.warning(f"session_resume_path failed: {e}")
+    return None
+
+
+def has_session(widget):
+    """启动时有没有可恢复的现场。"""
+    return bool(session_resume_path(widget))
+
+
+def continue_last_session(widget):
+    """恢复上次的现场：打开那个项目，再回到**那个项目自己的**位置。
+
+    先问项目清单（``last_file``），再退回 QSettings 的 ``filename`` ——
+    后者是改造前的全局记忆，只为老会话留一条路。切换过项目的人在这里
+    受益最明显：以前只有一个全局"最后一张"，切回来就找不着了。
+    """
+    directory = session_resume_path(widget)
+    if not directory:
+        return False
+    try:
+        widget.import_image_folder(directory, load=False)
+        target = project_settings.remembered_file(directory) or ""
+        if not target:
+            fallback = widget.settings.value("filename", "") or ""
+            if fallback and osp.isfile(str(fallback)):
+                target = str(fallback)
+        if target:
+            widget.load_file(target)
+        else:
+            widget.open_next_image(load=True)
+        widget._refresh_file_panel()
+        return True
+    except Exception as e:  # noqa: BLE001
+        logger.warning(f"Session resume failed: {e}")
+        widget.status(_tr("恢复上次工作现场失败"), 4000)
+        return False
+
+
 def new_project(widget):
     """新建项目：选文件夹 → 起名/选任务 → 打开它。
 
@@ -328,11 +382,10 @@ def open_settings_folder(widget):
 
 
 def close_project(widget):
-    """关闭当前项目：确认未保存改动，然后回到空画布。
+    """关闭当前项目：确认未保存改动，写回项目状态，回到空画布。
 
-    L1 阶段只做到"干净地退出到没有项目的状态"，不做项目生命周期管理
-    （新建/重命名/删除属于后续批次）。项目记录本身留在最近项目列表
-    里，随时可以再打开。
+    项目记录留在最近项目列表里，随时可以再打开 —— 而且因为离开时写下
+    了位置，再打开会回到关掉时看的那张图。
     """
     if not current_root(widget):
         widget.status(_tr("当前没有打开的项目"), 3000)
@@ -340,6 +393,9 @@ def close_project(widget):
     if not widget.may_continue():
         return False
 
+    # 先把状态写回项目：下面的 reset_state 只清界面，不会替项目留续点，
+    # 而清掉 _project_dataset_dir 之后就不知道写给谁了。
+    project_settings.flush_open_project(widget)
     # 项目上下文必须先清掉：否则标题栏与菜单勾选会在文件列表已经清空
     # 之后仍然指着刚关闭的那个项目。
     widget._project_dataset_dir = None
@@ -442,14 +498,17 @@ def build_project_menu(widget):
 __all__ = [
     "build_project_menu",
     "close_project",
+    "continue_last_session",
     "current_name",
     "current_root",
     "edit_project",
+    "has_session",
     "new_project",
     "open_settings_folder",
     "populate_recent_menu",
     "project_name",
     "recent_dirs",
     "record_recent",
+    "session_resume_path",
     "title_project_prefix",
 ]

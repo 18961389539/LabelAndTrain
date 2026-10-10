@@ -608,10 +608,11 @@ def _main():
     def _offer_session_resume():
         try:
             from anylabeling.views.labeling import project_registry
+            from anylabeling.views.labeling.utils import project_view
 
             widget = win.labeling_widget.view
             action = project_registry.decide_startup_action(
-                has_session=bool(widget.session_resume_path()),
+                has_session=project_view.has_session(widget),
                 always_show_manager=bool(
                     config.get("startup_show_project_manager")
                 ),
@@ -620,7 +621,8 @@ def _main():
             if action == "manager":
                 widget.open_project_switcher()
             elif action == "restore":
-                widget.continue_last_session()
+                # 项目化的续点：由项目清单决定回到哪张图。
+                project_view.continue_last_session(widget)
         except Exception as e:  # noqa
             logger.warning(f"Session resume prompt skipped: {e}")
 

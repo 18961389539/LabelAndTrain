@@ -46,6 +46,7 @@ CONTRACT_MEMBERS = frozenset(
         "_next_visible_row",
         "_paging_blocked_by_drawing",
         "_position_canvas_adjustment",
+        "_project_resume_file",
         "_refresh_file_item_status_icon",
         "_refresh_file_panel",
         "_refresh_file_progress",

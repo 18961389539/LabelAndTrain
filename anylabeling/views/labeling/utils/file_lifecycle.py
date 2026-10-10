@@ -443,6 +443,22 @@ def handle_drop(widget, event):
     widget.import_dropped_image_files(items)
 
 
+def _resume_remembered_file(widget):
+    """Open the image this project was last on; ``False`` when unavailable.
+
+    Runs between the row scan and ``open_next_image`` because that call is
+    the "nothing remembered" fallback. The remembered path is checked
+    against the freshly built image list, so an image deleted since the
+    last visit falls through instead of becoming a phantom row.
+    """
+    target = getattr(widget, "_project_resume_file", None)
+    widget._project_resume_file = None
+    if not target or target not in widget.image_list:
+        return False
+    widget.load_file(target)
+    return True
+
+
 def import_image_folder(widget, dirpath, pattern=None, load=True):
     if not widget.may_continue() or not dirpath:
         return
@@ -522,7 +538,11 @@ def import_image_folder(widget, dirpath, pattern=None, load=True):
     widget.actions.open_next_unchecked_image.setEnabled(True)
     widget.actions.open_prev_unchecked_image.setEnabled(True)
     widget.toggle_actions(True)
-    widget.open_next_image(load=load)
+    # A project resumes where it was left, not at the first image. The
+    # fallback below is what "nothing remembered" means; load=False (a
+    # bulk import that will be painted later) skips both.
+    if not (load and _resume_remembered_file(widget)):
+        widget.open_next_image(load=load)
 
     if image_files and widget._config.get("exif_scan_enabled", True):
         widget.async_exif_scanner.start_scan(image_files)

@@ -800,33 +800,6 @@ class LabelingWidget(LabelDialog):
         QtCore.QTimer.singleShot(0, self._install_save_status_widget)
         QtCore.QTimer.singleShot(0, self._sync_empty_canvas_state)
 
-    def session_resume_path(self):
-        """Return the last working directory, or None when unavailable."""
-        try:
-            directory = self.settings.value("last_open_dir", None)
-            if directory and osp.isdir(str(directory)):
-                return str(directory)
-        except Exception as e:  # noqa
-            logger.warning(f"session_resume_path failed: {e}")
-        return None
-
-    def continue_last_session(self):
-        """Reload the previous folder and jump to the last viewed image."""
-        directory = self.session_resume_path()
-        if not directory:
-            return
-        try:
-            self.import_image_folder(directory, load=False)
-            last_filename = self.settings.value("filename", "") or ""
-            if last_filename and osp.isfile(str(last_filename)):
-                self.load_file(str(last_filename))
-            else:
-                self.open_next_image(load=True)
-            self._refresh_file_panel()
-        except Exception as e:  # noqa
-            logger.warning(f"Session resume failed: {e}")
-            self.status(self.tr("恢复上次工作现场失败"), 4000)
-
     def restore_navigator_state(self) -> None:
         try:
             navigator_visible: bool = self.settings.value(

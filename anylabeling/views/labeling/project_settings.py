@@ -169,11 +169,67 @@ def _previous_dataset_dir(widget):
     return getattr(widget, "_project_dataset_dir", None) or None
 
 
+def _relative_to_project(dataset_dir, filename):
+    """``filename`` as a project-relative path, or absolute if outside.
+
+    Relative where possible: copying or moving a whole dataset folder is
+    a normal thing to do, and a resume point that stops matching after
+    the next ``mv`` is not worth writing down.
+    """
+    try:
+        relative = osp.relpath(filename, dataset_dir)
+    except ValueError:
+        # Different drives on Windows: no relative form exists.
+        return filename
+    if relative.startswith(".."):
+        return filename
+    return relative
+
+
+def remembered_file(dataset_dir):
+    """The image this project was last looking at, or ``None``.
+
+    Both stored forms are accepted: relative (the normal case) and
+    absolute (the image sits outside the project, e.g. an output
+    directory browsed on its own). A path that no longer exists reads as
+    "nothing remembered" rather than an error — the folder is allowed to
+    change under us.
+    """
+    stored = get_value(dataset_dir, "last_file")
+    if not stored:
+        return None
+    stored = str(stored)
+    if osp.isabs(stored):
+        return stored if osp.isfile(stored) else None
+    candidate = osp.join(str(dataset_dir), stored)
+    return candidate if osp.isfile(candidate) else None
+
+
+def save_last_file(widget, dataset_dir):
+    """Record which image the project is on; skips the write if unchanged.
+
+    Called from the leaving paths (switch away, close, quit) rather than
+    on every image: one small write per visit to a project is affordable,
+    one per image is not — and the record only matters when leaving.
+    """
+    filename = getattr(widget, "filename", None)
+    if not filename or not dataset_dir:
+        return False
+    if not osp.isfile(str(filename)):
+        return False
+    stored = _relative_to_project(str(dataset_dir), str(filename))
+    if get_value(dataset_dir, "last_file") == stored:
+        return False
+    return update_values(dataset_dir, last_file=stored)
+
+
 def flush_open_project(widget):
     """Write back per-project state of the dataset currently open."""
     previous = _previous_dataset_dir(widget)
-    if previous:
-        save_current_labels(widget, previous)
+    if not previous:
+        return
+    save_current_labels(widget, previous)
+    save_last_file(widget, previous)
 
 
 def _restore_output_dir(widget, dataset_dir):
@@ -269,13 +325,18 @@ def begin_project_switch(widget, dataset_dir):
     """First half of a dataset switch: flush the old, restore the early.
 
     Must run before the image scan of ``import_image_folder`` so a restored
-    ``output_dir`` routes the label-file paths correctly. Records the old
-    dataset's label panel first, so edits made without saving are not lost.
+    ``output_dir`` routes the label-file paths correctly, and so the
+    remembered image can be opened by that scan's tail. Records the old
+    dataset's label panel and position first, so leaving loses nothing.
     """
     if not dataset_dir:
         return
     flush_open_project(widget)
     widget._project_dataset_dir = dataset_dir
+    # Read now, consumed later by ``_resume_remembered_file``: the scan
+    # in between is what fills ``image_list``, and the target has to be
+    # known before the "open the first image" fallback runs.
+    widget._project_resume_file = remembered_file(dataset_dir)
     _restore_output_dir(widget, dataset_dir)
 
 
