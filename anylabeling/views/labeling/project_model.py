@@ -257,6 +257,26 @@ def apply_template(target_root, template):
     return save_record(target_root, record)
 
 
+def describe_from_record(top_name, record):
+    """A :func:`describe`-shaped summary from an unpacked record.
+
+    The import path's form of :func:`describe`: the record comes from
+    inside a bundle (possibly damaged, possibly absent) and the folder
+    name is the archive's top-level directory. Same tolerance contract —
+    name and task always come back usable.
+    """
+    record = record if isinstance(record, dict) else {}
+    return {
+        "root": "",
+        "name": record.get("name") or default_name(top_name),
+        "task": normalize_task(record.get("task")),
+        "has_record": bool(record),
+        "created_at": record.get("created_at") or "",
+        "labels": list(record.get("labels") or []),
+        "output_dir": record.get("output_dir") or "",
+    }
+
+
 __all__ = [
     "NAME_MAX_LENGTH",
     "TASK_HINTS",
@@ -266,6 +286,7 @@ __all__ = [
     "create",
     "default_name",
     "describe",
+    "describe_from_record",
     "has_record",
     "load_record",
     "new_record",

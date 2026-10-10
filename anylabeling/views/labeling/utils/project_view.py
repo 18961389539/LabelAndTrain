@@ -463,6 +463,152 @@ def open_settings_folder(widget):
     _open_in_file_manager(settings_dir)
 
 
+def _bundle_progress_dialog(widget, title):
+    """A progress dialog for pack/unpack, driven by the bundle callbacks.
+
+    Synchronous-with-progress rather than a worker thread: packing is
+    per-file IO, ``setValue`` keeps the window alive, and the cancel
+    button routes through the bundle's own cancel hook.
+    """
+    dialog = QtWidgets.QProgressDialog(widget)
+    dialog.setWindowTitle(title)
+    dialog.setLabelText(_tr("正在处理…"))
+    dialog.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
+    dialog.setMinimumDuration(0)
+    dialog.setAutoClose(False)
+    dialog.setAutoReset(False)
+    return dialog
+
+
+def _run_bundle_step(widget, total, work, title):
+    """Drive ``work(progress, cancel)`` with a progress dialog.
+
+    ``work`` receives a ``(done, total, name)`` progress callback and a
+    ``cancel()`` predicate, and returns its own result. Returns
+    ``None`` when the user cancelled, otherwise whatever ``work`` did.
+    """
+    dialog = _bundle_progress_dialog(widget, title)
+    dialog.setRange(0, max(total, 1))
+
+    def progress(done, _total, name):
+        dialog.setValue(done)
+        dialog.setLabelText(name)
+
+    result = work(progress, dialog.wasCanceled)
+    dialog.cancel()
+    if dialog.wasCanceled():
+        return None
+    return result
+
+
+def export_project_bundle(widget):
+    """把当前项目打包成 zip：图片、标签、.jllabel 设置一起走。
+
+    包是"整个数据集目录"的原样快照 —— 项目化的第一原则（清单随数据
+    走）让它不需要任何额外的组装步骤。导出在界面上有进度与取消；取消
+    会删掉半成品，一个自称项目包的残缺 zip 比没有包更糟。
+    """
+    from anylabeling.views.labeling import project_bundle
+
+    root = current_root(widget)
+    if not root:
+        QtWidgets.QMessageBox.information(
+            widget,
+            _tr("没有打开的项目"),
+            _tr("先打开一个项目文件夹，再来导出项目包。"),
+        )
+        return False
+
+    suggested = osp.join(osp.dirname(root), f"{osp.basename(root)}.zip")
+    path, _ = QtWidgets.QFileDialog.getSaveFileName(
+        widget, _tr("导出项目包"), suggested, _tr("项目包 (*.zip)")
+    )
+    if not path:
+        return False
+    if not path.lower().endswith(".zip"):
+        path += ".zip"
+
+    total = sum(1 for _ in project_bundle._iter_files(root))
+
+    def work(progress, cancel):
+        return project_bundle.export_bundle(
+            root, path, progress=progress, cancel=cancel
+        )
+
+    result = _run_bundle_step(widget, total, work, _tr("导出项目包"))
+    if result is None:
+        widget.status(_tr("已取消导出"), 3000)
+        return False
+    widget.status(_tr("已导出项目包（%d 个文件）") % result["files"], 5000)
+    logger.info(
+        f"Exported project bundle: {root} -> {path} "
+        f"({result['files']} files, {result['bytes']} bytes, "
+        f"{len(result['skipped'])} skipped)"
+    )
+    return True
+
+
+def import_project_bundle(widget):
+    """从项目包 zip 还原一个项目，并打开它。
+
+    解包目标由包的顶层目录名决定（同名已存在则拒绝——绝不合并别人
+    的半成品）；条目逐一做 zip-slip 校验，越界即整体失败。成功后
+    直接打开还原出的项目。
+    """
+    from anylabeling.views.labeling import project_bundle
+
+    path, _ = QtWidgets.QFileDialog.getOpenFileName(
+        widget, _tr("从项目包导入"), "", _tr("项目包 (*.zip)")
+    )
+    if not path:
+        return False
+    info = project_bundle.inspect_bundle(path)
+    if not info or not info["top"]:
+        QtWidgets.QMessageBox.warning(
+            widget,
+            _tr("不是项目包"),
+            _tr("这个 zip 不是单文件夹的项目包，无法导入：\n%s") % path,
+        )
+        return False
+    described = project_model.describe_from_record(info["top"], info["record"])
+    answer = QtWidgets.QMessageBox.question(
+        widget,
+        _tr("导入项目包"),
+        _tr("将导入项目「%s」（%s），解包后立即打开。继续吗？")
+        % (described["name"], project_model.task_label(described["task"])),
+    )
+    if answer != QtWidgets.QMessageBox.StandardButton.Yes:
+        return False
+
+    parent = QtWidgets.QFileDialog.getExistingDirectory(
+        widget,
+        _tr("选择解包位置"),
+        getattr(widget, "last_open_dir", None) or "",
+    )
+    if not parent:
+        return False
+
+    def work(progress, cancel):
+        return project_bundle.import_bundle(
+            path, parent, progress=progress, cancel=cancel
+        )
+
+    try:
+        result = _run_bundle_step(
+            widget, info["entries"], work, _tr("导入项目包")
+        )
+    except ValueError as e:
+        QtWidgets.QMessageBox.warning(widget, _tr("导入失败"), str(e))
+        return False
+    if result is None:
+        widget.status(_tr("已取消导入"), 3000)
+        return False
+    widget.import_image_folder(result["root"])
+    widget.status(_tr("已导入项目并打开"), 5000)
+    logger.info(f"Imported project bundle: {path} -> {result['root']}")
+    return True
+
+
 def close_project(widget):
     """关闭当前项目：确认未保存改动，写回项目状态，回到空画布。
 
@@ -564,13 +710,29 @@ def build_project_menu(widget):
         slot=lambda: open_settings_folder(widget),
         tip=_tr("在文件管理器里打开当前项目的 .jllabel 目录"),
     )
+    export_action = new_action(
+        widget,
+        _tr("导出项目包…"),
+        slot=lambda: export_project_bundle(widget),
+        tip=_tr("把整个项目（图片、标签、设置）打包成一个 zip"),
+    )
+    import_action = new_action(
+        widget,
+        _tr("从项目包导入…"),
+        slot=lambda: import_project_bundle(widget),
+        tip=_tr("从项目包 zip 还原一个项目并打开它"),
+    )
     menu.addAction(settings_action)
+    menu.addAction(export_action)
+    menu.addAction(import_action)
     menu.addAction(close_action)
 
     widget.actions.new_project = new_action_item
     widget.actions.project_properties = properties_action
     widget.actions.close_project = close_action
     widget.actions.open_project_settings_folder = settings_action
+    widget.actions.export_project_bundle = export_action
+    widget.actions.import_project_bundle = import_action
 
     file_menu = widget.menus.file
     first = file_menu.actions()
@@ -589,7 +751,9 @@ __all__ = [
     "current_name",
     "current_root",
     "edit_project",
+    "export_project_bundle",
     "has_session",
+    "import_project_bundle",
     "new_project",
     "open_settings_folder",
     "populate_recent_menu",

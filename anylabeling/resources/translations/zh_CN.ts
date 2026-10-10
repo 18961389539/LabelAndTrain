@@ -4957,12 +4957,12 @@ Results have been saved to:
         <translation>%s（%d 个标签）</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\project_dialog.py" line="197" />
+        <location filename="..\..\views\labeling\widgets\project_dialog.py" line="198" />
         <source>保存</source>
         <translation>保存</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\project_dialog.py" line="201" />
+        <location filename="..\..\views\labeling\widgets\project_dialog.py" line="202" />
         <source>取消</source>
         <translation type="unfinished">取消</translation>
     </message>
