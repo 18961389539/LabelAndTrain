@@ -302,13 +302,44 @@ class TestDatasetBuildReportsWhatItCouldNotUse:
 class TestNameIsOneDirectory:
     @pytest.mark.parametrize(
         "name",
-        ["..", ".", "a/b", "a\\b", "C:/", "D:/labels", "/etc", "", "   "],
+        # ``a\b`` is *not* in this list: a backslash is a separator only on
+        # Windows, and POSIX has no such rule to test. See the test below.
+        ["..", ".", "a/b", "C:/", "D:/labels", "/etc", "", "   "],
     )
     def test_path_shaped_names_are_rejected(self, name, tmp_path):
         config = {
             "basic": {
                 "project": str(tmp_path),
                 "name": name,
+                "model": "yolov8n.pt",
+                "data": _data_file(tmp_path),
+            }
+        }
+
+        is_valid, message = validate_basic_config(config, "Detect")
+
+        assert is_valid is False
+        assert "single folder name" in message or "required" in message
+
+    @pytest.mark.skipif(
+        os.sep != "\\",
+        reason="a backslash separates components on Windows only; elsewhere "
+        "it is an ordinary character in a directory name",
+    )
+    def test_a_backslash_name_is_rejected_on_windows_only(self, tmp_path):
+        """``a\\b`` is two components on Windows, so it must be refused.
+
+        On POSIX there is no equivalent failure to pin: ``a\\b`` is one
+        perfectly legal directory name there, one that cannot escape its
+        parent, so ``is_single_path_component`` accepting it is correct
+        rather than a hole. Parametrising the name above is what made the
+        Linux and macOS jobs red -- the assertion was testing Windows
+        semantics on every platform.
+        """
+        config = {
+            "basic": {
+                "project": str(tmp_path),
+                "name": "a\\b",
                 "model": "yolov8n.pt",
                 "data": _data_file(tmp_path),
             }

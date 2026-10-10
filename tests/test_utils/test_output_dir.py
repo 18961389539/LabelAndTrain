@@ -226,8 +226,15 @@ class TestSharedDialog(OutputDirTestCase):
         self.assertEqual(action, output_dir.CLEAR)
         self.assertFalse(os.path.exists(marker))
         self.assertEqual(len(dialogs), 2)
+        # ``realpath`` on both sides. The dialog shows the path it was
+        # handed, and on a runner whose TEMP sits behind an 8.3 short name
+        # (``C:\Users\RUNNER~1\...``) that string differs from the resolved
+        # one while pointing at the same directory. Comparing resolved
+        # forms keeps the assertion about *which* directory is on screen,
+        # which is what this second confirmation exists for.
         self.assertEqual(
-            dialogs[1].informative_text, os.path.realpath(self.output)
+            os.path.realpath(dialogs[1].informative_text),
+            os.path.realpath(self.output),
         )
         self.assertEqual(dialogs[1].default_button.text, "Cancel")
 
