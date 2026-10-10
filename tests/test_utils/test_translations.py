@@ -168,7 +168,14 @@ class TestCompiledCatalogIsInSync(unittest.TestCase):
                 if not expected or expected == source.strip():
                     continue
                 compared += 1
-                actual = QtCore.QCoreApplication.translate(name, source)
+                # Both sides are stripped. A translation may deliberately
+                # carry leading or trailing space -- 「 Deletion cannot be
+                # undone.」 is appended to a "、"-joined list -- and this
+                # check is about the words reaching the compiled catalog,
+                # not about the padding around them.
+                actual = QtCore.QCoreApplication.translate(
+                    name, source
+                ).strip()
                 if actual != expected:
                     mismatches.append((name, source, expected, actual))
         self.assertGreater(compared, 0)
