@@ -91,6 +91,26 @@ jobs:
           tail -40 pytest-out.txt
           exit $code
 
+      # Unit tests cover the pieces; this covers the seams between them --
+      # real widget, real image folder, Qt offscreen, 13 steps. It earned its
+      # place here on 2026-10-10: two real bugs (a project record written into
+      # the opened folder's *parent*, so two datasets in one directory shared
+      # a single record; and the training window deriving its project from
+      # `image_list[0]`, which sits in a sub-folder when the scan recurses)
+      # passed 1165 unit tests and were caught only by this script. A gate
+      # nobody runs is not a gate, so it runs on every push now.
+      # `-u` is required: buffered stdout loses the whole report when the
+      # process dies, and the report is the only diagnosis that survives.
+      - name: Walk the integration paths (smoke)
+        shell: bash
+        run: |
+          set +e
+          python -u scripts/smoke_widget_paths.py > smoke-out.txt 2>&1
+          code=$?
+          set -e
+          tail -20 smoke-out.txt
+          exit $code
+
       - name: Surface failures as annotations
         if: failure()
         shell: bash
