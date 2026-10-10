@@ -280,6 +280,28 @@ TRAIN_PREFS_SECTIONS = (
 )
 
 
+def _dataset_dir_for(dialog):
+    """The open dataset's folder — the project's identity — or ``""``.
+
+    Module-level and taking the dialog, not a method: the tests drive
+    ``_project_train_prefs`` / ``_save_project_train_prefs`` with a
+    ``SimpleNamespace`` stand-in, and a new ``self._helper()`` call would
+    break every one of them (the stand-in has no such attribute).
+
+    The dialog is handed an image list rather than a project, so the
+    folder is derived exactly the way the annotation side derives it —
+    "which project is this" gets the same answer on both sides of the loop.
+    """
+    from anylabeling.views.labeling import project_settings
+
+    return (
+        project_settings.dataset_dir_for(
+            image_list=getattr(dialog, "image_list", None)
+        )
+        or ""
+    )
+
+
 class UltralyticsDialog(QDialog):
     # Emitted from the background dataset-preparation thread when the YOLO
     # dataset build finishes (temp_dir_or_empty, error_message).
@@ -970,6 +992,10 @@ class UltralyticsDialog(QDialog):
         layout.addWidget(scroll_area)
 
         self.init_actions(layout)
+        # Last, once every widget the handler touches exists: the project's
+        # declared task is preselected so the Data tab opens knowing what
+        # this dataset is for.
+        self._apply_project_task()
 
     # Config Tab
     def browse_model_file(self):
@@ -2704,21 +2730,50 @@ class UltralyticsDialog(QDialog):
         """``train_prefs`` recorded for the open dataset, ``{}`` when none."""
         from anylabeling.views.labeling import project_settings
 
-        dataset_dir = project_settings.dataset_dir_for(
-            image_list=getattr(self, "image_list", None)
-        )
+        dataset_dir = _dataset_dir_for(self)
         if not dataset_dir:
             return {}
         prefs = project_settings.get_value(dataset_dir, "train_prefs")
         return prefs if isinstance(prefs, dict) else {}
 
-    def _save_project_train_prefs(self, config):
-        """Mirror the whitelisted tuning onto the open dataset's record."""
-        from anylabeling.views.labeling import project_settings
+    def _apply_project_task(self):
+        """Preselect the task kind the open *project* declares.
 
-        dataset_dir = project_settings.dataset_dir_for(
-            image_list=getattr(self, "image_list", None)
-        )
+        Only for a folder that really carries a project record: one that
+        was merely opened keeps the old "nothing selected yet" start on
+        purpose, because picking a task here is picking wrong on a full
+        run, and the project is the only thing that has actually been
+        told what it is for.
+        """
+        from anylabeling.views.labeling import project_model
+
+        dataset_dir = _dataset_dir_for(self)
+        if not dataset_dir:
+            return False
+        described = project_model.describe(dataset_dir)
+        if not described["has_record"]:
+            return False
+        task = described["task"]
+        if task not in self.task_type_buttons:
+            return False
+        if self.selected_task_type == task:
+            return False
+        # Through the real handler: it is what refreshes the summary, the
+        # labeled-image hint and the wizard state.
+        self.on_task_type_selected(task)
+        return True
+
+    def _save_project_train_prefs(self, config):
+        """Mirror the whitelisted tuning onto the open dataset's record.
+
+        The task kind rides along: whichever kind the run was committed
+        with becomes the project's declared kind, so a project whose task
+        was never set — or was set differently — ends up agreeing with
+        what was actually trained.
+        """
+        from anylabeling.views.labeling import project_model, project_settings
+
+        dataset_dir = _dataset_dir_for(self)
         if not dataset_dir:
             return False
         basic = config.get("basic") or {}
@@ -2728,7 +2783,19 @@ class UltralyticsDialog(QDialog):
         for section in TRAIN_PREFS_SECTIONS:
             if section in config:
                 prefs[section] = dict(config[section])
-        return project_settings.update_values(dataset_dir, train_prefs=prefs)
+        ok = project_settings.update_values(dataset_dir, train_prefs=prefs)
+        # ``getattr`` because the tests drive this with a SimpleNamespace
+        # stand-in that carries only ``image_list``.
+        task = getattr(self, "selected_task_type", None)
+        if task:
+            # Written straight to the record rather than through
+            # ``project_model.set_task``: that one requires a project to
+            # already exist, and a folder reaching training has just had
+            # its record created by the line above.
+            project_settings.update_values(
+                dataset_dir, task=project_model.normalize_task(task)
+            )
+        return ok
 
     def init_config_tab(self):
         layout = QVBoxLayout(self.config_tab)
