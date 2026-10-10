@@ -88,7 +88,6 @@ from .schema import (
 from .logger import logger
 from .utils.yolo_detect import (
     CLASSES_FILENAME,
-    load_class_names,
     merge_class_names,
     rename_label_across_folder,
     write_yolo_detect_sidecar,
@@ -4369,38 +4368,43 @@ class LabelingWidget(LabelDialog):
         file_lifecycle.import_image_folder(self, dirpath, pattern, load)
 
     def _load_classes_from_folder(self, image_dir):
-        """Make the label panel follow ``classes.txt`` of the opened folder.
+        """Open the panel on this project's single label source.
 
-        Two problems are fixed here:
+        The project record is the one source: once it carries labels they
+        win, and a ``classes.txt`` is only the seed a folder ships — it
+        fills the panel while the record has none, and the leaving flush
+        writes those names into the record, so the two can disagree for
+        one session at most. A folder with neither falls back to the
+        configured labels (``restore_configured_classes``), which also
+        clears whatever the previous folder left — ``_yolo_class_names``
+        reads this panel to build the YOLO id map, so leftovers silently
+        remap every exported label.
 
-        * opening a folder used to ignore ``classes.txt`` entirely, so the
-          "还没有类别" prompt appeared even when the folder declared classes;
-        * the panel survived folder switches, so labels from a previously
-          opened folder stayed in the list and looked like classes that were
-          never in the file.
-
-        A folder that ships ``classes.txt`` is now authoritative and replaces
-        the panel. Folders without one are left alone, so labels from the
-        config keep working as before.
+        A record/classes.txt mismatch says so in the status bar: the
+        record still wins, but a hand-edited classes.txt that "did
+        nothing" must not be a silent nothing.
         """
         if not image_dir:
             return []
 
-        names = []
-        for candidate_dir in (self.output_dir, image_dir):
-            if not candidate_dir:
-                continue
-            names = load_class_names(osp.join(candidate_dir, CLASSES_FILENAME))
-            if names:
-                break
+        resolution = project_settings.resolve_open_labels(
+            image_dir, (self.output_dir, image_dir)
+        )
+        names = resolution["names"]
         if not names:
-            # This folder ships no classes.txt, so fall back to the configured
-            # labels rather than leaving the panel as the previous folder left
-            # it: _yolo_class_names reads that panel to build the YOLO id map,
-            # so leftovers silently remap every exported label.
             project_settings.restore_configured_classes(self)
             return []
-
+        if resolution["conflict"]:
+            logger.warning(
+                f"{CLASSES_FILENAME} disagrees with the project record; "
+                "the record wins"
+            )
+            status = getattr(self, "status", None)
+            if callable(status):
+                status(
+                    self.tr("classes.txt 与项目标签不一致，已按项目标签打开"),
+                    5000,
+                )
         if self._panel_label_names() == names:
             return names
 
@@ -4408,7 +4412,7 @@ class LabelingWidget(LabelDialog):
         self.load_labels(names, clear_existing=False)
         self._reset_label_dialog_labels(names)
         logger.info(
-            f"Loaded {len(names)} classes from {CLASSES_FILENAME}: "
+            f"Loaded {len(names)} labels from {resolution['source']}: "
             f"{', '.join(names)}"
         )
         return names

@@ -304,6 +304,54 @@ def _restore_output_dir(widget, dataset_dir):
         pass
 
 
+def resolve_open_labels(dataset_dir, classes_dirs):
+    """The label list the panel should open with, and where it came from.
+
+    Single source: once the record carries labels, they win. A
+    ``classes.txt`` is the seed a folder ships and is read only while the
+    record has none — the panel it seeds is written back into the record
+    when the project is left (``save_current_labels``), so the two can
+    disagree for one session at most and the record stays the one place
+    that counts. A pure folder (no record, no classes.txt) answers
+    ``{"names": [], "source": "none"}`` and the caller falls back to the
+    configured labels as before. Nothing is written here: opening a
+    dataset stays read-only, and the seeded names land on disk with the
+    leaving flush.
+    """
+    from anylabeling.views.labeling.utils.yolo_detect import (
+        CLASSES_FILENAME,
+        load_class_names,
+    )
+
+    names = [
+        str(name)
+        for name in (get_value(dataset_dir, "labels") or [])
+        if str(name)
+    ]
+    classes_names = []
+    for candidate_dir in classes_dirs:
+        if not candidate_dir:
+            continue
+        classes_names = load_class_names(
+            osp.join(str(candidate_dir), CLASSES_FILENAME)
+        )
+        if classes_names:
+            break
+    if names:
+        return {
+            "names": names,
+            "source": "record",
+            "conflict": bool(classes_names) and classes_names != names,
+        }
+    if classes_names:
+        return {
+            "names": classes_names,
+            "source": "classes.txt",
+            "conflict": False,
+        }
+    return {"names": [], "source": "none", "conflict": False}
+
+
 def restore_configured_classes(widget):
     """Reset the label panel to the configured classes.
 

@@ -54,7 +54,13 @@ BUDGETS = {
     # (which project, and which image inside it) moved to project_view too,
     # so session_resume_path and continue_last_session left the widget and
     # nothing took their place -- callers reach project_view directly.
-    "anylabeling/views/labeling/label_widget.py": 6781,
+    #
+    # Raised 6781 -> 6785 on 2026-10-10, documented feature: the label
+    # panel opened on the project record as its single source (project
+    # settings own the resolution now), and the record/classes.txt
+    # mismatch says so in the status bar -- the four lines are that
+    # warning, the one thing the single-source change adds to the widget.
+    "anylabeling/views/labeling/label_widget.py": 6785,
     # Lowered 3772 -> 3760 on 2026-09-29: the undo/redo stacks moved out to
     # widgets/shape_history.py (which is also what made them survive a file
     # switch) and the canvas reaches them through the attribute names it has

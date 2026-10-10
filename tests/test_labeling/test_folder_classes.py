@@ -172,6 +172,105 @@ class TestLoadClassesFromFolder(unittest.TestCase):
             widget._load_classes_from_folder(tmp)
             self.assertEqual(widget.label_dialog.label_list.items, ["bag"])
 
+    def test_the_project_record_wins_over_classes_txt(self):
+        """单源化：记录里有标签后，classes.txt 退化为不再被读的种子。"""
+        from anylabeling.views.labeling import project_model
+
+        with tempfile.TemporaryDirectory() as tmp:
+            self._write_classes(tmp, ["from_classes_txt"])
+            assert project_model.create(
+                tmp, task="Detect", labels=["from_record", "added"]
+            )
+            widget = self._widget()
+            self.assertEqual(
+                widget._load_classes_from_folder(tmp),
+                ["from_record", "added"],
+            )
+            self.assertEqual(
+                widget.unique_label_list.labels,
+                ["from_record", "added"],
+            )
+
+    def test_a_record_classes_txt_mismatch_says_so(self):
+        from anylabeling.views.labeling import project_model
+
+        with tempfile.TemporaryDirectory() as tmp:
+            self._write_classes(tmp, ["stale", "classes"])
+            assert project_model.create(
+                tmp, task="Detect", labels=["live", "labels"]
+            )
+            widget = self._widget()
+            widget.messages = []
+            widget.tr = lambda text: text
+            widget.status = lambda text, _ms=0: widget.messages.append(text)
+            self.assertEqual(
+                widget._load_classes_from_folder(tmp), ["live", "labels"]
+            )
+            # 记录仍然赢，但"classes.txt 没生效"不再是沉默的。
+            self.assertTrue(
+                any("不一致" in message for message in widget.messages)
+            )
+
+    def test_a_matching_classes_txt_says_nothing(self):
+        from anylabeling.views.labeling import project_model
+
+        with tempfile.TemporaryDirectory() as tmp:
+            self._write_classes(tmp, ["bag"])
+            assert project_model.create(tmp, task="Detect", labels=["bag"])
+            widget = self._widget()
+            widget.messages = []
+            widget.status = lambda text, _ms=0: widget.messages.append(text)
+            self.assertEqual(widget._load_classes_from_folder(tmp), ["bag"])
+            self.assertEqual(widget.messages, [])
+
+
+class TestResolveOpenLabels:
+    """解析本身只读：打开一个数据集不写盘（离开时的 flush 才写）。"""
+
+    def test_seeding_from_classes_txt_writes_nothing(self, tmp_path):
+        from anylabeling.views.labeling import (
+            project_model,
+            project_settings,
+        )
+
+        (tmp_path / "classes.txt").write_text("bag\n", encoding="utf-8")
+        resolution = project_settings.resolve_open_labels(
+            str(tmp_path), (str(tmp_path),)
+        )
+        assert resolution == {
+            "names": ["bag"],
+            "source": "classes.txt",
+            "conflict": False,
+        }
+        assert not project_model.has_record(str(tmp_path))
+
+    def test_the_record_beats_the_seed(self, tmp_path):
+        from anylabeling.views.labeling import (
+            project_model,
+            project_settings,
+        )
+
+        (tmp_path / "classes.txt").write_text("stale\n", encoding="utf-8")
+        assert project_model.create(str(tmp_path), labels=["live"])
+        resolution = project_settings.resolve_open_labels(
+            str(tmp_path), (str(tmp_path),)
+        )
+        assert resolution["source"] == "record"
+        assert resolution["conflict"] is True
+        assert resolution["names"] == ["live"]
+
+    def test_nothing_to_read(self, tmp_path):
+        from anylabeling.views.labeling import project_settings
+
+        resolution = project_settings.resolve_open_labels(
+            str(tmp_path), (None, str(tmp_path))
+        )
+        assert resolution == {
+            "names": [],
+            "source": "none",
+            "conflict": False,
+        }
+
 
 class TestLoadLabelsRegression(unittest.TestCase):
     @classmethod
