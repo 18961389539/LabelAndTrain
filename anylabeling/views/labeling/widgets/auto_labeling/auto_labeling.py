@@ -129,22 +129,22 @@ def _dataset_dir_for(panel):
 
     Module-level and taking the panel, like the other helpers in this
     file: the tests drive them with a stand-in parent, and a ``self.``
-    reach would demand one carrying the whole widget. The folder is
-    derived the way the annotation side derives it, so "which project is
-    this" gets the same answer on both sides of the loop.
-    """
-    parent = getattr(panel, "parent", None)
-    if parent is None:
-        return ""
-    from anylabeling.views.labeling import project_settings
+    reach would demand one carrying the whole widget.
 
-    opened = getattr(parent, "_project_dataset_dir", None)
+    The lookup lives in ``project_context`` so this panel, the training
+    dialog and the project UI all get the same answer to "which project
+    is this" by construction rather than by three hand-rolled copies.
+    """
+    from anylabeling.views.labeling import project_context, project_settings
+
+    opened = project_context.current_dataset_dir(panel)
     if opened and os.path.isdir(str(opened)):
         return str(opened)
+    holder = project_context.parent_of(panel)
     return (
         project_settings.dataset_dir_for(
-            image_list=getattr(parent, "image_list", None),
-            filename=getattr(parent, "filename", None),
+            image_list=getattr(holder, "image_list", None),
+            filename=getattr(holder, "filename", None),
         )
         or ""
     )

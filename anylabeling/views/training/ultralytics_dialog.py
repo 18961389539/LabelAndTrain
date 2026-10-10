@@ -294,18 +294,15 @@ def _dataset_dir_for(dialog):
     inside a *different* folder than the one that was opened — and the
     tuning, and now the task kind, would be read from and written to the
     wrong project.
-    """
-    from anylabeling.views.labeling import project_settings
 
-    # ``getattr`` twice: the tests drive the prefs helpers with a
-    # SimpleNamespace stand-in, which has neither a ``parent`` nor the
-    # attribute behind it.
-    parent_fn = getattr(dialog, "parent", None)
-    opened = (
-        getattr(parent_fn(), "_project_dataset_dir", None)
-        if callable(parent_fn)
-        else None
-    )
+    The lookup itself lives in ``project_context`` so the auto-labeling
+    panel asks the same question the same way; this wrapper keeps the
+    dialog's own fallback (first-image folder) and the ``""``-on-nothing
+    contract its tests pin.
+    """
+    from anylabeling.views.labeling import project_context, project_settings
+
+    opened = project_context.current_dataset_dir(dialog)
     if opened and os.path.isdir(str(opened)):
         return str(opened)
     return (
