@@ -11,6 +11,10 @@ them -- the paths that only exist when everything is wired together:
   5. canvas rectangle edits -> canvas_geometry (14-16)
   6. delete_image_file      -> file_lifecycle (batch 9)
   7. YOLO export            -> export_check / manifest (batch 23)
+  8. project identity       -> registry / name / title bar (project L1+L2)
+  9. project resume         -> last_file round trip (project L3)
+ 10. close project          -> back to an empty canvas (project L1)
+ 11. project task           -> training window, both ways (project L4)
 
 Run it before a machine-verification pass (or before a release) to
 catch runtime wiring breaks the unit tests cannot see:
@@ -207,6 +211,133 @@ def run_yolo_export(widget, app, tmp):
     check_export_output(out_dir, classes, messages)
 
 
+def run_project_identity(widget, app, tmp):
+    """Step 8: opening a folder makes it the project, name and all."""
+    from anylabeling.views.labeling import project_model, project_registry
+    from anylabeling.views.labeling.utils import project_view
+
+    # A folder nothing has written to yet, so the fallback is the thing
+    # under test: the name has to come from the folder itself.
+    fresh = os.path.join(tmp, "fresh")
+    os.makedirs(fresh, exist_ok=True)
+    make_images(fresh)
+    widget.import_image_folder(fresh)
+    app.processEvents()
+
+    root = project_view.current_root(widget)
+    assert root == os.path.normpath(fresh), root
+    assert project_model.has_record(root) is False, "wrote a record"
+    assert project_view.project_name(root) == "fresh"
+
+    recorded = [
+        os.path.normcase(entry["root"])
+        for entry in project_registry.recent_projects()
+    ]
+    assert os.path.normcase(fresh) in recorded, recorded
+
+    widget.update_progress_title()
+    title = widget.parent.parent.windowTitle()
+    assert "fresh" in title, title
+
+
+def run_project_resume(widget, app, tmp, target):
+    """Step 9: leave a project on a frame, come back to that frame."""
+    from anylabeling.views.labeling import project_settings
+
+    widget.import_image_folder(tmp)
+    app.processEvents()
+    widget.load_file(target)
+    app.processEvents()
+
+    # Leaving writes the position into *this* dataset's own record...
+    other = os.path.join(tmp, "another")
+    os.makedirs(other, exist_ok=True)
+    make_images(other)
+    widget.import_image_folder(other)
+    app.processEvents()
+    remembered = project_settings.remembered_file(tmp)
+    assert remembered == target, remembered
+
+    # ...and coming back opens it instead of the first image.
+    widget.import_image_folder(tmp)
+    app.processEvents()
+    assert widget.filename == target, widget.filename
+
+
+def run_close_project(widget, app, tmp):
+    """Step 10: closing a project leaves a genuinely empty canvas."""
+    from anylabeling.views.labeling.utils import project_view
+
+    widget.import_image_folder(tmp)
+    app.processEvents()
+    assert project_view.current_root(widget) is not None
+
+    assert project_view.close_project(widget) is True
+    app.processEvents()
+
+    assert project_view.current_root(widget) is None
+    assert widget.file_list_widget.count() == 0
+    assert widget.filename is None
+    assert os.path.basename(tmp) not in widget.parent.parent.windowTitle()
+
+
+def run_project_task(widget, app, tmp):
+    """Step 11: the task kind, project -> dialog -> project."""
+    from anylabeling.views.labeling import project_model
+    from anylabeling.views.training import ultralytics_dialog as dialog_mod
+    from anylabeling.views.training.ultralytics_dialog import (
+        UltralyticsDialog,
+    )
+
+    if project_model.has_record(tmp):
+        record = project_model.load_record(tmp)
+        record["task"] = "Segment"
+        project_model.save_record(tmp, record)
+    else:
+        project_model.create(tmp, name="smoke project", task="Segment")
+    assert project_model.describe(tmp)["task"] == "Segment"
+
+    widget.import_image_folder(tmp)
+    app.processEvents()
+    # Importing must not disturb what the record already says.
+    assert project_model.describe(tmp)["task"] == "Segment"
+
+    originals = {
+        name: getattr(dialog_mod, name)
+        for name in (
+            "get_trainer_root_dir",
+            "load_config",
+            "get_config",
+            "DEVICE_OPTIONS",
+        )
+    }
+    dialog_mod.get_trainer_root_dir = lambda: os.path.join(tmp, "trainer")
+    dialog_mod.load_config = lambda: {}
+    dialog_mod.get_config = lambda: {"training": {}}
+    dialog_mod.DEVICE_OPTIONS = ["cpu"]
+    dialog = None
+    try:
+        dialog = UltralyticsDialog(widget)
+        # The dialog is handed an image list whose first entry can sit in a
+        # sub-folder (the scan recurses), so this assertion also pins "the
+        # project context wins over image_list[0]".
+        assert dialog.selected_task_type == "Segment", (
+            dialog.selected_task_type,
+            list(widget.image_list),
+            project_model.describe(tmp),
+        )
+        # And the other direction: committing writes the kind back.
+        dialog.on_task_type_selected("Detect")
+        dialog._save_project_train_prefs({"basic": {}})
+        assert project_model.describe(tmp)["task"] == "Detect"
+    finally:
+        for name, original in originals.items():
+            setattr(dialog_mod, name, original)
+        if dialog is not None:
+            dialog.deleteLater()
+        app.processEvents()
+
+
 def main():
     app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
     tmp = tempfile.mkdtemp(prefix="smoke_widget_paths_")
@@ -217,6 +348,14 @@ def main():
     # Work on a copy inside the temp dir.
     config_copy = os.path.join(tmp, "smoke_config.yaml")
     shutil.copy(TEMPLATE_CONFIG, config_copy)
+    # Same reasoning one level up: the project registry lives in
+    # ``<work directory>/.jllabel/projects.json``, so without this every
+    # run recorded its throwaway folders in the *real* recent-project
+    # list. Found in the wild: a registry holding nine smoke paths, the
+    # oldest from 2026-09-29 -- the leak predates the project batches.
+    from anylabeling.config import set_work_directory
+
+    set_work_directory(tmp)
     widget = build_widget(config_copy)
 
     @step("1. folder import (file_lifecycle rewires)")
@@ -349,6 +488,22 @@ def main():
     def s7():
         run_yolo_export(widget, app, tmp)
 
+    @step("8. project identity -- registry entry, name, title bar")
+    def s8():
+        run_project_identity(widget, app, tmp)
+
+    @step("9. project resume -- left on this frame, came back to it")
+    def s9():
+        run_project_resume(widget, app, tmp, images[1])
+
+    @step("10. close project -- empty canvas, plain title")
+    def s10():
+        run_close_project(widget, app, tmp)
+
+    @step("11. project task reaches the training window, and comes back")
+    def s11():
+        run_project_task(widget, app, tmp)
+
     s1()
     s2a()
     s2b()
@@ -358,6 +513,10 @@ def main():
     s5()
     s6()
     s7()
+    s8()
+    s9()
+    s10()
+    s11()
 
     print("")
     print("=== smoke summary ===", flush=True)

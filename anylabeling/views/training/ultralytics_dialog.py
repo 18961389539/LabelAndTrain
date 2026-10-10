@@ -288,12 +288,26 @@ def _dataset_dir_for(dialog):
     ``SimpleNamespace`` stand-in, and a new ``self._helper()`` call would
     break every one of them (the stand-in has no such attribute).
 
-    The dialog is handed an image list rather than a project, so the
-    folder is derived exactly the way the annotation side derives it —
-    "which project is this" gets the same answer on both sides of the loop.
+    The widget's own project context wins over "where the first image
+    lives". Opening a folder that contains annotated sub-folders scans
+    them all (``scan_all_images`` recurses), so ``image_list[0]`` can sit
+    inside a *different* folder than the one that was opened — and the
+    tuning, and now the task kind, would be read from and written to the
+    wrong project.
     """
     from anylabeling.views.labeling import project_settings
 
+    # ``getattr`` twice: the tests drive the prefs helpers with a
+    # SimpleNamespace stand-in, which has neither a ``parent`` nor the
+    # attribute behind it.
+    parent_fn = getattr(dialog, "parent", None)
+    opened = (
+        getattr(parent_fn(), "_project_dataset_dir", None)
+        if callable(parent_fn)
+        else None
+    )
+    if opened and os.path.isdir(str(opened)):
+        return str(opened)
     return (
         project_settings.dataset_dir_for(
             image_list=getattr(dialog, "image_list", None)

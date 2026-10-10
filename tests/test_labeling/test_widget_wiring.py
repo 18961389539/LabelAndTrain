@@ -534,6 +534,21 @@ class TestWidgetLaunchedWithFolder(unittest.TestCase):
         ]
         self.assertIn(os.path.normcase(self.tmp.name), recorded)
 
+    def test_the_project_is_the_folder_that_was_opened(self):
+        """项目身份是打开的那个文件夹，不是它的父目录。
+
+        退回父目录会让同一层下的两个数据集共用一份项目清单：打开
+        /data/plates 之后，/data/screws 会读到 plates 的标签列表、
+        输出目录和续点。冒烟脚本先发现的 —— 单测只验了
+        ``dataset_dir_for`` 自己的语义，没验调用点传的是什么。
+        """
+        from anylabeling.views.labeling.utils import project_view
+
+        self.assertEqual(
+            project_view.current_root(self.widget),
+            os.path.normpath(self.tmp.name),
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

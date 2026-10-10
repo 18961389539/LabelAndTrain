@@ -468,9 +468,16 @@ def import_image_folder(widget, dirpath, pattern=None, load=True):
     # Per-project settings: flush the previous dataset's state, then
     # restore this one's output dir before the scan below routes label
     # files (an explicit output_dir always wins over the stored one).
-    project_settings.begin_project_switch(
-        widget, project_settings.dataset_dir_for(filename=dirpath)
-    )
+    #
+    # ``dirpath`` *is* the dataset folder, so it goes in as-is.
+    # ``dataset_dir_for(filename=...)`` takes an image path and returns
+    # its folder, so handing it a folder returned the *parent*: every
+    # dataset in one directory shared a single project record -- open
+    # /data/plates, then /data/screws, and the second inherited the
+    # first's labels, output dir and position. Found by the smoke script
+    # rather than a unit test: the function-level tests pass the right
+    # thing, only the call site was wrong.
+    project_settings.begin_project_switch(widget, dirpath)
     widget.filename = None
     # A fresh project answers nothing to the 1-9 keys until a shape exists --
     # exactly the step those keys are for. Give the declared labels their
@@ -551,9 +558,7 @@ def import_image_folder(widget, dirpath, pattern=None, load=True):
         widget._load_classes_from_folder(dirpath)
         # classes.txt keeps precedence; the project record only fills
         # the panel for folders whose labels were built interactively.
-        project_settings.end_project_switch(
-            widget, project_settings.dataset_dir_for(filename=dirpath)
-        )
+        project_settings.end_project_switch(widget, dirpath)
         widget._maybe_prompt_missing_labels()
         _maybe_show_smart_tools_guide(widget, dirpath)
 
