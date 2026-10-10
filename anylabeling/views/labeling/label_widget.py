@@ -109,7 +109,7 @@ from .utils.shortcuts_help import (
     build_shortcut_rows,
     filter_shortcut_rows,
 )
-from .utils.recent_dirs import push_recent_dir
+from .utils import project_view
 from .settings import SettingsController, SettingsDialog
 from .settings.runtime_applier import SettingsRuntimeApplier
 from .shortcuts.digit_controller import DigitShortcutController
@@ -1438,7 +1438,16 @@ class LabelingWidget(LabelDialog):
         self.status(message, timeout)
 
     def _window_title(self):
+        """标题栏：先把项目名放在最前面，再接当前图片与进度。
+
+        项目名取数据集目录名（路径即身份），让"我在哪个项目里"和
+        "我在看哪张图"在同一条标题里都能读到；没有打开项目时标题与
+        改造前完全一致。
+        """
+        project = project_view.title_project_prefix(self)
         title = f"{__appname__} v{__version__}"
+        if project:
+            title = f"{title} - {project.strip()}"
         if self.filename is not None:
             current_index, total_count = self.get_image_progress_info()
             basename = osp.basename(str(self.filename))
@@ -2107,28 +2116,6 @@ class LabelingWidget(LabelDialog):
             icon = new_icon_path("error", "svg")
         popup = Popup(message, parent=self, icon=icon)
         popup.show_popup(self, position="default")
-
-    def _recent_dir_list(self):
-        """Recent folders persisted in QSettings, newest first."""
-        raw = self.settings.value("recent_dirs", []) or []
-        if isinstance(raw, list):
-            return [str(item) for item in raw if str(item)]
-        return [str(raw)] if raw else []
-
-    def _update_recent_dirs_menu(self):
-        menu = self.menus.recent_dirs
-        menu.clear()
-        dirs = self._recent_dir_list()
-        if not dirs:
-            empty_action = menu.addAction(self.tr("（暂无最近文件夹）"))
-            empty_action.setEnabled(False)
-            return
-        for path in dirs:
-            action = menu.addAction(osp.basename(osp.normpath(path)))
-            action.setToolTip(path)
-            action.triggered.connect(
-                functools.partial(self.load_recent_dir, path)
-            )
 
     def _review_state_for_label_file(self, label_file):
         if not QtCore.QFile.exists(label_file):
@@ -3833,6 +3820,14 @@ class LabelingWidget(LabelDialog):
         )
 
         ProjectSwitcherDialog(self).exec()
+
+    def close_project(self):
+        """关闭当前项目并回到空画布（委托 project_view）。"""
+        return project_view.close_project(self)
+
+    def open_project_settings_folder(self):
+        """在文件管理器里打开当前项目的 ``.jllabel`` 目录。"""
+        return project_view.open_settings_folder(self)
 
     def _paging_blocked_by_drawing(self):
         """Block prev/next paging while a shape is being drawn so the
@@ -6378,14 +6373,8 @@ def _build_actions(widget):
         recent_files=QtWidgets.QMenu(
             QCoreApplication.translate("LabelingWidget", "Open Recent")
         ),
-        recent_dirs=QtWidgets.QMenu(
-            QCoreApplication.translate("LabelingWidget", "打开最近文件夹")
-        ),
     )
     widget.menus.recent_files.aboutToShow.connect(widget.update_file_menu)
-    widget.menus.recent_dirs.aboutToShow.connect(
-        widget._update_recent_dirs_menu
-    )
     widget.canvas_label_filter_menu_0 = None
     widget.canvas_gid_filter_menu_0 = None
     widget.canvas_label_filter_menu_1 = None
@@ -6400,9 +6389,7 @@ def _build_actions(widget):
             open_next_unchecked_image,
             open_prev_unchecked_image,
             opendir,
-            widget.menus.recent_dirs,
             widget.menus.recent_files,
-            open_project,
             save,
             save_as,
             save_auto,
@@ -6503,6 +6490,11 @@ def _build_actions(widget):
     widget.menus.view.installEventFilter(widget._view_menu_filter)
 
     widget.menus.file.aboutToShow.connect(widget.update_file_menu)
+
+    # 「项目」子菜单插在 File 菜单最前面：项目化改造的第一步是让"项目"
+    # 出现在用户第一眼看到的位置，项目管理本身（新建/重命名/删除）留
+    # 给后续批次，这里只做呈现。
+    widget.menus.project = project_view.build_project_menu(widget)
 
     # Custom context menu for the canvas widget:
     utils.add_actions(widget.canvas.menus[0], widget.actions.menu)

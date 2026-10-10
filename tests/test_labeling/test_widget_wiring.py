@@ -525,8 +525,12 @@ class TestWidgetLaunchedWithFolder(unittest.TestCase):
         )
 
     def test_folder_is_recorded_as_recent(self):
+        """打开文件夹即记入项目注册表 —— 最近项目的唯一来源。"""
+        from anylabeling.views.labeling.utils import project_view
+
         recorded = [
-            os.path.normcase(path) for path in self.widget._recent_dir_list()
+            os.path.normcase(path)
+            for path in project_view.recent_dirs(self.widget)
         ]
         self.assertIn(os.path.normcase(self.tmp.name), recorded)
 

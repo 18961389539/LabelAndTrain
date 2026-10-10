@@ -40,8 +40,9 @@ class TestCanvasEmptyStateWidget(unittest.TestCase):
         self.app.processEvents()
         self.assertTrue(self._clicked)
 
-    def test_copy_describes_three_steps(self):
-        self.assertIn("打开文件夹", self.widget.open_button.text())
+    def test_the_button_names_the_project_folder(self):
+        """按钮说的是"项目文件夹"—— 打开文件夹就是新建/打开项目。"""
+        self.assertIn("打开项目文件夹", self.widget.open_button.text())
 
     def test_the_steps_teach_the_whole_loop(self):
         """Annotating is not the end of the loop this build is for."""

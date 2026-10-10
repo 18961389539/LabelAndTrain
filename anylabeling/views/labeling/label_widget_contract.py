@@ -40,7 +40,6 @@ CONTRACT_MEMBERS = frozenset(
         "_label_path_for_image",
         "_load_active_thresholds",
         "_load_classes_from_folder",
-        "_recent_dir_list",
         "_smart_tools_guide_message",
         "_smart_tools_guide_signature",
         "_maybe_prompt_missing_labels",

@@ -35,7 +35,7 @@ from ..widgets import (
     NavigatorDialog,
 )
 from ..utils.qt import new_icon_path
-from ..utils.recent_dirs import push_recent_dir
+from . import project_view
 from ..utils.session_snapshot import snapshot_before_label_write
 from ..filelist.controller import FileReviewController
 from anylabeling.services.auto_labeling.types import AutoLabelingMode
@@ -764,11 +764,15 @@ def _maybe_focus_low_confidence_shapes(widget):
 
 
 def _record_recent_dir(widget, directory):
-    """Push a folder to the recent list and persist it."""
+    """把一个目录记入最近项目列表。
+
+    旧实现只写 QSettings 的 ``recent_dirs``，与项目注册表各存一份，
+    于是"打开最近文件夹"和"切换项目"两个入口经常对不上。现在统一
+    走 :mod:`project_view`（内部写 registry），老键由读取路径负责迁移。
+    """
     if not directory:
         return
-    dirs = push_recent_dir(widget._recent_dir_list(), directory)
-    widget.settings.setValue("recent_dirs", dirs)
+    project_view.record_recent(widget, directory)
 
 
 def _maybe_show_smart_tools_guide(widget, directory):

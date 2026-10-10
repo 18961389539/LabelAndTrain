@@ -42,7 +42,14 @@ BUDGETS = {
     # which is the only reason this number may move up; the next split
     # batch should take _apply_file_filter / _refresh_file_progress out
     # to file_list_ops and freeze the lower number again.
-    "anylabeling/views/labeling/label_widget.py": 6817,
+    #
+    # Lowered 6817 -> 6808 on 2026-10-10: the project UI batch (a 项目
+    # submenu, the project name in the title bar, one merged recent list)
+    # moved the recent-dir menu and the project actions into
+    # utils/project_view.py -- the two retired methods were 22 lines, the
+    # delegations, the project-name prefix and the menu call add 13, so
+    # the widget delegates its way to a smaller file instead of growing.
+    "anylabeling/views/labeling/label_widget.py": 6808,
     # Lowered 3772 -> 3760 on 2026-09-29: the undo/redo stacks moved out to
     # widgets/shape_history.py (which is also what made them survive a file
     # switch) and the canvas reaches them through the attribute names it has

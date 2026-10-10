@@ -32,13 +32,13 @@ class CanvasEmptyStateWidget(QtWidgets.QWidget):
             }}
             """)
 
-        title = QtWidgets.QLabel(self.tr("打开文件夹开始标注"))
+        title = QtWidgets.QLabel(self.tr("打开或新建项目"))
         title.setObjectName("EmptyTitle")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         steps = QtWidgets.QLabel(
             self.tr(
-                "1. 打开图片文件夹\n"
+                "1. 打开图片文件夹（它就成为一个项目）\n"
                 "2. 需要时在自动标注面板选择模型\n"
                 "3. 画框或修正结果，切图时自动保存\n"
                 "4. 标注完成后可一键训练，训练结果能直接用于自动标注"
@@ -58,7 +58,7 @@ class CanvasEmptyStateWidget(QtWidgets.QWidget):
         hint.setWordWrap(True)
 
         self.open_button = QtWidgets.QPushButton(
-            self.tr("打开文件夹（Ctrl+U）")
+            self.tr("打开项目文件夹（Ctrl+U）")
         )
         self.open_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self.open_button.setStyleSheet(get_ok_btn_style())
