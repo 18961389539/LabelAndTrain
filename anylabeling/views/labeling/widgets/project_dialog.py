@@ -108,6 +108,7 @@ class ProjectPropertiesDialog(QtWidgets.QDialog):
         title="",
         note=None,
         overview=None,
+        templates=None,
     ):
         super().__init__(parent)
         self.root = root
@@ -155,6 +156,32 @@ class ProjectPropertiesDialog(QtWidgets.QDialog):
             self.task_group.addButton(radio)
             layout.addWidget(radio)
 
+        # 新建向导独有：从既有项目复制标签集与训练超参。选中的那一刻
+        # 就把任务类型带过来 —— 这是模板里唯一能立即在界面上反映的
+        # 部分，也让"模板的任务"和"单选的任务"从选中起就是一致的。
+        self.template_combo = None
+        self._templates = list(templates or [])
+        if self._templates:
+            layout.addWidget(QtWidgets.QLabel(self.tr("设置模板")))
+            self.template_combo = QtWidgets.QComboBox(self)
+            self.template_combo.addItem(self.tr("不使用模板"), None)
+            for choice in self._templates:
+                label = choice.get("name") or choice.get("root") or ""
+                count = len(choice.get("labels") or [])
+                if count:
+                    label = self.tr("%s（%d 个标签）") % (label, count)
+                self.template_combo.addItem(label, choice.get("root"))
+                index = self.template_combo.count() - 1
+                self.template_combo.setItemData(
+                    index,
+                    choice.get("task"),
+                    QtCore.Qt.ItemDataRole.ToolTipRole,
+                )
+            self.template_combo.currentIndexChanged.connect(
+                self._on_template_changed
+            )
+            layout.addWidget(self.template_combo)
+
         if note:
             hint = QtWidgets.QLabel(note)
             hint.setWordWrap(True)
@@ -177,12 +204,37 @@ class ProjectPropertiesDialog(QtWidgets.QDialog):
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
 
+    def _on_template_changed(self, index):
+        """Carry the template's task kind over to the radio buttons.
+
+        Fires only when a template is actually picked; going back to
+        不使用模板 leaves the radios where the user has them, because a
+        cleared template is not a statement about the task.
+        """
+        if self.template_combo is None:
+            return
+        source = self.template_combo.itemData(index)
+        if not source:
+            return
+        try:
+            template = project_model.template_record(source)
+        except Exception:  # noqa: BLE001 - 坏模板只是不预选
+            return
+        kind = project_model.normalize_task(template.get("task"))
+        for button in self.task_group.buttons():
+            if button.property("task_kind") == kind:
+                button.setChecked(True)
+                return
+
     def values(self):
-        """``{"name", "task"}`` with both already normalized.
+        """``{"name", "task", "template_root"}``, name and task normalized.
 
         The name falls back to the folder name when the box is empty, so
         a project can never end up nameless — "unnamed" in a list of
         twelve is less useful than the folder it came from.
+        ``template_root`` is ``None`` unless a template is picked; the
+        caller reads the template's settings from that project itself,
+        so the dialog does not have to keep a copy of them in step.
         """
         kind = None
         for button in self.task_group.buttons():
@@ -194,4 +246,9 @@ class ProjectPropertiesDialog(QtWidgets.QDialog):
                 self.name_edit.text(), self.root
             ),
             "task": project_model.normalize_task(kind),
+            "template_root": (
+                self.template_combo.currentData()
+                if self.template_combo is not None
+                else None
+            ),
         }

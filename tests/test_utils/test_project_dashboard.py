@@ -229,15 +229,22 @@ def test_overview_group_lines(overview, expected):
         build_overview_group,
     )
 
+    # QApplication 必须留引用：临时对象被 GC 后，下一个控件创建是
+    # 原生崩溃（Qt 运行时被连根拆掉）。
+    global _QAPP
     if QtWidgets.QApplication.instance() is None:
-        QtWidgets.QApplication([])
+        _QAPP = QtWidgets.QApplication([])
 
     group = build_overview_group(overview)
     if not expected:
         assert group is None
         return
     texts = [label.text() for label in group.findChildren(QtWidgets.QLabel)]
+    group.deleteLater()
     assert texts == expected
+
+
+_QAPP = None
 
 
 def test_fmt_map50():

@@ -240,12 +240,77 @@ def continue_last_session(widget):
         return False
 
 
+def _template_choices(target_root, limit=RECENT_LIMIT):
+    """Existing projects worth offering as templates, registry order.
+
+    Only folders that really carry a record qualify — a merely-opened
+    folder has no labels or tuning to give. The target itself is
+    excluded (a fresh folder cannot be its own template). Read failures
+    degrade to a shorter list, never an error: the wizard must open
+    even when the registry is unreadable.
+    """
+    choices = []
+    try:
+        entries = project_registry.recent_projects(limit=limit)
+    except Exception as e:  # noqa: BLE001 - 模板列表不是关键路径
+        logger.warning(f"Could not list template candidates: {e}")
+        return choices
+    target = osp.normcase(osp.normpath(str(target_root or "")))
+    for entry in entries:
+        source = entry.get("root")
+        if not source:
+            continue
+        if target and osp.normcase(osp.normpath(source)) == target:
+            continue
+        described = project_model.describe(source)
+        if not described["has_record"]:
+            continue
+        choices.append(
+            {
+                "root": source,
+                "name": described["name"],
+                "task": described["task"],
+                "labels": described["labels"],
+            }
+        )
+    return choices
+
+
+def _apply_chosen_template(root, template_root):
+    """Copy the template's labels and tuning onto the fresh record.
+
+    Best effort by design: the project was created either way, so a
+    failed template copy is a warning in the log and a project with
+    defaults — never a dialog in front of a just-created project.
+    """
+    if not template_root:
+        return True
+    try:
+        template = project_model.template_record(template_root)
+    except Exception as e:  # noqa: BLE001
+        logger.warning(f"Could not read template {template_root}: {e}")
+        return False
+    if not project_model.apply_template(root, template):
+        logger.warning(f"Could not apply template {template_root} to {root}")
+        return False
+    logger.info(
+        f"Applied template {template_root} to {root} "
+        f"(task={template['task']}, "
+        f"labels={len(template.get('labels') or [])})"
+    )
+    return True
+
+
 def new_project(widget):
     """新建项目：选文件夹 → 起名/选任务 → 打开它。
 
     目标文件夹已经有项目清单时**不覆盖** —— 那是别人攒下来的设置；
     这里只提供"打开它"，换个目录由用户决定。（``project_model.create``
     拒绝覆盖，正好把"已存在"和"写失败"这两种 False 留给调用方分辨。）
+
+    向导里可以选一个既有项目作为模板：标签集与训练超参在创建后拷入，
+    任务类型在选中的那一刻就预选好 —— 同类任务的第二个项目不再从
+    空白开始。
     """
     from anylabeling.views.labeling.widgets.project_dialog import (
         ProjectPropertiesDialog,
@@ -275,6 +340,7 @@ def new_project(widget):
         name=project_model.default_name(root),
         root=root,
         title=_tr("新建项目"),
+        templates=_template_choices(root),
     )
     if dialog.exec() != QtWidgets.QDialog.DialogCode.Accepted:
         return False
@@ -289,6 +355,7 @@ def new_project(widget):
             _tr("无法写入项目设置，请检查该目录是否可写：\n%s") % root,
         )
         return False
+    _apply_chosen_template(root, values.get("template_root"))
 
     logger.info(f"Created project: {root} ({values['task']})")
     widget.import_image_folder(root)

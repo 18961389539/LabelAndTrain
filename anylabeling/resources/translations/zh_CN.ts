@@ -4917,37 +4917,52 @@ Results have been saved to:
 </context><context>
     <name>ProjectPropertiesDialog</name>
     <message>
-        <location filename="..\..\views\labeling\widgets\project_dialog.py" line="112" />
+        <location filename="..\..\views\labeling\widgets\project_dialog.py" line="115" />
         <source>项目属性</source>
         <translation>项目属性</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\project_dialog.py" line="120" />
+        <location filename="..\..\views\labeling\widgets\project_dialog.py" line="123" />
         <source>文件夹：%s</source>
         <translation>文件夹：%s</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\project_dialog.py" line="129" />
+        <location filename="..\..\views\labeling\widgets\project_dialog.py" line="132" />
         <source>项目名</source>
         <translation>项目名</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\project_dialog.py" line="135" />
+        <location filename="..\..\views\labeling\widgets\project_dialog.py" line="138" />
         <source>例如：螺丝划痕</source>
         <translation>例如：螺丝划痕</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\project_dialog.py" line="140" />
+        <location filename="..\..\views\labeling\widgets\project_dialog.py" line="143" />
         <source>任务类型</source>
         <translation>任务类型</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\project_dialog.py" line="169" />
+        <location filename="..\..\views\labeling\widgets\project_dialog.py" line="165" />
+        <source>设置模板</source>
+        <translation>设置模板</translation>
+    </message>
+    <message>
+        <location filename="..\..\views\labeling\widgets\project_dialog.py" line="167" />
+        <source>不使用模板</source>
+        <translation>不使用模板</translation>
+    </message>
+    <message>
+        <location filename="..\..\views\labeling\widgets\project_dialog.py" line="172" />
+        <source>%s（%d 个标签）</source>
+        <translation>%s（%d 个标签）</translation>
+    </message>
+    <message>
+        <location filename="..\..\views\labeling\widgets\project_dialog.py" line="197" />
         <source>保存</source>
         <translation>保存</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\project_dialog.py" line="173" />
+        <location filename="..\..\views\labeling\widgets\project_dialog.py" line="201" />
         <source>取消</source>
         <translation type="unfinished">取消</translation>
     </message>

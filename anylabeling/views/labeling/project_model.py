@@ -200,10 +200,69 @@ def describe(root):
     }
 
 
+#: What a template carries to a new project: the settings a user would
+#: otherwise re-enter by hand for the same kind of work. Deliberately
+#: absent: ``output_dir`` (path-specific — the new folder must not inherit
+#: another folder's paths), ``name``/``created_at`` (the wizard owns both),
+#: ``last_file``/``split_seed`` (per-project by design: the resume point
+#: and the split comparability are this project's, not the template's).
+TEMPLATE_KEYS = ("labels", "train_prefs")
+
+
+def template_record(source_root):
+    """The settings a new project may inherit from ``source_root``.
+
+    Read-only and tolerant: a folder without a record yields just the
+    default task, so a caller can hand the result to
+    :func:`apply_template` without pre-checking. ``train_prefs`` is the
+    trainer's own whitelist (it already excludes machine-specific and
+    path-specific keys); the model entry inside it may still name the
+    source project's weights, which the trainer treats as any other
+    model path — editable before the first run.
+    """
+    record = load_record(source_root)
+    template = {"task": normalize_task(record.get("task"))}
+    for key in TEMPLATE_KEYS:
+        value = record.get(key)
+        if value:
+            template[key] = value
+    return template
+
+
+def apply_template(target_root, template):
+    """Write a template's settings onto a *fresh* record. Best effort.
+
+    Only the template keys are touched — the wizard has already written
+    name and task — and a record that does not exist yet is refused
+    (``False``), so a template can never bring a half-created project
+    into being. A failed write leaves the project with its defaults;
+    the caller logs, the project still opens. A falsy template is
+    "nothing to apply" and succeeds by definition.
+    """
+    if not template:
+        return True
+    if not target_root:
+        return False
+    record = load_record(target_root)
+    if not record:
+        return False
+    changed = False
+    for key in TEMPLATE_KEYS:
+        value = template.get(key)
+        if value and record.get(key) != value:
+            record[key] = value
+            changed = True
+    if not changed:
+        return True
+    return save_record(target_root, record)
+
+
 __all__ = [
     "NAME_MAX_LENGTH",
     "TASK_HINTS",
     "TASK_LABELS",
+    "TEMPLATE_KEYS",
+    "apply_template",
     "create",
     "default_name",
     "describe",
@@ -217,4 +276,5 @@ __all__ = [
     "set_task",
     "task_hint",
     "task_label",
+    "template_record",
 ]
