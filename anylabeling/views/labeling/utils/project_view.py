@@ -437,6 +437,11 @@ def build_project_menu(widget):
             tip=_tr("在最近打开的项目之间切换"),
         )
         widget.actions.open_project = switch
+    else:
+        # 复用的动作来自 File 菜单，源串是英文 "Switch Project"，翻译表里
+        # 没有省略号；它和同一菜单里的另两项一样会打开对话框，按 Qt 惯例
+        # 应带省略号。两处共用这一个动作对象，所以一起变。
+        switch.setText(_tr("切换项目…"))
     new_action_item = new_action(
         widget,
         _tr("新建项目…"),
