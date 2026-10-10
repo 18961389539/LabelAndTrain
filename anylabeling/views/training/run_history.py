@@ -187,6 +187,31 @@ def _normalize(path):
     return osp.normcase(osp.normpath(str(path)))
 
 
+def project_run_rows(root, label_dir, runs_root):
+    """The run rows attributed to one project, newest finished first.
+
+    The single-anchor form of :func:`project_training_stats`: the same
+    closest-ancestor rule (a recorded ``label_dir`` beats the image folder
+    itself, prefix boundaries respected), applied to one project so a caller
+    that wants the *rows* - best mAP, last round - does not have to re-derive
+    the attribution by hand and drift away from the list's numbers.
+    """
+    root_norm = _normalize(root)
+    if not root_norm:
+        return []
+    label_dir_norm = _normalize(label_dir)
+    rows = []
+    for row in collect_run_history(runs_root)["rows"]:
+        dataset_dir = _normalize(row.get("dataset_label_dir"))
+        if not dataset_dir:
+            continue
+        if label_dir_norm and _under(dataset_dir, label_dir_norm):
+            rows.append(row)
+        elif _under(dataset_dir, root_norm):
+            rows.append(row)
+    return rows
+
+
 def _under(path, anchor):
     """True when ``path`` is ``anchor`` itself or lives inside it."""
     return path == anchor or path.startswith(anchor + osp.sep)

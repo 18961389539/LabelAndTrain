@@ -316,11 +316,25 @@ def edit_project(widget):
 
     described = project_model.describe(root)
     note = None
+    overview = None
     if not described["has_record"]:
         note = _tr(
             "这个文件夹还不是正式项目；保存后会在其中创建 "
             ".jllabel/project.json（只是多一个隐藏目录）。"
         )
+    else:
+        # 只读快照：进度与训练轮次都从盘上现数，不另存一份。任何一路
+        # 读不了都按"没有"处理 —— 概览不能成为打不开属性对话框的理由。
+        try:
+            from anylabeling.views.labeling import project_dashboard
+
+            overview = project_dashboard.collect(
+                root,
+                output_dir=project_settings.get_value(root, "output_dir"),
+            )
+        except Exception as e:  # noqa: BLE001 - 概览永远不是关键路径
+            logger.warning(f"Could not build the project overview: {e}")
+            overview = None
     dialog = ProjectPropertiesDialog(
         widget,
         name=described["name"],
@@ -328,6 +342,7 @@ def edit_project(widget):
         root=root,
         title=_tr("项目属性"),
         note=note,
+        overview=overview,
     )
     if dialog.exec() != QtWidgets.QDialog.DialogCode.Accepted:
         return False
