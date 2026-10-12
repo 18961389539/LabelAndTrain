@@ -453,12 +453,26 @@ def end_project_switch(widget, dataset_dir):
             record_project,
         )
 
+        def _note_evicted(roots):
+            # 与 project_view.record_recent 同一句提示：挤掉谁要说出来。
+            # 上下文用 LabelingWidget：本文件模块级翻译的既有惯例，
+            # 也是翻译目录守卫认的类名。
+            names = "、".join(osp.basename(r) for r in roots if r)
+            widget.status(
+                QtCore.QCoreApplication.translate(
+                    "LabelingWidget",
+                    "最近项目已满，已移出列表（数据与设置不受影响）：%s",
+                )
+                % names
+            )
+
         record_project(
             dataset_dir,
             label_dir=label_dir_for_dataset(
                 getattr(widget, "output_dir", None),
                 getattr(widget, "image_list", None),
             ),
+            on_evicted=_note_evicted,
         )
     except Exception as e:  # noqa: BLE001 - registry is never critical
         _logger().warning(f"Failed to record project: {e}")

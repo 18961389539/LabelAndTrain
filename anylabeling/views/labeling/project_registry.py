@@ -64,19 +64,32 @@ def save_registry(data):
         return False
 
 
-def record_project(root, label_dir=None):
-    """Touch (or prepend) ``root`` and remember where its labels live."""
+def record_project(root, label_dir=None, on_evicted=None):
+    """Touch (or prepend) ``root`` and remember where its labels live.
+
+    The list is bounded by ``MAX_ENTRIES``. When it overflows, entries
+    whose folder has vanished from disk make way first -- the switcher
+    never shows them, yet they occupy real slots -- and only then does
+    the oldest entry go. The entry being recorded is never evicted:
+    it sits at the head and the cut stops short of it.
+
+    Eviction is not silent: ``on_evicted(roots)`` hears about every
+    entry that left, so the caller can put a line in the status bar
+    instead of letting rows disappear without a word. The dataset
+    itself -- labels, settings, the ``.jllabel`` record -- is never
+    touched by an eviction; only the convenience list shrinks.
+    """
     if not root:
         return False
     root = osp.normpath(str(root))
     registry = load_registry()
-    projects = [
-        entry for entry in registry["projects"] if entry.get("root") != root
-    ]
     previous = next(
         (entry for entry in registry["projects"] if entry.get("root") == root),
         {},
     )
+    projects = [
+        entry for entry in registry["projects"] if entry.get("root") != root
+    ]
     projects.insert(
         0,
         {
@@ -85,7 +98,24 @@ def record_project(root, label_dir=None):
             "last_opened": time.strftime("%Y-%m-%d %H:%M:%S"),
         },
     )
-    registry["projects"] = projects[:MAX_ENTRIES]
+    evicted = []
+    if len(projects) > MAX_ENTRIES:
+        # 目录已不在的条目先让位：数据可能回来了，但名额是现在占着的。
+        kept, gone = [], []
+        for entry in projects[1:]:
+            (gone if not osp.isdir(entry.get("root") or "") else kept).append(
+                entry
+            )
+        evicted.extend(gone)
+        projects = [projects[0]] + kept
+        while len(projects) > MAX_ENTRIES:
+            evicted.append(projects.pop())
+    if evicted and on_evicted is not None:
+        try:
+            on_evicted([entry.get("root") or "" for entry in evicted])
+        except Exception:  # noqa: BLE001 - 提示永远不是关键路径
+            pass
+    registry["projects"] = projects
     return save_registry(registry)
 
 

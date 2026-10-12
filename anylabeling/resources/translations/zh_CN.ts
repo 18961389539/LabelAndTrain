@@ -371,7 +371,7 @@ Only the registry entry is removed. The config/weight files on disk are kept:
     <message>
         <location filename="..\..\views\labeling\widgets\canvas_rotation.py" line="188" />
         <source>Click &amp; drag to rotate shape '%s'</source>
-        <translation type="unfinished">点击并拖动以旋转形状“%s”</translation>
+        <translation>点击并拖动以旋转形状“%s”</translation>
     </message>
 </context><context>
     <name>CanvasAdjustmentWidget</name>
@@ -684,7 +684,7 @@ Only the registry entry is removed. The config/weight files on disk are kept:
     <message>
         <location filename="..\..\views\labeling\filelist\controller.py" line="109" />
         <source>打回并下一张</source>
-        <translation type="unfinished">打回并下一张</translation>
+        <translation>打回并下一张</translation>
     </message>
     <message>
         <location filename="..\..\views\labeling\filelist\controller.py" line="110" />
@@ -2952,6 +2952,11 @@ Reset the label as {}.</source>
 本次会话中这个项目的标签列表与标注输出目录不会被记住。</translation>
     </message>
     <message>
+        <location filename="..\..\views\labeling\project_settings.py" line="462" />
+        <source>最近项目已满，已移出列表（数据与设置不受影响）：%s</source>
+        <translation>最近项目已满，已移出列表（数据与设置不受影响）：%s</translation>
+    </message>
+    <message>
         <location filename="..\..\views\labeling\settings\runtime_applier.py" line="147" />
         <source>Quit</source>
         <translation>退出</translation>
@@ -3069,7 +3074,7 @@ Original images backed up to:
         <location filename="..\..\views\labeling\utils\crop.py" line="367" />
         <location filename="..\..\views\labeling\utils\batch.py" line="738" />
         <source>Processing...</source>
-        <translation type="unfinished">处理中...</translation>
+        <translation>处理中...</translation>
     </message>
     <message>
         <location filename="..\..\views\labeling\utils\batch.py" line="739" />
@@ -3084,7 +3089,7 @@ Original images backed up to:
     <message>
         <location filename="..\..\views\labeling\utils\batch.py" line="842" />
         <source>Model is not loaded. Choose a mode to continue.</source>
-        <translation type="unfinished">模型尚未加载。选择一个模式以继续。</translation>
+        <translation>模型尚未加载。选择一个模式以继续。</translation>
     </message>
     <message>
         <location filename="..\..\views\labeling\utils\batch.py" line="859" />
@@ -3145,7 +3150,7 @@ Original images backed up to:
         <location filename="..\..\views\labeling\utils\export.py" line="702" />
         <location filename="..\..\views\labeling\utils\crop.py" line="375" />
         <source>Progress</source>
-        <translation type="unfinished">进度</translation>
+        <translation>进度</translation>
     </message>
     <message>
         <location filename="..\..\views\labeling\utils\data_audit.py" line="198" />
@@ -3358,7 +3363,7 @@ The current labels could not be saved first.</source>
         <source>Exporting annotations successfully!
 Results have been saved to:
 %s</source>
-        <translation type="unfinished">导出标签成功！
+        <translation>导出标签成功！
 结果已保存到：
 %s</translation>
     </message>
@@ -3609,17 +3614,17 @@ This warning will only be shown once. Do you want to continue?</source>
         <location filename="..\..\views\labeling\utils\upload.py" line="78" />
         <location filename="..\..\views\labeling\utils\shape.py" line="351" />
         <source>Warning</source>
-        <translation type="unfinished">警告</translation>
+        <translation>警告</translation>
     </message>
     <message>
         <location filename="..\..\views\labeling\utils\shape.py" line="354" />
         <source>Current annotation will be changed</source>
-        <translation type="unfinished">当前的标注将被更改</translation>
+        <translation>当前的标注将被更改</translation>
     </message>
     <message>
         <location filename="..\..\views\labeling\utils\shape.py" line="359" />
         <source>Are you sure you want to perform this conversion?</source>
-        <translation type="unfinished">您确定要执行此转换操作吗？</translation>
+        <translation>您确定要执行此转换操作吗？</translation>
     </message>
     <message>
         <location filename="..\..\views\labeling\utils\shape.py" line="374" />
@@ -3629,7 +3634,7 @@ This warning will only be shown once. Do you want to continue?</source>
     <message>
         <location filename="..\..\views\labeling\utils\shape.py" line="404" />
         <source>Conversion completed successfully!</source>
-        <translation type="unfinished">转换成功完成！</translation>
+        <translation>转换成功完成！</translation>
     </message>
     <message>
         <location filename="..\..\views\labeling\utils\shape.py" line="418" />
@@ -4969,7 +4974,7 @@ Results have been saved to:
     <message>
         <location filename="..\..\views\labeling\widgets\project_dialog.py" line="202" />
         <source>取消</source>
-        <translation type="unfinished">取消</translation>
+        <translation>取消</translation>
     </message>
 </context><context>
     <name>ProjectSearchDialog</name>
@@ -4981,7 +4986,7 @@ Results have been saved to:
     <message>
         <location filename="..\..\views\labeling\widgets\project_search_dialog.py" line="80" />
         <source>全部</source>
-        <translation type="unfinished">全部</translation>
+        <translation>全部</translation>
     </message>
     <message>
         <location filename="..\..\views\labeling\widgets\project_search_dialog.py" line="85" />
@@ -5006,7 +5011,7 @@ Results have been saved to:
     <message>
         <location filename="..\..\views\labeling\widgets\project_search_dialog.py" line="103" />
         <source>关闭</source>
-        <translation type="unfinished">关闭</translation>
+        <translation>关闭</translation>
     </message>
     <message>
         <location filename="..\..\views\labeling\widgets\project_search_dialog.py" line="145" />
@@ -5273,7 +5278,7 @@ Results have been saved to:
     <message>
         <location filename="..\..\views\training\run_history_dialog.py" line="71" />
         <source>Close</source>
-        <translation type="unfinished">关闭</translation>
+        <translation>关闭</translation>
     </message>
     <message>
         <location filename="..\..\views\training\run_history_dialog.py" line="104" />
@@ -6292,17 +6297,17 @@ Changes will not be saved until you click Save.</source>
     <message>
         <location filename="..\..\views\training\image_preview_dialog.py" line="44" />
         <source>Training Images</source>
-        <translation type="unfinished">训练图像</translation>
+        <translation>训练图像</translation>
     </message>
     <message>
         <location filename="..\..\views\training\image_preview_dialog.py" line="63" />
         <source>Previous</source>
-        <translation type="unfinished">上一步</translation>
+        <translation>上一步</translation>
     </message>
     <message>
         <location filename="..\..\views\training\image_preview_dialog.py" line="67" />
         <source>Next</source>
-        <translation type="unfinished">下一步</translation>
+        <translation>下一步</translation>
     </message>
     <message>
         <location filename="..\..\views\training\image_preview_dialog.py" line="73" />
@@ -6312,13 +6317,13 @@ Changes will not be saved until you click Save.</source>
     <message>
         <location filename="..\..\views\training\image_preview_dialog.py" line="77" />
         <source>Close</source>
-        <translation type="unfinished">关闭</translation>
+        <translation>关闭</translation>
     </message>
     <message>
         <location filename="..\..\views\training\image_preview_dialog.py" line="122" />
         <location filename="..\..\views\training\image_preview_dialog.py" line="114" />
         <source>No image</source>
-        <translation type="unfinished">无图像</translation>
+        <translation>无图像</translation>
     </message>
 </context><context>
     <name>TrainingStepBar</name>
@@ -7106,7 +7111,7 @@ Changes will not be saved until you click Save.</source>
     <message>
         <location filename="..\..\views\training\ultralytics_dialog.py" line="2046" />
         <source>Save</source>
-        <translation type="unfinished">保存</translation>
+        <translation>保存</translation>
     </message>
     <message>
         <location filename="..\..\views\training\ultralytics_dialog.py" line="2049" />
@@ -7279,7 +7284,7 @@ Changes will not be saved until you click Save.</source>
     <message>
         <location filename="..\..\views\training\ultralytics_dialog.py" line="2459" />
         <source>Cancel</source>
-        <translation type="unfinished">取消</translation>
+        <translation>取消</translation>
     </message>
     <message>
         <location filename="..\..\views\training\ultralytics_dialog.py" line="2505" />

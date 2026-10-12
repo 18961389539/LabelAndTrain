@@ -89,13 +89,23 @@ def record_recent(widget, directory):
 
     registry 是唯一的事实来源；老 QSettings 键只在读取时迁移一次
     （见 :func:`recent_dirs`），此后不再写入，两个列表不会再次分叉。
+    列表满了会挤掉最旧的 —— 挤掉谁要说出来，不能让一行记录悄悄消失。
     """
     if not directory:
         return False
     directory = osp.normpath(str(directory))
+
+    def _note_evicted(roots):
+        names = "、".join(osp.basename(r) for r in roots if r)
+        widget.status(
+            _tr("最近项目已满，已移出列表（数据与设置不受影响）：%s") % names
+        )
+
     try:
         return project_registry.record_project(
-            directory, label_dir=getattr(widget, "output_dir", None)
+            directory,
+            label_dir=getattr(widget, "output_dir", None),
+            on_evicted=_note_evicted,
         )
     except Exception as e:  # noqa: BLE001 - registry 永远不是关键路径
         logger.warning(f"Could not record project {directory}: {e}")
