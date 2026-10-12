@@ -212,3 +212,34 @@ def test_deleting_the_open_project_closes_it_first(
     dialog._delete_selected()
     assert widget._project_dataset_dir is None
     assert project_registry.load_registry()["projects"] == []
+
+
+# --- 卷类型闸门 -------------------------------------------------------------
+# FOF_ALLOWUNDO 在没有回收站的卷（网络盘/RAM盘）上会直接永久删除——
+# 这类卷必须被拒绝，False 永远意味着"什么都没删"。
+
+
+def test_a_volume_without_a_recycle_bin_is_refused():
+    if os.name != "nt":
+        pytest.skip("the drive-type gate is Windows-only")
+    operation = recycle_bin._windows_recycle_operation()
+    if operation is None:
+        pytest.skip("not windows")
+    # DRIVE_REMOTE(4)：网络共享没有回收站
+    assert operation("X:/plates", _drive_type_of=lambda _p: 4) is False
+    # DRIVE_CDROM(5)：光驱同理
+    assert operation("X:/plates", _drive_type_of=lambda _p: 5) is False
+    # DRIVE_UNKNOWN(0)：认不出的卷也不赌
+    assert operation("X:/plates", _drive_type_of=lambda _p: 0) is False
+
+
+def test_drive_type_reads_the_volume_root():
+    if os.name != "nt":
+        pytest.skip("the drive-type gate is Windows-only")
+    operation = recycle_bin._windows_recycle_operation()
+    if operation is None:
+        pytest.skip("not windows")
+    seen = []
+    # drive_type_of 是 operation 的默认参数，通过注入观察它收到的卷根
+    operation("C:/plates", _drive_type_of=lambda p: seen.append(p) or 3)
+    assert seen and seen[0].upper().startswith("C:")

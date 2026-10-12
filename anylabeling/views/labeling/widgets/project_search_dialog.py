@@ -109,7 +109,13 @@ class ProjectSearchDialog(QtWidgets.QDialog):
         close_button.clicked.connect(self.reject)
 
         self.state_combo.currentIndexChanged.connect(self._start_search)
-        self.label_edit.textChanged.connect(self._start_search)
+        # 打字每敲一个字符就是一轮全量扫描：标签名输入走 300ms 防抖，
+        # 最后一次输入才算数；状态下拉是单次点击，即时生效。
+        self._search_timer = QtCore.QTimer(self)
+        self._search_timer.setSingleShot(True)
+        self._search_timer.setInterval(300)
+        self._search_timer.timeout.connect(self._start_search)
+        self.label_edit.textChanged.connect(self._search_timer.start)
         self._start_search()
 
     # --- criteria ----------------------------------------------------------

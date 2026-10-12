@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import ctypes
 import os
+import os.path as osp
 import sys
 
 #: FOF_ALLOWUNDO（进回收站）| FOF_NOCONFIRMATION（确认由应用自己做）
@@ -55,7 +56,19 @@ def _windows_recycle_operation():
             ("lpszProgressTitle", ctypes.c_wchar_p),
         ]
 
-    def operation(abspath):
+    def drive_type_of(abspath):
+        return ctypes.windll.kernel32.GetDriveTypeW(
+            ctypes.c_wchar_p(osp.splitdrive(abspath)[0] + "\\")
+        )
+
+    def operation(abspath, _drive_type_of=drive_type_of):
+        # FOF_ALLOWUNDO 只在**有回收站的卷**上进回收站；网络盘、RAM 盘
+        # 这些没有回收站的卷上，同一个调用会**直接永久删除** —— 恰好是
+        # 本模块承诺过绝不发生的事。这类卷一律拒绝，让调用方走"手动
+        # 处理"的提示，而不是换一条不可恢复的路把同一件事做掉。
+        # DRIVE_FIXED(3) 与 DRIVE_REMOVABLE(2) 有回收站；其余不算。
+        if _drive_type_of(abspath) not in (2, 3):
+            return False
         # SHFileOperationW 的 pFrom 是双 NUL 结尾的路径列表；
         # c_wchar_p 只带一个，追加一个显式的。
         buffer = ctypes.create_unicode_buffer(abspath + "\0")
