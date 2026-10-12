@@ -5029,7 +5029,7 @@ Results have been saved to:
         <translation>打开项目设置文件夹</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\project_switcher.py" line="227" />
+        <location filename="..\..\views\labeling\widgets\project_switcher.py" line="230" />
         <location filename="..\..\views\labeling\widgets\project_switcher.py" line="78" />
         <source>重置本项目设置</source>
         <translation>重置本项目设置</translation>
@@ -5041,46 +5041,51 @@ Results have been saved to:
     </message>
     <message>
         <location filename="..\..\views\labeling\widgets\project_switcher.py" line="80" />
+        <source>删除项目数据…</source>
+        <translation>删除项目数据…</translation>
+    </message>
+    <message>
+        <location filename="..\..\views\labeling\widgets\project_switcher.py" line="81" />
         <source>关闭</source>
         <translation>关闭</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\project_switcher.py" line="119" />
+        <location filename="..\..\views\labeling\widgets\project_switcher.py" line="122" />
         <source>（还没有项目记录）</source>
         <translation>（还没有项目记录）</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\project_switcher.py" line="143" />
+        <location filename="..\..\views\labeling\widgets\project_switcher.py" line="146" />
         <source>（还没有项目设置文件）</source>
         <translation>（还没有项目设置文件）</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\project_switcher.py" line="145" />
+        <location filename="..\..\views\labeling\widgets\project_switcher.py" line="148" />
         <source>创建于</source>
         <translation>创建于</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\project_switcher.py" line="150" />
+        <location filename="..\..\views\labeling\widgets\project_switcher.py" line="153" />
         <source>上次看到</source>
         <translation>上次看到</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\project_switcher.py" line="153" />
+        <location filename="..\..\views\labeling\widgets\project_switcher.py" line="156" />
         <source>标注目录</source>
         <translation>标注目录</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\project_switcher.py" line="213" />
+        <location filename="..\..\views\labeling\widgets\project_switcher.py" line="216" />
         <source>暂无项目设置</source>
         <translation>暂无项目设置</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\project_switcher.py" line="214" />
+        <location filename="..\..\views\labeling\widgets\project_switcher.py" line="217" />
         <source>该项目还没有 .jllabel 设置文件；它会在首次保存时创建。</source>
         <translation>该项目还没有 .jllabel 设置文件；它会在首次保存时创建。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\project_switcher.py" line="228" />
+        <location filename="..\..\views\labeling\widgets\project_switcher.py" line="231" />
         <source>清除该项目的标签列表与标注输出目录记录？
 
 划分种子（split_seed）会保留，训练集/验证集划分不受影响。
@@ -5091,14 +5096,72 @@ Results have been saved to:
 %s</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\project_switcher.py" line="241" />
+        <location filename="..\..\views\labeling\widgets\project_switcher.py" line="244" />
         <source>失败</source>
         <translation>失败</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\project_switcher.py" line="241" />
+        <location filename="..\..\views\labeling\widgets\project_switcher.py" line="244" />
         <source>项目设置文件无法写入。</source>
         <translation>项目设置文件无法写入。</translation>
+    </message>
+    <message>
+        <location filename="..\..\views\labeling\widgets\project_switcher.py" line="271" />
+        <source>项目文件夹不存在</source>
+        <translation>项目文件夹不存在</translation>
+    </message>
+    <message>
+        <location filename="..\..\views\labeling\widgets\project_switcher.py" line="272" />
+        <source>这个项目的文件夹已经不在磁盘上了：
+%s</source>
+        <translation>这个项目的文件夹已经不在磁盘上了：
+%s</translation>
+    </message>
+    <message>
+        <location filename="..\..\views\labeling\widgets\project_switcher.py" line="279" />
+        <source>删除项目数据</source>
+        <translation>删除项目数据</translation>
+    </message>
+    <message>
+        <location filename="..\..\views\labeling\widgets\project_switcher.py" line="280" />
+        <source>删除项目「%s」的整个文件夹（含图片与标注）？
+
+%s
+
+文件夹将移入回收站，可随时还原；同时从最近项目列表移除。
+只想忘掉这个项目的话，请用「从列表移除」。</source>
+        <translation>删除项目「%s」的整个文件夹（含图片与标注）？
+
+%s
+
+文件夹将移入回收站，可随时还原；同时从最近项目列表移除。
+只想忘掉这个项目的话，请用「从列表移除」。</translation>
+    </message>
+    <message>
+        <location filename="..\..\views\labeling\widgets\project_switcher.py" line="292" />
+        <source>确认删除</source>
+        <translation>确认删除</translation>
+    </message>
+    <message>
+        <location filename="..\..\views\labeling\widgets\project_switcher.py" line="293" />
+        <source>再次确认：整个文件夹将移入回收站。
+%s</source>
+        <translation>再次确认：整个文件夹将移入回收站。
+%s</translation>
+    </message>
+    <message>
+        <location filename="..\..\views\labeling\widgets\project_switcher.py" line="305" />
+        <source>删除失败</source>
+        <translation>删除失败</translation>
+    </message>
+    <message>
+        <location filename="..\..\views\labeling\widgets\project_switcher.py" line="306" />
+        <source>未能把文件夹移入回收站，没有删除任何内容。
+请手动处理：
+%s</source>
+        <translation>未能把文件夹移入回收站，没有删除任何内容。
+请手动处理：
+%s</translation>
     </message>
 </context><context>
     <name>RunHistoryDialog</name>

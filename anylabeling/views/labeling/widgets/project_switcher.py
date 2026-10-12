@@ -77,6 +77,7 @@ class ProjectSwitcherDialog(QtWidgets.QDialog):
         reveal_button = QtWidgets.QPushButton(self.tr("打开项目设置文件夹"))
         reset_button = QtWidgets.QPushButton(self.tr("重置本项目设置"))
         forget_button = QtWidgets.QPushButton(self.tr("从列表移除"))
+        delete_button = QtWidgets.QPushButton(self.tr("删除项目数据…"))
         close_button = QtWidgets.QPushButton(self.tr("关闭"))
         for button in (
             open_button,
@@ -85,6 +86,7 @@ class ProjectSwitcherDialog(QtWidgets.QDialog):
             reveal_button,
             reset_button,
             forget_button,
+            delete_button,
         ):
             buttons.addWidget(button)
         buttons.addStretch()
@@ -97,6 +99,7 @@ class ProjectSwitcherDialog(QtWidgets.QDialog):
         reveal_button.clicked.connect(self._reveal_settings)
         reset_button.clicked.connect(self._reset_settings)
         forget_button.clicked.connect(self._forget_selected)
+        delete_button.clicked.connect(self._delete_selected)
         close_button.clicked.connect(self.reject)
 
         self._reload()
@@ -247,6 +250,70 @@ class ProjectSwitcherDialog(QtWidgets.QDialog):
             return
         if project_registry.forget_project(root):
             self._reload()
+
+    def _delete_selected(self):
+        """删除选中项目的整个文件夹 —— 进回收站，双重确认。
+
+        「从列表移除」只忘记录，「删除项目数据」动的是图片与标注：所以
+        有三道闸 —— 确认对话框说清范围与恢复方式（默认按钮是不删）、
+        完整路径的第二次确认、以及回收站通道（``shutil.rmtree`` 在本
+        应用里没有删除的资格）。当前打开的项目先安全关闭（未保存的
+        改动会照常询问），回收失败则什么都没少，用户手动处理。
+        """
+        from anylabeling.views.labeling.utils import project_view, recycle_bin
+
+        root = self._selected_root()
+        if not root:
+            return
+        if not osp.isdir(root):
+            QtWidgets.QMessageBox.information(
+                self,
+                self.tr("项目文件夹不存在"),
+                self.tr("这个项目的文件夹已经不在磁盘上了：\n%s") % root,
+            )
+            self._reload()
+            return
+        described = project_model.describe(root)
+        confirm = QtWidgets.QMessageBox.question(
+            self,
+            self.tr("删除项目数据"),
+            self.tr(
+                "删除项目「%s」的整个文件夹（含图片与标注）？\n\n"
+                "%s\n\n"
+                "文件夹将移入回收站，可随时还原；同时从最近项目列表移除。\n"
+                "只想忘掉这个项目的话，请用「从列表移除」。"
+            )
+            % (described["name"], root),
+        )
+        if confirm != QtWidgets.QMessageBox.StandardButton.Yes:
+            return
+        confirm = QtWidgets.QMessageBox.question(
+            self,
+            self.tr("确认删除"),
+            self.tr("再次确认：整个文件夹将移入回收站。\n%s") % root,
+        )
+        if confirm != QtWidgets.QMessageBox.StandardButton.Yes:
+            return
+
+        if root == self._current_root():
+            if not project_view.close_project(self.widget):
+                return  # 未保存的改动没处理完，删除作罢
+
+        if not recycle_bin.send_to_recycle_bin(root):
+            QtWidgets.QMessageBox.warning(
+                self,
+                self.tr("删除失败"),
+                self.tr(
+                    "未能把文件夹移入回收站，没有删除任何内容。\n"
+                    "请手动处理：\n%s"
+                )
+                % root,
+            )
+            return
+        if not project_registry.forget_project(root):
+            logger.warning(f"Could not forget the deleted project: {root}")
+        logger.info(f"Sent project folder to the recycle bin: {root}")
+        self._reload()
 
     # --- startup switch ---------------------------------------------------
 

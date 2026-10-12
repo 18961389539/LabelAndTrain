@@ -309,7 +309,9 @@ def s2_new_project(ctx):
     shoot(dialog, app, "02b_new_project_filled.png")
 
     values = dialog.values()
-    assert values == {"name": "螺丝划痕", "task": "Segment"}, values
+    # 字段级断言：values() 可能随新功能（如模板）多带键，整字典相等会过时
+    assert values["name"] == "螺丝划痕", values
+    assert values["task"] == "Segment", values
     dialog.accept()
     pump(app, 80)
 
