@@ -362,6 +362,20 @@ def new_project(widget):
     return True
 
 
+def search_in_project(widget):
+    """打开项目内搜索：按标注状态或标签名找图，双击跳转。
+
+    菜单项常开 —— 没打开图片时对话框自己会说"当前没有打开的图片"，
+    比让菜单项变灰更省一次解释。
+    """
+    from anylabeling.views.labeling.widgets.project_search_dialog import (
+        ProjectSearchDialog,
+    )
+
+    dialog = ProjectSearchDialog(widget)
+    dialog.exec()
+
+
 def edit_project(widget):
     """改当前项目的名字与任务类型。
 
@@ -682,8 +696,15 @@ def build_project_menu(widget):
         slot=lambda: edit_project(widget),
         tip=_tr("修改当前项目的名字与任务类型"),
     )
+    search_action = new_action(
+        widget,
+        _tr("项目内搜索…"),
+        slot=lambda: search_in_project(widget),
+        tip=_tr("按标注状态或标签名找图，双击跳转"),
+    )
     menu.addAction(new_action_item)
     menu.addAction(properties_action)
+    menu.addAction(search_action)
 
     menu.addSeparator()
     menu.addAction(switch)
@@ -729,6 +750,7 @@ def build_project_menu(widget):
 
     widget.actions.new_project = new_action_item
     widget.actions.project_properties = properties_action
+    widget.actions.project_search = search_action
     widget.actions.close_project = close_action
     widget.actions.open_project_settings_folder = settings_action
     widget.actions.export_project_bundle = export_action

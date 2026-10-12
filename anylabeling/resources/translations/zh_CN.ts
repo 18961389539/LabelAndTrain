@@ -4972,6 +4972,63 @@ Results have been saved to:
         <translation type="unfinished">取消</translation>
     </message>
 </context><context>
+    <name>ProjectSearchDialog</name>
+    <message>
+        <location filename="..\..\views\labeling\widgets\project_search_dialog.py" line="67" />
+        <source>项目内搜索</source>
+        <translation>项目内搜索</translation>
+    </message>
+    <message>
+        <location filename="..\..\views\labeling\widgets\project_search_dialog.py" line="80" />
+        <source>全部</source>
+        <translation type="unfinished">全部</translation>
+    </message>
+    <message>
+        <location filename="..\..\views\labeling\widgets\project_search_dialog.py" line="85" />
+        <source>标签名包含…（留空为不限）</source>
+        <translation>标签名包含…（留空为不限）</translation>
+    </message>
+    <message>
+        <location filename="..\..\views\labeling\widgets\project_search_dialog.py" line="87" />
+        <source>标注状态</source>
+        <translation>标注状态</translation>
+    </message>
+    <message>
+        <location filename="..\..\views\labeling\widgets\project_search_dialog.py" line="88" />
+        <source>标签名</source>
+        <translation>标签名</translation>
+    </message>
+    <message>
+        <location filename="..\..\views\labeling\widgets\project_search_dialog.py" line="102" />
+        <source>跳转</source>
+        <translation>跳转</translation>
+    </message>
+    <message>
+        <location filename="..\..\views\labeling\widgets\project_search_dialog.py" line="103" />
+        <source>关闭</source>
+        <translation type="unfinished">关闭</translation>
+    </message>
+    <message>
+        <location filename="..\..\views\labeling\widgets\project_search_dialog.py" line="145" />
+        <source>当前没有打开的图片。</source>
+        <translation>当前没有打开的图片。</translation>
+    </message>
+    <message>
+        <location filename="..\..\views\labeling\widgets\project_search_dialog.py" line="147" />
+        <source>搜索中…</source>
+        <translation>搜索中…</translation>
+    </message>
+    <message>
+        <location filename="..\..\views\labeling\widgets\project_search_dialog.py" line="173" />
+        <source>共 %d 张。</source>
+        <translation>共 %d 张。</translation>
+    </message>
+    <message>
+        <location filename="..\..\views\labeling\widgets\project_search_dialog.py" line="175" />
+        <source>没有匹配的图片。</source>
+        <translation>没有匹配的图片。</translation>
+    </message>
+</context><context>
     <name>ProjectSwitcherDialog</name>
     <message>
         <location filename="..\..\views\labeling\widgets\project_switcher.py" line="73" />
