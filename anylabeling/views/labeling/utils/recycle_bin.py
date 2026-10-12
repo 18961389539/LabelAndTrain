@@ -39,6 +39,22 @@ def send_to_recycle_bin(path, _operation=None):
     return bool(operation(os.path.abspath(str(path))))
 
 
+def _shell_success(code, aborted, abspath):
+    """Whether the operation really moved ``abspath`` out of the way.
+
+    ``code == 0`` is the normal success. But the shell has been
+    observed returning ``DE_INVALIDFILES`` (2) **after a successful
+    recycle** on one machine's system drive -- the entries land in the
+    bin and the code still says 2. The only truth that matters here is
+    the one the caller cares about: did the path leave the disk? An
+    operation that moved it counts as success; one that left it in
+    place (with any nonzero code) is a refusal.
+    """
+    if aborted:
+        return False
+    return code == 0 or not osp.exists(abspath)
+
+
 def _windows_recycle_operation():
     """The shell operation for Windows, or ``None`` elsewhere."""
     if sys.platform != "win32":
@@ -79,6 +95,6 @@ def _windows_recycle_operation():
         op.pTo = None
         op.fFlags = _FOF_FLAGS
         code = ctypes.windll.shell32.SHFileOperationW(ctypes.byref(op))
-        return code == 0 and not op.fAnyOperationsAborted
+        return _shell_success(code, op.fAnyOperationsAborted, abspath)
 
     return operation

@@ -243,3 +243,33 @@ def test_drive_type_reads_the_volume_root():
     # drive_type_of 是 operation 的默认参数，通过注入观察它收到的卷根
     operation("C:/plates", _drive_type_of=lambda p: seen.append(p) or 3)
     assert seen and seen[0].upper().startswith("C:")
+
+
+# --- 返回码不可信：以"路径是否离开磁盘"为准 ---------------------------------
+# 实测：某台机器的系统盘上，删除成功（回收站条目 +2）shell 却返回
+# DE_INVALIDFILES(2)。只信 code 会把成功删成"失败提示"。
+
+
+def test_shell_success_reads_code_zero_as_success(tmp_path):
+    existing = tmp_path / "still_here"
+    existing.mkdir()
+    assert recycle_bin._shell_success(0, False, str(existing))
+
+
+def test_shell_success_reads_abort_as_refusal(tmp_path):
+    existing = tmp_path / "still_here"
+    existing.mkdir()
+    assert not recycle_bin._shell_success(0, True, str(existing))
+
+
+def test_shell_success_reads_nonzero_with_path_still_there_as_refusal(
+    tmp_path,
+):
+    existing = tmp_path / "still_here"
+    existing.mkdir()
+    assert not recycle_bin._shell_success(2, False, str(existing))
+
+
+def test_shell_success_reads_nonzero_with_path_gone_as_success(tmp_path):
+    gone = tmp_path / "moved_to_bin"
+    assert recycle_bin._shell_success(2, False, str(gone))
