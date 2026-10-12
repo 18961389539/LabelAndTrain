@@ -525,6 +525,55 @@ def s9_write_failure_is_visible(ctx):
     pump(app, 80)
 
 
+@step("10. 项目管理器：标注进度列占位后回填")
+def s10_switcher_progress_column(ctx):
+    from anylabeling.views.labeling.widgets.project_switcher import (
+        ProjectSwitcherDialog,
+    )
+
+    win = ctx.win
+    dialog = ProjectSwitcherDialog(win)
+    dialog.show()
+    pump(ctx.app, 250)
+    assert dialog.list.columnCount() == 6
+    assert dialog.list.headerItem().text(3) == "标注进度"
+    # 后台计数在真窗口上也要落下来：每个格子要么是计数中，要么已回填。
+    for _ in range(40):
+        if all(
+            dialog.list.topLevelItem(i).text(3) != "计数中…"
+            for i in range(dialog.list.topLevelItemCount())
+        ):
+            break
+        pump(ctx.app, 200)
+    shoot(dialog, ctx.app, "10a_switcher_progress.png")
+    for i in range(dialog.list.topLevelItemCount()):
+        text = dialog.list.topLevelItem(i).text(3)
+        assert text != "计数中…", f"row {i} still counting after 8s: {text}"
+    dialog.close()
+    pump(ctx.app, 80)
+
+
+@step("11. 项目内搜索：对话框打开、条件与空态文案")
+def s11_project_search_dialog(ctx):
+    from anylabeling.views.labeling.widgets.project_search_dialog import (
+        ProjectSearchDialog,
+    )
+
+    dialog = ProjectSearchDialog(ctx.win)
+    dialog.show()
+    pump(ctx.app, 250)
+    assert dialog.state_combo.count() == 5  # 全部 + 四个状态
+    for _ in range(40):
+        if "搜索中" not in dialog.count_label.text():
+            break
+        pump(ctx.app, 200)
+    text = dialog.count_label.text()
+    assert text and "搜索中" not in text, text
+    shoot(dialog, ctx.app, "11a_project_search.png")
+    dialog.close()
+    pump(ctx.app, 80)
+
+
 STEPS = (
     s1_project_menu,
     s2_new_project,
@@ -535,6 +584,8 @@ STEPS = (
     s7_task_reaches_trainer,
     s8_rename_keeps_folder,
     s9_write_failure_is_visible,
+    s10_switcher_progress_column,
+    s11_project_search_dialog,
 )
 
 
