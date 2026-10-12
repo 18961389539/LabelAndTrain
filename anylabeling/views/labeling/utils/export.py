@@ -402,6 +402,15 @@ def export_yolo_annotation(self, mode):
             popup.show_popup(self, position="center")
             return
 
+    # 上次导出的参数跟着项目走：对话框预填，第二次导出只剩确认。
+    # 不是项目的文件夹没有记录可读，照旧走默认值。
+    from anylabeling.views.labeling import project_model
+
+    project_root = getattr(self, "_project_dataset_dir", None)
+    remembered = (
+        project_model.last_export(project_root) if project_root else {}
+    )
+
     dialog = QtWidgets.QDialog(self)
     dialog.setWindowTitle(
         QCoreApplication.translate("LabelingWidget", "Export options")
@@ -423,9 +432,17 @@ def export_yolo_annotation(self, mode):
     path_input_layout.setSpacing(8)
 
     path_edit = QtWidgets.QLineEdit()
-    path_edit.setText(
-        osp.realpath(osp.join(osp.dirname(self.filename), "..", "labels"))
-    )
+    remembered_save_path = remembered.get("save_path") or ""
+    if remembered_save_path and osp.isdir(remembered_save_path):
+        # 上次导到哪，这次就默认到哪；目录没了才退回推断值。
+        default_save_path = remembered_save_path
+    elif self.output_dir:
+        default_save_path = self.output_dir
+    else:
+        default_save_path = osp.realpath(
+            osp.join(osp.dirname(self.filename), "..", "labels")
+        )
+    path_edit.setText(default_save_path)
     path_edit.setPlaceholderText(
         QCoreApplication.translate("LabelingWidget", "Select Export Directory")
     )
@@ -461,13 +478,15 @@ def export_yolo_annotation(self, mode):
     save_images_checkbox = QtWidgets.QCheckBox(
         QCoreApplication.translate("LabelingWidget", "Save with images?")
     )
-    save_images_checkbox.setChecked(False)
+    save_images_checkbox.setChecked(bool(remembered.get("save_images", False)))
     layout.addWidget(save_images_checkbox)
 
     skip_empty_files_checkbox = QtWidgets.QCheckBox(
         QCoreApplication.translate("LabelingWidget", "Skip empty labels?")
     )
-    skip_empty_files_checkbox.setChecked(False)
+    skip_empty_files_checkbox.setChecked(
+        bool(remembered.get("skip_empty", False))
+    )
     skip_empty_files_checkbox.setToolTip(
         QCoreApplication.translate(
             "LabelingWidget",
@@ -485,7 +504,9 @@ def export_yolo_annotation(self, mode):
     only_checked_checkbox = QtWidgets.QCheckBox(
         QCoreApplication.translate("LabelingWidget", "仅导出「已确认」的图片")
     )
-    only_checked_checkbox.setChecked(False)
+    only_checked_checkbox.setChecked(
+        bool(remembered.get("only_confirmed", False))
+    )
     only_checked_checkbox.setToolTip(
         QCoreApplication.translate(
             "LabelingWidget",
@@ -509,7 +530,9 @@ def export_yolo_annotation(self, mode):
             )
             % len(classes)
         )
-        write_classes_checkbox.setChecked(True)
+        write_classes_checkbox.setChecked(
+            bool(remembered.get("write_classes", True))
+        )
         write_classes_checkbox.setToolTip(
             QCoreApplication.translate(
                 "LabelingWidget",
@@ -528,7 +551,7 @@ def export_yolo_annotation(self, mode):
         QCoreApplication.translate("LabelingWidget", "写入导出记录（%s）")
         % MANIFEST_NAME
     )
-    manifest_checkbox.setChecked(True)
+    manifest_checkbox.setChecked(bool(remembered.get("manifest", True)))
     manifest_checkbox.setToolTip(
         QCoreApplication.translate(
             "LabelingWidget",
@@ -773,6 +796,25 @@ def export_yolo_annotation(self, mode):
                     readiness=readiness,
                 ),
             )
+
+        # 快照这次导出参数进项目记录：下次对话框全部预填。
+        # best-effort —— 快照写不进去不影响这次已完成的导出。
+        if project_root:
+            try:
+                project_model.remember_export(
+                    project_root,
+                    {
+                        "save_path": save_path,
+                        "save_images": save_images,
+                        "skip_empty": skip_empty_files,
+                        "only_confirmed": only_checked,
+                        "write_classes": classes_target is not None,
+                        "manifest": write_manifest_record,
+                        "mode": mode,
+                    },
+                )
+            except Exception as e:  # noqa: BLE001 - 快照不是关键路径
+                logger.warning(f"Could not remember export params: {e}")
         summary = _format_yolo_export_summary(
             self,
             exported_files,

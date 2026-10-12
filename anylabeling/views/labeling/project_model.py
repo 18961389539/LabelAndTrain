@@ -180,6 +180,43 @@ def set_task(root, task):
     return save_record(root, record)
 
 
+#: The export parameters that travel with a project: the dialog's path
+#: and checkboxes, nothing else. Counts and class lists belong to the
+#: export manifest; the record only answers "how did I export last time".
+EXPORT_PARAM_KEYS = (
+    "save_path",
+    "save_images",
+    "skip_empty",
+    "only_confirmed",
+    "write_classes",
+    "manifest",
+    "mode",
+)
+
+
+def last_export(root):
+    """The last export's parameter snapshot, or ``{}``."""
+    record = load_record(root)
+    params = record.get("last_export")
+    return dict(params) if isinstance(params, dict) else {}
+
+
+def remember_export(root, params):
+    """Store the export parameters into the project record.
+
+    Whitelist-only: an unknown key is dropped, so a stray dialog field
+    cannot grow the record forever. A folder without a record returns
+    False -- the snapshot travels with the project or not at all.
+    """
+    record = load_record(root)
+    if not record:
+        return False
+    record["last_export"] = {
+        key: params[key] for key in EXPORT_PARAM_KEYS if key in params
+    }
+    return save_record(root, record)
+
+
 def describe(root):
     """One summary for the UI, tolerant of a missing or damaged record.
 
