@@ -6,7 +6,11 @@ switching, revealing the per-project settings file, resetting that file
 (keeping the pinned split seed), trimming the registry, and the
 show-at-startup switch. Training counts per project come from the run
 history (``run_meta.json`` files), joined by path prefix -- a project the
-loop never trained shows dashes, which is information too.
+loop never trained shows dashes, which is information too. Annotation
+progress (标注进度 ``12/40``) is counted from disk by background workers
+(``project_dashboard.collect_progress``) so the dialog opens instantly
+no matter how big the datasets are; a row still counting shows a
+placeholder, and a count that cannot be made leaves it.
 """
 
 import os
@@ -23,6 +27,43 @@ from anylabeling.views.labeling import (
 )
 
 
+class _ProgressSignals(QtCore.QObject):
+    """Bridge from worker threads back to the dialog's GUI thread."""
+
+    done = QtCore.pyqtSignal(str, dict)
+
+
+class _ProgressWorker(QtCore.QRunnable):
+    """Count one project's annotation progress off the GUI thread.
+
+    ``collect_progress`` walks every image and peeks into every label
+    file -- seconds on a real dataset, and the manager must open
+    instantly on twenty of them. A failure just leaves the placeholder:
+    a missing column beats a broken dialog.
+    """
+
+    def __init__(self, signals, root, output_dir):
+        super().__init__()
+        self._signals = signals
+        self._root = root
+        self._output_dir = output_dir
+
+    def run(self):
+        try:
+            from anylabeling.views.labeling import project_dashboard
+
+            stat = project_dashboard.collect_progress(
+                self._root, self._output_dir
+            )
+        except Exception as e:  # noqa: BLE001 - dashes beat a broken dialog
+            logger.warning(f"Could not count progress for {self._root}: {e}")
+            return
+        try:
+            self._signals.done.emit(self._root, stat)
+        except RuntimeError:
+            pass  # 对话框已经关了：没人听的结果就让它消失
+
+
 class ProjectSwitcherDialog(QtWidgets.QDialog):
     """List every recorded project; double-click or 打开 switches to it."""
 
@@ -37,12 +78,13 @@ class ProjectSwitcherDialog(QtWidgets.QDialog):
         layout.setSpacing(10)
 
         self.list = QtWidgets.QTreeWidget(self)
-        self.list.setColumnCount(5)
+        self.list.setColumnCount(6)
         self.list.setHeaderLabels(
             [
                 self.tr("项目"),
                 self.tr("任务"),
                 self.tr("上次打开"),
+                self.tr("标注进度"),
                 self.tr("训练"),
                 self.tr("最近训练"),
             ]
@@ -54,7 +96,7 @@ class ProjectSwitcherDialog(QtWidgets.QDialog):
         header.setSectionResizeMode(
             0, QtWidgets.QHeaderView.ResizeMode.Stretch
         )
-        for column in (1, 2, 3, 4):
+        for column in (1, 2, 3, 4, 5):
             header.setSectionResizeMode(
                 column, QtWidgets.QHeaderView.ResizeMode.ResizeToContents
             )
@@ -102,6 +144,8 @@ class ProjectSwitcherDialog(QtWidgets.QDialog):
         delete_button.clicked.connect(self._delete_selected)
         close_button.clicked.connect(self.reject)
 
+        self._progress_signals = _ProgressSignals()
+        self._progress_signals.done.connect(self._apply_progress)
         self._reload()
 
     # --- population -------------------------------------------------------
@@ -135,6 +179,8 @@ class ProjectSwitcherDialog(QtWidgets.QDialog):
                     described["name"],
                     project_model.task_label(described["task"]),
                     entry.get("last_opened") or "",
+                    # 占位：后台线程数完由 _apply_progress 回填。
+                    self.tr("计数中…"),
                     str(runs) if runs else "—",
                     stat.get("last") or "",
                 ]
@@ -160,6 +206,49 @@ class ProjectSwitcherDialog(QtWidgets.QDialog):
                 self.list.setCurrentItem(item)
         if self.list.currentItem() is None:
             self.list.setCurrentItem(self.list.topLevelItem(0))
+        self._start_progress_workers(entries)
+
+    def _start_progress_workers(self, entries):
+        """Count annotation progress for every listed project in the
+        background; each result lands back in its row when it arrives.
+
+        A folder with no record still gets counted (it is a folder of
+        images all the same) -- the same judgement the bundle import
+        makes.
+        """
+        pool = QtCore.QThreadPool.globalInstance()
+        for entry in entries:
+            root = entry["root"]
+            described = project_model.describe(root)
+            worker = _ProgressWorker(
+                self._progress_signals, root, described["output_dir"]
+            )
+            pool.start(worker)
+
+    def _apply_progress(self, root, stat):
+        """Put a finished count into its row: ``12/40`` in the column,
+        the confirmed/rework split in the tooltip.
+
+        Rows may have come and gone while the thread was walking the
+        disk -- a result for a row that no longer exists is dropped,
+        not an error.
+        """
+        from anylabeling.views.labeling import project_dashboard
+
+        for index in range(self.list.topLevelItemCount()):
+            item = self.list.topLevelItem(index)
+            if item.data(0, QtCore.Qt.ItemDataRole.UserRole) != root:
+                continue
+            progress = project_dashboard.format_progress(stat)
+            item.setText(3, progress["short"])
+            item.setToolTip(
+                0,
+                item.toolTip(0)
+                + f"\n{self.tr('已标注')}: {progress['short']}"
+                + f"（{self.tr('已确认')} {stat.get('confirmed') or 0}，"
+                + f"{self.tr('待复检')} {stat.get('rework') or 0}）",
+            )
+            return
 
     def _training_stats(self, entries):
         """``{root: {"runs", "last"}}`` for the listed projects.

@@ -89,6 +89,20 @@ def collect_progress(root, output_dir=None):
     }
 
 
+def format_progress(stat):
+    """One row of display text from :func:`collect_progress`'s dict.
+
+    ``{"short": "12/40"}`` — annotated over images. A project with no
+    images reads as a dash: no data is information, not an error. Pure
+    text shaping, so tests can pin it without a widget in sight.
+    """
+    images = int(stat.get("images") or 0)
+    annotated = int(stat.get("annotated") or 0)
+    if images <= 0:
+        return {"short": "—"}
+    return {"short": f"{annotated}/{images}"}
+
+
 def collect_training(root, output_dir=None, runs_root=None):
     """Training history attributed to this project, or all-``None``.
 
