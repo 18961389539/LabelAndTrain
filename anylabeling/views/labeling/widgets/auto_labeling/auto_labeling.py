@@ -1566,6 +1566,16 @@ class AutoLabelingWidget(QWidget):
         box.setText(friendly)
         cpu_btn = None
         if offer_cpu:
+            # 用户此刻看到的是"改用 CPU"，但真正的问题是 GPU 为什么
+            # 用不上。有卡却缺 onnxruntime-gpu 时把原因和处理办法写出来，
+            # 不留一个只能靠猜的降级按钮。
+            from anylabeling.views.common.device_manager import (
+                device_manager,
+            )
+
+            advice = device_manager.gpu_advice()
+            if advice:
+                box.setInformativeText(advice)
             cpu_btn = box.addButton(
                 self.tr("改用 CPU 并重试"),
                 QMessageBox.ButtonRole.AcceptRole,

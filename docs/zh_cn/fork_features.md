@@ -165,6 +165,24 @@ YOLO 导出对话框会记住上一次的参数（导出目录、复制图片、
 
 ## 3. 智能工具
 
+### 设备：跑在哪块硬件上，以及为什么
+
+自动标注的推理设备按这个顺序决定：**手动选择 → 环境变量
+`X_ANYLABELING_DEVICE` → 配置 `device` → 自动探测**。设备串支持
+**带卡号**：`GPU`（= `GPU:0`）、`GPU:1`、`CUDA:2` 都认，写成
+`gpu:1` / `cuda:1` 也一样。卡号越界（比如单卡机器写 `GPU:3`）不会报错，
+回退第 0 张并在日志里说明。
+
+判定"能不能用 GPU"以 **onnxruntime 的 CUDAExecutionProvider** 为准
+（自动标注走 ONNX 后端）。静默降级被取消了：机器上有 NVIDIA 卡、但装的
+onnxruntime 不是 GPU 版时，**模型加载失败对话框会直接说明**——
+"本机有 NVIDIA GPU（RTX 4090），但当前 onnxruntime 未启用 CUDA……
+安装 onnxruntime-gpu 后可用 GPU 加速"，而不是只给一个「改用 CPU」的按钮。
+
+启动后日志里有一行 `🧮 Auto-labeling device: …`，排查"为什么这么慢"
+先看这一行。`device_manager.describe_devices()` 给出可读的设备摘要
+（CPU 核数、GPU 数量与型号、不可用时的处理办法），供诊断与后续的设备面板使用。
+
 `智能工具` 菜单下有 11 项，**建议按编号顺序用**：
 
 | # | 工具 | 作用 |

@@ -601,6 +601,24 @@ def _main():
     restore_window_placement(win)
     win.raise_()
 
+    def _report_device():
+        """One line saying which device auto labeling will use.
+
+        Deliberately after the window is up: probing costs an
+        onnxruntime import, and the answer is only needed when something
+        looks slow ("为什么跑在 CPU？先看这一行").
+        """
+        try:
+            from anylabeling.views.common.device_manager import (
+                device_manager,
+            )
+
+            logger.info(
+                f"🧮 Auto-labeling device: {device_manager.get_device()}"
+            )
+        except Exception as e:  # noqa: BLE001
+            logger.debug(f"Could not report the auto-labeling device: {e}")
+
     # Resume the last session or hand the choice to the project manager,
     # after the window is visible. The decision is pure and lives in
     # project_registry (tested); a first run ends up as "none", so the
@@ -626,6 +644,7 @@ def _main():
         except Exception as e:  # noqa
             logger.warning(f"Session resume prompt skipped: {e}")
 
+    QtCore.QTimer.singleShot(100, _report_device)
     QtCore.QTimer.singleShot(500, _offer_session_resume)
     app.aboutToQuit.connect(lambda: save_window_placement(win))
     sys.exit(app.exec())

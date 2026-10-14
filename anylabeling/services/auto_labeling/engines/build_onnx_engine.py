@@ -15,8 +15,33 @@ class OnnxBaseModel:
             )
 
         self.providers = ["CPUExecutionProvider"]
-        if device_type.lower() == "gpu":
-            self.providers = ["CUDAExecutionProvider"]
+        head, _, tail = str(device_type).strip().lower().partition(":")
+        gpu_card = None
+        if head == "gpu":
+            # "gpu" or "gpu:N" both land on CUDA; the index picks the card.
+            # Anything GPU-ish that is not a number keeps card 0 rather
+            # than failing the session over a malformed string.
+            gpu_card = int(tail) if tail.isdigit() else 0
+
+        if gpu_card is not None:
+            # ``(name, options)`` tuples are the documented way to pass a
+            # device id; older wheels that reject them still get the plain
+            # provider name (card 0) instead of a hard failure.
+            try:
+                self.ort_session = ort.InferenceSession(
+                    model_path,
+                    providers=[
+                        ("CUDAExecutionProvider", {"device_id": gpu_card})
+                    ],
+                    sess_options=self.sess_opts,
+                )
+                self.providers = [
+                    ("CUDAExecutionProvider", {"device_id": gpu_card})
+                ]
+                self.model_path = model_path
+                return
+            except (TypeError, ValueError):
+                self.providers = ["CUDAExecutionProvider"]
 
         self.ort_session = ort.InferenceSession(
             model_path,
