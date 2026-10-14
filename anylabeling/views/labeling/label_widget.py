@@ -144,6 +144,7 @@ from .utils import file_navigation
 from .utils import file_list_ops
 from .utils import label_editing
 from .utils import shortcuts_help
+from .utils import device_menu
 from .utils import smart_tools_menu
 from .utils.file_lifecycle import (
     _report_inherited_shapes,
@@ -6385,6 +6386,7 @@ def _build_actions(widget):
     smart_tools_menu.populate_smart_tools_menu(
         widget.menus.smart_tools, widget.actions
     )
+    device_menu.populate_device_menu(widget)
     utils.add_actions(widget.menus.train, (ultralytics_train, run_history))
     utils.add_actions(
         widget.menus.tool,

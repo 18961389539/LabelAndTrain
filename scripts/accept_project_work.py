@@ -574,6 +574,23 @@ def s11_project_search_dialog(ctx):
     pump(ctx.app, 80)
 
 
+@step("12. 工具 → 设备：子菜单列出可用设备与重新检测")
+def s12_device_submenu(ctx):
+    widget = ctx.widget
+    tool_menu = widget.menus.tool
+    submenus = [a for a in tool_menu.actions() if a.menu() is not None]
+    device_actions = [a for a in submenus if a.text() == "设备"]
+    assert device_actions, [a.text() for a in tool_menu.actions()]
+    menu = device_actions[0].menu()
+    entries = [a.text() for a in menu.actions() if not a.isSeparator()]
+    assert "CPU" in entries, entries
+    assert "重新检测设备" in entries, entries
+    # 这台机器上 onnxruntime 没有 CUDA provider：只有 CPU 一个可选项
+    checkable = [a.text() for a in menu.actions() if a.isCheckable()]
+    assert checkable and checkable[0] == "CPU", checkable
+    shoot_menu(menu, ctx.app, tool_menu, "12a_device_submenu.png")
+
+
 STEPS = (
     s1_project_menu,
     s2_new_project,
@@ -586,6 +603,7 @@ STEPS = (
     s9_write_failure_is_visible,
     s10_switcher_progress_column,
     s11_project_search_dialog,
+    s12_device_submenu,
 )
 
 

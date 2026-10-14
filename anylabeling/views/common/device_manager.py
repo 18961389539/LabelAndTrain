@@ -175,6 +175,25 @@ class DeviceManager:
             "onnxruntime-gpu 后，重新启动即可用 GPU 加速。"
         )
 
+    def describe_available(self) -> list:
+        """``[(spec, label)]`` for a menu or picker, labels included.
+
+        The label carries what the spec cannot: the card's name, when one
+        can be probed. Cheap by design -- cached probes only, and names
+        are only asked for when a GPU is actually usable, so building a
+        menu never imports torch on a CPU-only machine.
+        """
+        if not self._is_gpu_available():
+            return [("CPU", "CPU")]
+
+        names = self._probe_torch_cuda()
+        entries = [("CPU", "CPU")]
+        for index in range(self.gpu_count()):
+            spec = "GPU" if index == 0 else f"GPU:{index}"
+            name = names[index] if index < len(names) else ""
+            entries.append((spec, f"{spec} · {name}" if name else spec))
+        return entries
+
     def refresh_devices(self):
         """Forget every probe result, so the next call re-detects.
 

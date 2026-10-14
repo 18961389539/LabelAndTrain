@@ -60,7 +60,14 @@ BUDGETS = {
     # settings own the resolution now), and the record/classes.txt
     # mismatch says so in the status bar -- the four lines are that
     # warning, the one thing the single-source change adds to the widget.
-    "anylabeling/views/labeling/label_widget.py": 6785,
+    #
+    # Raised 6785 -> 6787 on 2026-10-14, documented feature: the 设备
+    # submenu under 工具. Two lines only -- the import and the one call
+    # that hands the widget to utils/device_menu.py, which builds every
+    # action itself. The menu is where the device list can be dynamic
+    # (a QActionGroup asks device_manager at fill time); the settings
+    # schema's static `options` cannot express a machine-dependent list.
+    "anylabeling/views/labeling/label_widget.py": 6787,
     # Lowered 3772 -> 3760 on 2026-09-29: the undo/redo stacks moved out to
     # widgets/shape_history.py (which is also what made them survive a file
     # switch) and the canvas reaches them through the attribute names it has
