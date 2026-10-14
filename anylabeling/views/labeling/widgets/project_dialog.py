@@ -40,6 +40,45 @@ def _fmt_map50(value):
         return None
 
 
+def format_labels_line(labels, limit=6):
+    """``标签 3 个：划痕、凹坑、气泡``; long lists stop at ``limit``.
+
+    Returns ``""`` for an empty list -- a project with no labels has
+    nothing to show, and an empty "标签 0 个" line would just be noise.
+    """
+    names = [str(label) for label in labels if str(label or "").strip()]
+    if not names:
+        return ""
+    shown = "、".join(names[:limit])
+    if len(names) > limit:
+        # 字符串内联（不用 _tr 助手）：lupdate 只提取调用点上的字面量，
+        # 本项目现有 _tr 包装的串全部没进翻译目录（已知缺陷，另批处理）。
+        shown += "、" + QtCore.QCoreApplication.translate(
+            "LabelingWidget", "…共 %d 个"
+        ) % len(names)
+    return QtCore.QCoreApplication.translate(
+        "LabelingWidget", "标签 %d 个：%s"
+    ) % (len(names), shown)
+
+
+def format_last_export_line(snapshot):
+    """``上次导出：G:/out（yolo，2026-10-14 09:20:11）``, or ``""``."""
+    save_path = str((snapshot or {}).get("save_path") or "").strip()
+    if not save_path:
+        return ""
+    mode = str((snapshot or {}).get("mode") or "").strip()
+    at = str((snapshot or {}).get("at") or "").strip()
+    detail = "，".join(part for part in (mode, at) if part)
+    if detail:
+        return QtCore.QCoreApplication.translate(
+            "LabelingWidget", "上次导出：%s（%s）"
+        ) % (save_path, detail)
+    return (
+        QtCore.QCoreApplication.translate("LabelingWidget", "上次导出：%s")
+        % save_path
+    )
+
+
 def build_overview_group(overview):
     """The read-only 概览 block, or ``None`` when there is nothing to say.
 
@@ -84,6 +123,14 @@ def build_overview_group(overview):
             )
     elif images:
         lines.append(QtWidgets.QLabel(_tr("尚未训练")))
+
+    # 标签列表与上次导出：项目的两个"我该去哪看"的问题，答案都在清单里。
+    labels_line = format_labels_line(overview.get("labels") or [])
+    if labels_line:
+        lines.append(QtWidgets.QLabel(labels_line))
+    export_line = format_last_export_line(overview.get("last_export") or {})
+    if export_line:
+        lines.append(QtWidgets.QLabel(export_line))
 
     if not lines:
         return None

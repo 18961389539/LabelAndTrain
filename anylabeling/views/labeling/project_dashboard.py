@@ -135,8 +135,46 @@ def collect_training(root, output_dir=None, runs_root=None):
     }
 
 
+def collect_labels(root):
+    """The project's label list from its own record; ``[]`` when unreadable.
+
+    Read-only and forgiving on purpose: an overview is not the place to
+    report a damaged record, the properties dialog already is.
+    """
+    try:
+        from anylabeling.views.labeling import project_model
+
+        record = project_model.load_record(root) or {}
+    except Exception:  # noqa: BLE001 - 概览不能因为清单而打不开
+        return []
+    labels = record.get("labels")
+    if not isinstance(labels, (list, tuple)):
+        return []
+    return [str(label) for label in labels if str(label or "").strip()]
+
+
+def collect_last_export(root):
+    """The export parameter snapshot, or ``{}``.
+
+    Answers "where did this project's labels go last time" -- the
+    question that used to require opening the export dialog and reading
+    the pre-filled path.
+    """
+    try:
+        from anylabeling.views.labeling import project_model
+
+        return project_model.last_export(root) or {}
+    except Exception:  # noqa: BLE001
+        return {}
+
+
 def collect(root, output_dir=None, runs_root=None):
     """Everything the overview shows, in one call."""
     progress = collect_progress(root, output_dir)
     training = collect_training(root, output_dir, runs_root)
-    return {"progress": progress, "training": training}
+    return {
+        "progress": progress,
+        "training": training,
+        "labels": collect_labels(root),
+        "last_export": collect_last_export(root),
+    }

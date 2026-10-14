@@ -460,6 +460,28 @@ def edit_project(widget):
     return True
 
 
+def open_project_folder(widget):
+    """在文件管理器里打开当前项目的根目录。
+
+    与「打开项目设置文件夹」配对：那个去 ``.jllabel``（清单、设置），
+    这个去数据本身（图片、标签、导出结果）——用户十次里有九次想看的
+    是后者。
+    """
+    root = current_root(widget)
+    if not root or not osp.isdir(root):
+        QtWidgets.QMessageBox.information(
+            widget,
+            _tr("没有打开的项目"),
+            _tr("先打开一个项目文件夹，再来打开它的目录。"),
+        )
+        return
+    from anylabeling.views.labeling.widgets.project_switcher import (
+        _open_in_file_manager,
+    )
+
+    _open_in_file_manager(root)
+
+
 def open_settings_folder(widget):
     """在文件管理器里打开当前项目的 ``.jllabel`` 目录。"""
     root = current_root(widget)
@@ -735,6 +757,14 @@ def build_project_menu(widget):
         slot=lambda: close_project(widget),
         tip=_tr("关闭当前项目并回到空画布"),
     )
+    folder_action = new_action(
+        widget,
+        _tr("打开项目文件夹"),
+        slot=lambda: open_project_folder(widget),
+        tip=_tr(
+            "在文件管理器里打开当前项目的目录（图片、标签、导出结果都在这里）"
+        ),
+    )
     settings_action = new_action(
         widget,
         _tr("打开项目设置文件夹"),
@@ -753,6 +783,7 @@ def build_project_menu(widget):
         slot=lambda: import_project_bundle(widget),
         tip=_tr("从项目包 zip 还原一个项目并打开它"),
     )
+    menu.addAction(folder_action)
     menu.addAction(settings_action)
     menu.addAction(export_action)
     menu.addAction(import_action)
@@ -762,6 +793,7 @@ def build_project_menu(widget):
     widget.actions.project_properties = properties_action
     widget.actions.project_search = search_action
     widget.actions.close_project = close_action
+    widget.actions.open_project_folder = folder_action
     widget.actions.open_project_settings_folder = settings_action
     widget.actions.export_project_bundle = export_action
     widget.actions.import_project_bundle = import_action

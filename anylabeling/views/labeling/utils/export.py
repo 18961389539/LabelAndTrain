@@ -811,6 +811,7 @@ def export_yolo_annotation(self, mode):
                         "write_classes": classes_target is not None,
                         "manifest": write_manifest_record,
                         "mode": mode,
+                        "at": time.strftime("%Y-%m-%d %H:%M:%S"),
                     },
                 )
             except Exception as e:  # noqa: BLE001 - 快照不是关键路径

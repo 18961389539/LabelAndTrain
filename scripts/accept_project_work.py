@@ -591,6 +591,16 @@ def s12_device_submenu(ctx):
     shoot_menu(menu, ctx.app, tool_menu, "12a_device_submenu.png")
 
 
+@step("13. 项目菜单：打开项目文件夹 排在设置文件夹之前")
+def s13_open_project_folder_entry(ctx):
+    menu = ctx.widget.menus.project
+    labels = [a.text() for a in menu.actions()]
+    assert "打开项目文件夹" in labels, labels
+    assert "打开项目设置文件夹" in labels, labels
+    # 数据目录在前：十次里有九次想看的是数据本身
+    assert labels.index("打开项目文件夹") < labels.index("打开项目设置文件夹")
+
+
 STEPS = (
     s1_project_menu,
     s2_new_project,
@@ -604,6 +614,7 @@ STEPS = (
     s10_switcher_progress_column,
     s11_project_search_dialog,
     s12_device_submenu,
+    s13_open_project_folder_entry,
 )
 
 
