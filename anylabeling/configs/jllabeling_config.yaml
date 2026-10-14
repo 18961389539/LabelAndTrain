@@ -275,7 +275,7 @@ sidebar:
   lists: null
   width: null
 sort_labels: true
-startup_show_project_manager: false
+startup_show_project_manager: true
 store_data: false
 system_clipboard: false
 theme: auto

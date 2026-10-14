@@ -409,7 +409,7 @@ class ProjectSwitcherDialog(QtWidgets.QDialog):
     def _startup_pref(self):
         """Current show-at-startup choice, defaulting to off."""
         config = getattr(self.widget, "_config", None) or {}
-        return bool(config.get("startup_show_project_manager", False))
+        return bool(config.get("startup_show_project_manager", True))
 
     def _on_startup_toggled(self, checked):
         """Persist the switch to the app config (rc), best-effort."""

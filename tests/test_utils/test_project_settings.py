@@ -532,7 +532,12 @@ def test_startup_action_matrix():
     assert decide(False, False, False) == "none"
 
 
-def test_startup_show_project_manager_defaults_off():
+def test_startup_show_project_manager_defaults_on():
+    """出厂即先看管理页：项目中心化的入口不能藏在菜单里。
+
+    恢复上次会话仍然是"没勾选时"的快路径 —— 勾选框每次都赢，
+    所以默认开启意味着打开就是项目管理器，除非用户主动关掉。
+    """
     import importlib.resources as pkg_resources
 
     import yaml
@@ -543,7 +548,7 @@ def test_startup_show_project_manager_defaults_off():
         anylabeling_configs, "jllabeling_config.yaml"
     ) as handle:
         template = yaml.safe_load(handle)
-    assert template["startup_show_project_manager"] is False
+    assert template["startup_show_project_manager"] is True
 
 
 # --- training prefs whitelist ---------------------------------------------
