@@ -99,15 +99,19 @@ class FileReviewController:
         widget = self._widget
         presets = [
             "",
-            widget.tr("漏标"),
-            widget.tr("类别错误"),
-            widget.tr("框不准"),
-            widget.tr("多标/误标"),
+            QtCore.QCoreApplication.translate("LabelingWidget", "漏标"),
+            QtCore.QCoreApplication.translate("LabelingWidget", "类别错误"),
+            QtCore.QCoreApplication.translate("LabelingWidget", "框不准"),
+            QtCore.QCoreApplication.translate("LabelingWidget", "多标/误标"),
         ]
         text, accepted = QtWidgets.QInputDialog.getItem(
             widget,
-            widget.tr("打回并下一张"),
-            widget.tr("说明需要返工的地方（可留空）："),
+            QtCore.QCoreApplication.translate(
+                "LabelingWidget", "打回并下一张"
+            ),
+            QtCore.QCoreApplication.translate(
+                "LabelingWidget", "说明需要返工的地方（可留空）："
+            ),
             presets,
             0,
             True,

@@ -136,9 +136,16 @@ def resolve_classes_for_yolo(widget, mode):
     if labels:
         box = QtWidgets.QMessageBox(widget)
         box.setIcon(QtWidgets.QMessageBox.Icon.Question)
-        box.setWindowTitle(widget.tr("Select the class list"))
+        box.setWindowTitle(
+            QCoreApplication.translate(
+                "LabelingWidget", "Select the class list"
+            )
+        )
         box.setText(
-            widget.tr("用当前标签列表（%d 个类别）还是选择一个 classes.txt？")
+            QCoreApplication.translate(
+                "LabelingWidget",
+                "用当前标签列表（%d 个类别）还是选择一个 classes.txt？",
+            )
             % len(labels)
         )
         preview = ", ".join(labels[:8])
@@ -147,20 +154,24 @@ def resolve_classes_for_yolo(widget, mode):
         box.setInformativeText(
             preview
             + "\n\n"
-            + widget.tr(
-                "类别顺序决定 YOLO 的类别编号，导出前请确认与训练一致。"
+            + QCoreApplication.translate(
+                "LabelingWidget",
+                "类别顺序决定 YOLO 的类别编号，导出前请确认与训练一致。",
             )
         )
         current_button = box.addButton(
-            widget.tr("用当前标签列表"),
+            QCoreApplication.translate("LabelingWidget", "用当前标签列表"),
             QtWidgets.QMessageBox.ButtonRole.AcceptRole,
         )
         file_button = box.addButton(
-            widget.tr("选择 classes.txt..."),
+            QCoreApplication.translate(
+                "LabelingWidget", "选择 classes.txt..."
+            ),
             QtWidgets.QMessageBox.ButtonRole.ActionRole,
         )
         box.addButton(
-            widget.tr("Cancel"), QtWidgets.QMessageBox.ButtonRole.RejectRole
+            QCoreApplication.translate("LabelingWidget", "Cancel"),
+            QtWidgets.QMessageBox.ButtonRole.RejectRole,
         )
         box.setDefaultButton(current_button)
         box.setStyleSheet(get_msg_box_style())
@@ -170,7 +181,7 @@ def resolve_classes_for_yolo(widget, mode):
             logger.info(f"{mode}: using the open project's label list")
             return (
                 labels,
-                widget.tr("当前标签列表"),
+                QCoreApplication.translate("LabelingWidget", "当前标签列表"),
                 LabelConverter(classes=labels),
             )
         if clicked is not file_button:
@@ -178,7 +189,9 @@ def resolve_classes_for_yolo(widget, mode):
 
     classes_file, _ = QtWidgets.QFileDialog.getOpenFileName(
         widget,
-        widget.tr("Select a specific classes file"),
+        QCoreApplication.translate(
+            "LabelingWidget", "Select a specific classes file"
+        ),
         "",
         "Classes Files (*.txt);;All Files (*)",
     )
@@ -272,43 +285,69 @@ def _format_yolo_export_summary(
     that silently dropped half its polygons passes for a good run.
     """
     lines = [
-        widget.tr("导出完成：%d/%d 张图，%d 个标注")
+        QCoreApplication.translate(
+            "LabelingWidget", "导出完成：%d/%d 张图，%d 个标注"
+        )
         % (counted_files, total_files, stats.get("exported", 0)),
     ]
     if skipped_unchecked:
         lines.append(
-            widget.tr("按「仅导出已确认图片」跳过 %d 张（未检查或需返工）")
+            QCoreApplication.translate(
+                "LabelingWidget",
+                "按「仅导出已确认图片」跳过 %d 张（未检查或需返工）",
+            )
             % skipped_unchecked
         )
     if copied_images:
-        lines.append(widget.tr("已复制 %d 张图片") % copied_images)
+        lines.append(
+            QCoreApplication.translate("LabelingWidget", "已复制 %d 张图片")
+            % copied_images
+        )
     if classes_target:
-        lines.append(widget.tr("已写入 %s") % osp.basename(classes_target))
+        lines.append(
+            QCoreApplication.translate("LabelingWidget", "已写入 %s")
+            % osp.basename(classes_target)
+        )
     if data_yaml_target:
         lines.append(
-            widget.tr("已写入 %s（train/val 需按布局补填）") % "data.yaml"
+            QCoreApplication.translate(
+                "LabelingWidget", "已写入 %s（train/val 需按布局补填）"
+            )
+            % "data.yaml"
         )
     if manifest_target:
         lines.append(
-            widget.tr("已写入 %s（本次的类别来源、筛选条件与跳过明细）")
+            QCoreApplication.translate(
+                "LabelingWidget",
+                "已写入 %s（本次的类别来源、筛选条件与跳过明细）",
+            )
             % MANIFEST_NAME
         )
     missing = stats.get("missing_label_file", 0)
     if missing:
         lines.append(
-            widget.tr("没有标签文件（按空标注处理）：%d 张") % missing
+            QCoreApplication.translate(
+                "LabelingWidget", "没有标签文件（按空标注处理）：%d 张"
+            )
+            % missing
         )
     skipped = stats.get("skipped") or {}
     if skipped:
         total_skipped = sum(skipped.values())
-        lines.append(widget.tr("跳过 %d 个无法转换的标注：") % total_skipped)
+        lines.append(
+            QCoreApplication.translate(
+                "LabelingWidget", "跳过 %d 个无法转换的标注："
+            )
+            % total_skipped
+        )
         for reason, count in sorted(
             skipped.items(), key=lambda item: (-item[1], item[0])
         ):
             lines.append(f"    - {count} × {reason}")
         lines.append(
-            widget.tr(
-                "若不应跳过，请检查类别列表与形状类型（例如 hbb 只导出矩形框）。"
+            QCoreApplication.translate(
+                "LabelingWidget",
+                "若不应跳过，请检查类别列表与形状类型（例如 hbb 只导出矩形框）。",
             )
         )
     return "\n".join(lines)
@@ -317,9 +356,13 @@ def _format_yolo_export_summary(
 def _copy_export_path(widget, save_path):
     """Copy the export path and say whether it worked."""
     if copy_text_to_system_clipboard(save_path):
-        widget.status(widget.tr("已复制输出路径"))
+        widget.status(
+            QCoreApplication.translate("LabelingWidget", "已复制输出路径")
+        )
     else:
-        widget.status(widget.tr("复制输出路径失败"))
+        widget.status(
+            QCoreApplication.translate("LabelingWidget", "复制输出路径失败")
+        )
 
 
 def _show_export_done_popup(widget, message, save_path, icon, height):
@@ -332,11 +375,14 @@ def _show_export_done_popup(widget, message, save_path, icon, height):
     actions = []
     if save_path and osp.isdir(save_path):
         actions.append(
-            (widget.tr("打开输出目录"), lambda: open_path(save_path))
+            (
+                QCoreApplication.translate("LabelingWidget", "打开输出目录"),
+                lambda: open_path(save_path),
+            )
         )
         actions.append(
             (
-                widget.tr("复制输出路径"),
+                QCoreApplication.translate("LabelingWidget", "复制输出路径"),
                 lambda: _copy_export_path(widget, save_path),
             )
         )

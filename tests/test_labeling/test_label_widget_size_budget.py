@@ -87,7 +87,14 @@ BUDGETS = {
     # widget contract. The freed 29 lines are the first headroom this file has
     # had in a week -- the next extraction candidate is still the
     # _build_actions registration tail.
-    "anylabeling/views/labeling/label_widget.py": 6768,
+    #
+    # Raised 6768 -> 6772 the same day, documented feature: two dock
+    # checkboxes' tooltips moved from `widget.tr(...)` to
+    # QCoreApplication.translate, which the extractor can actually see (the
+    # old form never reached zh_CN.ts). The longer call is what the four extra
+    # lines are; utils/export.py and filelist/controller.py gave up 27 of the
+    # same invisible call sites in the same batch, outside this budget.
+    "anylabeling/views/labeling/label_widget.py": 6772,
     # Lowered 3772 -> 3760 on 2026-09-29: the undo/redo stacks moved out to
     # widgets/shape_history.py (which is also what made them survive a file
     # switch) and the canvas reaches them through the attribute names it has

@@ -6662,7 +6662,9 @@ def _build_layout(widget):
     widget.labels_checkbox = QCheckBox()
     widget.labels_checkbox.setChecked(widget._config["label_dock"]["show"])
     widget.labels_checkbox.setStyleSheet(get_checkbox_indicator_style())
-    widget.labels_checkbox.setToolTip(widget.tr("显示/隐藏标签列表"))
+    widget.labels_checkbox.setToolTip(
+        QCoreApplication.translate("LabelingWidget", "显示/隐藏标签列表")
+    )
     widget.labels_checkbox.toggled.connect(widget.toggle_labels_visibility)
 
     labels_header_layout = QHBoxLayout()
@@ -6694,7 +6696,9 @@ def _build_layout(widget):
     widget.shapes_checkbox = QCheckBox()
     widget.shapes_checkbox.setChecked(widget._config["shape_dock"]["show"])
     widget.shapes_checkbox.setStyleSheet(get_checkbox_indicator_style())
-    widget.shapes_checkbox.setToolTip(widget.tr("显示/隐藏对象列表"))
+    widget.shapes_checkbox.setToolTip(
+        QCoreApplication.translate("LabelingWidget", "显示/隐藏对象列表")
+    )
     widget.shapes_checkbox.toggled.connect(widget.toggle_shapes_visibility)
 
     shapes_header_layout = QHBoxLayout()

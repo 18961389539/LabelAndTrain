@@ -9,6 +9,7 @@ These tests do, and they also check that the compiled ``.qm`` the app
 actually loads still agrees with the ``.ts``.
 """
 
+import ast
 import os
 import re
 import unittest
@@ -97,6 +98,52 @@ class TestCatalogMatchesSources(unittest.TestCase):
             [],
             "zh_CN.ts still carries contexts for classes that are gone. "
             "Re-run scripts/generate_languages.py to drop them.",
+        )
+
+    def test_no_tr_call_is_invisible_to_the_extractor(self):
+        """``widget.tr("...")`` never reaches the catalog, and says nothing.
+
+        pylupdate6 can only name a context when it can see the receiver: a
+        ``tr()`` call on ``self`` inside a class is attributed to that class,
+        while the same call on *any other object* -- the widget a util
+        function was handed -- is dropped from the catalog silently. That is
+        how export.py shipped 21 dialog strings no locale could replace, and
+        how the catalog once lost 772 locations without a sound.
+
+        Module-level strings must use ``QCoreApplication.translate(ctx, ...)``,
+        which the extractor does read; this test is what makes the difference
+        visible at commit time instead of at translation time.
+        """
+        offenders = []
+        for base, dirs, files in os.walk(APP_DIR):
+            dirs[:] = [d for d in dirs if d != "__pycache__"]
+            for name in files:
+                if not name.endswith(".py") or name == "resources.py":
+                    continue
+                path = os.path.join(base, name)
+                try:
+                    tree = ast.parse(open(path, encoding="utf-8").read(), path)
+                except SyntaxError:  # pragma: no cover - source is parsed
+                    continue
+                for node in ast.walk(tree):
+                    if not isinstance(node, ast.Call):
+                        continue
+                    func = node.func
+                    if (
+                        isinstance(func, ast.Attribute)
+                        and func.attr == "tr"
+                        and isinstance(func.value, ast.Name)
+                        and func.value.id not in ("self", "cls")
+                    ):
+                        rel = os.path.relpath(path, REPO_ROOT)
+                        offenders.append(f"{rel}:{node.lineno}")
+        self.assertEqual(
+            sorted(offenders),
+            [],
+            f"{len(offenders)} tr() call(s) the extractor cannot place: "
+            f"{sorted(offenders)[:8]}. Use "
+            'QCoreApplication.translate("<context>", ...) -- a literal in '
+            "these never enters zh_CN.ts.",
         )
 
     def test_catalog_is_fully_translated(self):
