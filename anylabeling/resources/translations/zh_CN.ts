@@ -1116,13 +1116,13 @@ Only the registry entry is removed. The config/weight files on disk are kept:
         <location filename="..\..\views\labeling\utils\upload.py" line="211" />
         <location filename="..\..\views\labeling\utils\upload.py" line="102" />
         <location filename="..\..\views\labeling\utils\shape.py" line="375" />
-        <location filename="..\..\views\labeling\utils\export.py" line="1259" />
-        <location filename="..\..\views\labeling\utils\export.py" line="1221" />
-        <location filename="..\..\views\labeling\utils\export.py" line="1047" />
-        <location filename="..\..\views\labeling\utils\export.py" line="1003" />
-        <location filename="..\..\views\labeling\utils\export.py" line="764" />
-        <location filename="..\..\views\labeling\utils\export.py" line="732" />
-        <location filename="..\..\views\labeling\utils\export.py" line="622" />
+        <location filename="..\..\views\labeling\utils\export.py" line="1307" />
+        <location filename="..\..\views\labeling\utils\export.py" line="1269" />
+        <location filename="..\..\views\labeling\utils\export.py" line="1095" />
+        <location filename="..\..\views\labeling\utils\export.py" line="1051" />
+        <location filename="..\..\views\labeling\utils\export.py" line="812" />
+        <location filename="..\..\views\labeling\utils\export.py" line="780" />
+        <location filename="..\..\views\labeling\utils\export.py" line="670" />
         <location filename="..\..\views\labeling\utils\export.py" line="173" />
         <location filename="..\..\views\labeling\utils\crop.py" line="368" />
         <location filename="..\..\views\labeling\utils\crop.py" line="325" />
@@ -1136,9 +1136,9 @@ Only the registry entry is removed. The config/weight files on disk are kept:
         <location filename="..\..\views\labeling\utils\visualization.py" line="201" />
         <location filename="..\..\views\labeling\utils\upload.py" line="456" />
         <location filename="..\..\views\labeling\utils\upload.py" line="217" />
-        <location filename="..\..\views\labeling\utils\export.py" line="1227" />
-        <location filename="..\..\views\labeling\utils\export.py" line="1009" />
-        <location filename="..\..\views\labeling\utils\export.py" line="628" />
+        <location filename="..\..\views\labeling\utils\export.py" line="1275" />
+        <location filename="..\..\views\labeling\utils\export.py" line="1057" />
+        <location filename="..\..\views\labeling\utils\export.py" line="676" />
         <location filename="..\..\views\labeling\utils\crop.py" line="330" />
         <location filename="..\..\views\labeling\label_widget.py" line="892" />
         <source>OK</source>
@@ -3113,9 +3113,9 @@ Original images backed up to:
     <message>
         <location filename="..\..\views\labeling\utils\upload.py" line="427" />
         <location filename="..\..\views\labeling\utils\upload.py" line="196" />
-        <location filename="..\..\views\labeling\utils\export.py" line="1206" />
-        <location filename="..\..\views\labeling\utils\export.py" line="959" />
-        <location filename="..\..\views\labeling\utils\export.py" line="509" />
+        <location filename="..\..\views\labeling\utils\export.py" line="1254" />
+        <location filename="..\..\views\labeling\utils\export.py" line="1007" />
+        <location filename="..\..\views\labeling\utils\export.py" line="557" />
         <location filename="..\..\views\labeling\utils\crop.py" line="289" />
         <source>Browse</source>
         <translation>浏览</translation>
@@ -3136,9 +3136,9 @@ Original images backed up to:
         <location filename="..\..\views\labeling\utils\upload.py" line="274" />
         <location filename="..\..\views\labeling\utils\upload.py" line="109" />
         <location filename="..\..\views\labeling\utils\shape.py" line="382" />
-        <location filename="..\..\views\labeling\utils\export.py" line="1266" />
-        <location filename="..\..\views\labeling\utils\export.py" line="1054" />
-        <location filename="..\..\views\labeling\utils\export.py" line="771" />
+        <location filename="..\..\views\labeling\utils\export.py" line="1314" />
+        <location filename="..\..\views\labeling\utils\export.py" line="1102" />
+        <location filename="..\..\views\labeling\utils\export.py" line="819" />
         <location filename="..\..\views\labeling\utils\crop.py" line="375" />
         <source>Progress</source>
         <translation>进度</translation>
@@ -3240,141 +3240,171 @@ Original images backed up to:
         <translation>当前标签列表</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="1151" />
+        <location filename="..\..\views\labeling\utils\export.py" line="1199" />
         <location filename="..\..\views\labeling\utils\export.py" line="192" />
         <source>Select a specific classes file</source>
         <translation>选择类别文件</translation>
     </message>
     <message>
+        <location filename="..\..\views\labeling\utils\export.py" line="282" />
+        <source>类别不在导出类别表里：%s</source>
+        <translation>类别不在导出类别表里：%s</translation>
+    </message>
+    <message>
         <location filename="..\..\views\labeling\utils\export.py" line="288" />
+        <source>多边形不足 3 个顶点</source>
+        <translation>多边形不足 3 个顶点</translation>
+    </message>
+    <message>
+        <location filename="..\..\views\labeling\utils\export.py" line="293" />
+        <source>旋转框顶点数为 %s（需要 4 个）</source>
+        <translation>旋转框顶点数为 %s（需要 4 个）</translation>
+    </message>
+    <message>
+        <location filename="..\..\views\labeling\utils\export.py" line="299" />
+        <source>旋转框有顶点落在画面外</source>
+        <translation>旋转框有顶点落在画面外</translation>
+    </message>
+    <message>
+        <location filename="..\..\views\labeling\utils\export.py" line="304" />
+        <source>形状类型 %s 无法作为姿态关键点导出</source>
+        <translation>形状类型 %s 无法作为姿态关键点导出</translation>
+    </message>
+    <message>
+        <location filename="..\..\views\labeling\utils\export.py" line="312" />
+        <source>形状类型 %1$s 不属于 %2$s 导出</source>
+        <translation>形状类型 %1$s 不属于 %2$s 导出</translation>
+    </message>
+    <message>
+        <location filename="..\..\views\labeling\utils\export.py" line="336" />
         <source>导出完成：%d/%d 张图，%d 个标注</source>
         <translation>导出完成：%d/%d 张图，%d 个标注</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="295" />
+        <location filename="..\..\views\labeling\utils\export.py" line="343" />
         <source>按「仅导出已确认图片」跳过 %d 张（未检查或需返工）</source>
         <translation>按「仅导出已确认图片」跳过 %d 张（未检查或需返工）</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="303" />
+        <location filename="..\..\views\labeling\utils\export.py" line="351" />
         <source>已复制 %d 张图片</source>
         <translation>已复制 %d 张图片</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="308" />
+        <location filename="..\..\views\labeling\utils\export.py" line="356" />
         <source>已写入 %s</source>
         <translation>已写入 %s</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="313" />
+        <location filename="..\..\views\labeling\utils\export.py" line="361" />
         <source>已写入 %s（train/val 需按布局补填）</source>
         <translation>已写入 %s（train/val 需按布局补填）</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="320" />
+        <location filename="..\..\views\labeling\utils\export.py" line="368" />
         <source>已写入 %s（本次的类别来源、筛选条件与跳过明细）</source>
         <translation>已写入 %s（本次的类别来源、筛选条件与跳过明细）</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="329" />
+        <location filename="..\..\views\labeling\utils\export.py" line="377" />
         <source>没有标签文件（按空标注处理）：%d 张</source>
         <translation>没有标签文件（按空标注处理）：%d 张</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="338" />
+        <location filename="..\..\views\labeling\utils\export.py" line="386" />
         <source>跳过 %d 个无法转换的标注：</source>
         <translation>跳过 %d 个无法转换的标注：</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="348" />
+        <location filename="..\..\views\labeling\utils\export.py" line="396" />
         <source>若不应跳过，请检查类别列表与形状类型（例如 hbb 只导出矩形框）。</source>
         <translation>若不应跳过，请检查类别列表与形状类型（例如 hbb 只导出矩形框）。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="360" />
+        <location filename="..\..\views\labeling\utils\export.py" line="408" />
         <source>已复制输出路径</source>
         <translation>已复制输出路径</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="364" />
+        <location filename="..\..\views\labeling\utils\export.py" line="412" />
         <source>复制输出路径失败</source>
         <translation>复制输出路径失败</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="379" />
+        <location filename="..\..\views\labeling\utils\export.py" line="427" />
         <source>打开输出目录</source>
         <translation>打开输出目录</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="385" />
+        <location filename="..\..\views\labeling\utils\export.py" line="433" />
         <source>复制输出路径</source>
         <translation>复制输出路径</translation>
     </message>
     <message>
         <location filename="..\..\views\labeling\utils\upload.py" line="343" />
-        <location filename="..\..\views\labeling\utils\export.py" line="409" />
+        <location filename="..\..\views\labeling\utils\export.py" line="457" />
         <source>Select a specific yolo-pose config file</source>
         <translation>选择 yolo-pose 配置文件</translation>
     </message>
     <message>
         <location filename="..\..\views\labeling\utils\upload.py" line="357" />
-        <location filename="..\..\views\labeling\utils\export.py" line="1138" />
-        <location filename="..\..\views\labeling\utils\export.py" line="422" />
+        <location filename="..\..\views\labeling\utils\export.py" line="1186" />
+        <location filename="..\..\views\labeling\utils\export.py" line="470" />
         <source>Invalid pose config file:
 %s</source>
         <translation>姿态配置文件无效：
 %s</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="441" />
+        <location filename="..\..\views\labeling\utils\export.py" line="489" />
         <source>The class list is empty - nothing can be exported.</source>
         <translation>类别列表为空，没有可导出的内容。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="1163" />
-        <location filename="..\..\views\labeling\utils\export.py" line="920" />
-        <location filename="..\..\views\labeling\utils\export.py" line="462" />
+        <location filename="..\..\views\labeling\utils\export.py" line="1211" />
+        <location filename="..\..\views\labeling\utils\export.py" line="968" />
+        <location filename="..\..\views\labeling\utils\export.py" line="510" />
         <source>Export options</source>
         <translation>导出选项</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="1174" />
-        <location filename="..\..\views\labeling\utils\export.py" line="931" />
-        <location filename="..\..\views\labeling\utils\export.py" line="473" />
+        <location filename="..\..\views\labeling\utils\export.py" line="1222" />
+        <location filename="..\..\views\labeling\utils\export.py" line="979" />
+        <location filename="..\..\views\labeling\utils\export.py" line="521" />
         <source>Export path</source>
         <translation>导出路径</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="1196" />
-        <location filename="..\..\views\labeling\utils\export.py" line="1190" />
-        <location filename="..\..\views\labeling\utils\export.py" line="949" />
-        <location filename="..\..\views\labeling\utils\export.py" line="943" />
-        <location filename="..\..\views\labeling\utils\export.py" line="499" />
-        <location filename="..\..\views\labeling\utils\export.py" line="493" />
+        <location filename="..\..\views\labeling\utils\export.py" line="1244" />
+        <location filename="..\..\views\labeling\utils\export.py" line="1238" />
+        <location filename="..\..\views\labeling\utils\export.py" line="997" />
+        <location filename="..\..\views\labeling\utils\export.py" line="991" />
+        <location filename="..\..\views\labeling\utils\export.py" line="547" />
+        <location filename="..\..\views\labeling\utils\export.py" line="541" />
         <source>Select Export Directory</source>
         <translation>选择导出目录</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="970" />
-        <location filename="..\..\views\labeling\utils\export.py" line="520" />
+        <location filename="..\..\views\labeling\utils\export.py" line="1018" />
+        <location filename="..\..\views\labeling\utils\export.py" line="568" />
         <source>Export Options</source>
         <translation>导出选项</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="975" />
-        <location filename="..\..\views\labeling\utils\export.py" line="525" />
+        <location filename="..\..\views\labeling\utils\export.py" line="1023" />
+        <location filename="..\..\views\labeling\utils\export.py" line="573" />
         <source>Save with images?</source>
         <translation>同时复制图片？</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="981" />
-        <location filename="..\..\views\labeling\utils\export.py" line="531" />
+        <location filename="..\..\views\labeling\utils\export.py" line="1029" />
+        <location filename="..\..\views\labeling\utils\export.py" line="579" />
         <source>Skip empty labels?</source>
         <translation>跳过空标注？</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="985" />
-        <location filename="..\..\views\labeling\utils\export.py" line="537" />
+        <location filename="..\..\views\labeling\utils\export.py" line="1033" />
+        <location filename="..\..\views\labeling\utils\export.py" line="585" />
         <source>Skip empty labels / 跳过空标注
 
 默认关闭：空标注（确认无目标的负样本图）会导出为空文件，作为背景样本参与 YOLO 训练。
@@ -3387,12 +3417,12 @@ Original images backed up to:
 勾选后：空标注的图片不会导出对应标签文件，这些负样本将从训练数据中排除（通常不建议，除非你确实不要背景样本）。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="551" />
+        <location filename="..\..\views\labeling\utils\export.py" line="599" />
         <source>仅导出「已确认」的图片</source>
         <translation>仅导出「已确认」的图片</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="557" />
+        <location filename="..\..\views\labeling\utils\export.py" line="605" />
         <source>Only export confirmed images / 仅导出已确认的图片
 
 默认关闭：导出当前文件夹里的全部图片，含未检查与「需返工」的。
@@ -3407,29 +3437,29 @@ Original images backed up to:
 训练侧本来就有同样的过滤（只用已检查的图片），勾上它可以让导出与训练集合保持一致。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="574" />
+        <location filename="..\..\views\labeling\utils\export.py" line="622" />
         <source>在导出目录写入 classes.txt（%d 个类别）</source>
         <translation>在导出目录写入 classes.txt（%d 个类别）</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="583" />
+        <location filename="..\..\views\labeling\utils\export.py" line="631" />
         <source>勾选后会在导出目录生成 classes.txt，类别顺序与本次导出所用的列表一致；训练前不必再手工摆一份。
 类别来源：%s</source>
         <translation>勾选后会在导出目录生成 classes.txt，类别顺序与本次导出所用的列表一致；训练前不必再手工摆一份。
 类别来源：%s</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="591" />
+        <location filename="..\..\views\labeling\utils\export.py" line="639" />
         <source>项目标签列表</source>
         <translation>项目标签列表</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="597" />
+        <location filename="..\..\views\labeling\utils\export.py" line="645" />
         <source>写入导出记录（%s）</source>
         <translation>写入导出记录（%s）</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="602" />
+        <location filename="..\..\views\labeling\utils\export.py" line="650" />
         <source>写入导出记录 export_manifest.json / export record
 
 勾选后会在导出目录生成一份 JSON，记下本次导出的类别列表及其来源、筛选条件（仅已确认 / 跳过空标注 / 复制图片）、导出与跳过的数量，以及源数据的检查结果（无标注 / 空标注 / 读不出的文件 / 不在类别表里的标签）。
@@ -3442,51 +3472,51 @@ Original images backed up to:
 训练不读这个文件，删掉也不影响；它是为了几个月后还能回答「这批标签是怎么导出来的」。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="655" />
+        <location filename="..\..\views\labeling\utils\export.py" line="703" />
         <source>Export cancelled.
 The current labels could not be saved first.</source>
         <translation>已取消导出。
 无法先保存当前标签列表。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="689" />
+        <location filename="..\..\views\labeling\utils\export.py" line="737" />
         <source>没有「已确认」的图片可导出（共 %d 张未确认）。
 先在文件列表里把要看过的图标成「已检查」，或取消勾选「仅导出已确认的图片」。</source>
         <translation>没有「已确认」的图片可导出（共 %d 张未确认）。
 先在文件列表里把要看过的图标成「已检查」，或取消勾选「仅导出已确认的图片」。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="711" />
+        <location filename="..\..\views\labeling\utils\export.py" line="759" />
         <source>导出前检查</source>
         <translation>导出前检查</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="714" />
+        <location filename="..\..\views\labeling\utils\export.py" line="762" />
         <source>这批数据无法完整导出。</source>
         <translation>这批数据无法完整导出。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="721" />
+        <location filename="..\..\views\labeling\utils\export.py" line="769" />
         <source>继续导出：类别不在表里的形状不会出现在结果里；读不出来的标注文件会让本轮导出中断，留下不完整的目录。</source>
         <translation>继续导出：类别不在表里的形状不会出现在结果里；读不出来的标注文件会让本轮导出中断，留下不完整的目录。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="728" />
+        <location filename="..\..\views\labeling\utils\export.py" line="776" />
         <source>仍然导出</source>
         <translation>仍然导出</translation>
     </message>
     <message>
         <location filename="..\..\views\labeling\utils\visualization.py" line="347" />
-        <location filename="..\..\views\labeling\utils\export.py" line="1258" />
-        <location filename="..\..\views\labeling\utils\export.py" line="1046" />
-        <location filename="..\..\views\labeling\utils\export.py" line="763" />
+        <location filename="..\..\views\labeling\utils\export.py" line="1306" />
+        <location filename="..\..\views\labeling\utils\export.py" line="1094" />
+        <location filename="..\..\views\labeling\utils\export.py" line="811" />
         <source>Exporting...</source>
         <translation>正在导出…</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="1280" />
-        <location filename="..\..\views\labeling\utils\export.py" line="1090" />
-        <location filename="..\..\views\labeling\utils\export.py" line="877" />
+        <location filename="..\..\views\labeling\utils\export.py" line="1328" />
+        <location filename="..\..\views\labeling\utils\export.py" line="1138" />
+        <location filename="..\..\views\labeling\utils\export.py" line="925" />
         <source>Exporting annotations successfully!
 Results have been saved to:
 %s</source>
@@ -3495,7 +3525,7 @@ Results have been saved to:
 %s</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="1125" />
+        <location filename="..\..\views\labeling\utils\export.py" line="1173" />
         <source>Select a specific coco-pose config file</source>
         <translation>选择 coco-pose 配置文件</translation>
     </message>

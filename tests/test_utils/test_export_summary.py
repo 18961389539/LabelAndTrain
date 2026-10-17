@@ -132,8 +132,12 @@ class TestExportSummary(unittest.TestCase):
         )
 
         self.assertIn("跳过 5 个", summary)
-        self.assertIn("4 × polygon is not part of a hbb export", summary)
-        self.assertIn("1 × label not in classes: dog", summary)
+        # The reason reads in Chinese now, with the internal code still
+        # inside the sentence: the manifest keys stay English, and a user who
+        # wants to look one up has to be able to name it.
+        self.assertIn("4 × 形状类型 polygon 不属于 hbb 导出", summary)
+        self.assertIn("1 × 类别不在导出类别表里：dog", summary)
+        self.assertNotIn("is not part of a", summary)
 
     def test_copied_images_and_classes_file_are_reported(self):
         summary = _format_yolo_export_summary(

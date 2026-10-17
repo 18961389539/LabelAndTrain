@@ -268,6 +268,54 @@ def _write_data_yaml(save_path, classes):
     return target
 
 
+def _skip_reason_text(reason):
+    """Chinese for a converter skip reason; anything unknown passes through.
+
+    The reason keys stay English where they are written (the export manifest
+    is machine-readable, and a key that changes wording with the UI language
+    is useless for comparing two exports), so the wording is chosen here --
+    the one place a human reads it. A reason with no mapping still shows up
+    rather than vanishing behind a translation table.
+    """
+    if reason.startswith("label not in classes:"):
+        return (
+            QCoreApplication.translate(
+                "LabelingWidget", "类别不在导出类别表里：%s"
+            )
+            % reason.split(":", 1)[1].strip()
+        )
+    if reason == "polygon with < 3 points":
+        return QCoreApplication.translate(
+            "LabelingWidget", "多边形不足 3 个顶点"
+        )
+    if reason.startswith("rotation with "):
+        return (
+            QCoreApplication.translate(
+                "LabelingWidget", "旋转框顶点数为 %s（需要 4 个）"
+            )
+            % reason[len("rotation with ") :].split()[0]
+        )
+    if reason == "rotation reaching outside the image":
+        return QCoreApplication.translate(
+            "LabelingWidget", "旋转框有顶点落在画面外"
+        )
+    if reason.endswith(" cannot be a pose keypoint"):
+        return (
+            QCoreApplication.translate(
+                "LabelingWidget", "形状类型 %s 无法作为姿态关键点导出"
+            )
+            % reason.split(" cannot")[0]
+        )
+    if " is not part of a " in reason:
+        shape_type, mode = reason.split(" is not part of a ", 1)
+        return (
+            QCoreApplication.translate(
+                "LabelingWidget", "形状类型 %1$s 不属于 %2$s 导出"
+            ).replace("%1$s", shape_type)
+        ).replace("%2$s", mode.replace(" export", ""))
+    return reason
+
+
 def _format_yolo_export_summary(
     widget,
     counted_files,
@@ -343,7 +391,7 @@ def _format_yolo_export_summary(
         for reason, count in sorted(
             skipped.items(), key=lambda item: (-item[1], item[0])
         ):
-            lines.append(f"    - {count} × {reason}")
+            lines.append(f"    - {count} × {_skip_reason_text(reason)}")
         lines.append(
             QCoreApplication.translate(
                 "LabelingWidget",
