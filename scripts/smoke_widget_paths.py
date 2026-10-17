@@ -15,6 +15,7 @@ them -- the paths that only exist when everything is wired together:
   9. project resume         -> last_file round trip (project L3)
  10. close project          -> back to an empty canvas (project L1)
  11. project task           -> training window, both ways (project L4)
+ 12. auto label -> provenance -> review -> YOLO export (the loop's own seam)
 
 Run it before a machine-verification pass (or before a release) to
 catch runtime wiring breaks the unit tests cannot see:
@@ -209,6 +210,174 @@ def run_yolo_export(widget, app, tmp):
     app.processEvents()
 
     check_export_output(out_dir, classes, messages)
+
+
+def answer_modals(titles):
+    """Answer every message box this step raises, and record that it did.
+
+    Production code blocks on ``exec()``, and offscreen there is no hand to
+    click: a step that reaches a modal silently hangs, which reads exactly
+    like a crash in the report. The dialogs themselves are behavior the
+    machine checklist covers; here only the click is supplied -- and the
+    titles are collected so an unexpected one is at least named in the log.
+    """
+    original = QtWidgets.QMessageBox.exec
+
+    def auto_exec(self):
+        titles.append(self.windowTitle())
+        print(f"       弹窗（自动应答）：{self.windowTitle()}", flush=True)
+        return QtWidgets.QMessageBox.StandardButton.No
+
+    QtWidgets.QMessageBox.exec = auto_exec
+
+    def restore():
+        QtWidgets.QMessageBox.exec = original
+
+    return restore
+
+
+def run_auto_label_seam(widget, app, tmp):
+    """auto label -> provenance written to disk -> review -> YOLO export.
+
+    Only the inference is faked: a real ``AutoLabelingResult`` goes through
+    the real ``new_shapes_from_auto_labeling``, the real save writes the real
+    label file, and the real export path turns that file into a YOLO row. This
+    is the chain the loop is sold on -- "one click less labeling" -- and until
+    now no gate walked any of it in one piece: unit tests covered the model
+    panel's plumbing, and step 7 exported shapes a human had drawn.
+    """
+    from PyQt6 import QtCore
+
+    from anylabeling.services.auto_labeling.types import AutoLabelingResult
+    from anylabeling.views.labeling import provenance
+    from anylabeling.views.labeling.label_converter import LabelConverter
+    from anylabeling.views.labeling.shape import Shape
+    from anylabeling.views.labeling.utils import export as export_mod
+
+    source_dir = os.path.join(tmp, "loop_src")
+    out_dir = os.path.join(tmp, "loop_out")
+    os.makedirs(source_dir)
+    images = make_images(source_dir)  # img_0 has a label file, img_1 does not
+    clean = images[1]
+
+    modals = []
+    restore_modals = answer_modals(modals)
+    weights = os.path.join(tmp, "smoke-yolov8.onnx")
+    with open(weights, "wb") as handle:
+        handle.write(b"smoke-weights-for-the-digest")
+    manager = widget.auto_labeling_widget.model_manager
+    original_config = getattr(manager, "loaded_model_config", None)
+    manager.loaded_model_config = {
+        "name": "smoke-yolov8",
+        "model_path": weights,
+    }
+
+    shape = Shape()
+    shape.label = "box"
+    shape.shape_type = "rectangle"
+    shape.points = [
+        QtCore.QPointF(10, 10),
+        QtCore.QPointF(80, 10),
+        QtCore.QPointF(80, 60),
+        QtCore.QPointF(10, 60),
+    ]
+    try:
+        widget.import_image_folder(source_dir)
+        app.processEvents()
+        widget.load_file(clean)
+        app.processEvents()
+        assert not widget.canvas.shapes, "the clean image arrived pre-labeled"
+
+        widget.new_shapes_from_auto_labeling(
+            AutoLabelingResult(
+                shapes=[shape], replace=True, image_path=widget.filename
+            )
+        )
+        app.processEvents()
+        produced = widget.canvas.shapes
+        assert len(produced) == 1, [s.label for s in produced]
+        assert produced[0].source == provenance.SOURCE_MODEL, produced[
+            0
+        ].source
+        assert produced[0].model == "smoke-yolov8", produced[0].model
+
+        # The write the annotator gets is the debounced auto-save, not Ctrl+S:
+        # on an image that never had a label file, save_file() falls through to
+        # a "Choose File" dialog, which is why this step flushes the pending
+        # auto-save the way the 400 ms timer would.
+        if widget._auto_save_pending:
+            widget._flush_auto_save()
+        else:
+            assert widget.save_labels(
+                os.path.splitext(clean)[0] + ".json"
+            ), "auto-save off and the explicit write failed"
+        app.processEvents()
+        label_path = os.path.splitext(clean)[0] + ".json"
+        with open(label_path, encoding="utf-8") as handle:
+            stored = json.load(handle)["shapes"][0]
+        assert (
+            stored[provenance.SOURCE_FIELD] == provenance.SOURCE_MODEL
+        ), stored
+        assert stored[provenance.MODEL_FIELD] == "smoke-yolov8", stored
+        # The digest is what answers "which weights made this box" after a
+        # retrain lands on the same path -- the name alone cannot.
+        assert stored.get(provenance.MODEL_VERSION_FIELD), stored
+
+        # The row's UserRole is its checked flag, not its path (see step 4a),
+        # so the row is found through the widget's own filename index.
+        from anylabeling.views.labeling.filelist.roles import FILE_REVIEW_ROLE
+        from anylabeling.views.labeling.schema import REVIEW_CONFIRMED
+
+        index = widget.fn_to_index[clean]
+        item = widget.file_list_widget.item(index)
+        widget._set_file_item_checked(item, True)
+        app.processEvents()
+        assert (
+            item.data(QtCore.Qt.ItemDataRole.UserRole) is True
+        ), "the auto-labeled file did not take the confirmed state"
+        assert item.data(FILE_REVIEW_ROLE) == REVIEW_CONFIRMED, item.data(
+            FILE_REVIEW_ROLE
+        )
+
+        classes = ["box"]
+        messages = []
+        restore = stub_export_dialogs(
+            export_mod,
+            classes,
+            LabelConverter(classes=classes),
+            out_dir,
+            messages,
+        )
+        try:
+            export_mod.export_yolo_annotation(widget, "hbb")
+        finally:
+            restore()
+        app.processEvents()
+
+        with open(
+            os.path.join(out_dir, "img_1.txt"), encoding="utf-8"
+        ) as handle:
+            row = handle.read().split()
+        assert row and row[0] == "0" and len(row) == 5, row
+        with open(
+            os.path.join(out_dir, "export_manifest.json"), encoding="utf-8"
+        ) as handle:
+            manifest = json.load(handle)
+        assert manifest["result"]["shapes_exported"] == 2, manifest["result"]
+
+        # Offscreen the widget is never shown, so the 还没有类别 hint defers
+        # itself rather than raising -- and no other dialog may block this step.
+        # The hint's own rules are guarded by acceptance step 14 on a real
+        # window; here the stub exists so a surprise modal is named, not fatal.
+        assert modals.count("还没有类别") <= 1, modals
+        for title in modals:
+            if title != "还没有类别":
+                raise AssertionError(
+                    f"unexpected dialog in this step: {title}"
+                )
+    finally:
+        restore_modals()
+        manager.loaded_model_config = original_config
 
 
 def run_project_identity(widget, app, tmp):
@@ -504,6 +673,10 @@ def main():
     def s11():
         run_project_task(widget, app, tmp)
 
+    @step("12. auto label -> provenance -> review -> YOLO export, one seam")
+    def s12():
+        run_auto_label_seam(widget, app, tmp)
+
     s1()
     s2a()
     s2b()
@@ -517,6 +690,7 @@ def main():
     s9()
     s10()
     s11()
+    s12()
 
     print("")
     print("=== smoke summary ===", flush=True)
