@@ -663,6 +663,49 @@ def s14_missing_classes_hint_once(ctx):
         hint._ask = original
 
 
+@step("15. 每个绑定的快捷键都真的挂在窗口上（不只是配置里有这个键）")
+def s15_shortcut_keys_are_installed(ctx):
+    """`shortcuts` in the yaml is a different claim from "this key does something".
+
+    Qt fires a WindowShortcut QAction only while the action is installed on a
+    widget inside the active window -- which is what the
+    `# XXX: need to add some actions here to activate the shortcut` note in
+    label_widget.py was worried about. Enabled-ness is deliberately not
+    asserted here: copy / paste / union are selection-dependent by design, and
+    a step that demanded they be live would only teach the next person to
+    delete the check.
+    """
+    widget, win = ctx.widget, ctx.win
+    bound = {
+        name: key
+        for name, key in widget._config.get("shortcuts", {}).items()
+        if isinstance(key, str) and key.strip()
+    }
+    # A config that silently lost its keys would otherwise pass by having
+    # nothing to check.
+    assert len(bound) > 60, len(bound)
+
+    installed = set()
+    for holder in [win] + win.findChildren(QtWidgets.QWidget):
+        installed.update(QtWidgets.QWidget.actions(holder))
+    actions = win.findChildren(QtGui.QAction)
+
+    for name, key in sorted(bound.items()):
+        wanted = QtGui.QKeySequence(key)
+        carriers = [
+            act for act in actions if any(s == wanted for s in act.shortcuts())
+        ]
+        assert carriers, f"{name} ({key}) is bound but no action carries it"
+        live = [
+            act
+            for act in carriers
+            if act in installed
+            or act.shortcutContext()
+            == QtCore.Qt.ShortcutContext.ApplicationShortcut
+        ]
+        assert live, f"{name} ({key}) has an action that is never installed"
+
+
 STEPS = (
     s1_project_menu,
     s2_new_project,
@@ -678,6 +721,7 @@ STEPS = (
     s12_device_submenu,
     s13_open_project_folder_entry,
     s14_missing_classes_hint_once,
+    s15_shortcut_keys_are_installed,
 )
 
 

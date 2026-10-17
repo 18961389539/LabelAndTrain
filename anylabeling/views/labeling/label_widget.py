@@ -6182,7 +6182,7 @@ def _build_actions(widget):
             close,
         ),
         tool=(),
-        # XXX: need to add some actions here to activate the shortcut
+        # 每个绑定的键都由窗口里已安装的 QAction 承载：验收第 15 步守住这点
         editMenu=(
             edit,
             duplicate,
