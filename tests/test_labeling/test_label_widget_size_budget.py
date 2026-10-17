@@ -99,7 +99,16 @@ BUDGETS = {
     # widgets/shape_history.py (which is also what made them survive a file
     # switch) and the canvas reaches them through the attribute names it has
     # always exposed, so the move is a net removal.
-    "anylabeling/views/labeling/widgets/canvas.py": 3760,
+    # Lowered 3760 -> 3414 on 2026-10-17: the overlay band left for
+    # widgets/canvas_overlays.py -- _paint_texts / _paint_labels /
+    # _paint_cross_coordinates / _paint_attributes, 358 lines that only read
+    # the canvas and draw. Canvas keeps the four `_paint_*` methods as one-line
+    # delegations, so `_paint_content` and its callers are untouched, and the
+    # render digest of a fixed scene was byte-identical across the move
+    # (tests/test_canvas/test_canvas_overlays.py now pins what each overlay
+    # draws, and that the module needs nothing but the read surface). This is
+    # the headroom the next canvas feature needed.
+    "anylabeling/views/labeling/widgets/canvas.py": 3414,
 }
 
 
