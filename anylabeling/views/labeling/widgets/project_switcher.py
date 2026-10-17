@@ -332,7 +332,7 @@ class ProjectSwitcherDialog(QtWidgets.QDialog):
             self,
             self.tr("重置本项目设置"),
             self.tr(
-                "清除该项目的标签列表与标注输出目录记录？\n\n"
+                "清除该项目的标签列表、标注输出目录记录与提示开关？\n\n"
                 "划分种子（split_seed）会保留，训练集/验证集划分不受影响。\n%s"
             )
             % root,

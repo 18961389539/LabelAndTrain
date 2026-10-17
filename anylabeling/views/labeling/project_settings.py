@@ -37,7 +37,13 @@ MODEL_KEY = "last_model"
 #: Keys this module owns inside ``project.json`` (beside ``split_seed``).
 #: ``reset_ui_settings`` drops these, so a project can be put back to its
 #: defaults without disturbing the train/validation split.
-UI_KEYS = ("labels", "output_dir", MODEL_KEY)
+#:
+#: ``HINT_KEY`` is the 还没有类别 advice switched off by 不再提示;
+#: ``utils/missing_classes_hint.py`` owns its meaning, and the reset above is
+#: the entry that turns the advice back on.
+HINT_KEY = "missing_classes_hint"
+
+UI_KEYS = ("labels", "output_dir", MODEL_KEY, HINT_KEY)
 
 #: Datasets whose settings already failed to save this session. One
 #: warning per dataset: a run of folder switches would otherwise stack

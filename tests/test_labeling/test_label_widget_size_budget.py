@@ -79,7 +79,15 @@ BUDGETS = {
     # The file list has shown a dedicated negative-sample badge all along, but
     # the filter dropdown could not isolate those rows -- one combo entry with
     # its tooltip and one branch in _apply_file_filter are the whole change.
-    "anylabeling/views/labeling/label_widget.py": 6797,
+    #
+    # Lowered 6797 -> 6768 on 2026-10-17: the 还没有类别 hint left for
+    # utils/missing_classes_hint.py. Its dialog, its once-per-project table and
+    # the per-project mute were 38 lines inside the widget; what stays is a
+    # five-line delegation, because `load_dir` reaches the hint through the
+    # widget contract. The freed 29 lines are the first headroom this file has
+    # had in a week -- the next extraction candidate is still the
+    # _build_actions registration tail.
+    "anylabeling/views/labeling/label_widget.py": 6768,
     # Lowered 3772 -> 3760 on 2026-09-29: the undo/redo stacks moved out to
     # widgets/shape_history.py (which is also what made them survive a file
     # switch) and the canvas reaches them through the attribute names it has

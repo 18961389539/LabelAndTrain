@@ -125,8 +125,9 @@ def install_auto_dismiss(app, notes):
         notes.append((title, text))
         first = (text.splitlines() or [""])[0]
         print(f"       弹窗：{title} / {first[:50]}", flush=True)
-        # One shot per distinct dialog: 「还没有类别」 comes up on every
-        # folder opened, and eleven copies of it say nothing.
+        # One shot per distinct dialog: the same dialog photographed eleven
+        # times says nothing new. (It used to *appear* eleven times, on
+        # every folder open -- step 14 guards against that coming back.)
         if title not in seen_titles:
             seen_titles.add(title)
             os.makedirs(SHOT_DIR, exist_ok=True)
@@ -192,6 +193,7 @@ def build_context(app):
         project_registry,
         project_settings,
     )
+    from anylabeling.views.labeling.utils import missing_classes_hint
     from anylabeling.views.labeling.utils import project_view
     from anylabeling.views.labeling.widgets.project_dialog import (
         ProjectPropertiesDialog,
@@ -233,6 +235,7 @@ def build_context(app):
         project_model=project_model,
         project_registry=project_registry,
         project_settings=project_settings,
+        missing_classes_hint=missing_classes_hint,
         project_view=project_view,
         ProjectPropertiesDialog=ProjectPropertiesDialog,
     )
@@ -601,6 +604,65 @@ def s13_open_project_folder_entry(ctx):
     assert labels.index("打开项目文件夹") < labels.index("打开项目设置文件夹")
 
 
+@step("14. 还没有类别：每个项目只问一次，「不再提示」写进项目记录")
+def s14_missing_classes_hint_once(ctx):
+    """The eleven dialogs of the 2026-10-10 run must not come back.
+
+    ``_ask`` is recorded rather than shown, and into a folder none of the
+    earlier steps opened: by this point the real widget has already been
+    asked about the folders the run touched, so its answer for those is
+    silence -- correct, but it would prove nothing about the rule.
+    """
+    hint = ctx.missing_classes_hint
+    settings = ctx.project_settings
+    asked = []
+
+    def probe():
+        return SimpleNamespace(
+            unique_label_list=SimpleNamespace(count=lambda: 0),
+            isVisible=lambda: True,
+        )
+
+    untouched = os.path.join(ctx.tmp, "hint_project")
+    os.makedirs(untouched, exist_ok=True)
+    make_images(untouched, count=2)
+
+    original = hint._ask
+    hint._ask = lambda widget, root: asked.append(os.path.abspath(root))
+    try:
+        for _ in range(3):
+            hint.maybe_prompt(probe(), untouched)
+        assert asked == [os.path.abspath(untouched)], asked
+
+        # 不再提示 is a recorded choice: a widget with no memory of the
+        # session still leaves the project alone.
+        muted = os.path.join(ctx.tmp, "muted_project")
+        os.makedirs(muted, exist_ok=True)
+        make_images(muted, count=1)
+        hint.maybe_prompt(probe(), muted)
+        assert len(asked) == 2, asked
+        assert settings.update_values(muted, **{settings.HINT_KEY: hint.MUTED})
+        hint.maybe_prompt(probe(), muted)
+        assert len(asked) == 2, asked
+
+        # 项目切换器 → 重置本项目设置 is the way back, and it is a *durable*
+        # re-arm: inside this process the project has already been asked once,
+        # so what reset promises is that the next session asks again.
+        assert settings.reset_ui_settings(muted) is True
+        hint.asked_roots().discard(os.path.normcase(os.path.abspath(muted)))
+        hint.maybe_prompt(probe(), muted)
+        assert len(asked) == 3, asked
+
+        # The production path does reach the hint: the earlier steps opened
+        # real folders, and each one is now in the asked table.
+        assert hint.asked_roots(), "load_dir never reached the hint"
+        assert (
+            os.path.normcase(os.path.abspath(ctx.plain)) in hint.asked_roots()
+        )
+    finally:
+        hint._ask = original
+
+
 STEPS = (
     s1_project_menu,
     s2_new_project,
@@ -615,6 +677,7 @@ STEPS = (
     s11_project_search_dialog,
     s12_device_submenu,
     s13_open_project_folder_entry,
+    s14_missing_classes_hint_once,
 )
 
 

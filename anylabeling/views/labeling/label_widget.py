@@ -145,6 +145,7 @@ from .utils import file_list_ops
 from .utils import label_editing
 from .utils import shortcuts_help
 from .utils import device_menu
+from .utils import missing_classes_hint
 from .utils import smart_tools_menu
 from .utils.file_lifecycle import (
     _report_inherited_shapes,
@@ -4455,44 +4456,14 @@ class LabelingWidget(LabelDialog):
             except Exception as e:  # noqa: BLE001
                 logger.warning(f"Failed to sort label dialog list: {e}")
 
-    def _maybe_prompt_missing_labels(self):
-        if self.unique_label_list.count() > 0:
-            self._pending_missing_labels_prompt = False
-            return
-        if not self.isVisible():
-            if not getattr(self, "_pending_missing_labels_prompt", False):
-                self._pending_missing_labels_prompt = True
-                QtCore.QTimer.singleShot(
-                    800, self._maybe_prompt_missing_labels
-                )
-            return
-        self._pending_missing_labels_prompt = False
-        box = QtWidgets.QMessageBox(self)
-        box.setWindowTitle(self.tr("还没有类别"))
-        box.setIcon(QtWidgets.QMessageBox.Icon.Information)
-        box.setText(
-            self.tr(
-                "当前没有预定义类别。导入 classes.txt 或打开标签管理器后再画框，"
-                "可以减少每张图重复输入。"
-            )
-        )
-        import_btn = box.addButton(
-            self.tr("导入 classes.txt"),
-            QtWidgets.QMessageBox.ButtonRole.AcceptRole,
-        )
-        manage_btn = box.addButton(
-            self.tr("打开标签管理器"),
-            QtWidgets.QMessageBox.ButtonRole.ActionRole,
-        )
-        box.addButton(
-            self.tr("稍后再说"), QtWidgets.QMessageBox.ButtonRole.RejectRole
-        )
-        box.exec()
-        clicked = box.clickedButton()
-        if clicked == import_btn:
-            utils.upload_label_classes_file(self)
-        elif clicked == manage_btn:
-            self.label_manager()
+    def _maybe_prompt_missing_labels(self, dataset_dir=None):
+        """Advice, not nagging: see utils/missing_classes_hint.py.
+
+        Kept as a widget method because `load_dir` calls it through the
+        widget contract; the hint, its once-per-project rule and its
+        per-project mute all live in the util.
+        """
+        missing_classes_hint.maybe_prompt(self, dataset_dir)
 
     def toggle_auto_labeling_widget(self):
         """Toggle auto labeling widget visibility."""

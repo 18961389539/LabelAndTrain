@@ -132,7 +132,7 @@ class OverviewDialog(RangeTableDialog):
         range_layout = QHBoxLayout()
         range_layout.addStretch(1)
 
-        from_label = QLabel("From:")
+        from_label = QLabel(self.tr("起始："))
         self.from_input = QSpinBox()
         self.from_input.setMinimum(1)
         self.from_input.setMaximum(len(self.image_file_list))
@@ -142,7 +142,7 @@ class OverviewDialog(RangeTableDialog):
         range_layout.addWidget(from_label)
         range_layout.addWidget(self.from_input)
 
-        to_label = QLabel("To:")
+        to_label = QLabel(self.tr("结束："))
         self.to_input = QSpinBox()
         self.to_input.setMinimum(1)
         self.to_input.setMaximum(len(self.image_file_list))
@@ -152,7 +152,7 @@ class OverviewDialog(RangeTableDialog):
         range_layout.addWidget(to_label)
         range_layout.addWidget(self.to_input)
 
-        self.range_button = QPushButton(self.tr("Go"))
+        self.range_button = QPushButton(self.tr("跳转"))
         self.range_button.setProperty("class", "primary-button")
         range_layout.addWidget(self.range_button)
         self.range_button.clicked.connect(self.update_range)

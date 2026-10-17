@@ -611,7 +611,7 @@ def import_image_folder(widget, dirpath, pattern=None, load=True):
         # classes.txt keeps precedence; the project record only fills
         # the panel for folders whose labels were built interactively.
         project_settings.end_project_switch(widget, dirpath)
-        widget._maybe_prompt_missing_labels()
+        widget._maybe_prompt_missing_labels(dirpath)
         _maybe_show_smart_tools_guide(widget, dirpath)
 
     # Background "checked" dot refresh (after rows exist so the batch
