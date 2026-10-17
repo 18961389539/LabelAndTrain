@@ -3,6 +3,7 @@ import os.path as osp
 import base64
 import io
 import shutil
+import zlib
 
 import numpy as np
 import PIL.Image
@@ -14,6 +15,122 @@ from ...labeling.logger import logger
 
 EXTRA_IMAGE_EXTENSIONS = (".heic", ".heif")
 _PILLOW_HEIF_REGISTERED = False
+
+#: A conformant ICC profile is at least this long and carries ``acsp`` at 36.
+ICC_MIN_SIZE = 128
+ICC_SIGNATURE = b"acsp"
+
+
+def _jpeg_icc_chunks(data):
+    """(sequence, count, payload) triples from a JPEG's APP2 segments."""
+    chunks = []
+    i = 2  # past the SOI marker
+    size = len(data)
+    while i + 4 <= size and data[i] == 0xFF:
+        marker = data[i + 1]
+        if marker == 0xDA:  # start of scan: metadata is over
+            break
+        if marker == 0x01 or 0xD0 <= marker <= 0xD7:
+            i += 2  # TEM and RSTn carry no length
+            continue
+        length = int.from_bytes(data[i + 2 : i + 4], "big")
+        if length < 2:
+            break
+        payload = data[i + 4 : i + 2 + length]
+        if marker == 0xE2 and payload.startswith(b"ICC_PROFILE\x00"):
+            chunks.append((payload[12], payload[13], payload[14:]))
+        i += 2 + length
+    return chunks
+
+
+def _png_icc_profile(data):
+    """The decompressed ``iCCP`` payload of a PNG, or ``None``."""
+    i = 8  # past the PNG signature
+    size = len(data)
+    while i + 8 <= size:
+        length = int.from_bytes(data[i : i + 4], "big")
+        kind = data[i + 4 : i + 8]
+        body = data[i + 8 : i + 8 + length]
+        if kind == b"iCCP":
+            split = body.find(b"\x00")
+            if split < 0 or split + 2 > len(body):
+                return b""
+            try:
+                return zlib.decompress(body[split + 2 :])
+            except zlib.error:
+                return b""
+        if kind in (b"IDAT", b"IEND"):
+            return None
+        i += 8 + length + 4
+    return None
+
+
+def _icc_shape_problem(profile):
+    """Why this profile is unusable, or ``None`` when it looks sound."""
+    if len(profile) < ICC_MIN_SIZE:
+        return "配置不足 128 字节（%d）" % len(profile)
+    if profile[36:40] != ICC_SIGNATURE:
+        return "缺少 acsp 签名"
+    declared = int.from_bytes(profile[0:4], "big")
+    if declared and declared != len(profile):
+        return "声明长度 %d 与实际 %d 不符" % (declared, len(profile))
+    if len(profile) < 132:
+        return None
+    tag_count = int.from_bytes(profile[128:132], "big")
+    if tag_count and (132 + tag_count * 12 > len(profile)):
+        return "标签表越出配置边界（%d 项）" % tag_count
+    for index in range(tag_count):
+        # Each entry is a 4-byte tag signature, the offset of its data, and
+        # the size of that data.
+        entry = profile[132 + index * 12 : 144 + index * 12]
+        if len(entry) < 12:
+            break
+        offset = int.from_bytes(entry[4:8], "big")
+        length = int.from_bytes(entry[8:12], "big")
+        if length < 12 or offset + length > len(profile) or offset < 128:
+            return "第 %d 个标签的偏移或长度无效" % (index + 1)
+    return None
+
+
+def icc_profile_issue(img_data):
+    """Return why an embedded ICC profile is broken, or ``None``.
+
+    Qt prints ``qt.gui.icc: fromIccProfile: failed minimal tag size sanity``
+    and ``invalid tag offset alignment`` for exactly these files, and
+    ``app.py`` mutes that category (``QT_LOGGING_RULES``) -- so a photo whose
+    colors are being mis-rendered currently shows the user a wrong image and
+    leaves no trace of it anywhere they would look. Labeling against colors
+    that are not the colors on the card is a quiet way to build a bad
+    dataset, which is why the check is worth doing here.
+
+    Advisory only: nothing about decoding changes, and a profile that cannot
+    be inspected (HEIC, or a JPEG this walker gives up on) reads as no issue
+    rather than as a warning.
+    """
+    if not img_data:
+        return None
+    try:
+        if img_data[:2] == b"\xff\xd8":
+            chunks = _jpeg_icc_chunks(img_data)
+            if not chunks:
+                return None
+            expected = chunks[0][1]
+            if len(chunks) != expected:
+                return "分块缺失（读到 %d，声明 %d）" % (len(chunks), expected)
+            profile = b"".join(
+                payload for _, _, payload in sorted(chunks, key=lambda c: c[0])
+            )
+        elif img_data[:8] == b"\x89PNG\r\n\x1a\n":
+            profile = _png_icc_profile(img_data)
+            if profile is None:
+                return None
+        else:
+            return None
+    except Exception:  # noqa: BLE001 - a detection never breaks an open
+        return None
+    if not profile:
+        return "内嵌配置为空"
+    return _icc_shape_problem(profile)
 
 
 def ensure_pillow_heif_registered():

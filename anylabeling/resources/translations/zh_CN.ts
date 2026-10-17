@@ -3624,94 +3624,99 @@ Results have been saved to:
         <translation>%d 个标注文件无法读取，导出会在它们上中断并留下不完整的目录。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\file_lifecycle.py" line="83" />
+        <location filename="..\..\views\labeling\utils\file_lifecycle.py" line="98" />
+        <source>此图片内嵌的 ICC 色彩配置无效（%s），显示颜色可能与实际不一致</source>
+        <translation>此图片内嵌的 ICC 色彩配置无效（%s），显示颜色可能与实际不一致</translation>
+    </message>
+    <message>
+        <location filename="..\..\views\labeling\utils\file_lifecycle.py" line="117" />
         <source>已继承上一张的 {n} 个标注，尚未写入本图（按 Ctrl+S 保存，或直接编辑后自动保存）</source>
         <translation>已继承上一张的 {n} 个标注，尚未写入本图（按 Ctrl+S 保存，或直接编辑后自动保存）</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\file_lifecycle.py" line="161" />
-        <location filename="..\..\views\labeling\utils\file_lifecycle.py" line="109" />
+        <location filename="..\..\views\labeling\utils\file_lifecycle.py" line="195" />
+        <location filename="..\..\views\labeling\utils\file_lifecycle.py" line="143" />
         <source>需返工：%1</source>
         <translation>需返工：%1</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\file_lifecycle.py" line="165" />
-        <location filename="..\..\views\labeling\utils\file_lifecycle.py" line="116" />
+        <location filename="..\..\views\labeling\utils\file_lifecycle.py" line="199" />
+        <location filename="..\..\views\labeling\utils\file_lifecycle.py" line="150" />
         <source>此图已打回，需返工</source>
         <translation>此图已打回，需返工</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\file_lifecycle.py" line="312" />
-        <location filename="..\..\views\labeling\utils\file_lifecycle.py" line="248" />
-        <location filename="..\..\views\labeling\utils\file_lifecycle.py" line="227" />
+        <location filename="..\..\views\labeling\utils\file_lifecycle.py" line="343" />
+        <location filename="..\..\views\labeling\utils\file_lifecycle.py" line="282" />
+        <location filename="..\..\views\labeling\utils\file_lifecycle.py" line="261" />
         <source>Error opening file</source>
         <translation>打开文件时出错</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\file_lifecycle.py" line="228" />
+        <location filename="..\..\views\labeling\utils\file_lifecycle.py" line="262" />
         <source>No such file: &lt;b&gt;%s&lt;/b&gt;</source>
         <translation>没有这个文件：&lt;b&gt;%s&lt;/b&gt;</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\file_lifecycle.py" line="251" />
+        <location filename="..\..\views\labeling\utils\file_lifecycle.py" line="285" />
         <source>&lt;p&gt;&lt;b&gt;%s&lt;/b&gt;&lt;/p&gt;&lt;p&gt;Make sure &lt;i&gt;%s&lt;/i&gt; is a valid label file.</source>
         <translation>&lt;p&gt;&lt;b&gt;%s&lt;/b&gt;&lt;/p&gt;&lt;p&gt;确保&lt;i&gt;%s&lt;/i&gt;是一个有效的标签文件。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\file_lifecycle.py" line="320" />
-        <location filename="..\..\views\labeling\utils\file_lifecycle.py" line="259" />
+        <location filename="..\..\views\labeling\utils\file_lifecycle.py" line="351" />
+        <location filename="..\..\views\labeling\utils\file_lifecycle.py" line="293" />
         <source>Error reading %s</source>
         <translation>读取%s时出错</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\file_lifecycle.py" line="313" />
+        <location filename="..\..\views\labeling\utils\file_lifecycle.py" line="344" />
         <source>&lt;p&gt;Make sure &lt;i&gt;{0}&lt;/i&gt; is a valid image file.&lt;br/&gt;Supported image formats: {1}&lt;/p&gt;</source>
         <translation>&lt;p&gt;确保&lt;i&gt;{0}&lt;/i&gt;是一个有效的图像文件。&lt;br/&gt;支持的图像格式：{1}&lt;/p&gt;</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\file_lifecycle.py" line="708" />
-        <location filename="..\..\views\labeling\utils\file_lifecycle.py" line="693" />
-        <location filename="..\..\views\labeling\utils\file_lifecycle.py" line="646" />
-        <location filename="..\..\views\labeling\utils\file_lifecycle.py" line="631" />
+        <location filename="..\..\views\labeling\utils\file_lifecycle.py" line="740" />
+        <location filename="..\..\views\labeling\utils\file_lifecycle.py" line="725" />
+        <location filename="..\..\views\labeling\utils\file_lifecycle.py" line="678" />
+        <location filename="..\..\views\labeling\utils\file_lifecycle.py" line="663" />
         <source>Attention</source>
         <translation>注意</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\file_lifecycle.py" line="632" />
+        <location filename="..\..\views\labeling\utils\file_lifecycle.py" line="664" />
         <source>Please disable 'Keep Previous Annotation' before deleting the label file.</source>
         <translation>请在删除标签文件前禁用"保留上一个注释"。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\file_lifecycle.py" line="640" />
+        <location filename="..\..\views\labeling\utils\file_lifecycle.py" line="672" />
         <source>当前标签文件将移到图片目录下的 _delete_ 文件夹，可从该目录找回。
 确定删除吗？</source>
         <translation>当前标签文件将移到图片目录下的 _delete_ 文件夹，可从该目录找回。
 确定删除吗？</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\file_lifecycle.py" line="680" />
+        <location filename="..\..\views\labeling\utils\file_lifecycle.py" line="712" />
         <source>至少需要两张图片才能删除图片文件：删除后会自动切到相邻图片。</source>
         <translation>至少需要两张图片才能删除图片文件：删除后会自动切到相邻图片。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\file_lifecycle.py" line="694" />
+        <location filename="..\..\views\labeling\utils\file_lifecycle.py" line="726" />
         <source>Please disable 'Keep Previous Annotation' before deleting the image file.</source>
         <translation>请在删除图像文件前禁用"保留上一个注释"。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\file_lifecycle.py" line="702" />
+        <location filename="..\..\views\labeling\utils\file_lifecycle.py" line="734" />
         <source>You are about to permanently delete this image file, proceed anyway?</source>
         <translation>您即将永久删除此图像文件，是否继续？</translation>
     </message>
     <message>
         <location filename="..\..\views\labeling\widgets\attributes_controller.py" line="452" />
-        <location filename="..\..\views\labeling\utils\file_lifecycle.py" line="823" />
+        <location filename="..\..\views\labeling\utils\file_lifecycle.py" line="855" />
         <source>Error saving label data</source>
         <translation>保存标签数据时出错</translation>
     </message>
     <message>
         <location filename="..\..\views\labeling\widgets\attributes_controller.py" line="455" />
-        <location filename="..\..\views\labeling\utils\file_lifecycle.py" line="826" />
+        <location filename="..\..\views\labeling\utils\file_lifecycle.py" line="858" />
         <source>&lt;b&gt;%s&lt;/b&gt;</source>
         <translation>&lt;b&gt;%s&lt;/b&gt;</translation>
     </message>

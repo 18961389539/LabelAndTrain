@@ -70,6 +70,40 @@ from ..logger import logger
 from . import file_list_ops
 from .style import get_rework_banner_style
 
+#: Files whose broken ICC profile the user has already been told about.
+#: Repeating the line on every file of the same batch teaches nothing new,
+#: and the app log carries one entry per file regardless.
+_ICC_WARNED = set()
+
+
+def note_icc_profile(widget, filename, image_data):
+    """Say out loud when the image being opened carries an unusable profile.
+
+    Qt logs ``fromIccProfile: failed minimal tag size sanity`` for these
+    files and ``app.py`` mutes the category, so the old behaviour was a wrong
+    -looking picture and no trace of why -- the ``# TODO(jack): icc profile
+    issue warning`` this replaces. Colors the annotator trusts are part of the
+    label decision, so this is reported: a status line once per file per
+    session, and a log line every time.
+    """
+    reason = utils.icc_profile_issue(image_data)
+    if not reason:
+        return False
+    logger.warning(f"Invalid embedded ICC profile in {filename}: {reason}")
+    key = osp.normcase(osp.abspath(str(filename)))
+    if key in _ICC_WARNED:
+        return True
+    _ICC_WARNED.add(key)
+    widget.status(
+        QCoreApplication.translate(
+            "LabelingWidget",
+            "此图片内嵌的 ICC 色彩配置无效（%s），显示颜色可能与实际不一致",
+        )
+        % reason,
+        8000,
+    )
+    return True
+
 
 def _report_inherited_shapes(widget, count):
     """Announce shapes inherited from the previous image (``keep_prev``).
@@ -299,9 +333,6 @@ def load_file(widget, filename=None):  # noqa: C901
         widget.label_file = None
         widget.other_data = {CHECKED_FIELD: False}
 
-    # TODO(jack): icc profile issue warning
-    # - qt.gui.icc: fromIccProfile: failed minimal tag size sanity
-    # - qt.gui.icc: fromIccProfile: invalid tag offset alignment
     # Decode large images off the UI thread so opening a big frame never
     # hard-freezes the whole window into a "Not Responding" state.
     image, pil_cache = widget._decode_image_data(widget.image_data, filename)
@@ -321,6 +352,7 @@ def load_file(widget, filename=None):  # noqa: C901
             % filename
         )
         return False
+    note_icc_profile(widget, filename, widget.image_data)
     widget.image = image
     widget.filename = filename
     # Now that the image is known, point the canvas undo history at it:
