@@ -30,6 +30,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anylabeling.views.labeling.ai.style import SliderStyle
+from anylabeling.views.labeling.utils.style import get_dialog_style
 from anylabeling.views.labeling.utils.theme import get_theme
 
 
@@ -479,6 +480,7 @@ class NavigatorDialog(QtWidgets.QDialog):
         super().__init__(parent)
 
         self.setWindowTitle(self.tr("Navigator"))
+        self.setStyleSheet(get_dialog_style())
         self.setWindowFlags(
             Qt.WindowType.Window
             | Qt.WindowType.WindowStaysOnTopHint
@@ -512,7 +514,7 @@ class NavigatorDialog(QtWidgets.QDialog):
         zoom_input_container.setStyleSheet(f"""
             QWidget {{
                 border: 1px solid {t["border"]};
-                border-radius: 4px;
+                border-radius: {t["radius_sm"]};
                 background-color: {t["background_secondary"]};
             }}
             QWidget:hover {{
@@ -533,7 +535,7 @@ class NavigatorDialog(QtWidgets.QDialog):
                 border: none;
                 background: transparent;
                 color: {t["text"]};
-                font-size: 10px;
+                font-size: 11px;
                 font-weight: 500;
                 padding: 0px;
             }}
@@ -549,7 +551,7 @@ class NavigatorDialog(QtWidgets.QDialog):
         percentage_label.setStyleSheet(f"""
             QLabel {{
                 color: {t["text_secondary"]};
-                font-size: 10px;
+                font-size: 11px;
                 font-weight: 500;
                 background: transparent;
                 border: none;

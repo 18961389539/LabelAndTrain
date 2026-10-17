@@ -56,7 +56,7 @@ class ColoredComboBox(QtWidgets.QComboBox):
             QComboBox {{
                 background-color: {t["background_secondary"]};
                 border: 1px solid {t["border"]};
-                border-radius: 6px;
+                border-radius: {t["radius_md"]};
             }}
             QComboBox:hover {{
                 background-color: {t["background_secondary"]};

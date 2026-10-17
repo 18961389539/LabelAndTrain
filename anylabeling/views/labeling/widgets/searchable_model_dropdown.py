@@ -180,7 +180,7 @@ class ModelItem(QFrame):
             rec_chip = QLabel(self.tr("推荐"))
             rec_chip.setToolTip(self.tr("该任务类型的推荐模型"))
             rec_chip.setStyleSheet(
-                "font-size: 10px; color: #F5A524; "
+                f"font-size: 11px; color: {_t['warning']}; "
                 "background: transparent; border: none; padding-right: 4px;"
             )
             layout.addWidget(rec_chip, 0, Qt.AlignmentFlag.AlignVCenter)
@@ -188,7 +188,7 @@ class ModelItem(QFrame):
             local_chip = QLabel("本地")
             local_chip.setToolTip("Model files already downloaded locally")
             local_chip.setStyleSheet(
-                "font-size: 10px; color: #30D158; "
+                f"font-size: 11px; color: {_t['success']}; "
                 "background: transparent; border: none; padding-right: 4px;"
             )
             layout.addWidget(local_chip, 0, Qt.AlignmentFlag.AlignVCenter)
@@ -249,7 +249,7 @@ class ModelItem(QFrame):
         self.setStyleSheet(f"""
             ModelItem {{
                 background-color: transparent;
-                border-radius: 4px;
+                border-radius: {t["radius_sm"]};
             }}
             ModelItem:hover {{
                 background-color: {t["surface_hover"]};
@@ -292,13 +292,13 @@ class ModelItem(QFrame):
                 QIcon(new_icon("check", "svg")).pixmap(QSize(*ICON_SIZE_SMALL))
             )
             self.setStyleSheet(
-                f"background-color: {t['surface_pressed']}; border-radius: 4px;"
+                f"background-color: {t['surface_pressed']}; border-radius: {t['radius_sm']};"
             )
         else:
             self.check_icon.clear()
-            self.setStyleSheet("""
+            self.setStyleSheet(f"""
                 background-color: transparent;
-                border-radius: 4px;
+                border-radius: {t['radius_sm']};
             """)
 
     def update_favorite(self, is_favorite):
@@ -327,7 +327,7 @@ class SearchableModelDropdownPopup(QWidget):
         self.setStyleSheet(f"""
             SearchableModelDropdownPopup {{
                 background-color: {t["surface"]};
-                border-radius: 8px;
+                border-radius: {t["radius_lg"]};
             }}
             QWidget, QFrame {{
                 background-color: {t["surface"]};
@@ -344,7 +344,7 @@ class SearchableModelDropdownPopup(QWidget):
             QScrollBar::handle:vertical {{
                 background-color: {t["scrollbar"]};
                 min-height: 20px;
-                border-radius: 5px;
+                border-radius: {t["radius_sm"]};
             }}
             QScrollBar::add-line:vertical {{
                 border: none;
@@ -393,14 +393,14 @@ class SearchableModelDropdownPopup(QWidget):
                     background: {t["background_secondary"]};
                     color: {t["text"]};
                     border: 1px solid {t["border"]};
-                    border-radius: 12px;
+                    border-radius: {t["radius_card"]};
                     padding: 2px 10px;
                     font-size: 11px;
                 }}
                 QPushButton:checked {{
-                    background: {t["primary"]};
-                    color: white;
-                    border-color: {t["primary"]};
+                    background: {t["primary_solid"]};
+                    color: {t["on_primary"]};
+                    border-color: {t["primary_solid"]};
                 }}
                 """)
             self._task_filter_group.addButton(button)

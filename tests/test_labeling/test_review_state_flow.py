@@ -8,7 +8,13 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 try:
     from PyQt6 import QtCore, QtGui, QtWidgets
 
+    from anylabeling.views.labeling.filelist.roles import REVIEW_STATE_FIELD
     from anylabeling.views.labeling.label_widget import LabelingWidget
+    from anylabeling.views.labeling.schema import (
+        REVIEW_NOTE_FIELD,
+        REVIEW_REJECTED,
+    )
+    from anylabeling.views.labeling.utils import file_lifecycle
     from anylabeling.views.labeling.utils.async_label_check import (
         _label_file_review_state,
         label_file_review_info,
@@ -170,6 +176,13 @@ class TestReviewStateRows(unittest.TestCase):
         self.assertTrue(items[1].hidden)
         self.assertEqual(widget.progress_calls, 1)
 
+    def test_negative_filter_shows_only_negative_rows(self):
+        widget, items = make_widget(filter_mode="negative")
+        items[0].data_values[NEGATIVE_ROLE] = True
+        widget._apply_file_filter()
+        self.assertFalse(items[0].hidden)
+        self.assertTrue(items[1].hidden)
+
     def test_checked_filter_still_hides_rejected_rows(self):
         widget, items = make_widget(filter_mode="checked")
         widget._set_file_item_review_state(items[0], "rejected")
@@ -329,6 +342,75 @@ class TestReviewStatePersistence(unittest.TestCase):
             state, _reviewed_at, note = label_file_review_info(filename)
             self.assertEqual(state, "confirmed")
             self.assertIsNone(note)
+
+
+@unittest.skipUnless(QT_AVAILABLE, "PyQt6 is required")
+class TestReworkBanner(unittest.TestCase):
+    """打开被打回的图时，返工原因要常驻在画布上方，而不是 8 秒后消失。"""
+
+    @classmethod
+    def setUpClass(cls):
+        # Held on the class: a QApplication left in a local dies young, and the
+        # next QWidget creation then dies with it (exit 127).
+        cls._app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(
+            []
+        )
+
+    def _widget(
+        self, filename="img_1.png", state=REVIEW_REJECTED, note="漏标"
+    ):
+        other_data = {REVIEW_STATE_FIELD: state}
+        if note is not None:
+            other_data[REVIEW_NOTE_FIELD] = note
+
+        class Widget:
+            def __init__(self):
+                self.filename = filename
+                self.other_data = dict(other_data)
+
+        widget = Widget()
+        _bind(widget, "_current_review_state")
+        return widget
+
+    def _built(self, **kwargs):
+        layout = QtWidgets.QVBoxLayout()
+        widget = self._widget(**kwargs)
+        file_lifecycle.build_rework_banner(widget, layout)
+        return widget, layout
+
+    def test_build_creates_a_hidden_card_under_the_hint_bar(self):
+        widget, layout = self._built()
+        self.assertIsInstance(widget.rework_banner, QtWidgets.QLabel)
+        self.assertTrue(widget.rework_banner.isHidden())
+        # Built into an empty layout, insertWidget(1) appends: the card lands
+        # at index 0 and the widget's later addWidget calls put the canvas
+        # after it.
+        self.assertEqual(layout.indexOf(widget.rework_banner), 0)
+
+    def test_rejected_file_shows_its_reason(self):
+        widget, _ = self._built(note="漏标")
+        file_lifecycle.refresh_rework_banner(widget)
+        self.assertFalse(widget.rework_banner.isHidden())
+        self.assertIn("漏标", widget.rework_banner.text())
+
+    def test_rejected_file_without_a_note_still_says_rework(self):
+        widget, _ = self._built(note=None)
+        file_lifecycle.refresh_rework_banner(widget)
+        self.assertFalse(widget.rework_banner.isHidden())
+        self.assertIn("需返工", widget.rework_banner.text())
+
+    def test_confirmed_file_hides_the_card(self):
+        widget, _ = self._built(state="confirmed", note="漏标")
+        file_lifecycle.refresh_rework_banner(widget)
+        self.assertTrue(widget.rework_banner.isHidden())
+
+    def test_torn_down_state_hides_the_card(self):
+        widget, _ = self._built(filename=None)
+        file_lifecycle.refresh_rework_banner(widget)
+        self.assertTrue(widget.rework_banner.isHidden())
+
+    def test_refresh_without_a_banner_is_a_noop(self):
+        file_lifecycle.refresh_rework_banner(self._widget())
 
 
 if __name__ == "__main__":

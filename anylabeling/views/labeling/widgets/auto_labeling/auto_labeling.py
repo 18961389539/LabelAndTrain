@@ -509,7 +509,7 @@ class AutoLabelingWidget(QWidget):
         self.mask_fineness_value_label.setStyleSheet(f"""
             QLabel {{
                 color: {get_theme()["text_secondary"]};
-                font-size: 10px;
+                font-size: 11px;
                 font-weight: 500;
                 background: transparent;
                 border: none;

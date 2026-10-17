@@ -192,7 +192,7 @@ LABEL_COLORMAP = utils.label_colormap()
 PREDICTIONS_FIELD = "predictions"
 FILE_CHECKED_COLOR = "#22A06B"
 FILE_ANNOTATED_COLOR = "#3B82F6"
-FILE_UNCHECKED_COLOR = "#8C98A4"
+FILE_UNCHECKED_COLOR = "#7A8592"
 FILE_NEGATIVE_COLOR = "#F59E0B"
 FILE_REJECTED_COLOR = "#D9534F"
 # Auto-save debounce: edits schedule one write this many milliseconds after
@@ -518,6 +518,12 @@ class LabelingWidget(LabelDialog):
         self.file_filter_combo.addItem(self.tr("全部"), "all")
         self.file_filter_combo.addItem(self.tr("未标注"), "unannotated")
         self.file_filter_combo.addItem(self.tr("已标注"), "annotated")
+        self.file_filter_combo.addItem(self.tr("负样本"), "negative")
+        self.file_filter_combo.setItemData(
+            self.file_filter_combo.count() - 1,
+            self.tr("已确认为空标注的图片（图中确实没有目标）"),
+            Qt.ItemDataRole.ToolTipRole,
+        )
         self.file_filter_combo.addItem(self.tr("已检查"), "checked")
         self.file_filter_combo.addItem(self.tr("未复核"), "unreviewed")
         self.file_filter_combo.setItemData(
@@ -1106,6 +1112,7 @@ class LabelingWidget(LabelDialog):
             return
         self.label_instruction.setText(self.get_labeling_instruction())
         self.update_space_pan_tip()
+        file_lifecycle.refresh_rework_banner(self)
 
     def _format_instruction_shortcut(self, value):
         """Plain shortcut text for ``keycap_html`` to escape and style.
@@ -2560,8 +2567,8 @@ class LabelingWidget(LabelDialog):
     def _apply_file_filter(self):
         """Hide/show file rows according to the status combo.
 
-        Modes: all / unannotated / annotated / checked / unreviewed /
-        rework / low_conf.
+        Modes: all / unannotated / annotated / negative / checked /
+        unreviewed / rework / low_conf.
         """
         mode = self.file_filter_combo.currentData()
         total = 0
@@ -2573,6 +2580,8 @@ class LabelingWidget(LabelDialog):
                 visible = annotated
             elif mode == "unannotated":
                 visible = not annotated
+            elif mode == "negative":
+                visible = bool(item.data(FILE_NEGATIVE_ROLE))
             elif mode == "checked":
                 visible = checked
             elif mode == "unreviewed":
@@ -6634,6 +6643,7 @@ def _build_layout(widget):
     # )
     widget.auto_labeling_widget.hide()  # Hide by default
     central_layout.addWidget(widget.label_instruction)
+    file_lifecycle.build_rework_banner(widget, central_layout)
     central_layout.addWidget(widget.auto_labeling_widget)
     central_layout.addWidget(widget._canvas_scroll_area)
 

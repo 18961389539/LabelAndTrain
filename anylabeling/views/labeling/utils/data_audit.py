@@ -45,6 +45,7 @@ from anylabeling.views.labeling.utils.quality import (
     inspect_shape_quality,
     json_txt_mismatch,
 )
+from anylabeling.views.labeling.utils.theme import get_theme
 
 CATEGORY_ORDER = (
     "unlabeled",
@@ -285,7 +286,9 @@ def run_data_audit(parent):
             "「智能工具 → 5. 智能复核」按序浏览。",
         )
     hint = QLabel(hint_text)
-    hint.setStyleSheet("color: #86868b; padding: 4px 2px;")
+    hint.setStyleSheet(
+        f"color: {get_theme()['text_secondary']}; padding: 4px 2px;"
+    )
     layout.addWidget(hint)
 
     dialog.exec()

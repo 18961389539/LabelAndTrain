@@ -216,6 +216,64 @@ def test_damaged_registry_reads_as_empty(registry_file):
     assert project_registry.load_registry() == {"projects": []}
 
 
+def _fake_lock_error(path):
+    """形如 WinError 5 的 PermissionError；用实例而非新类，避免额外 lint。"""
+    exc = PermissionError(5, "Access is denied", path)
+    exc.winerror = 5
+    return exc
+
+
+def test_registry_write_is_atomic(registry_file):
+    """注册表改写走临时文件+替换：一次瞬时锁不会丢数据也不会落半截。"""
+    from unittest import mock
+
+    from anylabeling.views.labeling.utils import _io
+
+    root = str(registry_file.parent)
+    assert project_registry.record_project(root) is True
+
+    real_replace = os.replace
+    calls = {"n": 0}
+
+    def fake_replace(src, dst):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise _fake_lock_error(dst)
+        return real_replace(src, dst)
+
+    with mock.patch.object(_io.os, "replace", side_effect=fake_replace):
+        with mock.patch.object(_io.time, "sleep"):
+            assert project_registry.record_project(root) is True
+
+    assert calls["n"] == 2
+    assert project_registry.load_registry()["projects"][0]["root"] == root
+    # 没有残留的临时文件。
+    assert [p.name for p in registry_file.parent.iterdir()] == [
+        registry_file.name
+    ]
+
+
+def test_registry_write_failure_keeps_the_previous_file(registry_file):
+    """替换彻底失败时返回 False，且磁盘上仍是旧的完整内容。"""
+    from unittest import mock
+
+    from anylabeling.views.labeling.utils import _io
+
+    def always_locked(src, dst):
+        raise _fake_lock_error(dst)
+
+    root = str(registry_file.parent)
+    assert project_registry.record_project(root) is True
+    before = registry_file.read_text(encoding="utf-8")
+
+    with mock.patch.object(_io.os, "replace", side_effect=always_locked):
+        with mock.patch.object(_io.time, "sleep"):
+            assert project_registry.record_project(root) is False
+
+    assert registry_file.read_text(encoding="utf-8") == before
+    assert project_registry.load_registry()["projects"][0]["root"] == root
+
+
 # --- run history dataset column -------------------------------------------
 
 

@@ -224,3 +224,22 @@ class TestSettingsSchema(unittest.TestCase):
             + fields_for_primary("Canvas")
         )
         self.assertTrue(all(field.description for field in fields))
+
+    def test_previously_rc_only_canvas_knobs_are_settable(self):
+        """The five canvas knobs used to be reachable from the rc file only.
+
+        They were listed in EXCLUDED_KEYS with the note "set once, then never
+        touched again", which left an annotator who wants a warmer attribute
+        box, or a shallower brush undo, with no path but hand-editing
+        ``~/.xanylabelingrc``. They are dialog fields now.
+        """
+        for key in (
+            "canvas.attributes.background_color",
+            "canvas.attributes.border_color",
+            "canvas.attributes.text_color",
+            "canvas.brush.max_undo_steps",
+            "canvas.brush.max_undo_memory_mb",
+        ):
+            self.assertIn(key, SETTINGS_KEYS)
+            self.assertNotIn(key, EXCLUDED_KEYS)
+            self.assertEqual(SETTING_FIELD_MAP[key].primary, "Canvas")

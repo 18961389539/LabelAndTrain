@@ -34,7 +34,7 @@ class QToaster(QtWidgets.QFrame):
         self.setStyleSheet(f"""
             QToaster {{
                 border: 1px solid {border};
-                border-radius: 6px;
+                border-radius: {_t["radius_md"]};
                 color: {fg};
                 background-color: {bg};
             }}

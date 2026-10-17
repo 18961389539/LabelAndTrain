@@ -11,6 +11,10 @@ from anylabeling.services.auto_training.ultralytics.config import (
 )
 from anylabeling.views.labeling.logger import logger
 from anylabeling.views.labeling.utils.active_learning import load_history
+from anylabeling.views.labeling.utils.style import (
+    get_dialog_style,
+    get_ok_btn_style,
+)
 from anylabeling.views.training import platform_open
 from anylabeling.views.training.run_history import (
     align_with_iterations,
@@ -39,6 +43,7 @@ class RunHistoryDialog(QtWidgets.QDialog):
         self.label_dir = label_dir
         self.setWindowTitle(self.tr("Run History"))
         self.resize(1080, 560)
+        self.setStyleSheet(get_dialog_style())
         self.rows = []
 
         layout = QtWidgets.QVBoxLayout(self)
@@ -66,6 +71,8 @@ class RunHistoryDialog(QtWidgets.QDialog):
 
         buttons = QtWidgets.QHBoxLayout()
         export_button = QtWidgets.QPushButton(self.tr("Export CSV"))
+        # 四个按钮此前同权，谁该点看不出来；导出是这张表唯一的产出动作。
+        export_button.setStyleSheet(get_ok_btn_style())
         open_button = QtWidgets.QPushButton(self.tr("Open Run Directory"))
         refresh_button = QtWidgets.QPushButton(self.tr("Refresh"))
         close_button = QtWidgets.QPushButton(self.tr("Close"))

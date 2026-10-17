@@ -623,7 +623,7 @@ class UltralyticsDialog(QDialog):
         self.labeled_images_hint = QLabel()
         self.labeled_images_hint.setVisible(False)
         self.labeled_images_hint.setStyleSheet(
-            f"color: {get_theme()['text_secondary']}; font-size: 10px;"
+            f"color: {get_theme()['text_secondary']}; font-size: 11px;"
         )
         task_type_layout.addWidget(self.labeled_images_hint)
         config_layout.addLayout(task_type_layout)
@@ -1296,7 +1296,7 @@ class UltralyticsDialog(QDialog):
         self.device_hint.setWordWrap(True)
         self.device_hint.setVisible(False)
         self.device_hint.setStyleSheet(
-            f"color: {get_theme()['text_secondary']}; font-size: 10px;"
+            f"color: {get_theme()['text_secondary']}; font-size: 11px;"
         )
         layout.addRow(self.device_hint)
 

@@ -283,6 +283,9 @@ class SettingsRuntimeApplier:
         if key.startswith("canvas.crosshair."):
             self.apply_canvas_crosshair()
             return
+        if key.startswith("canvas.attributes."):
+            self.apply_canvas_attributes()
+            return
         if key.startswith("canvas.brush."):
             self.apply_canvas_brush()
             return
@@ -388,6 +391,14 @@ class SettingsRuntimeApplier:
         )
         self._widget.crosshair_settings = dict(crosshair)
 
+    def apply_canvas_attributes(self) -> None:
+        attributes = self._widget._config["canvas"]["attributes"]
+        canvas = self._widget.canvas
+        canvas.attr_background_color = list(attributes["background_color"])
+        canvas.attr_border_color = list(attributes["border_color"])
+        canvas.attr_text_color = list(attributes["text_color"])
+        canvas.update()
+
     def apply_canvas_brush(self) -> None:
         brush = self._widget._config["canvas"]["brush"]
         self._widget.canvas.brush_point_distance = float(
@@ -395,6 +406,12 @@ class SettingsRuntimeApplier:
         )
         self._widget.canvas.brush_simplify_epsilon_px = float(
             brush["simplify_epsilon"]
+        )
+        self._widget.canvas._brush_max_undo_steps = max(
+            1, int(brush["max_undo_steps"])
+        )
+        self._widget.canvas._brush_max_undo_bytes = (
+            max(1, int(brush["max_undo_memory_mb"])) * 1024 * 1024
         )
 
     def apply_canvas_rotation(self) -> None:

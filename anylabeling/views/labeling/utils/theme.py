@@ -15,6 +15,25 @@ LIGHT: Dict[str, str] = {
     "primary_hover": "#14B8A6",
     "primary_pressed": "#0B8076",
     "primary_soft": "#D6EEE9",
+    # 圆角档位，控件圆角只从这几档里选
+    "radius_sm": "4px",
+    "radius_md": "6px",
+    "radius_lg": "8px",
+    "radius_card": "12px",
+    # 实心强调面（填充按钮/状态块）及其前景色。"primary" 是描边与浅色块
+    # 用的强调色；实心面用更深的一档，保证白字达到 4.5:1。
+    "primary_solid": "#0F766E",
+    "primary_solid_hover": "#0B8076",
+    "primary_solid_pressed": "#115E59",
+    "on_primary": "#FFFFFF",
+    "success_solid": "#30D158",
+    "on_success": "#0B2E1A",
+    "error_solid": "#CC362E",
+    "error_solid_hover": "#B93A31",
+    "error_solid_pressed": "#A32E26",
+    "on_error": "#FFFFFF",
+    # 浅色底上的错误色文字：原 error(#FF453A) 在浅底上只有 2.8:1。
+    "error_text": "#B93A31",
     "background": "#FAFAF9",
     "background_secondary": "#F5F5F1",
     "background_hover": "#E8E7E2",
@@ -24,8 +43,8 @@ LIGHT: Dict[str, str] = {
     "border": "#E2E1DB",
     "border_light": "#CFCEC8",
     "text": "#1d1d1f",
-    "text_secondary": "#86868b",
-    "text_placeholder": "#718096",
+    "text_secondary": "#6b6b70",
+    "text_placeholder": "#5F6B7C",
     "highlight": "#14B8A6",
     "highlight_text": "#0D9488",
     "success": "#30D158",
@@ -33,7 +52,7 @@ LIGHT: Dict[str, str] = {
     "error": "#FF453A",
     "scrollbar": "#BFBEB8",
     "scrollbar_hover": "#A8A7A1",
-    "selection": "#0D9488",
+    "selection": "#0F766E",
     "selection_text": "#ffffff",
     "tooltip_bg": "#1d1d1f",
     "tooltip_text": "#f5f5f7",
@@ -49,6 +68,23 @@ DARK: Dict[str, str] = {
     "primary_hover": "#5EEAD4",
     "primary_pressed": "#14B8A6",
     "primary_soft": "#1D3B38",
+    # 圆角档位，控件圆角只从这几档里选
+    "radius_sm": "4px",
+    "radius_md": "6px",
+    "radius_lg": "8px",
+    "radius_card": "12px",
+    # 深色下实心面本身就是亮的主色，前景必须用深墨色（白字仅 1.9:1）。
+    "primary_solid": "#2DD4BF",
+    "primary_solid_hover": "#5EEAD4",
+    "primary_solid_pressed": "#14B8A6",
+    "on_primary": "#082F2A",
+    "success_solid": "#30D158",
+    "on_success": "#0B2E1A",
+    "error_solid": "#CC362E",
+    "error_solid_hover": "#B93A31",
+    "error_solid_pressed": "#A32E26",
+    "on_error": "#FFFFFF",
+    "error_text": "#FF453A",
     "background": "#161618",
     "background_secondary": "#232326",
     "background_hover": "#303034",
@@ -68,7 +104,7 @@ DARK: Dict[str, str] = {
     "scrollbar": "#3C3C40",
     "scrollbar_hover": "#555559",
     "selection": "#14B8A6",
-    "selection_text": "#ffffff",
+    "selection_text": "#082F2A",
     "tooltip_bg": "#232326",
     "tooltip_text": "#f5f5f7",
     "spinbox_button": "#303034",
@@ -212,7 +248,7 @@ def _checkbox_indicator_qss() -> str:
         QCheckBox::indicator {{
             width: 16px;
             height: 16px;
-            border-radius: 4px;
+            border-radius: {t["radius_sm"]};
             border: 1px solid {t["border_light"]};
             background-color: {t["background_secondary"]};
         }}
@@ -249,7 +285,7 @@ def _light_accent_qss() -> str:
         QRadioButton::indicator {{
             width: 16px;
             height: 16px;
-            border-radius: 8px;
+            border-radius: {t["radius_lg"]};
             border: 1px solid {t["border_light"]};
             background-color: #ffffff;
         }}
@@ -259,6 +295,10 @@ def _light_accent_qss() -> str:
         QRadioButton::indicator:checked {{
             background-color: {t["primary"]};
             border-color: {t["primary"]};
+        }}
+
+        QPushButton:focus {{
+            border: 2px solid {t["highlight"]};
         }}
 
         QAbstractItemView {{
@@ -287,25 +327,25 @@ def _light_accent_qss() -> str:
         QProgressBar {{
             background-color: {t["surface"]};
             border: none;
-            border-radius: 4px;
+            border-radius: {t["radius_sm"]};
             text-align: center;
             color: {t["text"]};
         }}
         QProgressBar::chunk {{
             background-color: {t["primary"]};
-            border-radius: 3px;
+            border-radius: {t["radius_sm"]};
         }}
 
         QMenu {{
             background-color: {t["background_secondary"]};
             color: {t["text"]};
             border: 1px solid {t["border"]};
-            border-radius: 6px;
+            border-radius: {t["radius_md"]};
             padding: 4px 0 4px 8px;
         }}
         QMenu::item {{
             padding: 6px 24px 6px 8px;
-            border-radius: 4px;
+            border-radius: {t["radius_sm"]};
             background-color: transparent;
         }}
         QMenu::item:selected {{
@@ -325,7 +365,7 @@ def _light_accent_qss() -> str:
             background-color: {t["tooltip_bg"]};
             color: {t["tooltip_text"]};
             border: none;
-            border-radius: 4px;
+            border-radius: {t["radius_sm"]};
             padding: 2px 6px;
         }}
     """
@@ -366,7 +406,7 @@ def get_app_stylesheet() -> str:
         }}
         QMenuBar::item:selected {{
             background-color: {t["surface_hover"]};
-            border-radius: 4px;
+            border-radius: {t["radius_sm"]};
         }}
         QMenuBar::item:pressed {{
             background-color: {t["surface_pressed"]};
@@ -376,7 +416,7 @@ def get_app_stylesheet() -> str:
             background-color: {t["background_secondary"]};
             color: {t["text"]};
             border: 1px solid {t["border"]};
-            border-radius: 6px;
+            border-radius: {t["radius_md"]};
             padding: 4px 0 4px 8px;
         }}
         QMenu::item {{
@@ -391,7 +431,7 @@ def get_app_stylesheet() -> str:
         QMenu::icon:checked {{
             background-color: {t["surface_pressed"]};
             border: 1px solid {t["border_light"]};
-            border-radius: 4px;
+            border-radius: {t["radius_sm"]};
         }}
         QMenu::icon:checked:selected {{
             background-color: {t["surface_hover"]};
@@ -427,7 +467,7 @@ def get_app_stylesheet() -> str:
         QToolButton {{
             background-color: transparent;
             border: none;
-            border-radius: 4px;
+            border-radius: {t["radius_sm"]};
         }}
         QToolButton:hover {{
             background-color: {t["surface_hover"]};
@@ -468,7 +508,7 @@ def get_app_stylesheet() -> str:
         }}
         QScrollBar::handle:vertical {{
             background-color: {t["scrollbar"]};
-            border-radius: 4px;
+            border-radius: {t["radius_sm"]};
             min-height: 20px;
         }}
         QScrollBar::handle:vertical:hover {{
@@ -484,7 +524,7 @@ def get_app_stylesheet() -> str:
         }}
         QScrollBar::handle:horizontal {{
             background-color: {t["scrollbar"]};
-            border-radius: 4px;
+            border-radius: {t["radius_sm"]};
             min-width: 20px;
         }}
         QScrollBar::handle:horizontal:hover {{
@@ -499,7 +539,7 @@ def get_app_stylesheet() -> str:
             background-color: {t["background"]};
             color: {t["text"]};
             border: 1px solid {t["border"]};
-            border-radius: 6px;
+            border-radius: {t["radius_md"]};
             alternate-background-color: {t["background_secondary"]};
             outline: none;
         }}
@@ -543,7 +583,7 @@ def get_app_stylesheet() -> str:
             background-color: {t["background_secondary"]};
             color: {t["text"]};
             border: 1px solid {t["border"]};
-            border-radius: 6px;
+            border-radius: {t["radius_md"]};
             padding: 4px 8px;
             selection-background-color: {t["selection"]};
             selection-color: {t["selection_text"]};
@@ -563,7 +603,7 @@ def get_app_stylesheet() -> str:
             background-color: {t["background_secondary"]};
             color: {t["text"]};
             border: 1px solid {t["border"]};
-            border-radius: 6px;
+            border-radius: {t["radius_md"]};
             selection-background-color: {t["selection"]};
             selection-color: {t["selection_text"]};
         }}
@@ -575,7 +615,7 @@ def get_app_stylesheet() -> str:
             background-color: {t["background_secondary"]};
             color: {t["text"]};
             border: 1px solid {t["border"]};
-            border-radius: 6px;
+            border-radius: {t["radius_md"]};
             padding: 4px 8px;
             min-height: 24px;
         }}
@@ -628,7 +668,7 @@ def get_app_stylesheet() -> str:
         QRadioButton::indicator {{
             width: 16px;
             height: 16px;
-            border-radius: 8px;
+            border-radius: {t["radius_lg"]};
             border: 1px solid {t["border_light"]};
             background-color: {t["background_secondary"]};
         }}
@@ -641,7 +681,7 @@ def get_app_stylesheet() -> str:
             background-color: {t["surface"]};
             color: {t["text"]};
             border: 1px solid {t["border_light"]};
-            border-radius: 8px;
+            border-radius: {t["radius_lg"]};
             padding: 5px 12px;
             min-height: 24px;
         }}
@@ -656,19 +696,22 @@ def get_app_stylesheet() -> str:
             color: {t["text_secondary"]};
             border-color: {t["border"]};
         }}
+        QPushButton:focus {{
+            border: 2px solid {t["highlight"]};
+        }}
 
         QTabWidget::pane {{
             background-color: {t["background"]};
             border: 1px solid {t["border"]};
-            border-radius: 6px;
+            border-radius: {t["radius_md"]};
         }}
         QTabBar::tab {{
             background-color: {t["surface"]};
             color: {t["text_secondary"]};
             border: 1px solid {t["border"]};
             border-bottom: none;
-            border-top-left-radius: 4px;
-            border-top-right-radius: 4px;
+            border-top-left-radius: {t["radius_sm"]};
+            border-top-right-radius: {t["radius_sm"]};
             padding: 6px 12px;
             margin-right: 2px;
         }}
@@ -683,7 +726,7 @@ def get_app_stylesheet() -> str:
         QGroupBox {{
             color: {t["text"]};
             border: 1px solid {t["border"]};
-            border-radius: 6px;
+            border-radius: {t["radius_md"]};
             margin-top: 8px;
             padding-top: 8px;
         }}
@@ -720,7 +763,7 @@ def get_app_stylesheet() -> str:
             background-color: {t["tooltip_bg"]};
             color: {t["tooltip_text"]};
             border: none;
-            border-radius: 4px;
+            border-radius: {t["radius_sm"]};
             padding: 2px 6px;
         }}
 
@@ -728,7 +771,7 @@ def get_app_stylesheet() -> str:
             background-color: {t["background_secondary"]};
             color: {t["text"]};
             border: 1px solid {t["border_light"]};
-            border-radius: 6px;
+            border-radius: {t["radius_md"]};
             padding: 5px 8px;
             min-height: 24px;
             selection-background-color: {t["selection"]};
@@ -747,7 +790,7 @@ def get_app_stylesheet() -> str:
         QProgressBar {{
             background-color: {t["surface"]};
             border: none;
-            border-radius: 4px;
+            border-radius: {t["radius_sm"]};
             text-align: center;
             color: transparent;
         }}
@@ -758,7 +801,7 @@ def get_app_stylesheet() -> str:
                 stop:0.5 #2DD4BF,
                 stop:1 #0D9488
             );
-            border-radius: 3px;
+            border-radius: {t["radius_sm"]};
         }}
 
         QLabel {{
@@ -774,7 +817,7 @@ def get_app_stylesheet() -> str:
         QSlider::groove:horizontal {{
             height: 4px;
             background-color: {t["border"]};
-            border-radius: 2px;
+            border-radius: {t["radius_sm"]};
         }}
         QSlider::handle:horizontal {{
             background-color: {t["primary"]};
@@ -782,11 +825,11 @@ def get_app_stylesheet() -> str:
             width: 14px;
             height: 14px;
             margin: -5px 0;
-            border-radius: 7px;
+            border-radius: {t["radius_md"]};
         }}
         QSlider::sub-page:horizontal {{
             background-color: {t["primary"]};
-            border-radius: 2px;
+            border-radius: {t["radius_sm"]};
         }}
     """
 

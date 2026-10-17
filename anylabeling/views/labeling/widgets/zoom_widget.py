@@ -34,7 +34,7 @@ class ZoomWidget(QtWidgets.QSpinBox):
                 background-color: {t["button_bg"]};
                 color: {t["text"]};
                 border: 1px solid {t["border"]};
-                border-radius: 7px;
+                border-radius: {t["radius_md"]};
                 padding: 0 1px;
                 min-height: 24px;
                 selection-background-color: {t["selection"]};

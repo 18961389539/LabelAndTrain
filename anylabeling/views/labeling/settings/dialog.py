@@ -303,14 +303,13 @@ class SettingsDialog(QtWidgets.QDialog):
                 font-size: 16px;
                 font-weight: 500;
                 border-radius: 0px;
-                outline: none;
             }}
             QPushButton:focus {{
-                outline: none;
+                background: {get_theme()['surface_hover']};
             }}
             QPushButton:hover {{
-                background: rgb(239, 68, 68);
-                color: white;
+                background: {get_theme()['error_solid']};
+                color: {get_theme()['on_error']};
                 border-radius: 0px;
                 border-top-right-radius: 11px;
             }}
@@ -413,17 +412,21 @@ class SettingsDialog(QtWidgets.QDialog):
         self.shortcuts_save_button.setStyleSheet(f"""
             QPushButton {{
                 min-width: 84px;
-                border: none;
-                border-radius: 8px;
-                color: white;
-                background: {theme["primary"]};
+                border: 2px solid {theme["primary_solid"]};
+                border-radius: {theme["radius_lg"]};
+                color: {theme["on_primary"]};
+                background: {theme["primary_solid"]};
             }}
             QPushButton:hover {{
-                background: {theme["primary_hover"]};
+                background: {theme["primary_solid_hover"]};
+                border-color: {theme["primary_solid_hover"]};
+            }}
+            QPushButton:focus {{
+                border-color: {theme["background"]};
             }}
             QPushButton:disabled {{
-                background: rgb(180, 180, 180);
-                color: rgb(245, 245, 245);
+                background: {theme["surface"]};
+                color: {theme["text_secondary"]};
             }}
             """)
         self.shortcuts_footer_layout.addWidget(self.shortcuts_reset_button)
@@ -879,7 +882,8 @@ class SettingsDialog(QtWidgets.QDialog):
     ) -> None:
         if enabled:
             widget.setStyleSheet(
-                "border: 1px solid #FF453A; border-radius: 8px;"
+                f"border: 1px solid {get_theme()['error']};"
+                f" border-radius: {get_theme()['radius_lg']};"
             )
             return
         widget.setStyleSheet(default_style)
@@ -1448,7 +1452,7 @@ class SettingsDialog(QtWidgets.QDialog):
             desc = QtWidgets.QLabel(self.tr(field.description), left)
             desc.setWordWrap(False)
             desc.setStyleSheet(
-                f"color: {self._rgb('desc_text')}; font-size: 10px;"
+                f"color: {self._rgb('desc_text')}; font-size: 11px;"
             )
             left_layout.addWidget(desc)
 
@@ -1661,7 +1665,7 @@ class SettingsDialog(QtWidgets.QDialog):
         if hint_text:
             hint = ElidedLabel(hint_text, left)
             hint.setStyleSheet(
-                f"color: {self._rgb('desc_text')}; font-size: 10px;"
+                f"color: {self._rgb('desc_text')}; font-size: 11px;"
             )
             left_layout.addWidget(hint)
         row_layout.addWidget(left, 1)

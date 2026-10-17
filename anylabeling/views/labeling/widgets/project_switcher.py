@@ -25,6 +25,11 @@ from anylabeling.views.labeling import (
     project_registry,
     project_settings,
 )
+from anylabeling.views.labeling.utils.style import (
+    get_danger_btn_style,
+    get_dialog_style,
+    get_ok_btn_style,
+)
 
 
 class _ProgressSignals(QtCore.QObject):
@@ -72,6 +77,7 @@ class ProjectSwitcherDialog(QtWidgets.QDialog):
         self.widget = parent
         self.setWindowTitle(self.tr("切换项目"))
         self.resize(780, 420)
+        self.setStyleSheet(get_dialog_style())
 
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(16, 16, 16, 16)
@@ -112,28 +118,36 @@ class ProjectSwitcherDialog(QtWidgets.QDialog):
         self.startup_checkbox.toggled.connect(self._on_startup_toggled)
         layout.addWidget(self.startup_checkbox)
 
-        buttons = QtWidgets.QHBoxLayout()
         open_button = QtWidgets.QPushButton(self.tr("打开"))
+        open_button.setStyleSheet(get_ok_btn_style())
         new_button = QtWidgets.QPushButton(self.tr("新建项目…"))
         browse_button = QtWidgets.QPushButton(self.tr("打开其他文件夹…"))
         reveal_button = QtWidgets.QPushButton(self.tr("打开项目设置文件夹"))
         reset_button = QtWidgets.QPushButton(self.tr("重置本项目设置"))
         forget_button = QtWidgets.QPushButton(self.tr("从列表移除"))
         delete_button = QtWidgets.QPushButton(self.tr("删除项目数据…"))
+        delete_button.setStyleSheet(get_danger_btn_style())
         close_button = QtWidgets.QPushButton(self.tr("关闭"))
+
+        buttons = QtWidgets.QHBoxLayout()
+        for button in (open_button, new_button, browse_button):
+            buttons.addWidget(button)
+        buttons.addStretch()
+        buttons.addWidget(close_button)
+        layout.addLayout(buttons)
+
+        # 维护类动作单独一行。七个等权按钮挤在一排时既看不出该点哪个，
+        # 七个 min-width:100px 加间距还会把对话框撑得比设计宽度更宽。
+        maintenance = QtWidgets.QHBoxLayout()
         for button in (
-            open_button,
-            new_button,
-            browse_button,
             reveal_button,
             reset_button,
             forget_button,
             delete_button,
         ):
-            buttons.addWidget(button)
-        buttons.addStretch()
-        buttons.addWidget(close_button)
-        layout.addLayout(buttons)
+            maintenance.addWidget(button)
+        maintenance.addStretch()
+        layout.addLayout(maintenance)
 
         open_button.clicked.connect(self.open_selected)
         new_button.clicked.connect(self._new_project)

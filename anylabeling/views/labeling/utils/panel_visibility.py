@@ -71,18 +71,16 @@ def _section_header(title):
     return header
 
 
-def _add_files_header(files_panel):
-    """Give the files card the title row the other two panels have.
+def _add_files_header(files_group_layout):
+    """Title row for the files section, placed above its search box.
 
-    It was the only section with no header at all, so the column read as
-    two titled panels and one bare one.
+    The search row and the files panel are siblings inside one splitter
+    section, so a title added to the panel alone ended up *below* the
+    search box -- which then read as the search box of the panel above
+    (Objects). The title goes above both of them now.
     """
-    layout = files_panel.layout()
-    if layout is None:
-        return
-    layout.insertWidget(
-        0,
-        _section_header(QCoreApplication.translate("LabelingWidget", "文件")),
+    files_group_layout.addWidget(
+        _section_header(QCoreApplication.translate("LabelingWidget", "文件"))
     )
 
 
@@ -144,7 +142,6 @@ def build_main_splitter(widget, central_layout, sidebar_layout, sections):
     for nothing, and the footer's 收起 button carries the toggle.
     """
     labels_panel, objects_panel, file_search_layout, files_panel = sections
-    _add_files_header(files_panel)
     _replace_flags_title(widget)
     central = QtWidgets.QWidget()
     central.setObjectName("CentralArea")
@@ -160,6 +157,7 @@ def build_main_splitter(widget, central_layout, sidebar_layout, sections):
     files_group_layout = QtWidgets.QVBoxLayout(files_group)
     files_group_layout.setContentsMargins(0, 0, 0, 0)
     files_group_layout.setSpacing(4)
+    _add_files_header(files_group_layout)
     files_group_layout.addLayout(file_search_layout)
     files_group_layout.addWidget(files_panel)
     lists.addWidget(files_group)

@@ -76,29 +76,29 @@ class FloatingToolPanel(QtWidgets.QFrame):
             QFrame#FloatingToolPanel {{
                 background: {t["background_secondary"]};
                 border: 1px solid {t["border_light"]};
-                border-radius: 12px;
+                border-radius: {t["radius_card"]};
             }}
             QFrame#FloatingToolPanelHandle {{
                 background: {t["surface"]};
                 border: 1px solid {t["border"]};
-                border-radius: 7px;
+                border-radius: {t["radius_md"]};
             }}
             QLabel#FloatingToolPanelGrip {{
                 color: {t["text_secondary"]};
-                font-size: 10px;
+                font-size: 11px;
                 font-weight: 700;
             }}
             QToolButton#FloatingToolPanelCollapseBtn {{
                 border: none;
                 background: transparent;
                 color: {t["text_secondary"]};
-                font-size: 9px;
+                font-size: 11px;
                 padding: 0px;
             }}
             QToolButton#FloatingToolPanelCollapseBtn:hover {{
                 color: {t["text"]};
                 background: {t["background_hover"]};
-                border-radius: 4px;
+                border-radius: {t["radius_sm"]};
             }}
         """)
 
@@ -325,7 +325,7 @@ class ToolBar(QtWidgets.QFrame):
                 max-width: 30px;
                 max-height: 30px;
                 border: 1px solid {t["border"]};
-                border-radius: 8px;
+                border-radius: {t["radius_lg"]};
                 background: {base_bg};
                 padding: 0px;
                 margin: 0px;

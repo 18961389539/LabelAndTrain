@@ -128,6 +128,7 @@ CONTRACT_MEMBERS = frozenset(
         "recent_files",
         "reset_attribute",
         "reset_state",
+        "rework_banner",
         "right_sidebar",
         "scale_fit_window",
         "scroll_area",

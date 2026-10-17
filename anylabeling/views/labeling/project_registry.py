@@ -12,11 +12,11 @@ registry degrades to an empty list, never an error dialog), bounded size.
 """
 
 import json
-import os
 import os.path as osp
 import time
 
 from anylabeling.config import get_work_directory
+from anylabeling.views.labeling.utils._io import save_json
 
 REGISTRY_DIR_NAME = ".jllabel"
 REGISTRY_FILE_NAME = "projects.json"
@@ -53,12 +53,18 @@ def load_registry():
 
 
 def save_registry(data):
-    path = registry_path()
+    """Write the registry atomically; a crash cannot truncate it.
+
+    The write goes through the shared ``save_json`` helper (temp file +
+    fsync + replace), so a partial write never lands in ``projects.json``
+    -- the one file both the switcher and the recent list read. The
+    on-disk format stays the registry's own (two-space indent, Chinese
+    kept readable), and a failed write returns ``False`` rather than
+    raising, matching the module's damage-tolerance contract.
+    """
+    payload = {"schema": SCHEMA, "projects": data["projects"]}
     try:
-        os.makedirs(osp.dirname(path), exist_ok=True)
-        payload = {"schema": SCHEMA, "projects": data["projects"]}
-        with open(path, "w", encoding="utf-8") as handle:
-            json.dump(payload, handle, ensure_ascii=False, indent=2)
+        save_json(payload, registry_path(), indent=2, ensure_ascii=False)
         return True
     except OSError:
         return False

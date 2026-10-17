@@ -67,7 +67,19 @@ BUDGETS = {
     # action itself. The menu is where the device list can be dynamic
     # (a QActionGroup asks device_manager at fill time); the settings
     # schema's static `options` cannot express a machine-dependent list.
-    "anylabeling/views/labeling/label_widget.py": 6787,
+    #
+    # Raised 6787 -> 6789 on 2026-10-15, documented feature: the persistent
+    # rework banner. Two lines only -- one build call in _build_layout and
+    # one refresh call in update_labeling_instruction; the banner itself and
+    # its show/hide rule live in utils/file_lifecycle.py, so the widget gains
+    # wiring, not logic. It keeps a rejected image's reason on screen instead
+    # of relying on the eight-second status-bar line.
+    #
+    # Raised 6789 -> 6797 on 2026-10-15, documented feature: the 负样本 filter.
+    # The file list has shown a dedicated negative-sample badge all along, but
+    # the filter dropdown could not isolate those rows -- one combo entry with
+    # its tooltip and one branch in _apply_file_filter are the whole change.
+    "anylabeling/views/labeling/label_widget.py": 6797,
     # Lowered 3772 -> 3760 on 2026-09-29: the undo/redo stacks moved out to
     # widgets/shape_history.py (which is also what made them survive a file
     # switch) and the canvas reaches them through the attribute names it has

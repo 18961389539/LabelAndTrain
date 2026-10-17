@@ -55,9 +55,10 @@ class CustomComboBox(QComboBox):
                 padding: 5px 8px;
                 background: {t["background_secondary"]};
                 border: 1px solid {t["border_light"]};
-                border-radius: 6px;
+                border-radius: {t["radius_md"]};
                 min-height: 24px;
-                selection-background-color: {t["primary"]};
+                selection-background-color: {t["selection"]};
+                selection-color: {t["selection_text"]};
                 color: {t["text"]};
             }}
             QComboBox:hover {{
@@ -73,8 +74,8 @@ class CustomComboBox(QComboBox):
                 width: 20px;
                 border: none;
                 background: {t["spinbox_button"]};
-                border-top-right-radius: 6px;
-                border-bottom-right-radius: 6px;
+                border-top-right-radius: {t["radius_md"]};
+                border-bottom-right-radius: {t["radius_md"]};
             }}
             QComboBox::drop-down:hover {{
                 background: {t["spinbox_button_hover"]};
@@ -87,16 +88,16 @@ class CustomComboBox(QComboBox):
             QComboBox QAbstractItemView {{
                 background: {t["background_secondary"]};
                 border: 1px solid {t["border_light"]};
-                border-radius: 6px;
+                border-radius: {t["radius_md"]};
                 padding: 4px;
-                selection-background-color: {t["primary"]};
-                selection-color: white;
+                selection-background-color: {t["selection"]};
+                selection-color: {t["selection_text"]};
                 color: {t["text"]};
                 outline: none;
             }}
             QComboBox QAbstractItemView::item {{
                 padding: 6px 8px;
-                border-radius: 4px;
+                border-radius: {t["radius_sm"]};
                 min-height: 20px;
                 border: none;
                 outline: none;
@@ -105,14 +106,14 @@ class CustomComboBox(QComboBox):
                 background-color: {t["surface_hover"]};
             }}
             QComboBox QAbstractItemView::item:selected {{
-                background-color: {t["primary"]};
-                color: white;
+                background-color: {t["selection"]};
+                color: {t["selection_text"]};
                 border: none;
                 outline: none;
             }}
             QComboBox QAbstractItemView::item:selected:active {{
-                background-color: {t["primary"]};
-                color: white;
+                background-color: {t["selection"]};
+                color: {t["selection_text"]};
                 border: none;
                 outline: none;
             }}
@@ -132,9 +133,10 @@ class CustomSpinBox(QSpinBox):
                 background: {t["background_secondary"]};
                 color: {t["text"]};
                 border: 1px solid {t["border_light"]};
-                border-radius: 6px;
+                border-radius: {t["radius_md"]};
                 min-height: 24px;
-                selection-background-color: {t["primary"]};
+                selection-background-color: {t["selection"]};
+                selection-color: {t["selection_text"]};
             }}
             QSpinBox::up-button, QSpinBox::down-button {{
                 width: 20px;
@@ -170,9 +172,10 @@ class CustomDoubleSpinBox(QDoubleSpinBox):
                 background: {t["background_secondary"]};
                 color: {t["text"]};
                 border: 1px solid {t["border_light"]};
-                border-radius: 6px;
+                border-radius: {t["radius_md"]};
                 min-height: 24px;
-                selection-background-color: {t["primary"]};
+                selection-background-color: {t["selection"]};
+                selection-color: {t["selection_text"]};
             }}
             QDoubleSpinBox::up-button, QDoubleSpinBox::down-button {{
                 width: 20px;
@@ -211,7 +214,7 @@ class CustomSlider(QSlider):
             QSlider::groove:horizontal {{
                 height: 4px;
                 background: {t["border"]};
-                border-radius: 2px;
+                border-radius: {t["radius_sm"]};
             }}
             QSlider::handle:horizontal {{
                 background: {t["primary"]};
@@ -219,11 +222,11 @@ class CustomSlider(QSlider):
                 width: 16px;
                 height: 16px;
                 margin: -6px 0;
-                border-radius: 8px;
+                border-radius: {t["radius_lg"]};
             }}
             QSlider::sub-page:horizontal {{
                 background: {t["primary"]};
-                border-radius: 2px;
+                border-radius: {t["radius_sm"]};
             }}
         """)
 
@@ -238,7 +241,7 @@ class CustomLineEdit(QLineEdit):
         self.setStyleSheet(f"""
             QLineEdit {{
                 border: 1px solid {t["border"]};
-                border-radius: 8px;
+                border-radius: {t["radius_lg"]};
                 background-color: {t["background_secondary"]};
                 color: {t["text"]};
                 font-size: 13px;
@@ -247,7 +250,7 @@ class CustomLineEdit(QLineEdit):
             }}
             QLineEdit:hover {{
                 background-color: {t["background_hover"]};
-                border-radius: 8px;
+                border-radius: {t["radius_lg"]};
             }}
             QLineEdit:focus {{
                 border: 2px solid {t["highlight"]};
@@ -274,18 +277,19 @@ class CustomQPushButton(QPushButton):
         if self.selected:
             self.setStyleSheet(f"""
                 QPushButton {{
-                    background-color: {t["primary"]};
-                    color: white;
-                    border-radius: 4px;
+                    background-color: {t["primary_solid"]};
+                    color: {t["on_primary"]};
+                    border: 2px solid {t["primary_solid"]};
+                    border-radius: {t["radius_sm"]};
                     padding: 4px 8px;
                     font-weight: bold;
-                    outline: none;
                 }}
                 QPushButton:hover {{
-                    background-color: {t["primary_hover"]};
+                    background-color: {t["primary_solid_hover"]};
+                    border-color: {t["primary_solid_hover"]};
                 }}
                 QPushButton:focus {{
-                    outline: none;
+                    border-color: {t["background"]};
                 }}
             """)
         else:
@@ -294,7 +298,7 @@ class CustomQPushButton(QPushButton):
                     background-color: {t["surface"]};
                     color: {t["text"]};
                     border: 1px solid {t["border_light"]};
-                    border-radius: 4px;
+                    border-radius: {t["radius_sm"]};
                     padding: 4px 8px;
                     outline: none;
                 }}
@@ -331,7 +335,7 @@ class TrainingConfirmDialog(QDialog):
         self.setStyleSheet(f"""
             QDialog {{
                 background-color: {t["background"]};
-                border-radius: 8px;
+                border-radius: {t["radius_lg"]};
             }}
             QLabel {{
                 background-color: transparent;
@@ -367,7 +371,7 @@ class TrainingConfirmDialog(QDialog):
                 font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
                 font-size: 12px;
                 border: 1px solid {t["border"]};
-                border-radius: 6px;
+                border-radius: {t["radius_md"]};
                 padding: 12px;
             }}
         """)
@@ -497,20 +501,23 @@ class TrainingStepBar(QWidget):
             if index < current:
                 button.setText(f"{self._titles[index]} ✓")
                 button.setStyleSheet(
-                    f"QPushButton {{ background: {t.get('success', '#22A06B')}; "
-                    f"color: white; border: none; border-radius: 8px; height: 32px; }}"
+                    f"QPushButton {{ background: {t['success_solid']}; "
+                    f"color: {t['on_success']}; border: none; "
+                    f"border-radius: {t['radius_lg']}; height: 32px; }}"
                 )
             elif index == current:
                 button.setText(self._titles[index])
                 button.setStyleSheet(
-                    f"QPushButton {{ background: {t['primary']}; color: white; "
-                    f"border: none; border-radius: 8px; height: 32px; font-weight: 700; }}"
+                    f"QPushButton {{ background: {t['primary_solid']}; "
+                    f"color: {t['on_primary']}; "
+                    f"border: none; border-radius: {t['radius_lg']}; height: 32px; "
+                    f"font-weight: 700; }}"
                 )
             else:
                 button.setText(self._titles[index])
                 button.setStyleSheet(
                     f"QPushButton {{ background: {t['surface']}; color: {t['text']}; "
-                    f"border: 1px solid {t['border']}; border-radius: 8px; height: 32px; }}"
+                    f"border: 1px solid {t['border']}; border-radius: {t['radius_lg']}; height: 32px; }}"
                 )
             self._hints[index].setStyleSheet(
                 f"font-size: 11px; color: {t['text_secondary']};"

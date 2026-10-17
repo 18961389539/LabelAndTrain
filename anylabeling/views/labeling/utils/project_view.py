@@ -37,10 +37,6 @@ LEGACY_RECENT_KEY = "recent_dirs"
 RECENT_LIMIT = 10
 
 
-def _tr(text):
-    return QtCore.QCoreApplication.translate("ProjectUI", text)
-
-
 def project_name(root):
     """项目的显示名：清单里记的名字，缺清单时回退目录名。
 
@@ -98,7 +94,11 @@ def record_recent(widget, directory):
     def _note_evicted(roots):
         names = "、".join(osp.basename(r) for r in roots if r)
         widget.status(
-            _tr("最近项目已满，已移出列表（数据与设置不受影响）：%s") % names
+            QtCore.QCoreApplication.translate(
+                "LabelingWidget",
+                "最近项目已满，已移出列表（数据与设置不受影响）：%s",
+            )
+            % names
         )
 
     try:
@@ -178,7 +178,11 @@ def populate_recent_menu(widget, menu):
     menu.clear()
     dirs = recent_dirs(widget)
     if not dirs:
-        empty = menu.addAction(_tr("（还没有项目记录）"))
+        empty = menu.addAction(
+            QtCore.QCoreApplication.translate(
+                "LabelingWidget", "（还没有项目记录）"
+            )
+        )
         empty.setEnabled(False)
         return
     current = current_root(widget)
@@ -188,12 +192,21 @@ def populate_recent_menu(widget, menu):
         if current and osp.normcase(osp.normpath(path)) == osp.normcase(
             osp.normpath(current)
         ):
-            label = _tr("%s（当前）") % label
+            label = (
+                QtCore.QCoreApplication.translate(
+                    "LabelingWidget", "%s（当前）"
+                )
+                % label
+            )
         action = menu.addAction(label)
         # 显示名可以重复，路径不会：重名时靠 tooltip 里的完整路径区分。
         action.setToolTip(
             "%s\n%s：%s"
-            % (path, _tr("任务"), project_model.task_label(described["task"]))
+            % (
+                path,
+                QtCore.QCoreApplication.translate("LabelingWidget", "任务"),
+                project_model.task_label(described["task"]),
+            )
         )
         action.triggered.connect(
             lambda _checked=False, p=path: widget.load_recent_dir(p)
@@ -246,7 +259,12 @@ def continue_last_session(widget):
         return True
     except Exception as e:  # noqa: BLE001
         logger.warning(f"Session resume failed: {e}")
-        widget.status(_tr("恢复上次工作现场失败"), 4000)
+        widget.status(
+            QtCore.QCoreApplication.translate(
+                "LabelingWidget", "恢复上次工作现场失败"
+            ),
+            4000,
+        )
         return False
 
 
@@ -328,7 +346,9 @@ def new_project(widget):
 
     start_dir = getattr(widget, "last_open_dir", None) or ""
     root = QtWidgets.QFileDialog.getExistingDirectory(
-        widget, _tr("选择项目文件夹"), start_dir
+        widget,
+        QtCore.QCoreApplication.translate("LabelingWidget", "选择项目文件夹"),
+        start_dir,
     )
     if not root:
         return False
@@ -337,8 +357,12 @@ def new_project(widget):
     if project_model.has_record(root):
         answer = QtWidgets.QMessageBox.question(
             widget,
-            _tr("已经是项目"),
-            _tr("这个文件夹已经是一个项目了，直接打开它吗？\n%s") % root,
+            QtCore.QCoreApplication.translate("LabelingWidget", "已经是项目"),
+            QtCore.QCoreApplication.translate(
+                "LabelingWidget",
+                "这个文件夹已经是一个项目了，直接打开它吗？\n%s",
+            )
+            % root,
         )
         if answer != QtWidgets.QMessageBox.StandardButton.Yes:
             return False
@@ -349,7 +373,7 @@ def new_project(widget):
         widget,
         name=project_model.default_name(root),
         root=root,
-        title=_tr("新建项目"),
+        title=QtCore.QCoreApplication.translate("LabelingWidget", "新建项目"),
         templates=_template_choices(root),
     )
     if dialog.exec() != QtWidgets.QDialog.DialogCode.Accepted:
@@ -361,8 +385,14 @@ def new_project(widget):
     ):
         QtWidgets.QMessageBox.warning(
             widget,
-            _tr("新建项目失败"),
-            _tr("无法写入项目设置，请检查该目录是否可写：\n%s") % root,
+            QtCore.QCoreApplication.translate(
+                "LabelingWidget", "新建项目失败"
+            ),
+            QtCore.QCoreApplication.translate(
+                "LabelingWidget",
+                "无法写入项目设置，请检查该目录是否可写：\n%s",
+            )
+            % root,
         )
         return False
     _apply_chosen_template(root, values.get("template_root"))
@@ -400,8 +430,12 @@ def edit_project(widget):
     if not root:
         QtWidgets.QMessageBox.information(
             widget,
-            _tr("没有打开的项目"),
-            _tr("先打开一个文件夹，再来设置项目属性。"),
+            QtCore.QCoreApplication.translate(
+                "LabelingWidget", "没有打开的项目"
+            ),
+            QtCore.QCoreApplication.translate(
+                "LabelingWidget", "先打开一个文件夹，再来设置项目属性。"
+            ),
         )
         return False
 
@@ -409,9 +443,10 @@ def edit_project(widget):
     note = None
     overview = None
     if not described["has_record"]:
-        note = _tr(
+        note = QtCore.QCoreApplication.translate(
+            "LabelingWidget",
             "这个文件夹还不是正式项目；保存后会在其中创建 "
-            ".jllabel/project.json（只是多一个隐藏目录）。"
+            ".jllabel/project.json（只是多一个隐藏目录）。",
         )
     else:
         # 只读快照：进度与训练轮次都从盘上现数，不另存一份。任何一路
@@ -431,7 +466,7 @@ def edit_project(widget):
         name=described["name"],
         task=described["task"],
         root=root,
-        title=_tr("项目属性"),
+        title=QtCore.QCoreApplication.translate("LabelingWidget", "项目属性"),
         note=note,
         overview=overview,
     )
@@ -450,13 +485,21 @@ def edit_project(widget):
     if not ok:
         QtWidgets.QMessageBox.warning(
             widget,
-            _tr("保存失败"),
-            _tr("无法写入项目设置，请检查该目录是否可写：\n%s") % root,
+            QtCore.QCoreApplication.translate("LabelingWidget", "保存失败"),
+            QtCore.QCoreApplication.translate(
+                "LabelingWidget",
+                "无法写入项目设置，请检查该目录是否可写：\n%s",
+            )
+            % root,
         )
         return False
 
     widget.update_progress_title()
-    widget.status(_tr("已更新项目：%s") % values["name"], 3000)
+    widget.status(
+        QtCore.QCoreApplication.translate("LabelingWidget", "已更新项目：%s")
+        % values["name"],
+        3000,
+    )
     return True
 
 
@@ -471,8 +514,12 @@ def open_project_folder(widget):
     if not root or not osp.isdir(root):
         QtWidgets.QMessageBox.information(
             widget,
-            _tr("没有打开的项目"),
-            _tr("先打开一个项目文件夹，再来打开它的目录。"),
+            QtCore.QCoreApplication.translate(
+                "LabelingWidget", "没有打开的项目"
+            ),
+            QtCore.QCoreApplication.translate(
+                "LabelingWidget", "先打开一个项目文件夹，再来打开它的目录。"
+            ),
         )
         return
     from anylabeling.views.labeling.widgets.project_switcher import (
@@ -488,8 +535,12 @@ def open_settings_folder(widget):
     if not root:
         QtWidgets.QMessageBox.information(
             widget,
-            _tr("没有打开的项目"),
-            _tr("先打开一个项目文件夹，再来看它的项目设置。"),
+            QtCore.QCoreApplication.translate(
+                "LabelingWidget", "没有打开的项目"
+            ),
+            QtCore.QCoreApplication.translate(
+                "LabelingWidget", "先打开一个项目文件夹，再来看它的项目设置。"
+            ),
         )
         return
     from anylabeling.views.labeling.project import PROJECT_DIR_NAME
@@ -501,8 +552,13 @@ def open_settings_folder(widget):
     if not osp.isdir(settings_dir):
         QtWidgets.QMessageBox.information(
             widget,
-            _tr("暂无项目设置"),
-            _tr("该项目还没有 .jllabel 设置文件；它会在首次保存时创建。\n%s")
+            QtCore.QCoreApplication.translate(
+                "LabelingWidget", "暂无项目设置"
+            ),
+            QtCore.QCoreApplication.translate(
+                "LabelingWidget",
+                "该项目还没有 .jllabel 设置文件；它会在首次保存时创建。\n%s",
+            )
             % root,
         )
         return
@@ -518,7 +574,9 @@ def _bundle_progress_dialog(widget, title):
     """
     dialog = QtWidgets.QProgressDialog(widget)
     dialog.setWindowTitle(title)
-    dialog.setLabelText(_tr("正在处理…"))
+    dialog.setLabelText(
+        QtCore.QCoreApplication.translate("LabelingWidget", "正在处理…")
+    )
     dialog.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
     dialog.setMinimumDuration(0)
     dialog.setAutoClose(False)
@@ -560,14 +618,21 @@ def export_project_bundle(widget):
     if not root:
         QtWidgets.QMessageBox.information(
             widget,
-            _tr("没有打开的项目"),
-            _tr("先打开一个项目文件夹，再来导出项目包。"),
+            QtCore.QCoreApplication.translate(
+                "LabelingWidget", "没有打开的项目"
+            ),
+            QtCore.QCoreApplication.translate(
+                "LabelingWidget", "先打开一个项目文件夹，再来导出项目包。"
+            ),
         )
         return False
 
     suggested = osp.join(osp.dirname(root), f"{osp.basename(root)}.zip")
     path, _ = QtWidgets.QFileDialog.getSaveFileName(
-        widget, _tr("导出项目包"), suggested, _tr("项目包 (*.zip)")
+        widget,
+        QtCore.QCoreApplication.translate("LabelingWidget", "导出项目包"),
+        suggested,
+        QtCore.QCoreApplication.translate("LabelingWidget", "项目包 (*.zip)"),
     )
     if not path:
         return False
@@ -581,11 +646,25 @@ def export_project_bundle(widget):
             root, path, progress=progress, cancel=cancel
         )
 
-    result = _run_bundle_step(widget, total, work, _tr("导出项目包"))
+    result = _run_bundle_step(
+        widget,
+        total,
+        work,
+        QtCore.QCoreApplication.translate("LabelingWidget", "导出项目包"),
+    )
     if result is None:
-        widget.status(_tr("已取消导出"), 3000)
+        widget.status(
+            QtCore.QCoreApplication.translate("LabelingWidget", "已取消导出"),
+            3000,
+        )
         return False
-    widget.status(_tr("已导出项目包（%d 个文件）") % result["files"], 5000)
+    widget.status(
+        QtCore.QCoreApplication.translate(
+            "LabelingWidget", "已导出项目包（%d 个文件）"
+        )
+        % result["files"],
+        5000,
+    )
     logger.info(
         f"Exported project bundle: {root} -> {path} "
         f"({result['files']} files, {result['bytes']} bytes, "
@@ -604,7 +683,10 @@ def import_project_bundle(widget):
     from anylabeling.views.labeling import project_bundle
 
     path, _ = QtWidgets.QFileDialog.getOpenFileName(
-        widget, _tr("从项目包导入"), "", _tr("项目包 (*.zip)")
+        widget,
+        QtCore.QCoreApplication.translate("LabelingWidget", "从项目包导入"),
+        "",
+        QtCore.QCoreApplication.translate("LabelingWidget", "项目包 (*.zip)"),
     )
     if not path:
         return False
@@ -612,15 +694,22 @@ def import_project_bundle(widget):
     if not info or not info["top"]:
         QtWidgets.QMessageBox.warning(
             widget,
-            _tr("不是项目包"),
-            _tr("这个 zip 不是单文件夹的项目包，无法导入：\n%s") % path,
+            QtCore.QCoreApplication.translate("LabelingWidget", "不是项目包"),
+            QtCore.QCoreApplication.translate(
+                "LabelingWidget",
+                "这个 zip 不是单文件夹的项目包，无法导入：\n%s",
+            )
+            % path,
         )
         return False
     described = project_model.describe_from_record(info["top"], info["record"])
     answer = QtWidgets.QMessageBox.question(
         widget,
-        _tr("导入项目包"),
-        _tr("将导入项目「%s」（%s），解包后立即打开。继续吗？")
+        QtCore.QCoreApplication.translate("LabelingWidget", "导入项目包"),
+        QtCore.QCoreApplication.translate(
+            "LabelingWidget",
+            "将导入项目「%s」（%s），解包后立即打开。继续吗？",
+        )
         % (described["name"], project_model.task_label(described["task"])),
     )
     if answer != QtWidgets.QMessageBox.StandardButton.Yes:
@@ -628,7 +717,7 @@ def import_project_bundle(widget):
 
     parent = QtWidgets.QFileDialog.getExistingDirectory(
         widget,
-        _tr("选择解包位置"),
+        QtCore.QCoreApplication.translate("LabelingWidget", "选择解包位置"),
         getattr(widget, "last_open_dir", None) or "",
     )
     if not parent:
@@ -641,16 +730,31 @@ def import_project_bundle(widget):
 
     try:
         result = _run_bundle_step(
-            widget, info["entries"], work, _tr("导入项目包")
+            widget,
+            info["entries"],
+            work,
+            QtCore.QCoreApplication.translate("LabelingWidget", "导入项目包"),
         )
     except ValueError as e:
-        QtWidgets.QMessageBox.warning(widget, _tr("导入失败"), str(e))
+        QtWidgets.QMessageBox.warning(
+            widget,
+            QtCore.QCoreApplication.translate("LabelingWidget", "导入失败"),
+            str(e),
+        )
         return False
     if result is None:
-        widget.status(_tr("已取消导入"), 3000)
+        widget.status(
+            QtCore.QCoreApplication.translate("LabelingWidget", "已取消导入"),
+            3000,
+        )
         return False
     widget.import_image_folder(result["root"])
-    widget.status(_tr("已导入项目并打开"), 5000)
+    widget.status(
+        QtCore.QCoreApplication.translate(
+            "LabelingWidget", "已导入项目并打开"
+        ),
+        5000,
+    )
     logger.info(f"Imported project bundle: {path} -> {result['root']}")
     return True
 
@@ -662,7 +766,12 @@ def close_project(widget):
     了位置，再打开会回到关掉时看的那张图。
     """
     if not current_root(widget):
-        widget.status(_tr("当前没有打开的项目"), 3000)
+        widget.status(
+            QtCore.QCoreApplication.translate(
+                "LabelingWidget", "当前没有打开的项目"
+            ),
+            3000,
+        )
         return False
     if not widget.may_continue():
         return False
@@ -681,7 +790,9 @@ def close_project(widget):
     widget.canvas.setEnabled(False)
     widget.actions.save_as.setEnabled(False)
     widget.update_progress_title()
-    widget.status(_tr("已关闭项目"), 3000)
+    widget.status(
+        QtCore.QCoreApplication.translate("LabelingWidget", "已关闭项目"), 3000
+    )
     return True
 
 
@@ -695,7 +806,9 @@ def build_project_menu(widget):
     """
     from anylabeling.views.labeling.utils import new_action
 
-    menu = QtWidgets.QMenu(_tr("项目"), widget)
+    menu = QtWidgets.QMenu(
+        QtCore.QCoreApplication.translate("LabelingWidget", "项目"), widget
+    )
 
     # 复用 File 菜单里原有的"切换项目"动作对象：快捷键、设置页对
     # ``actions.open_project`` 的引用都跟着走，不必两处各建一个。
@@ -704,35 +817,45 @@ def build_project_menu(widget):
         shortcuts = getattr(widget, "_config", {}).get("shortcuts", {}) or {}
         switch = new_action(
             widget,
-            _tr("切换项目…"),
+            QtCore.QCoreApplication.translate("LabelingWidget", "切换项目…"),
             slot=widget.open_project_switcher,
             shortcut=shortcuts.get("open_project") or None,
             icon="open",
-            tip=_tr("在最近打开的项目之间切换"),
+            tip=QtCore.QCoreApplication.translate(
+                "LabelingWidget", "在最近打开的项目之间切换"
+            ),
         )
         widget.actions.open_project = switch
     else:
         # 复用的动作来自 File 菜单，源串是英文 "Switch Project"，翻译表里
         # 没有省略号；它和同一菜单里的另两项一样会打开对话框，按 Qt 惯例
         # 应带省略号。两处共用这一个动作对象，所以一起变。
-        switch.setText(_tr("切换项目…"))
+        switch.setText(
+            QtCore.QCoreApplication.translate("LabelingWidget", "切换项目…")
+        )
     new_action_item = new_action(
         widget,
-        _tr("新建项目…"),
+        QtCore.QCoreApplication.translate("LabelingWidget", "新建项目…"),
         slot=lambda: new_project(widget),
-        tip=_tr("选一个文件夹，为它起名并指定任务类型"),
+        tip=QtCore.QCoreApplication.translate(
+            "LabelingWidget", "选一个文件夹，为它起名并指定任务类型"
+        ),
     )
     properties_action = new_action(
         widget,
-        _tr("项目属性…"),
+        QtCore.QCoreApplication.translate("LabelingWidget", "项目属性…"),
         slot=lambda: edit_project(widget),
-        tip=_tr("修改当前项目的名字与任务类型"),
+        tip=QtCore.QCoreApplication.translate(
+            "LabelingWidget", "修改当前项目的名字与任务类型"
+        ),
     )
     search_action = new_action(
         widget,
-        _tr("项目内搜索…"),
+        QtCore.QCoreApplication.translate("LabelingWidget", "项目内搜索…"),
         slot=lambda: search_in_project(widget),
-        tip=_tr("按标注状态或标签名找图，双击跳转"),
+        tip=QtCore.QCoreApplication.translate(
+            "LabelingWidget", "按标注状态或标签名找图，双击跳转"
+        ),
     )
     menu.addAction(new_action_item)
     menu.addAction(properties_action)
@@ -741,7 +864,10 @@ def build_project_menu(widget):
     menu.addSeparator()
     menu.addAction(switch)
 
-    recent_menu = QtWidgets.QMenu(_tr("打开最近项目"), menu)
+    recent_menu = QtWidgets.QMenu(
+        QtCore.QCoreApplication.translate("LabelingWidget", "打开最近项目"),
+        menu,
+    )
     recent_menu.aboutToShow.connect(
         lambda: populate_recent_menu(widget, recent_menu)
     )
@@ -753,35 +879,46 @@ def build_project_menu(widget):
     # 快捷键，而关闭项目/打开设置目录不依赖菜单是否打开。
     close_action = new_action(
         widget,
-        _tr("关闭项目"),
+        QtCore.QCoreApplication.translate("LabelingWidget", "关闭项目"),
         slot=lambda: close_project(widget),
-        tip=_tr("关闭当前项目并回到空画布"),
+        tip=QtCore.QCoreApplication.translate(
+            "LabelingWidget", "关闭当前项目并回到空画布"
+        ),
     )
     folder_action = new_action(
         widget,
-        _tr("打开项目文件夹"),
+        QtCore.QCoreApplication.translate("LabelingWidget", "打开项目文件夹"),
         slot=lambda: open_project_folder(widget),
-        tip=_tr(
-            "在文件管理器里打开当前项目的目录（图片、标签、导出结果都在这里）"
+        tip=QtCore.QCoreApplication.translate(
+            "LabelingWidget",
+            "在文件管理器里打开当前项目的目录（图片、标签、导出结果都在这里）",
         ),
     )
     settings_action = new_action(
         widget,
-        _tr("打开项目设置文件夹"),
+        QtCore.QCoreApplication.translate(
+            "LabelingWidget", "打开项目设置文件夹"
+        ),
         slot=lambda: open_settings_folder(widget),
-        tip=_tr("在文件管理器里打开当前项目的 .jllabel 目录"),
+        tip=QtCore.QCoreApplication.translate(
+            "LabelingWidget", "在文件管理器里打开当前项目的 .jllabel 目录"
+        ),
     )
     export_action = new_action(
         widget,
-        _tr("导出项目包…"),
+        QtCore.QCoreApplication.translate("LabelingWidget", "导出项目包…"),
         slot=lambda: export_project_bundle(widget),
-        tip=_tr("把整个项目（图片、标签、设置）打包成一个 zip"),
+        tip=QtCore.QCoreApplication.translate(
+            "LabelingWidget", "把整个项目（图片、标签、设置）打包成一个 zip"
+        ),
     )
     import_action = new_action(
         widget,
-        _tr("从项目包导入…"),
+        QtCore.QCoreApplication.translate("LabelingWidget", "从项目包导入…"),
         slot=lambda: import_project_bundle(widget),
-        tip=_tr("从项目包 zip 还原一个项目并打开它"),
+        tip=QtCore.QCoreApplication.translate(
+            "LabelingWidget", "从项目包 zip 还原一个项目并打开它"
+        ),
     )
     menu.addAction(folder_action)
     menu.addAction(settings_action)

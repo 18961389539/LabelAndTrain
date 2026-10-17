@@ -19,17 +19,7 @@ from PyQt6 import QtCore, QtWidgets
 
 from anylabeling.views.labeling import project_model
 from anylabeling.views.labeling.project import TASK_TYPES
-
-
-def _tr(text):
-    """Module-level strings go through an explicit context.
-
-    ``self.tr`` inside a module-level function is invisible to
-    ``pylupdate6`` (it can only infer the context from a receiver
-    expression inside a class body), so the overview's labels are
-    translated the way ``utils/output_dir.py`` does it.
-    """
-    return QtCore.QCoreApplication.translate("LabelingWidget", text)
+from anylabeling.views.labeling.utils.style import get_dialog_style
 
 
 def _fmt_map50(value):
@@ -94,8 +84,9 @@ def build_overview_group(overview):
     if images:
         lines.append(
             QtWidgets.QLabel(
-                _tr(
-                    "已标 {annotated}/{images} · 已确认 {confirmed} · 需返工 {rework}"
+                QtCore.QCoreApplication.translate(
+                    "LabelingWidget",
+                    "已标 {annotated}/{images} · 已确认 {confirmed} · 需返工 {rework}",
                 ).format(**progress)
             )
         )
@@ -105,24 +96,37 @@ def build_overview_group(overview):
         if best:
             lines.append(
                 QtWidgets.QLabel(
-                    _tr("训练 %d 轮 · 最好 mAP50 %s（%s）")
+                    QtCore.QCoreApplication.translate(
+                        "LabelingWidget", "训练 %d 轮 · 最好 mAP50 %s（%s）"
+                    )
                     % (runs, best, training.get("best_name") or "-")
                 )
             )
         else:
             lines.append(
-                QtWidgets.QLabel(_tr("训练 %d 轮 · 无评分记录") % runs)
+                QtWidgets.QLabel(
+                    QtCore.QCoreApplication.translate(
+                        "LabelingWidget", "训练 %d 轮 · 无评分记录"
+                    )
+                    % runs
+                )
             )
         last = training.get("last_finished") or ""
         if last:
             lines.append(
                 QtWidgets.QLabel(
-                    _tr("最近一轮：%s（%s）")
+                    QtCore.QCoreApplication.translate(
+                        "LabelingWidget", "最近一轮：%s（%s）"
+                    )
                     % (training.get("last_run") or "-", last)
                 )
             )
     elif images:
-        lines.append(QtWidgets.QLabel(_tr("尚未训练")))
+        lines.append(
+            QtWidgets.QLabel(
+                QtCore.QCoreApplication.translate("LabelingWidget", "尚未训练")
+            )
+        )
 
     # 标签列表与上次导出：项目的两个"我该去哪看"的问题，答案都在清单里。
     labels_line = format_labels_line(overview.get("labels") or [])
@@ -134,7 +138,9 @@ def build_overview_group(overview):
 
     if not lines:
         return None
-    group = QtWidgets.QGroupBox(_tr("项目概览"))
+    group = QtWidgets.QGroupBox(
+        QtCore.QCoreApplication.translate("LabelingWidget", "项目概览")
+    )
     box = QtWidgets.QVBoxLayout(group)
     box.setContentsMargins(8, 4, 8, 4)
     for line in lines:
@@ -161,6 +167,7 @@ class ProjectPropertiesDialog(QtWidgets.QDialog):
         self.root = root
         self.setWindowTitle(title or self.tr("项目属性"))
         self.resize(460, 320)
+        self.setStyleSheet(get_dialog_style())
 
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(18, 18, 18, 18)

@@ -21,14 +21,23 @@ class CanvasEmptyStateWidget(QtWidgets.QWidget):
             QWidget#CanvasEmptyState {{
                 background: transparent;
             }}
+            QFrame#EmptyCard {{
+                background: {t["surface"]};
+                border: 1px solid {t["border"]};
+                border-radius: {t["radius_card"]};
+            }}
             QLabel#EmptyTitle {{
-                color: {t["text_secondary"]};
-                font-size: 18px;
-                font-weight: 700;
+                color: {t["text"]};
+                font-size: 20px;
+                font-weight: 600;
             }}
             QLabel#EmptyStep {{
-                color: {t["text_placeholder"]};
+                color: {t["text_secondary"]};
                 font-size: 13px;
+            }}
+            QLabel#EmptyHint {{
+                color: {t["text_placeholder"]};
+                font-size: 12px;
             }}
             """)
 
@@ -53,7 +62,7 @@ class CanvasEmptyStateWidget(QtWidgets.QWidget):
         hint = QtWidgets.QLabel(
             self.tr("提示：按 Ctrl+Y 可自动沿用上一标签，成片同类时更省手")
         )
-        hint.setObjectName("EmptyStep")
+        hint.setObjectName("EmptyHint")
         hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
         hint.setWordWrap(True)
 
@@ -65,10 +74,12 @@ class CanvasEmptyStateWidget(QtWidgets.QWidget):
         self.open_button.setMinimumWidth(200)
         self.open_button.clicked.connect(self.open_folder_requested.emit)
 
-        card = QtWidgets.QWidget()
+        card = QtWidgets.QFrame()
+        card.setObjectName("EmptyCard")
+        card.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         card_layout = QtWidgets.QVBoxLayout(card)
-        card_layout.setContentsMargins(24, 24, 24, 24)
-        card_layout.setSpacing(14)
+        card_layout.setContentsMargins(36, 32, 36, 28)
+        card_layout.setSpacing(16)
         card_layout.addWidget(title)
         card_layout.addWidget(steps)
         card_layout.addWidget(hint)

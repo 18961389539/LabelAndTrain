@@ -155,12 +155,24 @@ class TestSidebarSplitters(unittest.TestCase):
         self.assertFalse(widget.right_sidebar.isHidden())
 
     def test_the_files_section_has_a_matching_header(self):
-        files_panel = self.widget.file_dock.parent()
+        # The search row and the files panel share one splitter section, so
+        # the title lives in that section, above the search box -- inside the
+        # panel it rendered *under* the box, which then read as the panel
+        # above's search box.
+        files_section = self.widget.lists_splitter.widget(2)
+        layout = files_section.layout()
         titles = [
             label.text()
-            for label in files_panel.findChildren(QtWidgets.QLabel)
+            for label in layout.itemAt(0)
+            .widget()
+            .findChildren(QtWidgets.QLabel)
         ]
         self.assertIn("文件", titles)
+        # Right below the title sits the search row, not the files panel.
+        self.assertIsNotNone(layout.itemAt(1).layout())
+        self.assertIs(
+            layout.itemAt(2).widget(), self.widget.file_dock.parent()
+        )
 
     def test_the_flags_dock_wears_our_header(self):
         # The last native title bar in the column is gone: the dock gets

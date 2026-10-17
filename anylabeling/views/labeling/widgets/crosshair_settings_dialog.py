@@ -108,7 +108,7 @@ class CrosshairSettingsDialog(QtWidgets.QDialog):
                 background-color: {theme["surface"]};
                 color: {theme["text"]};
                 border: 1px solid {theme["border_light"]};
-                border-radius: 8px;
+                border-radius: {theme["radius_lg"]};
                 font-weight: 500;
                 padding: 0 8px;
             }}

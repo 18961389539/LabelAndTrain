@@ -68,7 +68,13 @@ def safe_replace(src: str, dst: str, attempts: int = 5, delay: float = 0.15):
     ) from last_exc
 
 
-def save_json(data: dict, file_path: str):
+def save_json(
+    data: dict,
+    file_path: str,
+    *,
+    indent: int = 4,
+    ensure_ascii: bool = True,
+):
     """Atomically write ``data`` as JSON.
 
     The payload is written to a temporary file in the destination
@@ -78,6 +84,10 @@ def save_json(data: dict, file_path: str):
     Args:
         data: JSON-serializable payload.
         file_path: Destination path. Parent directories are created.
+        indent: Indentation passed to :func:`json.dump`.
+        ensure_ascii: Whether to escape non-ASCII characters. Callers
+            that store data meant to be read by eye (project records)
+            pass ``False`` to keep Chinese readable.
     """
     directory = os.path.dirname(os.path.abspath(file_path))
     os.makedirs(directory, exist_ok=True)
@@ -87,7 +97,7 @@ def save_json(data: dict, file_path: str):
             prefix=".xal_", suffix=".tmp", dir=directory
         )
         with os.fdopen(fd, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=4)
+            json.dump(data, f, indent=indent, ensure_ascii=ensure_ascii)
             f.flush()
             os.fsync(f.fileno())
         safe_replace(temporary_file, file_path)

@@ -332,13 +332,6 @@ EXCLUDED_KEYS = frozenset(
         "tools_panel.collapsed",
         "tools_panel.position",
         "auto_labeling.more_panel_expanded",
-        # Canvas rendering knobs kept as rc-file only: set once, then never
-        # touched again.
-        "canvas.attributes.background_color",
-        "canvas.attributes.border_color",
-        "canvas.attributes.text_color",
-        "canvas.brush.max_undo_steps",
-        "canvas.brush.max_undo_memory_mb",
         # Live state owned by other panels.  The device picker lives in the
         # auto-labeling dock, ``file_search`` is the file list's search box
         # text, and the read-only switch belongs to the training tab.  The
@@ -984,6 +977,58 @@ def _non_shortcut_fields() -> list[SettingField]:
                 "Set polygon simplification tolerance in image pixels. "
                 "Use 0 to preserve the extracted contour.",
             ),
+        ),
+        SettingField(
+            "canvas.brush.max_undo_steps",
+            "画笔撤销步数",
+            "int",
+            "Canvas",
+            "Interaction",
+            "Brush",
+            minimum=1,
+            maximum=200,
+            description="画笔编辑时可回退的笔画数上限。",
+        ),
+        SettingField(
+            "canvas.brush.max_undo_memory_mb",
+            "画笔撤销内存上限 (MB)",
+            "int",
+            "Canvas",
+            "Interaction",
+            "Brush",
+            minimum=1,
+            maximum=4096,
+            description="画笔撤销历史占用的内存上限，单位 MB。",
+        ),
+        SettingField(
+            "canvas.attributes.background_color",
+            "属性背景色",
+            "color",
+            "Canvas",
+            "Interaction",
+            "Attributes",
+            channels=4,
+            description="标注属性框的背景色（RGBA，0-255）。",
+        ),
+        SettingField(
+            "canvas.attributes.border_color",
+            "属性边框色",
+            "color",
+            "Canvas",
+            "Interaction",
+            "Attributes",
+            channels=4,
+            description="标注属性框的边框色（RGBA，0-255）。",
+        ),
+        SettingField(
+            "canvas.attributes.text_color",
+            "属性文字色",
+            "color",
+            "Canvas",
+            "Interaction",
+            "Attributes",
+            channels=4,
+            description="标注属性框的文字色（RGBA，0-255）。",
         ),
         SettingField(
             "canvas.cuboid.default_depth_vector",

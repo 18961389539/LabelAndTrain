@@ -37,16 +37,6 @@ from anylabeling.views.labeling.logger import logger
 MANIFEST_NAME = "export_manifest.json"
 
 
-def _tr(text):
-    """Translate from a module-level function.
-
-    ``self.tr`` in a module-level function is dropped by pylupdate6, which is
-    how the export dialogs ended up with untranslated strings; an explicit
-    context keeps these extractable.
-    """
-    return QCoreApplication.translate("LabelingWidget", text)
-
-
 def scan_source(image_list, label_file_for):
     """One pass over the label files behind ``image_list``.
 
@@ -145,19 +135,25 @@ def format_readiness(readiness):
     unknown = readiness["unknown_labels"]
     if unknown:
         lines.append(
-            _tr("%d 个标注的类别不在导出类别表里，导出时会被逐条跳过。")
+            QCoreApplication.translate(
+                "LabelingWidget",
+                "%d 个标注的类别不在导出类别表里，导出时会被逐条跳过。",
+            )
             % readiness["unknown_shapes"]
         )
         for label, count in sorted(
             unknown.items(), key=lambda item: (-item[1], item[0])
         ):
-            lines.append(f"    {label or _tr('（未命名的标注）')}：{count}")
+            lines.append(
+                f"    {label or QCoreApplication.translate("LabelingWidget", '（未命名的标注）')}：{count}"
+            )
 
     corrupted = readiness["corrupted"]
     if corrupted:
         lines.append(
-            _tr(
-                "%d 个标注文件无法读取，导出会在它们上中断并留下不完整的目录。"
+            QCoreApplication.translate(
+                "LabelingWidget",
+                "%d 个标注文件无法读取，导出会在它们上中断并留下不完整的目录。",
             )
             % len(corrupted)
         )

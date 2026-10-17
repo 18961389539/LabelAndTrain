@@ -25,7 +25,7 @@ class SliderStyle:
             height: 4px;
             background: {theme["border"]};
             margin: 0px;
-            border-radius: 2px;
+            border-radius: {theme["radius_sm"]};
         }}
 
         QSlider::handle:horizontal {{
@@ -39,6 +39,6 @@ class SliderStyle:
 
         QSlider::sub-page:horizontal {{
             background: {theme["primary"]};
-            border-radius: 2px;
+            border-radius: {theme["radius_sm"]};
         }}
         """

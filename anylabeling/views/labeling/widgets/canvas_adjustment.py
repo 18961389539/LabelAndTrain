@@ -68,7 +68,7 @@ class CanvasAdjustmentWidget(QtWidgets.QWidget):
         t = get_theme()
         return (
             f"QPushButton {{ background: {t['button_bg']};"
-            " border-radius: 3px; font-size: 11px; padding: 0;"
+            f" border-radius: {t['radius_sm']}; font-size: 11px; padding: 0;"
             f" color: {t['text']}; }}"
             f"QPushButton:hover {{ background: {t['button_hover']}; }}"
             f"QPushButton:pressed {{ background: {t['button_pressed']}; }}"
@@ -101,7 +101,7 @@ class CanvasAdjustmentWidget(QtWidgets.QWidget):
         t = get_theme()
         self.toggle_button.setStyleSheet(
             "QToolButton { background: transparent; border: none;"
-            " border-radius: 3px; padding: 4px; }"
+            f" border-radius: {t['radius_sm']}; padding: 4px; }}"
             f"QToolButton:hover {{ background: {t['background_hover']}; }}"
             f"QToolButton:pressed {{ background: {t['surface_pressed']}; }}"
         )
@@ -175,12 +175,12 @@ class CanvasAdjustmentWidget(QtWidgets.QWidget):
         #canvas_adjustment {{
             background: {card_bg};
             border: 1px solid {t['border_light']};
-            border-radius: 6px;
+            border-radius: {t["radius_md"]};
         }}
         #canvas_adjustment QSlider::groove:horizontal {{
             height: 4px;
             background: {groove_bg};
-            border-radius: 2px;
+            border-radius: {t["radius_sm"]};
         }}
         #canvas_adjustment QSlider::handle:horizontal {{
             background: {primary};
@@ -188,11 +188,11 @@ class CanvasAdjustmentWidget(QtWidgets.QWidget):
             width: 14px;
             height: 14px;
             margin: -5px 0;
-            border-radius: 7px;
+            border-radius: {t["radius_md"]};
         }}
         #canvas_adjustment QSlider::sub-page:horizontal {{
             background: {primary};
-            border-radius: 2px;
+            border-radius: {t["radius_sm"]};
         }}
         """
 
@@ -212,7 +212,7 @@ class CanvasAdjustmentWidget(QtWidgets.QWidget):
         row.setSpacing(4)
 
         name_label = QtWidgets.QLabel(title)
-        name_label.setFixedWidth(64)
+        name_label.setMinimumWidth(64)
         name_label.setStyleSheet(self._theme_text_css())
         name_label.setToolTip(tooltip)
 

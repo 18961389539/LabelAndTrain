@@ -10,6 +10,7 @@ from anylabeling.views.labeling.utils.style import (
     get_normal_button_style,
     get_spinbox_style,
 )
+from anylabeling.views.labeling.utils.theme import get_theme
 
 
 def _pick_native_color(
@@ -183,10 +184,11 @@ class HexColorPickerEditor(QtWidgets.QWidget):
         self._button.move(x, y)
 
     def _input_style(self) -> str:
+        t = get_theme()
         return (
             "QLineEdit {"
-            "border: 1px solid #C8C8CC;"
-            "border-radius: 6px;"
+            f"border: 1px solid {t['border_light']};"
+            f"border-radius: {t['radius_md']};"
             "padding: 0 8px;"
             "font-size: 11px;"
             "color: palette(text);"
@@ -194,18 +196,19 @@ class HexColorPickerEditor(QtWidgets.QWidget):
         )
 
     def _button_style(self) -> str:
+        t = get_theme()
         return (
             "QToolButton {"
-            "border: 1px solid #C8C8CC;"
-            "border-radius: 4px;"
+            f"border: 1px solid {t['border_light']};"
+            f"border-radius: {t['radius_sm']};"
             f"background: {self._value};"
             "padding: 0;"
             "}"
             "QToolButton:hover {"
-            "border: 1px solid #ADADB3;"
+            f"border: 1px solid {t['text_placeholder']};"
             "}"
             "QToolButton:pressed {"
-            "border: 1px solid #8E8E93;"
+            f"border: 1px solid {t['text']};"
             "}"
         )
 
@@ -362,18 +365,19 @@ class ShortcutLineEditor(QtWidgets.QWidget):
         self._clear_button = QtWidgets.QToolButton(self._edit)
         self._clear_button.setText("×")
         self._clear_button.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
-        self._clear_button.setStyleSheet("""
-            QToolButton {
-                border: none;
-                background: transparent;
-                color: rgb(153, 153, 158);
-                font-size: 14px;
-                padding: 0;
-            }
-            QToolButton:hover {
-                color: rgb(90, 90, 95);
-            }
-            """)
+        t = get_theme()
+        self._clear_button.setStyleSheet(
+            "QToolButton {"
+            "border: none;"
+            "background: transparent;"
+            f"color: {t['text_secondary']};"
+            "font-size: 14px;"
+            "padding: 0;"
+            "}"
+            "QToolButton:hover {"
+            f"color: {t['text']};"
+            "}"
+        )
         self._clear_button.setFixedSize(16, 16)
         self._clear_button.clicked.connect(self._clear_text)
         self._edit.setTextMargins(0, 0, 20, 0)
@@ -498,13 +502,16 @@ class ShortcutLineEditor(QtWidgets.QWidget):
         self._apply_style()
 
     def _apply_style(self) -> None:
+        t = get_theme()
         if self._error:
             self._edit.setStyleSheet(
-                "QLineEdit { border: 1px solid #FF453A; border-radius: 8px; padding: 4px 8px; }"
+                "QLineEdit { border: 1px solid "
+                f"{t['error']}; border-radius: {t['radius_lg']}; padding: 4px 8px; }}"
             )
             return
         self._edit.setStyleSheet(
-            "QLineEdit { border: 1px solid #C8C8CC; border-radius: 8px; padding: 4px 8px; }"
+            "QLineEdit { border: 1px solid "
+            f"{t['border_light']}; border-radius: {t['radius_lg']}; padding: 4px 8px; }}"
         )
 
 
@@ -571,9 +578,11 @@ class ShortcutEditor(QtWidgets.QWidget):
         self._apply_edit_style()
 
     def _apply_edit_style(self) -> None:
+        t = get_theme()
         if self._error:
             self._edit.setStyleSheet(
-                "QKeySequenceEdit { border: 1px solid #FF453A; border-radius: 6px; padding: 4px; }"
+                "QKeySequenceEdit { border: 1px solid "
+                f"{t['error']}; border-radius: {t['radius_md']}; padding: 4px; }}"
             )
         else:
             self._edit.setStyleSheet("")
@@ -675,12 +684,15 @@ class MultiKeySequenceEditor(QtWidgets.QWidget):
         self._apply_edit_style()
 
     def _apply_edit_style(self) -> None:
+        t = get_theme()
         if self._error:
             self._edit.setStyleSheet(
-                "QKeySequenceEdit { border: 1px solid #FF453A; border-radius: 6px; padding: 4px; }"
+                "QKeySequenceEdit { border: 1px solid "
+                f"{t['error']}; border-radius: {t['radius_md']}; padding: 4px; }}"
             )
             self._list.setStyleSheet(
-                "QListWidget { border: 1px solid #FF453A; border-radius: 6px; }"
+                "QListWidget { border: 1px solid "
+                f"{t['error']}; border-radius: {t['radius_md']}; }}"
             )
         else:
             self._edit.setStyleSheet("")

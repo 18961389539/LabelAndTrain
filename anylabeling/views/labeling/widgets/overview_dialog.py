@@ -47,7 +47,7 @@ def _get_overview_style() -> str:
             background-color: {t["surface"]};
             color: {t["text"]};
             border: 1px solid {t["border_light"]};
-            border-radius: 8px;
+            border-radius: {t["radius_lg"]};
             font-weight: 500;
             min-width: 100px;
             height: 36px;
@@ -59,19 +59,24 @@ def _get_overview_style() -> str:
             background-color: {t["surface_pressed"]};
         }}
         .primary-button {{
-            background-color: {t["primary"]};
-            color: white;
-            border: none;
-            border-radius: 8px;
+            background-color: {t["primary_solid"]};
+            color: {t["on_primary"]};
+            border: 2px solid {t["primary_solid"]};
+            border-radius: {t["radius_lg"]};
             font-weight: 500;
             min-width: 100px;
             height: 36px;
         }}
         .primary-button:hover {{
-            background-color: {t["primary_hover"]};
+            background-color: {t["primary_solid_hover"]};
+            border-color: {t["primary_solid_hover"]};
         }}
         .primary-button:pressed {{
-            background-color: {t["primary_pressed"]};
+            background-color: {t["primary_solid_pressed"]};
+            border-color: {t["primary_solid_pressed"]};
+        }}
+        .primary-button:focus {{
+            border-color: {t["background"]};
         }}
     """
 
@@ -147,7 +152,7 @@ class OverviewDialog(RangeTableDialog):
         range_layout.addWidget(to_label)
         range_layout.addWidget(self.to_input)
 
-        self.range_button = QPushButton("Go")
+        self.range_button = QPushButton(self.tr("Go"))
         self.range_button.setProperty("class", "primary-button")
         range_layout.addWidget(self.range_button)
         self.range_button.clicked.connect(self.update_range)

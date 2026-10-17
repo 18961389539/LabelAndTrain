@@ -68,6 +68,7 @@ import time
 from ..filelist import items as filelist_items
 from ..logger import logger
 from . import file_list_ops
+from .style import get_rework_banner_style
 
 
 def _report_inherited_shapes(widget, count):
@@ -115,6 +116,57 @@ def _announce_rework_reason(widget):
             QCoreApplication.translate("LabelingWidget", "此图已打回，需返工"),
             5000,
         )
+
+
+def build_rework_banner(widget, layout):
+    """Create the persistent rework banner and put it under the hint bar.
+
+    The rework reason already reaches the label JSON (``review_note``), the
+    file row's tooltip, and a status-bar line shown for eight seconds when a
+    rejected file opens -- but the annotator works on the canvas, and a toast
+    they look away from is a reason they will not see. This card stays up for
+    as long as a rejected file is open, so "why was this sent back" is
+    answerable without hovering a list that is not on screen.
+    """
+    banner = QtWidgets.QLabel()
+    banner.setObjectName("ReworkBanner")
+    banner.setWordWrap(True)
+    banner.setTextFormat(Qt.TextFormat.PlainText)
+    banner.setStyleSheet(get_rework_banner_style())
+    banner.hide()
+    widget.rework_banner = banner
+    layout.insertWidget(1, banner)
+
+
+def refresh_rework_banner(widget):
+    """Show the current file's rework reason, or hide the banner.
+
+    Driven from ``update_labeling_instruction``, which already runs on every
+    file load and on reset -- so the banner appears with a rejected image and
+    disappears the moment the file stops being rejected (or is torn down),
+    with no second place to keep in step.
+    """
+    banner = getattr(widget, "rework_banner", None)
+    if banner is None:
+        return
+    rejected = (
+        getattr(widget, "filename", None) is not None
+        and widget._current_review_state() == REVIEW_REJECTED
+    )
+    if not rejected:
+        banner.hide()
+        return
+    note = widget.other_data.get(REVIEW_NOTE_FIELD)
+    if note:
+        text = QCoreApplication.translate(
+            "LabelingWidget", "需返工：%1"
+        ).replace("%1", str(note))
+    else:
+        text = QCoreApplication.translate(
+            "LabelingWidget", "此图已打回，需返工"
+        )
+    banner.setText(text)
+    banner.show()
 
 
 def move_file_to_delete_folder(src_path, folder_hint=None):

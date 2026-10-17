@@ -124,7 +124,7 @@ class Popup(QWidget):
                 color: {t["highlight"]};
                 border: none;
                 padding: 3px 10px;
-                border-radius: 8px;
+                border-radius: {t["radius_lg"]};
             }}
             QPushButton:hover {{
                 background-color: {t["border"]};

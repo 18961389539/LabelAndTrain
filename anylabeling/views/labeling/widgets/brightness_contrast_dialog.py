@@ -23,7 +23,7 @@ class BrightnessContrastDialog(QtWidgets.QDialog):
         super(BrightnessContrastDialog, self).__init__(parent)
         self.setModal(True)
         self.setWindowTitle(self.tr("Brightness/Contrast"))
-        self.setFixedSize(400, 160)
+        self.setMinimumSize(400, 160)
         self.setWindowFlags(
             self.windowFlags() & ~Qt.WindowType.WindowContextHelpButtonHint
         )
@@ -52,7 +52,7 @@ class BrightnessContrastDialog(QtWidgets.QDialog):
         self.brightness_label = QtWidgets.QLabel(
             f"{self.slider_brightness.value() / 50:.2f}"
         )
-        self.brightness_label.setFixedWidth(40)
+        self.brightness_label.setMinimumWidth(40)
         self.brightness_label.setAlignment(
             Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
         )
@@ -60,7 +60,7 @@ class BrightnessContrastDialog(QtWidgets.QDialog):
         self.contrast_label = QtWidgets.QLabel(
             f"{self.slider_contrast.value() / 50:.2f}"
         )
-        self.contrast_label.setFixedWidth(40)
+        self.contrast_label.setMinimumWidth(40)
         self.contrast_label.setAlignment(
             Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
         )
@@ -87,9 +87,9 @@ class BrightnessContrastDialog(QtWidgets.QDialog):
         grid.setColumnStretch(1, 1)
 
         brightness_name = QtWidgets.QLabel(self.tr("Brightness:"))
-        brightness_name.setFixedWidth(85)
+        brightness_name.setMinimumWidth(85)
         contrast_name = QtWidgets.QLabel(self.tr("Contrast:"))
-        contrast_name.setFixedWidth(85)
+        contrast_name.setMinimumWidth(85)
 
         b_row = QtWidgets.QHBoxLayout()
         b_row.setSpacing(10)

@@ -49,5 +49,70 @@ class TestSettingsRuntimeApplier(unittest.TestCase):
         self.assertEqual(self.app.font().family(), self.original_font.family())
 
 
+class _StubCanvas:
+    """Just the attributes the canvas-rendering branches write."""
+
+    def __init__(self):
+        self.attr_background_color = None
+        self.attr_border_color = None
+        self.attr_text_color = None
+        self.brush_point_distance = 0.0
+        self.brush_simplify_epsilon_px = 0.0
+        self._brush_max_undo_steps = 0
+        self._brush_max_undo_bytes = 0
+        self.updates = 0
+
+    def update(self):
+        self.updates += 1
+
+
+class _StubWidget:
+    def __init__(self, config):
+        self.canvas = _StubCanvas()
+        self._config = config
+
+
+def _canvas_config():
+    return {
+        "canvas": {
+            "attributes": {
+                "background_color": [1, 2, 3, 4],
+                "border_color": [5, 6, 7, 8],
+                "text_color": [9, 10, 11, 12],
+            },
+            "brush": {
+                "point_distance": 12.5,
+                "simplify_epsilon": 1.5,
+                "max_undo_steps": 7,
+                "max_undo_memory_mb": 64,
+            },
+        }
+    }
+
+
+@unittest.skipUnless(PYQT_AVAILABLE, "PyQt6 is required for runtime tests")
+class TestCanvasKnobRuntimeApply(unittest.TestCase):
+    """Editing the five former rc-only knobs must reach the live canvas."""
+
+    def test_attribute_colors_apply_and_repaint(self):
+        widget = _StubWidget(_canvas_config())
+        applier = SettingsRuntimeApplier(widget)
+        applier.apply_change(
+            "canvas.attributes.background_color", [1, 2, 3, 4]
+        )
+        self.assertEqual(widget.canvas.attr_background_color, [1, 2, 3, 4])
+        self.assertEqual(widget.canvas.attr_border_color, [5, 6, 7, 8])
+        self.assertEqual(widget.canvas.attr_text_color, [9, 10, 11, 12])
+        self.assertEqual(widget.canvas.updates, 1)
+
+    def test_brush_undo_limits_apply(self):
+        widget = _StubWidget(_canvas_config())
+        applier = SettingsRuntimeApplier(widget)
+        applier.apply_change("canvas.brush.max_undo_steps", 7)
+        self.assertEqual(widget.canvas._brush_max_undo_steps, 7)
+        self.assertEqual(widget.canvas._brush_max_undo_bytes, 64 * 1024 * 1024)
+        self.assertEqual(widget.canvas.brush_point_distance, 12.5)
+
+
 if __name__ == "__main__":
     unittest.main()

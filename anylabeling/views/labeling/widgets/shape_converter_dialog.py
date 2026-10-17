@@ -85,9 +85,9 @@ class ShapeConverterDialog(QDialog):
             }}
             QProgressBar::chunk {{
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 #0D9488,
-                    stop:0.5 #2DD4BF,
-                    stop:1 #0D9488);
+                    stop:0 {theme["primary"]},
+                    stop:0.5 {theme["primary_hover"]},
+                    stop:1 {theme["primary"]});
                 border-radius: 0px;
             }}
             """)

@@ -30,7 +30,7 @@ def _list_widget_style() -> str:
             background-color: {t["background_secondary"]};
             color: {t["text"]};
             border: 1px solid {t["border"]};
-            border-radius: 6px;
+            border-radius: {t["radius_md"]};
             outline: none;
             selection-background-color: {t["selection"]};
             selection-color: {t["selection_text"]};
@@ -49,7 +49,7 @@ def _list_widget_style() -> str:
         QListWidget::indicator {{
             width: 14px;
             height: 14px;
-            border-radius: 3px;
+            border-radius: {t["radius_sm"]};
             border: 1px solid {t["border_light"]};
             background-color: {t["background"]};
             margin-right: 4px;

@@ -12,6 +12,7 @@ from PyQt6 import QtCore, QtWidgets
 
 from anylabeling.views.labeling.logger import logger
 from anylabeling.views.labeling.utils import project_search
+from anylabeling.views.labeling.utils.style import get_dialog_style
 
 
 class _Signals(QtCore.QObject):
@@ -66,6 +67,7 @@ class ProjectSearchDialog(QtWidgets.QDialog):
         self.widget = parent
         self.setWindowTitle(self.tr("项目内搜索"))
         self.resize(560, 480)
+        self.setStyleSheet(get_dialog_style())
         self._generation = 0
         self._signals = _Signals()
         self._signals.done.connect(self._apply_results)

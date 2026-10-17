@@ -18,6 +18,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
 )
 
+from anylabeling.views.labeling.utils.style import get_dialog_style
 from anylabeling.views.training.platform_open import open_path
 from anylabeling.views.training.widgets.ultralytics_widgets import (
     PrimaryButton,
@@ -44,6 +45,7 @@ class TrainingImagePreviewDialog(QDialog):
         self.setWindowTitle(self.tr("Training Images"))
         self.resize(900, 640)
         self.setSizeGripEnabled(True)
+        self.setStyleSheet(get_dialog_style())
 
         layout = QVBoxLayout(self)
         self.image_label = QLabel()

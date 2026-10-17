@@ -34,14 +34,14 @@ def get_progress_dialog_style(color=None, height=None):
     return f"""
         QProgressDialog {{
             background-color: {t["background"]};
-            border-radius: 12px;
+            border-radius: {t["radius_card"]};
             min-width: 280px;
             min-height: 120px;
             padding: 20px;
         }}
         QProgressBar {{
             border: none;
-            border-radius: 4px;
+            border-radius: {t["radius_sm"]};
             background-color: {t["surface"]};
             text-align: center;
             color: {"transparent" if color is None else color};
@@ -52,10 +52,10 @@ def get_progress_dialog_style(color=None, height=None):
         }}
         QProgressBar::chunk {{
             background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                stop:0 #0D9488,
-                stop:0.5 #2DD4BF,
-                stop:1 #0D9488);
-            border-radius: 3px;
+                stop:0 {t["primary"]},
+                stop:0.5 {t["primary_hover"]},
+                stop:1 {t["primary"]});
+            border-radius: {t["radius_sm"]};
         }}
         QLabel#progressLabel {{
             color: {t["text"]};
@@ -71,7 +71,7 @@ def get_progress_dialog_style(color=None, height=None):
         QPushButton {{
             background-color: {t["background_secondary"]};
             border: 0.5px solid {t["border_light"]};
-            border-radius: 6px;
+            border-radius: {t["radius_md"]};
             font-weight: 500;
             font-size: 13px;
             color: {t["primary"]};
@@ -100,7 +100,7 @@ def get_msg_box_style():
         QPushButton {{
             background-color: {t["button_bg"]};
             border: 1px solid {t["border_light"]};
-            border-radius: 8px;
+            border-radius: {t["radius_lg"]};
             font-weight: 500;
             min-width: 100px;
             height: 36px;
@@ -112,22 +112,38 @@ def get_msg_box_style():
 
 
 def get_ok_btn_style():
+    """主按钮：实心强调面 + 可读前景 + 可见聚焦环。
+
+    填充用 primary_solid 而非 primary——浅色下 primary 配白字仅 3.7:1，
+    深色下仅 1.9:1；前景用 on_primary。描边平时与填充同色（不可见），
+    聚焦时换成对话框背景色，两套主题下都形成反差且不引起布局跳动。
+    """
     t = get_theme()
     return f"""
         QPushButton {{
-            background-color: {t["primary"]};
-            color: white;
-            border: none;
-            border-radius: 8px;
+            background-color: {t["primary_solid"]};
+            color: {t["on_primary"]};
+            border: 2px solid {t["primary_solid"]};
+            border-radius: {t["radius_lg"]};
             font-weight: 500;
             min-width: 100px;
             height: 36px;
         }}
         QPushButton:hover {{
-            background-color: {t["primary_hover"]};
+            background-color: {t["primary_solid_hover"]};
+            border-color: {t["primary_solid_hover"]};
         }}
         QPushButton:pressed {{
-            background-color: {t["primary_pressed"]};
+            background-color: {t["primary_solid_pressed"]};
+            border-color: {t["primary_solid_pressed"]};
+        }}
+        QPushButton:disabled {{
+            background-color: {t["button_bg"]};
+            color: {t["text_secondary"]};
+            border-color: {t["button_bg"]};
+        }}
+        QPushButton:focus {{
+            border-color: {t["background"]};
         }}
     """
 
@@ -139,7 +155,7 @@ def get_cancel_btn_style():
             background-color: {t["button_bg"]};
             color: {t["text"]};
             border: 1px solid {t["border_light"]};
-            border-radius: 8px;
+            border-radius: {t["radius_lg"]};
             font-weight: 500;
             min-width: 100px;
             height: 36px;
@@ -153,12 +169,40 @@ def get_cancel_btn_style():
     """
 
 
+def get_danger_btn_style():
+    """破坏性动作的描边式按钮：平时只有错误色描边与文字，悬停才填充。
+
+    只给真正会造成数据丢失的动作使用（删除项目数据一类），这样它既
+    与主按钮区分开，也不会抢走一屏里唯一的焦点。
+    """
+    t = get_theme()
+    return f"""
+        QPushButton {{
+            background-color: {t["surface"]};
+            color: {t["error_text"]};
+            border: 1px solid {t["error_text"]};
+            border-radius: {t["radius_lg"]};
+            font-weight: 500;
+            min-width: 100px;
+            height: 36px;
+        }}
+        QPushButton:hover {{
+            background-color: {t["error_solid"]};
+            border-color: {t["error_solid"]};
+            color: {t["on_error"]};
+        }}
+        QPushButton:focus {{
+            border: 2px solid {t["error_text"]};
+        }}
+    """
+
+
 def get_export_option_style():
     t = get_theme()
     return f"""
         QDialog {{
             background-color: {t["background"]};
-            border-radius: 8px;
+            border-radius: {t["radius_lg"]};
         }}
 
         QLabel {{
@@ -169,7 +213,7 @@ def get_export_option_style():
 
         QLineEdit {{
             border: 1px solid {t["border"]};
-            border-radius: 8px;
+            border-radius: {t["radius_lg"]};
             background-color: {t["background_secondary"]};
             font-size: 13px;
             height: 36px;
@@ -177,7 +221,7 @@ def get_export_option_style():
         }}
         QLineEdit:hover {{
             background-color: {t["background_hover"]};
-            border-radius: 8px;
+            border-radius: {t["radius_lg"]};
         }}
         QLineEdit:focus {{
             border: 2px solid {t["highlight"]};
@@ -217,7 +261,7 @@ def get_settings_button_style():
     return f"""
         QPushButton {{
             border: 1px solid {t["border"]};
-            border-radius: 8px;
+            border-radius: {t["radius_lg"]};
             background: {t["background_secondary"]};
             padding: 0;
         }}
@@ -244,7 +288,7 @@ def get_toolbar_scroll_area_style():
         }}
         QScrollBar::handle:vertical {{
             background-color: {t["scrollbar"]};
-            border-radius: 3px;
+            border-radius: {t["radius_sm"]};
             min-height: 20px;
         }}
         QScrollBar::handle:vertical:hover {{
@@ -341,6 +385,7 @@ def get_settings_combo_style() -> str:
 
 
 def get_model_selection_scroll_area_style(compact: bool = False):
+    t = get_theme()
     scrollbar_height = 10 if compact else 16
     scrollbar_margin = "0px 8px 0px 8px" if compact else "2px 12px 2px 12px"
     right_arrow = new_icon_path("caret-right", "svg")
@@ -357,9 +402,9 @@ def get_model_selection_scroll_area_style(compact: bool = False):
             border: none;
         }}
         QScrollArea#model_selection_scroll_area QScrollBar::handle:horizontal {{
-            background: rgb(206, 213, 230);
+            background: {t["scrollbar"]};
             min-width: 34px;
-            border-radius: 4px;
+            border-radius: {t["radius_sm"]};
         }}
         QScrollArea#model_selection_scroll_area QScrollBar::add-line:horizontal {{
             background: transparent;
@@ -411,18 +456,23 @@ def get_highlight_button_style(compact: bool = False):
     return f"""
         QPushButton {{
             height: {height}px;
-            color: white;
-            border: none;
+            color: {t["on_primary"]};
+            border: 2px solid {t["primary_solid"]};
             min-width: {min_width}px;
             padding: {padding};
             border-radius: {radius}px;
-            background-color: {t["primary"]};
+            background-color: {t["primary_solid"]};
         }}
         QPushButton:hover {{
-            background-color: {t["primary_hover"]};
+            background-color: {t["primary_solid_hover"]};
+            border-color: {t["primary_solid_hover"]};
         }}
         QPushButton:pressed {{
-            background-color: {t["primary_pressed"]};
+            background-color: {t["primary_solid_pressed"]};
+            border-color: {t["primary_solid_pressed"]};
+        }}
+        QPushButton:focus {{
+            border-color: {t["background"]};
         }}
     """
 
@@ -464,9 +514,10 @@ def get_spinbox_style():
             padding: 5px 8px;
             background: {t["background_secondary"]};
             border: 1px solid {t["border_light"]};
-            border-radius: 6px;
+            border-radius: {t["radius_md"]};
             min-height: 24px;
-            selection-background-color: {t["primary"]};
+            selection-background-color: {t["selection"]};
+            selection-color: {t["selection_text"]};
         }}
         QSpinBox::up-button, QSpinBox::down-button {{
             width: 20px;
@@ -503,9 +554,10 @@ def get_double_spinbox_style(compact: bool = False):
             padding: {padding};
             background: {t["background_secondary"]};
             border: 1px solid {t["border_light"]};
-            border-radius: 6px;
+            border-radius: {t["radius_md"]};
             min-height: {min_height}px;
-            selection-background-color: {t["primary"]};
+            selection-background-color: {t["selection"]};
+            selection-color: {t["selection_text"]};
         }}
         QDoubleSpinBox::up-button, QDoubleSpinBox::down-button {{
             width: {button_width}px;
@@ -592,7 +644,7 @@ def get_dock_style() -> str:
         QListWidget#FileList::indicator {{
             width: 14px;
             height: 14px;
-            border-radius: 3px;
+            border-radius: {t["radius_sm"]};
             border: 1px solid {t["border_light"]};
             background-color: {t["background_secondary"]};
             margin-left: 2px;
@@ -610,7 +662,7 @@ def get_dock_style() -> str:
             background-color: {t["background_secondary"]};
             color: {t["text"]};
             border: 1px solid {t["border"]};
-            border-radius: 6px;
+            border-radius: {t["radius_md"]};
             padding: 4px 8px;
             selection-background-color: {t["selection"]};
         }}
@@ -628,7 +680,7 @@ def get_dock_style() -> str:
         }}
         QScrollBar::handle:vertical {{
             background-color: {t["scrollbar"]};
-            border-radius: 4px;
+            border-radius: {t["radius_sm"]};
             min-height: 20px;
         }}
         QScrollBar::handle:vertical:hover {{
@@ -644,7 +696,7 @@ def get_dock_style() -> str:
         }}
         QScrollBar::handle:horizontal {{
             background-color: {t["scrollbar"]};
-            border-radius: 4px;
+            border-radius: {t["radius_sm"]};
             min-width: 20px;
         }}
         QScrollBar::handle:horizontal:hover {{
@@ -661,7 +713,7 @@ def get_dock_style() -> str:
             background-color: {t["button_bg"]};
             color: {t["text"]};
             border: 1px solid {t["border_light"]};
-            border-radius: 6px;
+            border-radius: {t["radius_md"]};
             padding: 3px 8px;
         }}
         QPushButton:hover {{
@@ -674,7 +726,7 @@ def get_dock_style() -> str:
             background-color: {t["background_secondary"]};
             color: {t["text"]};
             border: 1px solid {t["border"]};
-            border-radius: 6px;
+            border-radius: {t["radius_md"]};
             padding: 3px 8px;
         }}
         QComboBox::drop-down {{
@@ -724,7 +776,7 @@ def get_panel_style() -> str:
         f"QFrame#sidebarPanel {{"
         f" background-color: {t['surface']};"
         f" border: 1px solid {t['border']};"
-        f" border-radius: 6px;"
+        f" border-radius: {t['radius_md']};"
         f" }}"
     )
 
@@ -749,7 +801,7 @@ def get_sidebar_collapse_strip_style() -> str:
         QToolButton#SidebarCollapseButton {{
             border: 1px solid {t["border"]};
             background: {t["surface"]};
-            border-radius: 6px;
+            border-radius: {t["radius_md"]};
             padding: 0px;
         }}
         QToolButton#SidebarCollapseButton:hover {{
@@ -774,8 +826,33 @@ def get_instruction_bar_style() -> str:
         QLabel#LabelInstructionBar {{
             background-color: {t["surface"]};
             border: 1px solid {t["border"]};
-            border-radius: 6px;
+            border-radius: {t["radius_md"]};
             color: {t["text_secondary"]};
+            font-size: 12px;
+            padding: 3px 8px;
+            margin: 0 4px;
+        }}
+    """
+
+
+def get_rework_banner_style() -> str:
+    """
+    Returns a stylesheet for the persistent rework-reason banner.
+
+    A warning-toned card shown above the canvas for as long as a rejected
+    image is open, so the reason stays on screen instead of vanishing with
+    the eight-second status-bar line.
+
+    Returns:
+        str: QSS stylesheet string targeting QLabel#ReworkBanner.
+    """
+    t = get_theme()
+    return f"""
+        QLabel#ReworkBanner {{
+            background-color: {t["surface"]};
+            border: 1px solid {t["warning"]};
+            border-radius: {t["radius_md"]};
+            color: {t["text"]};
             font-size: 12px;
             padding: 3px 8px;
             margin: 0 4px;
@@ -836,7 +913,7 @@ def get_lineedit_style():
     return f"""
         QLineEdit {{
             border: 1px solid {t["border"]};
-            border-radius: 8px;
+            border-radius: {t["radius_lg"]};
             background-color: {t["background_secondary"]};
             font-size: 13px;
             height: 24px;
@@ -844,7 +921,7 @@ def get_lineedit_style():
         }}
         QLineEdit:hover {{
             background-color: {t["background_hover"]};
-            border-radius: 8px;
+            border-radius: {t["radius_lg"]};
         }}
         QLineEdit:focus {{
             border: 2px solid {t["highlight"]};
@@ -889,7 +966,7 @@ def get_dialog_style() -> str:
         QGroupBox {{
             color: {t["text"]};
             border: 1px solid {t["border"]};
-            border-radius: 6px;
+            border-radius: {t["radius_md"]};
             margin-top: 8px;
             padding-top: 8px;
         }}
@@ -903,7 +980,7 @@ def get_dialog_style() -> str:
             background-color: {t["background_secondary"]};
             color: {t["text"]};
             border: 1px solid {t["border"]};
-            border-radius: 6px;
+            border-radius: {t["radius_md"]};
             padding: 4px 8px;
             height: 28px;
             selection-background-color: {t["selection"]};
@@ -918,10 +995,11 @@ def get_dialog_style() -> str:
             background-color: {t["background_secondary"]};
             color: {t["text"]};
             border: 1px solid {t["border_light"]};
-            border-radius: 6px;
+            border-radius: {t["radius_md"]};
             padding: 5px 8px;
             min-height: 24px;
-            selection-background-color: {t["primary"]};
+            selection-background-color: {t["selection"]};
+            selection-color: {t["selection_text"]};
         }}
         QSpinBox::up-button, QDoubleSpinBox::up-button,
         QSpinBox::down-button, QDoubleSpinBox::down-button {{
@@ -947,7 +1025,7 @@ def get_dialog_style() -> str:
             background-color: {t["background_secondary"]};
             color: {t["text"]};
             border: 1px solid {t["border_light"]};
-            border-radius: 6px;
+            border-radius: {t["radius_md"]};
             padding: 4px 8px;
             min-height: 24px;
         }}
@@ -989,7 +1067,7 @@ def get_dialog_style() -> str:
         QSlider::groove:horizontal {{
             height: 4px;
             background: {t["border"]};
-            border-radius: 2px;
+            border-radius: {t["radius_sm"]};
         }}
         QSlider::handle:horizontal {{
             background: {t["primary"]};
@@ -997,11 +1075,11 @@ def get_dialog_style() -> str:
             width: 16px;
             height: 16px;
             margin: -6px 0;
-            border-radius: 8px;
+            border-radius: {t["radius_lg"]};
         }}
         QSlider::sub-page:horizontal {{
             background: {t["primary"]};
-            border-radius: 2px;
+            border-radius: {t["radius_sm"]};
         }}
         QCheckBox {{
             color: {t["text"]};
@@ -1012,7 +1090,7 @@ def get_dialog_style() -> str:
             background-color: {t["button_bg"]};
             color: {t["text"]};
             border: 1px solid {t["border_light"]};
-            border-radius: 8px;
+            border-radius: {t["radius_lg"]};
             font-weight: 500;
             min-width: 100px;
             height: 36px;
@@ -1061,7 +1139,7 @@ def get_dialog_style() -> str:
         }}
         QScrollBar::handle:vertical {{
             background-color: {t["scrollbar"]};
-            border-radius: 4px;
+            border-radius: {t["radius_sm"]};
             min-height: 20px;
         }}
         QScrollBar::handle:vertical:hover {{
@@ -1077,7 +1155,7 @@ def get_dialog_style() -> str:
         }}
         QScrollBar::handle:horizontal {{
             background-color: {t["scrollbar"]};
-            border-radius: 4px;
+            border-radius: {t["radius_sm"]};
             min-width: 20px;
         }}
         QScrollBar::handle:horizontal:hover {{
@@ -1094,7 +1172,7 @@ def get_download_progress_bar_style():
     return f"""
         QProgressBar {{
             border: none;
-            border-radius: 3px;
+            border-radius: {t["radius_sm"]};
             background-color: {t["surface"]};
             text-align: center;
             color: transparent;
@@ -1103,10 +1181,10 @@ def get_download_progress_bar_style():
         }}
         QProgressBar::chunk {{
             background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                stop:0 #0D9488,
-                stop:0.5 #2DD4BF,
-                stop:1 #0D9488);
-            border-radius: 3px;
+                stop:0 {t["primary"]},
+                stop:0.5 {t["primary_hover"]},
+                stop:1 {t["primary"]});
+            border-radius: {t["radius_sm"]};
         }}
     """
 
@@ -1117,19 +1195,19 @@ def get_cancel_download_button_style():
         QPushButton {{
             background-color: transparent;
             border: 1px solid {t["border"]};
-            border-radius: 4px;
+            border-radius: {t["radius_sm"]};
             color: {t["text_secondary"]};
             padding: 2px 10px;
             font-size: 11px;
         }}
         QPushButton:hover {{
-            background-color: {t["error"]};
-            border-color: {t["error"]};
-            color: #ffffff;
+            background-color: {t["error_solid"]};
+            border-color: {t["error_solid"]};
+            color: {t["on_error"]};
         }}
         QPushButton:pressed {{
-            background-color: #CC362E;
-            border-color: #CC362E;
-            color: #ffffff;
+            background-color: {t["error_solid_pressed"]};
+            border-color: {t["error_solid_pressed"]};
+            color: {t["on_error"]};
         }}
     """

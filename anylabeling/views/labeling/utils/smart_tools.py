@@ -298,7 +298,7 @@ def _dialog_style():
         QTreeWidget {{
             background-color: {theme["surface"]};
             border: 1px solid {theme["border"]};
-            border-radius: 8px;
+            border-radius: {theme["radius_lg"]};
             color: {theme["text"]};
             font-size: 13px;
             padding: 6px;
@@ -309,7 +309,7 @@ def _dialog_style():
         QPushButton {{
             background-color: {theme["surface"]};
             border: 1px solid {theme["border"]};
-            border-radius: 6px;
+            border-radius: {theme["radius_md"]};
             color: {theme["text"]};
             font-size: 13px;
             height: 32px;
@@ -769,7 +769,7 @@ def _make_progress_dialog(parent, title, maximum):
     dialog.setValue(0)
     dialog.setStyleSheet(f"""
         QProgressDialog {{ background-color: {get_theme()["background"]};
-            border-radius: 12px; padding: 18px; }}
+            border-radius: {get_theme()["radius_card"]}; padding: 18px; }}
         QLabel {{ color: {get_theme()["text"]}; font-size: 13px; }}
         """)
     dialog.show()

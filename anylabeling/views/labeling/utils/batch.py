@@ -36,7 +36,11 @@ from anylabeling.views.labeling.utils.yolo_detect import (
     write_yolo_detect_sidecar,
 )
 from anylabeling.views.labeling.utils.qt import new_icon_path
-from anylabeling.views.labeling.utils.style import get_msg_box_style
+from anylabeling.views.labeling.utils.style import (
+    get_cancel_btn_style,
+    get_msg_box_style,
+    get_ok_btn_style,
+)
 from anylabeling.views.labeling.widgets.popup import Popup
 
 __all__ = ["run_all_images"]
@@ -74,6 +78,12 @@ class TextInputDialog(QDialog):
         )
         button_box.accepted.connect(self.accept)
         button_box.rejected.connect(self.reject)
+        ok_button = button_box.button(QDialogButtonBox.StandardButton.Ok)
+        cancel_button = button_box.button(
+            QDialogButtonBox.StandardButton.Cancel
+        )
+        ok_button.setProperty("class", "primary-button")
+        cancel_button.setProperty("class", "secondary-button")
         layout.addWidget(button_box)
 
         self.setLayout(layout)
@@ -86,7 +96,7 @@ class TextInputDialog(QDialog):
 
             QLineEdit {{
                 border: 1px solid {t["border"]};
-                border-radius: 8px;
+                border-radius: {t["radius_lg"]};
                 background-color: {t["background_secondary"]};
                 font-size: 13px;
                 height: 36px;
@@ -106,36 +116,38 @@ class TextInputDialog(QDialog):
             QPushButton {{
                 min-width: 100px;
                 height: 36px;
-                border-radius: 8px;
+                border-radius: {t["radius_lg"]};
                 font-weight: 500;
                 font-size: 13px;
             }}
 
-            QPushButton[text="OK"] {{
-                background-color: {t["primary"]};
-                color: white;
-                border: none;
+            .primary-button {{
+                background-color: {t["primary_solid"]};
+                color: {t["on_primary"]};
+                border: 2px solid {t["primary_solid"]};
             }}
 
-            QPushButton[text="OK"]:hover {{
-                background-color: {t["primary_hover"]};
+            .primary-button:hover {{
+                background-color: {t["primary_solid_hover"]};
+                border-color: {t["primary_solid_hover"]};
             }}
 
-            QPushButton[text="OK"]:pressed {{
-                background-color: {t["primary"]};
+            .primary-button:pressed {{
+                background-color: {t["primary_solid_pressed"]};
+                border-color: {t["primary_solid_pressed"]};
             }}
 
-            QPushButton[text="Cancel"] {{
+            .secondary-button {{
                 background-color: {t["surface"]};
                 color: {t["text"]};
                 border: 1px solid {t["border"]};
             }}
 
-            QPushButton[text="Cancel"]:hover {{
+            .secondary-button:hover {{
                 background-color: {t["background_hover"]};
             }}
 
-            QPushButton[text="Cancel"]:pressed {{
+            .secondary-button:pressed {{
                 background-color: {t["surface"]};
             }}
         """)
@@ -202,8 +214,10 @@ class FailedImagesDialog(QDialog):
         layout.addWidget(self.list_widget)
         buttons = QHBoxLayout()
         open_btn = QPushButton(self.tr("打开选中图片"))
+        open_btn.setStyleSheet(get_ok_btn_style())
         open_btn.clicked.connect(self.accept)
         close_btn = QPushButton(self.tr("关闭"))
+        close_btn.setStyleSheet(get_cancel_btn_style())
         close_btn.clicked.connect(self.reject)
         buttons.addStretch()
         buttons.addWidget(open_btn)
@@ -773,14 +787,14 @@ def show_progress_dialog_and_process(self):
     progress_dialog.setStyleSheet(f"""
         QProgressDialog {{
             background-color: {t["background"]};
-            border-radius: 12px;
+            border-radius: {t["radius_card"]};
             min-width: 280px;
             min-height: 120px;
             padding: 20px;
         }}
         QProgressBar {{
             border: none;
-            border-radius: 4px;
+            border-radius: {t["radius_sm"]};
             background-color: {t["surface"]};
             text-align: center;
             color: {t["text"]};
@@ -794,7 +808,7 @@ def show_progress_dialog_and_process(self):
                 stop:0 {t["primary"]},
                 stop:0.5 {t["highlight"]},
                 stop:1 {t["primary"]});
-            border-radius: 3px;
+            border-radius: {t["radius_sm"]};
         }}
         QLabel {{
             color: {t["text"]};
@@ -805,7 +819,7 @@ def show_progress_dialog_and_process(self):
         QPushButton {{
             background-color: {t["surface"]};
             border: 1px solid {t["border"]};
-            border-radius: 6px;
+            border-radius: {t["radius_md"]};
             font-weight: 500;
             font-size: 13px;
             color: {t["primary"]};
