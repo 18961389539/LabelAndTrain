@@ -6,6 +6,9 @@ from PyQt6.QtWidgets import QDialog
 
 from anylabeling.views.labeling.logger import logger
 from anylabeling.views.labeling.utils.qt import new_icon_path
+from anylabeling.views.labeling.utils.session_snapshot import (
+    snapshot_before_label_write,
+)
 from anylabeling.views.labeling.utils.shape import (
     CONVERSION_MODE_MAP,
     CONVERSION_TARGETS,
@@ -266,6 +269,12 @@ class ShapeConverterDialog(QDialog):
             try:
                 with open(label_file, "r", encoding="utf-8") as f:
                     data = json.load(f)
+                # The confirm dialog says the annotations *will be changed*,
+                # and this loop rewrites every label file of the folder in
+                # place. Snapshot first, exactly as the save path and the
+                # bulk label editor do: a conversion the user did not mean is
+                # then recoverable through 智能工具 -> 从备份恢复标注.
+                snapshot_before_label_write(label_file)
                 _apply_shape_conversion(data, mode, params)
                 with open(label_file, "w", encoding="utf-8") as f:
                     json.dump(data, f, indent=2, ensure_ascii=False)

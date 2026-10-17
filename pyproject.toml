@@ -224,6 +224,13 @@ norecursedirs = [".git", "dist", "build"]
 # dialog alone is 1741 statements at 12%, and Qt widget code is expensive
 # to reach without driving real event loops, so the honest floor is what
 # it is. Rule: when coverage grows, raise this number; never lower it.
+#
+# Raised 44 -> 53 on 2026-10-17, measured at 53.72% of 35602 statements.
+# The 9 points arrived with the test batches of the past three weeks and the
+# floor sat idle the whole time, which is the failure mode of a ratchet nobody
+# re-measures: nothing fails when a floor is merely stale, so tightening it is
+# someone's to-do, not a gate. Rounded down a point to 53 so ordinary float
+# drift between runs cannot fail CI.
 [tool.coverage.run]
 source = ["anylabeling"]
 omit = [

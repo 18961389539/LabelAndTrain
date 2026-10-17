@@ -52,7 +52,6 @@ from .shape import (
     shape_to_mask,
     shapes_to_label,
     rectangle_from_diagonal,
-    shape_conversion,
     open_shape_converter,
 )
 from .upload import (

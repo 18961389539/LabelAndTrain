@@ -51,7 +51,6 @@ anylabeling/views/labeling/utils/file_search.py                          B903 1
 anylabeling/views/labeling/utils/file_search.py                          C901 2
 anylabeling/views/labeling/utils/qt.py                                   B907 1
 anylabeling/views/labeling/utils/shape.py                                C901 1
-anylabeling/views/labeling/utils/shape.py                                F405 2
 anylabeling/views/labeling/utils/smart_tools.py                          B907 1
 anylabeling/views/labeling/utils/smart_tools.py                          C416 1
 anylabeling/views/labeling/utils/upload.py                               C420 1
