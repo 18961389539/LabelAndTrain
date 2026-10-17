@@ -292,7 +292,7 @@ class AutoLabelingWidget(QWidget):
         self.model_selection_button.setDefault(False)
         self.model_selection_button.setStyleSheet(_toolbar_btn())
         self.model_selection_button.setToolTip(
-            "Select an AI model to use for auto labeling"
+            self.tr("选择用于自动标注的模型")
         )
         self.model_selection_button.clicked.connect(self.show_model_dropdown)
         combo_style = get_settings_combo_style()
@@ -402,13 +402,15 @@ class AutoLabelingWidget(QWidget):
         # --- Configuration for: edit_text ---
         self.edit_text.setStyleSheet(get_lineedit_style())
         self.edit_text.setToolTip(
-            "Enter text prompt here. Use dots (.) to separate multiple classes.\n"
-            "Example: person.car.bicycle"
+            self.tr(
+                "在此输入文本提示，多个类别用英文句点（.）分隔，"
+                "例如：person.car.bicycle"
+            )
         )
 
         # --- Configuration for: button_add_point ---
         self.button_add_point.setToolTip(
-            "Add a foreground point (left click on object, shortcut: q)"
+            self.tr("添加前景点（在目标上左键，快捷键 q）")
         )
         self.button_add_point.clicked.connect(
             lambda: self.set_auto_labeling_mode(
@@ -418,7 +420,7 @@ class AutoLabelingWidget(QWidget):
 
         # --- Configuration for: button_remove_point ---
         self.button_remove_point.setToolTip(
-            "Remove a background point (left click, shortcut: e)"
+            self.tr("移除背景点（左键，快捷键 e）")
         )
         self.button_remove_point.clicked.connect(
             lambda: self.set_auto_labeling_mode(
@@ -428,38 +430,34 @@ class AutoLabelingWidget(QWidget):
 
         # --- Configuration for: button_add_rect ---
         self.button_add_rect.setText(self.tr("+Rect"))
-        self.button_add_rect.setToolTip(
-            "Add a box around the object to segment"
-        )
+        self.button_add_rect.setToolTip(self.tr("框住要分割的目标"))
         self.button_add_rect.clicked.connect(self.on_button_add_rect_clicked)
 
         # --- Configuration for: add_pos_rect ---
         self.add_pos_rect.setText(self.tr("+Rect"))
-        self.add_pos_rect.setToolTip("Add positive region inside the box")
+        self.add_pos_rect.setToolTip(self.tr("在框内添加正向区域"))
         self.add_pos_rect.clicked.connect(self.on_add_pos_rect_clicked)
 
         # --- Configuration for: add_neg_rect ---
         self.add_neg_rect.setText(self.tr("-Rect"))
-        self.add_neg_rect.setToolTip("Add negative region inside the box")
+        self.add_neg_rect.setToolTip(self.tr("在框内添加负向区域"))
         self.add_neg_rect.clicked.connect(self.on_add_neg_rect_clicked)
 
         # --- Configuration for: button_run_rect ---
         self.button_run_rect.setStyleSheet(_toolbar_highlight_btn())
         self.button_run_rect.setText(self.tr("Run Rect"))
-        self.button_run_rect.setToolTip(
-            "Run inference with the current box prompts"
-        )
+        self.button_run_rect.setToolTip(self.tr("用当前框提示运行推理"))
         self.button_run_rect.clicked.connect(self.run_prediction)
 
         # --- Configuration for: button_clear ---
         self.button_clear.setText(self.tr("Clear (b)"))
-        self.button_clear.setToolTip("Clear all prompts (shortcut: b)")
+        self.button_clear.setToolTip(self.tr("清除所有提示（快捷键 b）"))
         self.button_clear.clicked.connect(self.on_clear_clicked)
 
         # --- Configuration for: button_finish_object ---
         self.button_finish_object.setText(self.tr("Finish (f)"))
         self.button_finish_object.setToolTip(
-            "Finish the current object (shortcut: f)"
+            self.tr("完成当前对象（快捷键 f）")
         )
         self.button_finish_object.clicked.connect(self.on_finish_clicked)
 
@@ -1398,7 +1396,7 @@ class AutoLabelingWidget(QWidget):
         self._more_button = QPushButton("更多 ▾")
         self._more_button.setCheckable(True)
         self._more_button.setStyleSheet(_toolbar_btn())
-        self._more_button.setToolTip("Show/hide more AI labeling options")
+        self._more_button.setToolTip(self.tr("显示/隐藏更多智能标注选项"))
         self._more_button.clicked.connect(self._on_toggle_more_panel)
 
         close_index = main_layout.indexOf(self.button_close)

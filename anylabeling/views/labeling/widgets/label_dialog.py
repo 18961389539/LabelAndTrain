@@ -481,7 +481,7 @@ class GroupIDModifyDialog(RangeTableDialog):
         range_layout = QtWidgets.QHBoxLayout()
         range_layout.addStretch(1)
 
-        from_label = QtWidgets.QLabel("From:")
+        from_label = QtWidgets.QLabel(self.tr("起始："))
         self.from_input = QtWidgets.QSpinBox()
         self.from_input.setMinimum(1)
         self.from_input.setMaximum(len(self.image_file_list))
@@ -491,7 +491,7 @@ class GroupIDModifyDialog(RangeTableDialog):
         range_layout.addWidget(from_label)
         range_layout.addWidget(self.from_input)
 
-        to_label = QtWidgets.QLabel("To:")
+        to_label = QtWidgets.QLabel(self.tr("结束："))
         self.to_input = QtWidgets.QSpinBox()
         self.to_input.setMinimum(1)
         self.to_input.setMaximum(len(self.image_file_list))
@@ -527,7 +527,7 @@ class GroupIDModifyDialog(RangeTableDialog):
             # New Group-ID
             line_edit = QtWidgets.QLineEdit(self.table_widget)
             line_edit.setValidator(QIntValidator(0, 9999, self))
-            line_edit.setPlaceholderText("Enter new ID")
+            line_edit.setPlaceholderText(self.tr("输入新的 ID"))
             line_edit.setAlignment(Qt.AlignmentFlag.AlignCenter)
             line_edit.setFixedHeight(28)
             line_edit.textChanged.connect(
@@ -848,7 +848,7 @@ class LabelModifyDialog(RangeTableDialog):
         # Add stretch to center the widgets
         range_layout.addStretch(1)
 
-        from_label = QtWidgets.QLabel("From:")
+        from_label = QtWidgets.QLabel(self.tr("起始："))
         self.from_input = QtWidgets.QSpinBox()
         self.from_input.setMinimum(1)
         self.from_input.setMaximum(len(self.image_file_list))
@@ -858,7 +858,7 @@ class LabelModifyDialog(RangeTableDialog):
         range_layout.addWidget(from_label)
         range_layout.addWidget(self.from_input)
 
-        to_label = QtWidgets.QLabel("To:")
+        to_label = QtWidgets.QLabel(self.tr("结束："))
         self.to_input = QtWidgets.QSpinBox()
         self.to_input.setMinimum(1)
         self.to_input.setMaximum(len(self.image_file_list))

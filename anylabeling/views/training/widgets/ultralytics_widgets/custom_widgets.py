@@ -329,7 +329,7 @@ class SecondaryButton(QPushButton):
 class TrainingConfirmDialog(QDialog):
     def __init__(self, cmd_parts, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Start Training")
+        self.setWindowTitle(self.tr("开始训练"))
         self.setFixedSize(752, 320)
         t = get_theme()
         self.setStyleSheet(f"""
@@ -347,13 +347,13 @@ class TrainingConfirmDialog(QDialog):
         layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(15)
 
-        title_label = QLabel("Ready to Start Training")
+        title_label = QLabel(self.tr("准备开始训练"))
         title_label.setStyleSheet(
             f"font-size: 16px; font-weight: bold; color: {t['text']};"
         )
         layout.addWidget(title_label)
 
-        desc_label = QLabel("The following command will be executed:")
+        desc_label = QLabel(self.tr("将执行以下命令："))
         desc_label.setStyleSheet(
             f"color: {t['text_secondary']}; font-size: 13px;"
         )

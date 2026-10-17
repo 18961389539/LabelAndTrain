@@ -109,7 +109,7 @@ class ShapeModifyDialog(RangeTableDialog):
         bottom_layout = QHBoxLayout()
         bottom_layout.setContentsMargins(0, 0, 0, 0)
         bottom_layout.setSpacing(8)
-        from_label = QLabel("From:")
+        from_label = QLabel(self.tr("起始："))
         self.from_input = QtWidgets.QSpinBox()
         self.from_input.setMinimum(1)
         self.from_input.setMaximum(len(self.image_file_list))
@@ -117,7 +117,7 @@ class ShapeModifyDialog(RangeTableDialog):
         self.from_input.setFixedWidth(104)
         self.from_input.setStyleSheet(get_spinbox_style())
 
-        to_label = QLabel("To:")
+        to_label = QLabel(self.tr("结束："))
         self.to_input = QtWidgets.QSpinBox()
         self.to_input.setMinimum(0)
         self.to_input.setMaximum(len(self.image_file_list))

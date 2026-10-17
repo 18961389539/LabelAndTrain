@@ -186,7 +186,7 @@ class ModelItem(QFrame):
             layout.addWidget(rec_chip, 0, Qt.AlignmentFlag.AlignVCenter)
         if has_local:
             local_chip = QLabel("本地")
-            local_chip.setToolTip("Model files already downloaded locally")
+            local_chip.setToolTip(self.tr("模型文件已在本地下载"))
             local_chip.setStyleSheet(
                 f"font-size: 11px; color: {_t['success']}; "
                 "background: transparent; border: none; padding-right: 4px;"
@@ -240,7 +240,7 @@ class ModelItem(QFrame):
             }
         """)
         self.remove_icon.setIcon(QIcon(new_icon("trash", "svg")))
-        self.remove_icon.setToolTip("Remove this custom model")
+        self.remove_icon.setToolTip(self.tr("移除这个自定义模型"))
         self.remove_icon.setVisible(False)
         self.remove_icon.clicked.connect(self.request_remove)
         layout.addWidget(self.remove_icon, 0, Qt.AlignmentFlag.AlignVCenter)
