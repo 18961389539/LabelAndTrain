@@ -764,7 +764,6 @@ class LabelingWidget(LabelDialog):
         # Per-image view memory (zoom / brightness / scroll)
         self.view_state = ViewStateStore()
 
-        # XXX: Could be completely declarative.
         # Restore application settings. This happens before any folder is
         # imported, because opening a folder records it as a recent directory
         # through self.settings.

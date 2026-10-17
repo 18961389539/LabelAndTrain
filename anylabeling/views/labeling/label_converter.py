@@ -23,6 +23,91 @@ from typing import Any, Dict, List
 
 from anylabeling.app_info import __version__
 from anylabeling.views.labeling.logger import logger
+
+
+def _rle_run_counts(counts):
+    """COCO RLE run lengths, from either the compressed string or the list.
+
+    The compressed form is LEB128 with a zig-zag sign bit: each run length is
+    split into 5-bit groups whose high bit says "another byte follows", and the
+    sign is folded into the low bit. Both forms describe the same alternating
+    zero-run / one-run sequence, counted column-major.
+    """
+    if isinstance(counts, (list, tuple)):
+        return [int(value) for value in counts]
+    if not isinstance(counts, str):
+        return None
+    runs = []
+    index = 0
+    while index < len(counts):
+        value = 0
+        shift = 0
+        while True:
+            if index >= len(counts):
+                return None  # the last number is cut off
+            char = ord(counts[index]) - 48
+            index += 1
+            value |= (char & 0x1F) << shift
+            shift += 5
+            if not char & 0x20:
+                break
+        value = (value >> 1) ^ -(value & 1)
+        if value < 0:
+            return None
+        runs.append(value)
+    return runs
+
+
+def _rle_to_mask(rle):
+    """A COCO RLE dict as a ``(height, width)`` uint8 mask, or ``None``."""
+    try:
+        height, width = int(rle["size"][0]), int(rle["size"][1])
+    except (KeyError, TypeError, ValueError, IndexError):
+        return None
+    if height <= 0 or width <= 0:
+        return None
+    runs = _rle_run_counts(rle.get("counts"))
+    if not runs or sum(runs) != height * width:
+        return None
+    flat = np.zeros(height * width, dtype=np.uint8)
+    position = 0
+    for order, run in enumerate(runs):
+        if order % 2:
+            flat[position : position + run] = 1
+        position += run
+    return flat.reshape((height, width), order="F")
+
+
+def _rle_to_polygons(rle):
+    """COCO RLE -> flat polygon point lists, which is what a label file holds.
+
+    ``None`` means the encoding could not be read at all; an empty list means
+    it was read and contained no outline big enough to label. The caller reports
+    the difference, because the failure this replaced dropped every such object
+    without a word -- and RLE is how the *standard* COCO distribution files
+    store segmentations, so ``convert --task coco2xlabel --mode segment`` lost
+    whole datasets.
+    """
+    mask = _rle_to_mask(rle)
+    if mask is None:
+        return None
+    contours, _ = cv2.findContours(
+        mask * 255, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+    )
+    polygons = []
+    for contour in contours:
+        perimeter = cv2.arcLength(contour, True)
+        if perimeter <= 0:
+            continue
+        approx = cv2.approxPolyDP(contour, 0.01 * perimeter, True)
+        points = [
+            float(value) for pair in approx.reshape(-1, 2) for value in pair
+        ]
+        if len(points) >= 6 and len(points) % 2 == 0:
+            polygons.append(points)
+    return polygons
+
+
 from anylabeling.views.labeling.schema import create_xlabel_template
 from anylabeling.views.labeling.utils.shape import rectangle_from_diagonal
 from anylabeling.views.labeling.utils.general import is_possible_rectangle
@@ -847,7 +932,21 @@ class LabelConverter:
                         isinstance(segmentation, dict)
                         and "counts" in segmentation
                     ):
-                        # TODO: Handle RLE format segmentation
+                        polygons = _rle_to_polygons(segmentation)
+                        if polygons is None:
+                            logger.warning(
+                                "Unreadable COCO RLE segmentation for image "
+                                f"{dic_info['image_id']}; that object is not "
+                                "imported."
+                            )
+                        else:
+                            if not polygons:
+                                logger.warning(
+                                    "COCO RLE segmentation for image "
+                                    f"{dic_info['image_id']} holds no "
+                                    "outline; that object is not imported."
+                                )
+                            segmentations_list.extend(polygons)
                         continue
 
                     if not isinstance(segmentation, list):

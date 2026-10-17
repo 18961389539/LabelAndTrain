@@ -38,9 +38,6 @@ from anylabeling.views.labeling.widgets.range_table_dialog import (
     RangeTableDialog,
 )
 
-# TODO(unknown):
-# - Calculate optimal position so as not to go out of screen area.
-
 
 def natural_sort_key(s):
     return [

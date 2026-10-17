@@ -231,6 +231,13 @@ tooltip、以及打开该图时状态栏上停留 8 秒的一行。前两个要�
 界面上的「导入 / 导出」菜单各四项：目标检测（HBB）、实例分割（Seg）、旋转框（OBB）、
 关键点（Pose）。画旋转框（`O`）不再是无出口的死路——OBB 的读写都走同一份 `classes.txt`。
 
+- **COCO 分割导入接受两种写法**：`jllabelingandtrain convert --task coco2xlabel
+  --mode segment` 既读 polygon 坐标列表，也读 RLE（`{"size": [h, w], "counts": ...}`，
+  压缩字符串与未压缩 counts 都支持），因为**官方发布的 COCO 文件里 segmentation
+  大多是 RLE**。此前 RLE 那一条分支是 `# TODO: Handle RLE format segmentation` 加一句
+  `continue`：这类物体被逐个静默丢弃，导入结果看起来"成功"但少掉一半轮廓。现在
+  解不开的 RLE 会写日志并点名是哪张图的哪个物体，而不是不出声。
+
 导出时有六件事值得知道：
 
 - **类别从哪来**：如果当前项目已经有标签列表，会先问你"用当前标签列表（N 个类别）

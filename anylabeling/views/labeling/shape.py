@@ -13,10 +13,6 @@ from .provenance import (
     SOURCES,
 )
 
-# TODO(unknown):
-# - [opt] Store paths instead of creating new ones at each paint.
-
-
 DEFAULT_LINE_COLOR = QtGui.QColor(0, 255, 0, 128)  # bf hovering
 DEFAULT_FILL_COLOR = QtGui.QColor(100, 100, 100, 100)  # hovering
 DEFAULT_SELECT_LINE_COLOR = QtGui.QColor(255, 255, 255)  # selected
