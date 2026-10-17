@@ -166,7 +166,23 @@ a = Analysis(
     ],
     hookspath=[],
     runtime_hooks=[_p('packaging', 'pyinstaller', 'runtime_hooks', 'ort_dll_bootstrap.py')],
-    excludes=[],
+    # This build is the inference-only one; torch + ultralytics belong to
+    # x-anylabeling-win-cpu-train.spec, whose own header says a onefile must not
+    # re-extract ~250MB of training stack on every launch. `excludes=[]` held
+    # only while the build environment lacked those packages: once the training
+    # stack got installed into the same venv, the "CPU" build silently absorbed
+    # it -- measured on 2026-10-17 at 376MB against the 154MB this spec used to
+    # produce. The training panel then fails to import ultralytics at runtime,
+    # which is the documented, graceful behaviour of every CPU build shipped so
+    # far; the name now means what it says again.
+    excludes=[
+        'torch',
+        'torchvision',
+        'torchaudio',
+        'ultralytics',
+        'ultralytics_platform',
+        'triton',
+    ],
 )
 a.binaries = _strip_msvc_runtime_binaries(a.binaries)
 if msvc_runtime_binaries:
