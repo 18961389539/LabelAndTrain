@@ -300,3 +300,157 @@ class TestLabelConverterVocValidation(unittest.TestCase):
         self.assertEqual(data["shapes"], [])
         warning.assert_called_once()
         self.assertIn("bndbox/ymax", warning.call_args.args[0])
+
+
+class TestYoloExportLines(unittest.TestCase):
+    """Pin the bytes of the exported .txt, not just the skip counters.
+
+    Ultralytics trains on exactly this file, so a class index taken from the
+    wrong order, a swapped centre/width pair or a changed decimal format is a
+    silent dataset corruption. The stats tests above count shapes; these read
+    the file back and compare whole lines.
+    """
+
+    def setUp(self):
+        import shutil
+
+        self.dir = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.dir, True)
+
+    def _convert(self, classes, shapes, mode, pose_cfg=None):
+        label_file = os.path.join(self.dir, "label.json")
+        with open(label_file, "w", encoding="utf-8") as handle:
+            json.dump(
+                {
+                    "imagePath": "image.jpg",
+                    "imageWidth": 100,
+                    "imageHeight": 50,
+                    "shapes": shapes,
+                },
+                handle,
+            )
+        output_file = os.path.join(self.dir, "label.txt")
+        converter = (
+            LabelConverter(pose_cfg_file=pose_cfg)
+            if pose_cfg
+            else LabelConverter(classes=classes)
+        )
+        converter.custom_to_yolo(label_file, output_file, mode)
+        with open(output_file, encoding="utf-8") as handle:
+            return handle.read()
+
+    @staticmethod
+    def _rectangle(label, points):
+        return {
+            "label": label,
+            "shape_type": "rectangle",
+            "points": points,
+        }
+
+    def test_hbb_lines_carry_the_class_index_in_classes_order(self):
+        text = self._convert(
+            ["ship", "plane"],
+            [
+                self._rectangle(
+                    "plane", [[10, 20], [30, 20], [30, 40], [10, 40]]
+                ),
+                self._rectangle("ship", [[0, 0], [10, 0], [10, 10], [0, 10]]),
+            ],
+            "hbb",
+        )
+
+        self.assertEqual(
+            text,
+            "1 0.200000 0.600000 0.200000 0.400000\n"
+            "0 0.050000 0.100000 0.100000 0.200000\n",
+        )
+
+    def test_a_two_point_diagonal_still_exports_a_four_corner_box(self):
+        text = self._convert(
+            ["plane"],
+            [self._rectangle("plane", [[10, 20], [30, 40]])],
+            "hbb",
+        )
+
+        self.assertEqual(text, "0 0.200000 0.600000 0.200000 0.400000\n")
+
+    def test_a_skipped_shape_leaves_no_partial_line(self):
+        text = self._convert(
+            ["plane"],
+            [
+                self._rectangle(
+                    "plane", [[10, 20], [30, 20], [30, 40], [10, 40]]
+                ),
+                self._rectangle("dog", [[0, 0], [10, 0], [10, 10], [0, 10]]),
+            ],
+            "hbb",
+        )
+
+        self.assertEqual(text, "0 0.200000 0.600000 0.200000 0.400000\n")
+
+    def test_seg_lines_are_normalised_vertex_pairs(self):
+        text = self._convert(
+            ["plane"],
+            [
+                {
+                    "label": "plane",
+                    "shape_type": "polygon",
+                    "points": [[0, 0], [50, 0], [50, 25]],
+                }
+            ],
+            "seg",
+        )
+
+        self.assertEqual(text, "0 0.0 0.0 0.5 0.0 0.5 0.5\n")
+
+    def test_obb_lines_keep_vertex_order(self):
+        text = self._convert(
+            ["plane"],
+            [
+                {
+                    "label": "plane",
+                    "shape_type": "rotation",
+                    "points": [[10, 5], [20, 5], [20, 15], [10, 15]],
+                }
+            ],
+            "obb",
+        )
+
+        self.assertEqual(text, "0 0.1 0.1 0.2 0.1 0.2 0.3 0.1 0.3\n")
+
+    def test_pose_lines_pad_missing_keypoints_in_declared_order(self):
+        pose_cfg = os.path.join(self.dir, "pose.yaml")
+        with open(pose_cfg, "w", encoding="utf-8") as handle:
+            yaml.safe_dump(
+                {
+                    "classes": {
+                        "person": ["nose", "left_eye"],
+                        "dog": ["tail"],
+                    }
+                },
+                handle,
+                sort_keys=False,
+            )
+
+        text = self._convert(
+            None,
+            [
+                {
+                    "label": "person",
+                    "shape_type": "rectangle",
+                    "group_id": 1,
+                    "points": [[10, 10], [30, 10], [30, 30], [10, 30]],
+                },
+                {
+                    "label": "nose",
+                    "shape_type": "point",
+                    "group_id": 1,
+                    "points": [[25, 10]],
+                },
+            ],
+            "pose",
+            pose_cfg=pose_cfg,
+        )
+
+        # Box, then nose (visible), then left_eye padded as absent.
+        self.assertEqual(text, "0 0.2 0.4 0.2 0.4 0.25 0.2 2 0 0 0\n")
