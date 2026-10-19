@@ -634,10 +634,37 @@ def main():
             rect.top() >= 0 and rect.bottom() < widget.canvas.pixmap.height()
         )
 
-    @step("6. delete current image -> _delete_ folder")
+    @step("6. delete current image -> _delete_ folder, label snapshotted")
     def s6():
         # the modal confirm is a human step (machine checklist); stub it
         widget._confirm_destructive_action = lambda *a, **k: True
+        # The image lands in _delete_ "so you can get it back", so the
+        # annotation must not simply vanish. The version key matters: a label
+        # JSON without it takes load_file's error path, which is a modal --
+        # correct for a user, fatal for an offscreen run.
+        doomed_label = os.path.splitext(images[2])[0] + ".json"
+        with open(doomed_label, "w", encoding="utf-8") as handle:
+            json.dump(
+                {
+                    "version": "2.4.0",
+                    "flags": {},
+                    "shapes": [
+                        {
+                            "label": "scratch",
+                            "points": [[0, 0], [1, 1]],
+                            "group_id": None,
+                            "shape_type": "rectangle",
+                            "flags": {},
+                        }
+                    ],
+                    "imagePath": os.path.basename(images[2]),
+                    "imageData": None,
+                    "imageHeight": 160,
+                    "imageWidth": 5328,
+                    "checked": True,
+                },
+                handle,
+            )
         widget.load_file(images[2])
         app.processEvents()
         widget.delete_image_file()
@@ -649,9 +676,27 @@ def main():
         moved = [f for f in os.listdir(deleted_dir) if f.startswith("img_2")]
         assert moved, "image not moved into _delete_"
         assert not os.path.exists(images[2]), "image still in place"
+        assert not os.path.exists(doomed_label), "label still in place"
+        # The deletion is not the end of the annotation: the pre-delete
+        # content sits in the session snapshot that 从备份恢复标注 reads.
+        runs = os.path.join(tmp, ".label_backups")
+        snapshots = (
+            [
+                os.path.join(runs, run, "img_2.json")
+                for run in sorted(os.listdir(runs))
+                if os.path.isfile(os.path.join(runs, run, "img_2.json"))
+            ]
+            if os.path.isdir(runs)
+            else []
+        )
+        assert snapshots, f"no snapshot of {doomed_label} under {runs}"
+        with open(snapshots[0], "r", encoding="utf-8") as handle:
+            saved = json.load(handle)
+        assert [s["label"] for s in saved["shapes"]] == ["scratch"], saved
         for name in moved:  # clean up after ourselves
             os.remove(os.path.join(deleted_dir, name))
         os.rmdir(deleted_dir)
+        shutil.rmtree(runs, ignore_errors=True)
 
     @step("7. YOLO export -- readiness check, manifest, summary")
     def s7():
