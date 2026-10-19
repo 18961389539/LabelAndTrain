@@ -2046,12 +2046,6 @@ class AutoLabelingWidget(QWidget):
         if current_model_name not in _SKIP_PREDICTION_ON_NEW_MARKS_MODELS:
             self.run_prediction()
 
-    def on_open(self):
-        pass
-
-    def on_close(self):
-        return True
-
     def on_conf_value_changed(self, value):
         """Handle conf value changed"""
         self.model_manager.set_auto_labeling_conf(value)

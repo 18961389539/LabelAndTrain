@@ -306,10 +306,6 @@ EXCLUDED_KEYS = frozenset(
         # field for them would be hostile.  The four ``.show`` keys were
         # listed from the start and the rest simply never got added — which is
         # exactly what ``test_template_leaves_are_accounted_for`` now catches.
-        "description_dock.show",
-        "description_dock.closable",
-        "description_dock.floatable",
-        "description_dock.movable",
         "file_dock.show",
         "file_dock.closable",
         "file_dock.floatable",

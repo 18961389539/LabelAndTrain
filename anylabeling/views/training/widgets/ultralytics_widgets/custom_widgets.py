@@ -6,7 +6,6 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QSlider,
     QSpinBox,
-    QDialog,
     QVBoxLayout,
     QHBoxLayout,
     QLabel,
@@ -324,87 +323,6 @@ class SecondaryButton(QPushButton):
     def __init__(self, text="Cancel", parent=None):
         super().__init__(text, parent)
         self.setStyleSheet(get_cancel_btn_style())
-
-
-class TrainingConfirmDialog(QDialog):
-    def __init__(self, cmd_parts, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle(self.tr("开始训练"))
-        self.setFixedSize(752, 320)
-        t = get_theme()
-        self.setStyleSheet(f"""
-            QDialog {{
-                background-color: {t["background"]};
-                border-radius: {t["radius_lg"]};
-            }}
-            QLabel {{
-                background-color: transparent;
-                color: {t["text"]};
-            }}
-        """)
-
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(15)
-
-        title_label = QLabel(self.tr("准备开始训练"))
-        title_label.setStyleSheet(
-            f"font-size: 16px; font-weight: bold; color: {t['text']};"
-        )
-        layout.addWidget(title_label)
-
-        desc_label = QLabel(self.tr("将执行以下命令："))
-        desc_label.setStyleSheet(
-            f"color: {t['text_secondary']}; font-size: 13px;"
-        )
-        layout.addWidget(desc_label)
-
-        cmd_text = self._format_command(cmd_parts)
-        command_display = QTextEdit()
-        command_display.setPlainText(cmd_text)
-        command_display.setReadOnly(True)
-        command_display.setFixedHeight(160)
-        command_display.setStyleSheet(f"""
-            QTextEdit {{
-                background-color: {t["surface"]};
-                color: {t["text"]};
-                font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-                font-size: 12px;
-                border: 1px solid {t["border"]};
-                border-radius: {t["radius_md"]};
-                padding: 12px;
-            }}
-        """)
-        layout.addWidget(command_display)
-
-        button_layout = QHBoxLayout()
-        button_layout.addStretch()
-
-        self.cancel_btn = SecondaryButton("Cancel")
-        self.cancel_btn.clicked.connect(self.reject)
-        button_layout.addWidget(self.cancel_btn)
-
-        self.start_btn = PrimaryButton("Start")
-        self.start_btn.clicked.connect(self.accept)
-        button_layout.addWidget(self.start_btn)
-
-        layout.addLayout(button_layout)
-
-    def _format_command(self, cmd_parts):
-        if len(cmd_parts) <= 3:
-            return " ".join(cmd_parts)
-
-        base_cmd = " ".join(cmd_parts[:3])
-        params = cmd_parts[3:]
-
-        formatted_cmd = base_cmd + " \\\n"
-        for i, param in enumerate(params):
-            if i == len(params) - 1:
-                formatted_cmd += f"    {param}"
-            else:
-                formatted_cmd += f"    {param} \\\n"
-
-        return formatted_cmd
 
 
 class CustomTable(QTableWidget):

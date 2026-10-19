@@ -16,7 +16,6 @@ from anylabeling.services.auto_labeling.types import (
     AutoLabelingResult,
     DownloadCancelledError,
 )
-from anylabeling.services.auto_labeling.utils import TimeoutContext
 from anylabeling.services.auto_labeling import (
     _CUSTOM_MODELS,
     _CACHED_AUTO_LABELING_MODELS,
@@ -175,23 +174,6 @@ class ModelManager(QObject):
             and name not in (".", "..")
             and cls.CUSTOM_MODEL_NAME_PATTERN.fullmatch(name) is not None
         )
-
-    def update_model_config(self, config_file, key, value):
-        """Update a specific key in a model's configuration."""
-        for config in self.model_configs:
-            if config.get("config_file") == config_file:
-                config[key] = value
-                if (
-                    self.loaded_model_config
-                    and self.loaded_model_config.get("config_file")
-                    == config_file
-                ):
-                    self.loaded_model_config[key] = value
-                break
-
-        if config_file and config_file.startswith(":/"):
-            user_config = get_config()
-            save_config(user_config)
 
     def get_model_configs(self):
         """Return model infos"""

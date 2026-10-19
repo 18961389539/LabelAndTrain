@@ -296,7 +296,7 @@ Only the registry entry is removed. The config/weight files on disk are kept:
         <translation>正在取消……</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="2170" />
+        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="2164" />
         <source>Existing unsupported shape type. Only rectangle, rotation and polygon shapes are supported for detection boxes.</source>
         <translation>存在不支持的对象类型。检测框仅支持矩形、旋转框和多边形对象。</translation>
     </message>
@@ -5362,124 +5362,112 @@ Start now?</source>
 </context><context>
     <name>ModelManager</name>
     <message>
-        <location filename="..\..\services\auto_labeling\model_manager.py" line="233" />
+        <location filename="..\..\services\auto_labeling\model_manager.py" line="215" />
         <source>Download cancelled.</source>
         <translation>下载已取消。</translation>
     </message>
     <message>
-        <location filename="..\..\services\auto_labeling\model_manager.py" line="242" />
+        <location filename="..\..\services\auto_labeling\model_manager.py" line="224" />
         <source>Model loaded. Ready for labeling.</source>
         <translation>模型已加载。准备好进行数据标注。</translation>
     </message>
     <message>
-        <location filename="..\..\services\auto_labeling\model_manager.py" line="284" />
+        <location filename="..\..\services\auto_labeling\model_manager.py" line="266" />
         <source>Failed to save the custom-model list; the removed model will come back after the next restart.</source>
         <translation>自定义模型列表保存失败；被移除的模型会在下次启动后恢复。</translation>
     </message>
     <message>
-        <location filename="..\..\services\auto_labeling\model_manager.py" line="312" />
+        <location filename="..\..\services\auto_labeling\model_manager.py" line="294" />
         <source>Error in loading custom model: Invalid path.</source>
         <translation>加载自定义模型时出错：无效路径。</translation>
     </message>
     <message>
-        <location filename="..\..\services\auto_labeling\model_manager.py" line="328" />
+        <location filename="..\..\services\auto_labeling\model_manager.py" line="310" />
         <source>Error in loading custom model: Invalid config file.</source>
         <translation>加载自定义模型时出错：无效的配置文件。</translation>
     </message>
     <message>
-        <location filename="..\..\services\auto_labeling\model_manager.py" line="359" />
+        <location filename="..\..\services\auto_labeling\model_manager.py" line="341" />
         <source>Error in loading custom model: Invalid config file format.</source>
         <translation>加载自定义模型时出错：无效的配置文件格式。</translation>
     </message>
     <message>
-        <location filename="..\..\services\auto_labeling\model_manager.py" line="373" />
+        <location filename="..\..\services\auto_labeling\model_manager.py" line="355" />
         <source>Error in loading custom model: Invalid model name.</source>
         <translation>加载自定义模型时出错：无效的模型名称。</translation>
     </message>
     <message>
-        <location filename="..\..\services\auto_labeling\model_manager.py" line="400" />
+        <location filename="..\..\services\auto_labeling\model_manager.py" line="382" />
         <source>Custom model limit (%d) reached, but every model is pinned by an iteration round. Adding this one without removing anything; unpin or delete models you no longer need.</source>
         <translation>自定义模型已达上限（%d），但所有模型都被迭代轮次占用。本次直接添加、不移除任何模型；请取消占用或删除不再需要的模型。</translation>
     </message>
     <message>
-        <location filename="..\..\services\auto_labeling\model_manager.py" line="419" />
+        <location filename="..\..\services\auto_labeling\model_manager.py" line="401" />
         <source>Custom model limit reached (%d). Removed the least recently used model: %s. Use the trash icon in the model list to manage custom models.</source>
         <translation>自定义模型已达上限（%d），已移除最久未使用的模型：%s。可用模型列表中的垃圾桶图标管理自定义模型。</translation>
     </message>
     <message>
-        <location filename="..\..\services\auto_labeling\model_manager.py" line="434" />
+        <location filename="..\..\services\auto_labeling\model_manager.py" line="416" />
         <source>Failed to save the custom-model list; this model will be gone after the next restart.</source>
         <translation>自定义模型列表保存失败；该模型会在下次启动后消失。</translation>
     </message>
     <message>
-        <location filename="..\..\services\auto_labeling\model_manager.py" line="464" />
+        <location filename="..\..\services\auto_labeling\model_manager.py" line="446" />
         <source>No model selected.</source>
         <translation>未选择模型。</translation>
     </message>
     <message>
-        <location filename="..\..\services\auto_labeling\model_manager.py" line="479" />
+        <location filename="..\..\services\auto_labeling\model_manager.py" line="461" />
         <source>Error in loading model: Invalid model name.</source>
         <translation>加载模型时出错：无效的模型名称。</translation>
     </message>
     <message>
-        <location filename="..\..\services\auto_labeling\model_manager.py" line="489" />
+        <location filename="..\..\services\auto_labeling\model_manager.py" line="471" />
         <source>Loading model: {model_name}. Please wait...</source>
         <translation>正在加载模型：{model_name}，请稍候…</translation>
     </message>
     <message>
-        <location filename="..\..\services\auto_labeling\model_manager.py" line="755" />
-        <location filename="..\..\services\auto_labeling\model_manager.py" line="731" />
-        <location filename="..\..\services\auto_labeling\model_manager.py" line="707" />
-        <location filename="..\..\services\auto_labeling\model_manager.py" line="683" />
-        <location filename="..\..\services\auto_labeling\model_manager.py" line="659" />
-        <location filename="..\..\services\auto_labeling\model_manager.py" line="626" />
-        <location filename="..\..\services\auto_labeling\model_manager.py" line="599" />
-        <location filename="..\..\services\auto_labeling\model_manager.py" line="575" />
+        <location filename="..\..\services\auto_labeling\model_manager.py" line="737" />
+        <location filename="..\..\services\auto_labeling\model_manager.py" line="713" />
+        <location filename="..\..\services\auto_labeling\model_manager.py" line="689" />
+        <location filename="..\..\services\auto_labeling\model_manager.py" line="665" />
+        <location filename="..\..\services\auto_labeling\model_manager.py" line="641" />
+        <location filename="..\..\services\auto_labeling\model_manager.py" line="608" />
+        <location filename="..\..\services\auto_labeling\model_manager.py" line="581" />
+        <location filename="..\..\services\auto_labeling\model_manager.py" line="557" />
         <source>Error in loading model: {error_message}</source>
         <translation>加载模型出错：{error_message}</translation>
     </message>
     <message>
-        <location filename="..\..\services\auto_labeling\model_manager.py" line="911" />
-        <location filename="..\..\services\auto_labeling\model_manager.py" line="847" />
+        <location filename="..\..\services\auto_labeling\model_manager.py" line="893" />
+        <location filename="..\..\services\auto_labeling\model_manager.py" line="829" />
         <source>Model is not loaded. Choose a mode to continue.</source>
         <translation>模型尚未加载。选择一个模式以继续。</translation>
     </message>
     <message>
-        <location filename="..\..\services\auto_labeling\model_manager.py" line="873" />
+        <location filename="..\..\services\auto_labeling\model_manager.py" line="855" />
         <source>Inference cancelled. Result discarded.</source>
         <translation>推理已取消，结果已丢弃。</translation>
     </message>
     <message>
-        <location filename="..\..\services\auto_labeling\model_manager.py" line="883" />
+        <location filename="..\..\services\auto_labeling\model_manager.py" line="865" />
         <source>Finished inferencing AI model. Check the result.</source>
         <translation>完成 AI 模型推理，请检查结果。</translation>
     </message>
     <message>
-        <location filename="..\..\services\auto_labeling\model_manager.py" line="888" />
+        <location filename="..\..\services\auto_labeling\model_manager.py" line="870" />
         <source>Error in model prediction: {error_message}</source>
         <translation>模型推理出错：{error_message}</translation>
     </message>
     <message>
-        <location filename="..\..\services\auto_labeling\model_manager.py" line="915" />
+        <location filename="..\..\services\auto_labeling\model_manager.py" line="897" />
         <source>Inferencing AI model. Please wait...</source>
         <translation>正在进行 AI 模型推理，请稍等...</translation>
     </message>
     <message>
-        <location filename="..\..\services\auto_labeling\model_manager.py" line="933" />
+        <location filename="..\..\services\auto_labeling\model_manager.py" line="915" />
         <source>Another model is being executed. Please wait for it to finish.</source>
         <translation>另一个模型正在执行，请耐心等待。</translation>
-    </message>
-</context><context>
-    <name>MultiKeySequenceEditor</name>
-    <message>
-        <location filename="..\..\views\labeling\settings\editors.py" line="601" />
-        <source>Add</source>
-        <translation>添加</translation>
-    </message>
-    <message>
-        <location filename="..\..\views\labeling\settings\editors.py" line="613" />
-        <source>Remove</source>
-        <translation>移除</translation>
     </message>
 </context><context>
     <name>NavigatorDialog</name>
@@ -6939,13 +6927,6 @@ Changes will not be saved until you click Save.</source>
         <translation>并跳过了 %s 个超出边界的对象</translation>
     </message>
 </context><context>
-    <name>ShortcutEditor</name>
-    <message>
-        <location filename="..\..\views\labeling\settings\editors.py" line="532" />
-        <source>Clear</source>
-        <translation>清除</translation>
-    </message>
-</context><context>
     <name>TextInputDialog</name>
     <message>
         <location filename="..\..\views\labeling\utils\batch.py" line="55" />
@@ -6961,23 +6942,6 @@ Changes will not be saved until you click Save.</source>
         <location filename="..\..\views\labeling\utils\batch.py" line="72" />
         <source>Enter prompt here...</source>
         <translation>请输入您的文本提示词：</translation>
-    </message>
-</context><context>
-    <name>TrainingConfirmDialog</name>
-    <message>
-        <location filename="..\..\views\training\widgets\ultralytics_widgets\custom_widgets.py" line="332" />
-        <source>开始训练</source>
-        <translation>开始训练</translation>
-    </message>
-    <message>
-        <location filename="..\..\views\training\widgets\ultralytics_widgets\custom_widgets.py" line="350" />
-        <source>准备开始训练</source>
-        <translation>准备开始训练</translation>
-    </message>
-    <message>
-        <location filename="..\..\views\training\widgets\ultralytics_widgets\custom_widgets.py" line="356" />
-        <source>将执行以下命令：</source>
-        <translation>将执行以下命令：</translation>
     </message>
 </context><context>
     <name>TrainingImagePreviewDialog</name>
@@ -7015,17 +6979,17 @@ Changes will not be saved until you click Save.</source>
 </context><context>
     <name>TrainingStepBar</name>
     <message>
-        <location filename="..\..\views\training\widgets\ultralytics_widgets\custom_widgets.py" line="475" />
+        <location filename="..\..\views\training\widgets\ultralytics_widgets\custom_widgets.py" line="393" />
         <source>1. Data</source>
         <translation>1. 数据</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\widgets\ultralytics_widgets\custom_widgets.py" line="476" />
+        <location filename="..\..\views\training\widgets\ultralytics_widgets\custom_widgets.py" line="394" />
         <source>2. Config</source>
         <translation>2. 配置</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\widgets\ultralytics_widgets\custom_widgets.py" line="477" />
+        <location filename="..\..\views\training\widgets\ultralytics_widgets\custom_widgets.py" line="395" />
         <source>3. Train</source>
         <translation>3. 训练</translation>
     </message>

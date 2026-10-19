@@ -3,11 +3,6 @@ import math
 import numpy as np
 
 
-class Args:
-    def __init__(self, **kwargs):
-        self.__dict__.update(kwargs)
-
-
 def calculate_rotation_theta(poly):
     """
     Calculate the rotation angle of the polygon.

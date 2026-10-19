@@ -56,11 +56,6 @@ default_shape_color:
 - 0
 - 255
 - 0
-description_dock:
-  closable: false
-  floatable: false
-  movable: false
-  show: true
 device: null
 digit_shortcuts: {}
 display_label_popup: true
