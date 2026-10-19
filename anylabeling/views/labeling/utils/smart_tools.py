@@ -1256,6 +1256,26 @@ def apply_stale_deletions(
                 len(doomed) for _, _, doomed in pending.values()
             )
             return counts
+    else:
+        # No folder was handed over, but every label file knows where it
+        # lives: snapshot through the editor's helper. Deleting model boxes
+        # with nothing to restore is the one outcome this tool must not
+        # produce, whatever its caller remembered to pass.
+        from anylabeling.views.labeling.utils.session_snapshot import (
+            snapshot_before_label_write,
+        )
+
+        runs = {
+            label_file: snapshot_before_label_write(label_file)
+            for label_file in pending
+        }
+        if any(run is None for run in runs.values()):
+            counts["backup_failed"] = True
+            counts["skipped_unavailable"] += sum(
+                len(doomed) for _, _, doomed in pending.values()
+            )
+            return counts
+        counts["backup_dir"] = sorted(set(runs.values()))[0]
 
     for label_file, (data, shapes, doomed) in pending.items():
         data["shapes"] = [

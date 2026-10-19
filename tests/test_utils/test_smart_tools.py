@@ -45,7 +45,9 @@ class TestResultDialog(unittest.TestCase):
 
     def test_rows_carry_jump_targets_and_category(self):
         dialog = self._dialog()
-        root = dialog.add_category("难例", [("a.jpg", "不确定性 0.9", "a.jpg")])
+        root = dialog.add_category(
+            "难例", [("a.jpg", "不确定性 0.9", "a.jpg")]
+        )
         child = root.child(0)
         self.assertEqual(child.data(0, RESULT_PATH_ROLE), "a.jpg")
         self.assertEqual(child.data(0, RESULT_CATEGORY_ROLE), "难例")
@@ -125,7 +127,9 @@ class TestApplyStaleDeletions(unittest.TestCase):
         self.assertEqual(counts["deleted"], 1)
         self.assertEqual(counts["files"], 1)
         remaining = self._read(path)["shapes"]
-        self.assertEqual([shape["label"] for shape in remaining], ["cat", "dog", "pig"])
+        self.assertEqual(
+            [shape["label"] for shape in remaining], ["cat", "dog", "pig"]
+        )
 
     def test_locked_box_is_never_deleted(self):
         stale = self._model_box()
@@ -208,7 +212,9 @@ class TestApplyStaleDeletions(unittest.TestCase):
         counts = self.smart_tools.apply_stale_deletions({}, "run_07")
         self.assertEqual(counts["deleted"], 0)
         self.assertEqual(counts["files"], 0)
-        self.assertEqual(self.smart_tools.apply_stale_deletions(None, None)["deleted"], 0)
+        self.assertEqual(
+            self.smart_tools.apply_stale_deletions(None, None)["deleted"], 0
+        )
 
 
 class TestStaleAuditDialog(unittest.TestCase):
@@ -292,9 +298,8 @@ class TestStaleAuditDialog(unittest.TestCase):
         rows = dialog.all_rows()
         self.assertEqual(len([row for row in rows if row["shape_ref"]]), 1)
         labels = [
-            button.text() for button in dialog.findChildren(
-                self.smart_tools.QPushButton
-            )
+            button.text()
+            for button in dialog.findChildren(self.smart_tools.QPushButton)
         ]
         self.assertIn("删除所选", labels)
 
@@ -397,7 +402,9 @@ class TestStaleDeleteBackup(unittest.TestCase):
     def _live_labels(self):
         path = self.os.path.join(self.tmp.name, "a.json")
         with open(path, "r", encoding="utf-8") as handle:
-            return [shape["label"] for shape in self.json.load(handle)["shapes"]]
+            return [
+                shape["label"] for shape in self.json.load(handle)["shapes"]
+            ]
 
     def _backups(self):
         root = self.os.path.join(self.tmp.name, ".label_backups")
@@ -438,8 +445,43 @@ class TestStaleDeleteBackup(unittest.TestCase):
         self.assertEqual(self._live_labels(), ["cat", "dog"])
         self.assertEqual(self._backups(), [])
 
+    def test_no_label_dir_still_snapshots_before_deleting(self):
+        """A caller that forgets the folder must not mean "no undo"."""
+        counts = self.smart_tools.apply_stale_deletions(
+            {self.label: [self.ref]}, "run_07"
+        )
+        self.assertEqual(counts["deleted"], 1)
+        self.assertEqual(self._live_labels(), ["dog"])
+        # The session helper also drops a marker file in the run, so count
+        # the snapshots themselves.
+        backups = [b for b in self._backups() if b.endswith(".json")]
+        self.assertEqual(len(backups), 1, self._backups())
+        with open(backups[0], "r", encoding="utf-8") as handle:
+            saved = self.json.load(handle)
+        self.assertEqual(
+            [shape["label"] for shape in saved["shapes"]], ["cat", "dog"]
+        )
+        self.assertTrue(counts["backup_dir"])
+
+    def test_no_label_dir_and_a_failing_snapshot_deletes_nothing(self):
+        from unittest import mock
+
+        with mock.patch.object(
+            self.smart_tools.shutil, "copy2", side_effect=OSError("locked")
+        ):
+            counts = self.smart_tools.apply_stale_deletions(
+                {self.label: [self.ref]}, "run_07"
+            )
+        self.assertTrue(counts["backup_failed"])
+        self.assertEqual(counts["deleted"], 0)
+        self.assertEqual(self._live_labels(), ["cat", "dog"])
+
     def test_nothing_to_delete_creates_no_backup(self):
-        human_only = {"label": "dog", "points": [[1, 1], [2, 2]], "source": "human"}
+        human_only = {
+            "label": "dog",
+            "points": [[1, 1], [2, 2]],
+            "source": "human",
+        }
         with open(self.label, "w", encoding="utf-8") as handle:
             self.json.dump({"shapes": [human_only], "checked": False}, handle)
         ref = {"index": 0, "marker": self.smart_tools.shape_marker(human_only)}
@@ -447,7 +489,11 @@ class TestStaleDeleteBackup(unittest.TestCase):
             {self.label: [ref]}, "run_07", label_dir=self.tmp.name
         )
         self.assertEqual(counts["deleted"], 0)
-        self.assertFalse(self.os.path.exists(self.os.path.join(self.tmp.name, ".label_backups")))
+        self.assertFalse(
+            self.os.path.exists(
+                self.os.path.join(self.tmp.name, ".label_backups")
+            )
+        )
 
     def test_retention_prunes_only_our_own_backup_runs(self):
         from unittest import mock
@@ -473,9 +519,7 @@ class TestStaleDeleteBackup(unittest.TestCase):
         # What survives must be the run this call just wrote, i.e. the copy of
         # the label file, not one of the synthetic older folders.
         self.assertTrue(
-            self.os.path.isfile(
-                self.os.path.join(root, stamped[0], "a.json")
-            )
+            self.os.path.isfile(self.os.path.join(root, stamped[0], "a.json"))
         )
 
 
