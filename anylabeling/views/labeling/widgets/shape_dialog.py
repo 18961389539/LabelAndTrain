@@ -452,6 +452,14 @@ class ShapeModifyDialog(RangeTableDialog):
             start_idx (int): Starting frame index (inclusive).
             end_idx (int): Ending frame index (inclusive).
         """
+
+        # Imported here: session_snapshot -> smart_tools -> data_audit
+        # pulls in this widgets package, so a module-level import is
+        # circular.
+        from anylabeling.views.labeling.utils.session_snapshot import (
+            snapshot_before_label_write,
+        )
+
         selected_shapes = self.parent.canvas.selected_shapes
         if not selected_shapes:
             return
@@ -522,6 +530,7 @@ class ShapeModifyDialog(RangeTableDialog):
                         ]
                         removed_count += len(shapes_to_remove)
                         data["shapes"] = filtered_shapes
+                        snapshot_before_label_write(label_file)
                         with open(label_file, "w", encoding="utf-8") as f:
                             json.dump(data, f, indent=2, ensure_ascii=False)
 
@@ -555,6 +564,14 @@ class ShapeModifyDialog(RangeTableDialog):
             start_idx (int): Starting frame index (inclusive).
             end_idx (int): Ending frame index (inclusive).
         """
+
+        # Imported here: session_snapshot -> smart_tools -> data_audit
+        # pulls in this widgets package, so a module-level import is
+        # circular.
+        from anylabeling.views.labeling.utils.session_snapshot import (
+            snapshot_before_label_write,
+        )
+
         selected_shapes = self.parent.canvas.selected_shapes
         if not selected_shapes:
             return
@@ -648,6 +665,7 @@ class ShapeModifyDialog(RangeTableDialog):
                         data["shapes"].append(selected_shape.to_dict())
                         added_count += 1
 
+                snapshot_before_label_write(label_file)
                 with open(label_file, "w", encoding="utf-8") as f:
                     json.dump(data, f, indent=2, ensure_ascii=False)
 

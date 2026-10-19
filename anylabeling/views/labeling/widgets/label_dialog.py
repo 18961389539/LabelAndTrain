@@ -672,6 +672,12 @@ class GroupIDModifyDialog(RangeTableDialog):
         end_index: int = -1,
     ):
         """Modify the group IDs."""
+        # Imported here: session_snapshot -> smart_tools -> data_audit pulls
+        # in this widgets package, so a module-level import is circular.
+        from anylabeling.views.labeling.utils.session_snapshot import (
+            snapshot_before_label_write,
+        )
+
         try:
             if start_index == -1:
                 start_index = self.start_index
@@ -706,6 +712,7 @@ class GroupIDModifyDialog(RangeTableDialog):
                     dst_shapes.append(shape)
                 data["shapes"] = dst_shapes
 
+                snapshot_before_label_write(label_file)
                 with open(label_file, "w", encoding="utf-8") as f:
                     json.dump(data, f, indent=2, ensure_ascii=False)
 
