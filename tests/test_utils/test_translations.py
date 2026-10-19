@@ -36,6 +36,11 @@ TS_PATH = os.path.join(
 RESOURCE_QM = ":/languages/translations/zh_CN.qm"
 APP_DIR = os.path.join(REPO_ROOT, "anylabeling")
 
+#: Han ideographs. Enough to tell a Chinese source from an English one; CJK
+#: punctuation and kana are not needed here, and treating them as "not Chinese"
+#: only ever puts another string into the allowlist below.
+_CJK = re.compile(r"[\u4e00-\u9fff]")
+
 
 def _load_catalog():
     return ET.parse(TS_PATH).getroot()
@@ -161,6 +166,84 @@ class TestCatalogMatchesSources(unittest.TestCase):
             unfinished,
             [],
             f"{len(unfinished)} catalog entries have no Chinese text.",
+        )
+
+    #: Sources whose Chinese *is* the same characters: technical names the UI
+    #: shows untranslated on purpose (metric labels, model-family names), and
+    #: placeholder-only strings with no words to translate. Two-sided on
+    #: purpose -- a new entry here is a string that stopped being answered in
+    #: Chinese, and a vanished one means this list carries dead weight.
+    SELF_TRANSLATING = {
+        "AMG",
+        "AI",
+        "(unknown)",
+        "YOLO HBB",
+        "YOLO Seg",
+        "YOLO OBB",
+        "YOLO Pose",
+        "loss %1",
+        "mAP50 %1",
+        "<b>%s</b>",
+        "X: %d, Y: %d",
+        "X: %d, Y: %d | H: %d, W: %d",
+        "（%1）",
+        "· %1x%2",
+    }
+
+    def _latin_only_messages(self):
+        """(context, source, translation, type) for sources with no CJK.
+
+        These are the strings where the catalog carries the whole weight of
+        the UI: the fork writes Chinese sources, so an English source reaching
+        the screen means the catalog did not answer it.
+        """
+        root = _load_catalog()
+        rows = []
+        for context in root.findall("context"):
+            for message in context.findall("message"):
+                source = (message.findtext("source") or "").strip()
+                if not source or _CJK.search(source):
+                    continue
+                translation = message.find("translation")
+                text = "" if translation is None else (translation.text or "")
+                kind = (
+                    ""
+                    if translation is None
+                    else (translation.get("type") or "")
+                )
+                rows.append(
+                    (context.findtext("name"), source, text.strip(), kind)
+                )
+        return rows
+
+    def test_every_english_source_is_answered_in_chinese(self):
+        rows = self._latin_only_messages()
+        self.assertGreater(len(rows), 900, "the scan found nothing to check")
+        silent = [
+            (ctx, src)
+            for ctx, src, text, kind in rows
+            if not text or kind == "unfinished"
+        ]
+        self.assertEqual(
+            silent,
+            [],
+            f"{len(silent)} English source(s) would render as English: "
+            f"{silent[:6]}",
+        )
+
+    def test_only_the_listed_english_names_are_left_as_they_are(self):
+        rows = self._latin_only_messages()
+        identical = {src for _, src, text, _ in rows if text == src}
+        self.assertEqual(
+            identical - self.SELF_TRANSLATING,
+            set(),
+            f"new English-on-screen strings: {sorted(identical - self.SELF_TRANSLATING)}",
+        )
+        self.assertEqual(
+            self.SELF_TRANSLATING - identical,
+            set(),
+            f"no longer in the catalog, drop from SELF_TRANSLATING: "
+            f"{sorted(self.SELF_TRANSLATING - identical)}",
         )
 
 

@@ -3401,10 +3401,7 @@ class UltralyticsDialog(QDialog):
             )
         if "exited with code" in text:
             return (
-                self.tr(
-                    "%s — the training subprocess terminated unexpectedly. "
-                    "Please check the training log above for details."
-                )
+                self.tr("%s —— 训练子进程意外结束，请查看上方训练日志。")
                 % text
             )
         return text
