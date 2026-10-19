@@ -36,7 +36,10 @@ def _make_folder(shapes_by_stem):
     from PIL import Image
 
     holder = tempfile.TemporaryDirectory()
-    tmp = holder.name
+    # Nested: delete_images_in_range writes its _delete_ sibling next to the
+    # image folder, so the images must not sit at the temp root itself.
+    tmp = os.path.join(holder.name, "images")
+    os.makedirs(tmp)
     for stem, shapes in shapes_by_stem.items():
         Image.new("RGB", (20, 20), "gray").save(
             os.path.join(tmp, stem + ".png")
@@ -219,6 +222,51 @@ class TestRangeEditorSnapshots(unittest.TestCase):
         self.assertEqual([s["label"] for s in live["shapes"]], ["cat"])
         saved = self._snapshot("a")
         self.assertEqual([s["label"] for s in saved["shapes"]], ["cat", "dog"])
+
+    def test_delete_images_in_range_keeps_the_removed_label_recoverable(self):
+        """The image is moved to _delete_, but its JSON is destroyed.
+
+        The move message promises the picture can be found again; that is only
+        true for the annotation if it survives in .label_backups/ too.
+        """
+        from anylabeling.views.labeling.label_widget import LabelingWidget
+        from anylabeling.views.labeling.utils import missing_classes_hint
+        from anylabeling.views.labeling.widgets.shape_dialog import (
+            ShapeModifyDialog,
+        )
+
+        self._widget_with({"a": [_box("cat")], "b": [_box("dog")]})
+        dialog = ShapeModifyDialog(parent=self.widget)
+        self.addCleanup(dialog.deleteLater)
+
+        # The refresh after a delete reports through the main window's status
+        # bar; the headless harness has no such grandparent.
+        status_patcher = mock.patch.object(
+            LabelingWidget, "statusBar", lambda self: mock.Mock()
+        )
+        status_patcher.start()
+        self.addCleanup(status_patcher.stop)
+
+        # import_image_folder re-runs the open-folder path, and the hint's
+        # retry would outlive this widget.
+        with mock.patch.object(
+            missing_classes_hint, "_schedule", lambda *a, **k: None
+        ):
+            dialog.delete_images_in_range(2, 2)
+
+        self.assertFalse(os.path.exists(os.path.join(self.folder, "b.json")))
+        self.assertFalse(os.path.exists(os.path.join(self.folder, "b.png")))
+        moved = os.path.join(os.path.dirname(self.folder), "_delete_", "b.png")
+        self.assertTrue(os.path.exists(moved), "the image is moved, not lost")
+        self.assertEqual(
+            [s["label"] for s in self._read("a")["shapes"]], ["cat"]
+        )
+        saved = self._snapshot("b")
+        self.assertEqual(
+            [s["label"] for s in saved["shapes"]],
+            ["dog"],
+            "the removed annotation has to be readable back out of the backup",
+        )
 
 
 if __name__ == "__main__":
