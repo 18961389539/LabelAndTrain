@@ -299,6 +299,11 @@ def _skip_reason_text(reason):
         return QCoreApplication.translate(
             "LabelingWidget", "旋转框有顶点落在画面外"
         )
+    if reason == "rotation collapsed after clamping":
+        return QCoreApplication.translate(
+            "LabelingWidget",
+            "旋转框越界顶点裁剪后面积为零（整个框在画面外）",
+        )
     if reason.endswith(" cannot be a pose keypoint"):
         return (
             QCoreApplication.translate(
@@ -595,6 +600,30 @@ def export_yolo_annotation(self, mode):
     )
     layout.addWidget(skip_empty_files_checkbox)
 
+    obb_clamp_checkbox = None
+    if mode == "obb":
+        obb_clamp_checkbox = QtWidgets.QCheckBox(
+            QCoreApplication.translate(
+                "LabelingWidget", "越界旋转框裁剪到图像内"
+            )
+        )
+        obb_clamp_checkbox.setChecked(
+            remembered.get("obb_boundary") == "clamp"
+        )
+        obb_clamp_checkbox.setToolTip(
+            QCoreApplication.translate(
+                "LabelingWidget",
+                "OBB 越界处理 / out-of-bounds rotations\n"
+                "\n"
+                "默认：任一顶点落在图像外的旋转框不导出，只计入导出结果。\n"
+                "\n"
+                "勾选后：把越界顶点逐点裁剪到图像边缘再导出；"
+                "完全在图像外、裁剪后退化为零面积的框仍然跳过。"
+                "逐点裁剪会改变框的形状，勾选前请确认这正是你要的结果。",
+            )
+        )
+        layout.addWidget(obb_clamp_checkbox)
+
     only_checked_checkbox = QtWidgets.QCheckBox(
         QCoreApplication.translate("LabelingWidget", "仅导出「已确认」的图片")
     )
@@ -713,6 +742,11 @@ def export_yolo_annotation(self, mode):
 
     save_images = save_images_checkbox.isChecked()
     skip_empty_files = skip_empty_files_checkbox.isChecked()
+    obb_boundary_policy = (
+        "clamp"
+        if obb_clamp_checkbox is not None and obb_clamp_checkbox.isChecked()
+        else "skip"
+    )
     only_checked = only_checked_checkbox.isChecked()
     write_manifest_record = manifest_checkbox.isChecked()
     save_path = path_edit.text()
@@ -840,6 +874,7 @@ def export_yolo_annotation(self, mode):
                 dst_file,
                 mode,
                 skip_empty_files=skip_empty_files,
+                obb_boundary_policy=obb_boundary_policy,
                 stats=stats,
             )
             exported_files += 1
@@ -876,6 +911,7 @@ def export_yolo_annotation(self, mode):
                         "skip_empty_labels": skip_empty_files,
                         "save_with_images": save_images,
                         "write_classes_txt": classes_target is not None,
+                        "obb_boundary": obb_boundary_policy,
                     },
                     result={
                         "images_exported": exported_files,
@@ -902,6 +938,7 @@ def export_yolo_annotation(self, mode):
                         "save_images": save_images,
                         "skip_empty": skip_empty_files,
                         "only_confirmed": only_checked,
+                        "obb_boundary": obb_boundary_policy,
                         "write_classes": classes_target is not None,
                         "manifest": write_manifest_record,
                         "mode": mode,

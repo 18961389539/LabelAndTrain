@@ -394,6 +394,20 @@ class LabelConverter:
         ]
 
     @staticmethod
+    def rotation_area(points):
+        """Shoelace area of a four-vertex rotation box, in pixels."""
+        return (
+            abs(
+                sum(
+                    points[i][0] * points[(i + 1) % 4][1]
+                    - points[(i + 1) % 4][0] * points[i][1]
+                    for i in range(4)
+                )
+            )
+            / 2.0
+        )
+
+    @staticmethod
     def extract_bbox_answer(content):
         answer_matches = re.findall(
             r"<answer>(.*?)</answer>", content, re.DOTALL
@@ -1211,18 +1225,35 @@ class LabelConverter:
                             stats, f"rotation with {len(points)} points"
                         )
                         continue
-                    if obb_boundary_policy == "skip":
-                        if any(
-                            point[0] < 0
-                            or point[0] > image_width
-                            or point[1] < 0
-                            or point[1] > image_height
+                    if obb_boundary_policy == "clamp":
+                        # Per-vertex, because YOLO OBB takes exactly four
+                        # points: a true polygon clip would change that count.
+                        points = [
+                            [
+                                min(max(point[0], 0), image_width),
+                                min(max(point[1], 0), image_height),
+                            ]
                             for point in points
-                        ):
+                        ]
+                        if self.rotation_area(points) == 0:
                             self._bump_skip(
-                                stats, "rotation reaching outside the image"
+                                stats, "rotation collapsed after clamping"
                             )
                             continue
+                    elif any(
+                        point[0] < 0
+                        or point[0] > image_width
+                        or point[1] < 0
+                        or point[1] > image_height
+                        for point in points
+                    ):
+                        # Anything that is not an explicit clamp skips: a
+                        # typo must not silently export coordinates outside
+                        # [0, 1].
+                        self._bump_skip(
+                            stats, "rotation reaching outside the image"
+                        )
+                        continue
                     points = list(chain.from_iterable(points))
                     normalized_coords = [
                         (

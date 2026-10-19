@@ -187,6 +187,7 @@ EXPORT_PARAM_KEYS = (
     "save_path",
     "save_images",
     "skip_empty",
+    "obb_boundary",
     "only_confirmed",
     "write_classes",
     "manifest",

@@ -26,6 +26,7 @@ def test_remember_export_stores_whitelist_keys(tmp_path):
             "save_path": "G:/out/labels",
             "save_images": True,
             "skip_empty": False,
+            "obb_boundary": "clamp",
             "only_confirmed": True,
             "write_classes": True,
             "manifest": True,
@@ -37,6 +38,7 @@ def test_remember_export_stores_whitelist_keys(tmp_path):
     snapshot = project_model.last_export(root)
     assert snapshot["save_path"] == "G:/out/labels"
     assert snapshot["only_confirmed"] is True
+    assert snapshot["obb_boundary"] == "clamp"
     assert snapshot["mode"] == "yolo"
     assert "classes" not in snapshot
     assert "stats" not in snapshot

@@ -99,6 +99,57 @@ class TestLabelConverterObbBounds(unittest.TestCase):
         with open(output_file, "r", encoding="utf-8") as f:
             self.assertEqual(f.read(), "")
 
+    def test_yolo_obb_clamp_pulls_vertices_to_the_image_edge(self):
+        label_file = self._write_label_file(
+            [[-10, 10], [20, 10], [20, 20], [10, -5]]
+        )
+        output_file = os.path.join(self.temp_dir, "label.txt")
+
+        self.converter.custom_to_yolo(
+            label_file, output_file, "obb", obb_boundary_policy="clamp"
+        )
+
+        with open(output_file, "r", encoding="utf-8") as f:
+            self.assertEqual(f.read(), "0 0.0 0.2 0.2 0.2 0.2 0.4 0.1 0.0\n")
+
+    def test_yolo_obb_clamp_skips_a_box_that_collapses_to_nothing(self):
+        # Every vertex is outside the same corner, so clamping makes them
+        # coincide; a zero-area rotation is not a training sample.
+        label_file = self._write_label_file(
+            [[-9, -9], [-3, -9], [-3, -3], [-9, -3]]
+        )
+        output_file = os.path.join(self.temp_dir, "label.txt")
+        stats = {}
+
+        self.converter.custom_to_yolo(
+            label_file,
+            output_file,
+            "obb",
+            obb_boundary_policy="clamp",
+            stats=stats,
+        )
+
+        with open(output_file, "r", encoding="utf-8") as f:
+            self.assertEqual(f.read(), "")
+        self.assertEqual(
+            stats["skipped"],
+            {"rotation collapsed after clamping": 1},
+        )
+
+    def test_an_unknown_obb_policy_behaves_like_skip(self):
+        # A typo must not silently export coordinates outside [0, 1].
+        label_file = self._write_label_file(
+            [[-1, 10], [20, 10], [20, 20], [10, 20]]
+        )
+        output_file = os.path.join(self.temp_dir, "label.txt")
+
+        self.converter.custom_to_yolo(
+            label_file, output_file, "obb", obb_boundary_policy="clmap"
+        )
+
+        with open(output_file, "r", encoding="utf-8") as f:
+            self.assertEqual(f.read(), "")
+
 
 class TestLabelConverterYoloExportStats(unittest.TestCase):
     """A skipped shape used to vanish without a trace.
