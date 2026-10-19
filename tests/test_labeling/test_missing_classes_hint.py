@@ -311,3 +311,30 @@ def test_invisible_widget_retries_once_and_does_not_stack(
     assert [call[1] for call in scheduled] == [str(tmp_path)]
     assert widget._missing_classes_hint_pending is True
     assert _Box.shown == []
+
+
+def test_a_retry_after_the_view_is_destroyed_is_dropped():
+    """关闭项目 can tear the view down while the retry is still pending.
+
+    ``_schedule`` holds a Python reference to the widget, so the timer fires
+    on a deleted C++ object. Reading a label list off it then raises inside
+    the Qt event loop, where no dialog can show the failure and the frames
+    that caused it are already gone.
+    """
+    from PyQt6 import QtWidgets, sip
+
+    (QtWidgets.QApplication.instance() or QtWidgets.QApplication([]))
+
+    class _View(QtWidgets.QWidget):
+        def __init__(self):
+            super().__init__()
+            self.unique_label_list = _Labels(0)
+            self._missing_classes_hint_pending = True
+
+    view = _View()
+    assert missing_classes_hint._is_gone(view) is False
+    sip.delete(view)
+
+    assert missing_classes_hint._is_gone(view) is True
+    missing_classes_hint.maybe_prompt(view, None)
+    assert _Box.shown == []

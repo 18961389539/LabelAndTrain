@@ -16,7 +16,7 @@ counting on one widget object to survive would be a guess.
 
 import os.path as osp
 
-from PyQt6 import QtCore, QtWidgets
+from PyQt6 import QtCore, QtWidgets, sip
 
 from anylabeling.views.labeling import project_context, project_settings
 
@@ -64,6 +64,29 @@ def is_muted(dataset_dir):
     )
 
 
+def _deleted(obj):
+    """True when `obj` is a Qt object whose C++ side is already gone.
+
+    ``TypeError`` is the plain test doubles this package is fed in tests, and
+    those are always live.
+    """
+    try:
+        return sip.isdeleted(obj)
+    except TypeError:
+        return False
+
+
+def _is_gone(widget):
+    """True once the labeling view has been destroyed.
+
+    ``_schedule`` keeps a Python reference to the widget, so the retry still
+    fires after 关闭项目 or a project switch tears that view down. Touching a
+    deleted wrapper raises inside the Qt event loop, where no dialog can show
+    the failure and the frames that caused it are already gone.
+    """
+    return _deleted(widget) or _deleted(widget.unique_label_list)
+
+
 def maybe_prompt(widget, dataset_dir=None):
     """Offer to define classes for the open project, at most once per project.
 
@@ -71,6 +94,8 @@ def maybe_prompt(widget, dataset_dir=None):
     because the widget's own idea of the current project is not settled until
     the open finishes.
     """
+    if _is_gone(widget):
+        return
     if widget.unique_label_list.count() > 0:
         widget._missing_classes_hint_pending = False
         return

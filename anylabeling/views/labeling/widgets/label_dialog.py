@@ -698,7 +698,8 @@ class GroupIDModifyDialog(RangeTableDialog):
                     data = json.load(f)
 
                 src_shapes, dst_shapes = data["shapes"], []
-                for shape in reversed(src_shapes):
+                deleted_ids = {int(gid) for gid in deleted_gid_info}
+                for shape in src_shapes:
                     group_id = shape.get("group_id")
                     if group_id is not None:
                         group_id = int(group_id)
@@ -706,8 +707,7 @@ class GroupIDModifyDialog(RangeTableDialog):
                             shape["group_id"] = updated_gid_info[group_id][
                                 "new_gid"
                             ]
-                        if group_id in deleted_gid_info:
-                            src_shapes.remove(shape)
+                        if group_id in deleted_ids:
                             continue
                     dst_shapes.append(shape)
                 data["shapes"] = dst_shapes
