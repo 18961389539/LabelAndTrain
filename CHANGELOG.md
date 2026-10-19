@@ -3,7 +3,7 @@
 Fork entries are listed first; everything below the upstream marker is
 X-AnyLabeling's own history, kept for provenance.
 
-## `v1.0.0-beta.6` (unreleased)
+## `v1.0.0-beta.6` (Oct 19, 2026)
 
 ### ✨ New Features
 
