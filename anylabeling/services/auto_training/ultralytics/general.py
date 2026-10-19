@@ -301,12 +301,15 @@ def create_yolo_dataset(
     # both are told to the caller (and written to disk) instead of being
     # folded into the background count, where they were indistinguishable.
     conversion_errors = []
+    empty_after_conversion = []
     conversion_stats = {}
 
     def _process_images_batch(
         image_label_pairs, images_dir, labels_dir, converter, mode, skip_empty
     ):
+        """Write one split and return only the pairs that are in it."""
         used_names = set()
+        kept = []
         for image_file, label_file in image_label_pairs:
             filename = os.path.basename(image_file)
             stem, ext = os.path.splitext(filename)
@@ -329,7 +332,7 @@ def create_yolo_dataset(
                     labels_dir, os.path.splitext(filename)[0] + ".txt"
                 )
                 try:
-                    converter.custom_to_yolo(
+                    is_empty = converter.custom_to_yolo(
                         label_file,
                         dst_label_path,
                         mode,
@@ -350,6 +353,21 @@ def create_yolo_dataset(
                         }
                     )
                     _drop_unusable(dst_image_path, dst_label_path)
+                    continue
+                if skip_empty and is_empty:
+                    # The option promises to leave images with no shapes out
+                    # of training. Every shape being dropped -- an unknown
+                    # class, a rotation that cannot be exported -- leaves
+                    # exactly such a file, and keeping it would train the
+                    # annotated image as background, the guess this module
+                    # refuses to make.
+                    empty_after_conversion.append(image_file)
+                    _drop_unusable(dst_image_path, dst_label_path)
+                    continue
+
+            kept.append((image_file, label_file))
+
+        return kept
 
     def _process_classify_images_batch(image_label_pairs, base_dir):
         used_names = set()
@@ -471,7 +489,7 @@ def create_yolo_dataset(
             ] + train_valid_images
 
         mode = TASK_LABEL_MAPPINGS.get(task_type, "hbb")
-        _process_images_batch(
+        all_train_images = _process_images_batch(
             all_train_images,
             train_images_dir,
             train_labels_dir,
@@ -479,7 +497,7 @@ def create_yolo_dataset(
             mode,
             skip_empty_files,
         )
-        _process_images_batch(
+        val_valid_images = _process_images_batch(
             val_valid_images,
             val_images_dir,
             val_labels_dir,
@@ -514,6 +532,12 @@ def create_yolo_dataset(
         f.write(
             f"Images dropped (conversion failed): {len(conversion_errors)}\n"
         )
+        f.write(
+            f"Images left out (no shapes after conversion): "
+            f"{len(empty_after_conversion)}\n"
+        )
+        for path in empty_after_conversion:
+            f.write(f"  empty: {path}\n")
         f.write(
             f"Shapes dropped by the converter: {sum(dropped_shapes.values())}\n"
         )
@@ -582,6 +606,8 @@ def create_yolo_dataset(
             "unreadable_labels_count": len(unreadable_labels),
             "unchecked_files_count": len(unchecked_files),
             "conversion_errors": list(conversion_errors),
+            "empty_after_conversion": list(empty_after_conversion),
+            "empty_after_conversion_count": len(empty_after_conversion),
             "dropped_shapes": dict(dropped_shapes),
         },
         "data_yaml": yaml_file,

@@ -298,6 +298,83 @@ class TestDatasetBuildReportsWhatItCouldNotUse:
             if is_blocking_dataset_skip(entry[0])
         ] == []
 
+    def test_skip_empty_drops_an_image_whose_shapes_all_vanished(
+        self, dataset_root, tmp_path
+    ):
+        """The option promises images with no shapes stay out of training.
+
+        A rectangle of a class missing from ``data.yaml`` passes partition
+        (the shape type fits the task) and is then dropped by the converter,
+        so the written ``.txt`` is empty -- exactly the background sample the
+        option exists to exclude.
+        """
+        image = _write_image(tmp_path / "img.jpg")
+        (tmp_path / "img.json").write_text(
+            json.dumps(_label([_rectangle(label="zebra")])), encoding="utf-8"
+        )
+
+        out = create_yolo_dataset(
+            [image],
+            "Detect",
+            1.0,
+            _data_file(tmp_path),
+            str(tmp_path),
+            None,
+            True,
+            False,
+            seed=1,
+        )
+
+        assert os.listdir(os.path.join(out, "images", "train")) == []
+        assert not os.path.exists(
+            os.path.join(out, "labels", "train", "img.txt")
+        )
+        with open(
+            os.path.join(out, "manifest.json"), encoding="utf-8"
+        ) as handle:
+            manifest = json.load(handle)
+        assert manifest["counts"]["train"] == 0
+        assert manifest["files"] == []
+        assert manifest["skipped"]["empty_after_conversion"] == [image]
+        with open(
+            os.path.join(out, "dataset_info.txt"), encoding="utf-8"
+        ) as handle:
+            info = handle.read()
+        assert "Images left out (no shapes after conversion): 1" in info
+        assert "empty: " + image in info
+
+    def test_without_skip_the_empty_file_is_a_background_sample(
+        self, dataset_root, tmp_path
+    ):
+        image = _write_image(tmp_path / "img.jpg")
+        (tmp_path / "img.json").write_text(
+            json.dumps(_label([_rectangle(label="zebra")])), encoding="utf-8"
+        )
+
+        out = create_yolo_dataset(
+            [image],
+            "Detect",
+            1.0,
+            _data_file(tmp_path),
+            str(tmp_path),
+            None,
+            False,
+            False,
+            seed=1,
+        )
+
+        assert os.listdir(os.path.join(out, "images", "train")) == ["img.jpg"]
+        label_path = os.path.join(out, "labels", "train", "img.txt")
+        assert os.path.exists(label_path)
+        with open(label_path, encoding="utf-8") as handle:
+            assert handle.read() == ""
+        with open(
+            os.path.join(out, "manifest.json"), encoding="utf-8"
+        ) as handle:
+            manifest = json.load(handle)
+        assert manifest["counts"]["train"] == 1
+        assert manifest["skipped"]["empty_after_conversion"] == []
+
 
 class TestNameIsOneDirectory:
     @pytest.mark.parametrize(
