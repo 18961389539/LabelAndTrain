@@ -157,27 +157,6 @@ font-size: 12px;</string>
       </widget>
      </item>
      <item>
-      <widget class="QLineEdit" name="edit_text">
-        <property name="placeholderText">
-            <string>Enter text prompt here, e.g., person.car.bicycle</string>
-        </property>
-      </widget>
-     </item>
-    <item>
-        <widget class="QPushButton" name="button_send">
-            <property name="text">
-                <string>Send</string>
-            </property>
-        </widget>
-    </item>
-     <item>
-      <widget class="QLabel" name="input_box_thres">
-       <property name="text">
-        <string>Box threshold</string>
-       </property>
-      </widget>
-     </item>
-     <item>
       <widget class="QLabel" name="input_conf">
        <property name="text">
         <string>Confidence</string>
@@ -248,33 +227,12 @@ font-size: 12px;</string>
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="add_pos_rect">
-       <property name="text">
-        <string>+Rect</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="add_neg_rect">
-       <property name="text">
-        <string>-Rect</string>
-       </property>
-      </widget>
-     </item>
-     <item>
       <widget class="QPushButton" name="button_clear">
        <property name="text">
         <string>Clear (b)</string>
        </property>
       </widget>
      </item>
-    <item>
-        <widget class="QPushButton" name="button_run_rect">
-            <property name="text">
-                <string>Run Rect</string>
-            </property>
-        </widget>
-    </item>
      <item>
       <widget class="QPushButton" name="button_finish_object">
        <property name="text">
@@ -306,16 +264,6 @@ font-size: 12px;</string>
       <widget class="QPushButton" name="button_segment_everything">
        <property name="text">
         <string>AMG</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="button_skip_detection">
-       <property name="text">
-        <string>Skip Det</string>
-       </property>
-       <property name="checkable">
-        <bool>true</bool>
        </property>
       </widget>
      </item>

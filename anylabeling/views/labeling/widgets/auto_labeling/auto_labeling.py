@@ -26,7 +26,6 @@ from anylabeling.services.auto_labeling.types import AutoLabelingMode
 from anylabeling.services.auto_labeling import (
     _AUTO_LABELING_IOU_MODELS,
     _AUTO_LABELING_CONF_MODELS,
-    _SKIP_DET_MODELS,
     _SKIP_PREDICTION_ON_NEW_MARKS_MODELS,
 )
 from anylabeling.views.labeling.ai.style import SliderStyle
@@ -249,15 +248,11 @@ class AutoLabelingWidget(QWidget):
             self.button_add_point.setEnabled(enable)
             self.button_remove_point.setEnabled(enable)
             self.button_add_rect.setEnabled(enable)
-            self.add_pos_rect.setEnabled(enable)
-            self.add_neg_rect.setEnabled(enable)
-            self.button_run_rect.setEnabled(enable)
             self.button_clear.setEnabled(enable)
             self.button_finish_object.setEnabled(enable)
             self.button_auto_decode.setEnabled(enable)
             self.button_cropping.setEnabled(enable)
             self.button_segment_everything.setEnabled(enable)
-            self.button_skip_detection.setEnabled(enable)
             # Changing the class set mid-run would split one batch into two
             # different expectations, so this one follows the other tools.
             self.button_class_filter.setEnabled(
@@ -283,7 +278,6 @@ class AutoLabelingWidget(QWidget):
         self.initial_conf_value = 0
         self.initial_iou_value = 0
         self.initial_preserve_annotations_state = False
-        self.skip_detection = False
         self._amg_warning_confirmed = False
 
         # ===================================
@@ -322,17 +316,6 @@ class AutoLabelingWidget(QWidget):
             )
         )
         self.button_run.clicked.connect(self.run_prediction)
-
-        # --- Configuration for: input_box_thres ---
-        self.input_box_thres.setText(self.tr("Box threshold"))
-
-        # --- Configuration for: button_send ---
-        self.button_send.setStyleSheet(_toolbar_highlight_btn())
-        self.button_send.setText(self.tr("Send"))
-        self.button_send.setToolTip(
-            self.tr("把这张图片和输入的问题一起发给视觉语言模型")
-        )
-        self.button_send.clicked.connect(self.run_vl_prediction)
 
         # --- Configuration for: input_conf ---
         # Direct Chinese text (not tr) so the visible caption stays Chinese
@@ -409,15 +392,6 @@ class AutoLabelingWidget(QWidget):
         if container is not None:
             container.setMinimumWidth(max(container.minimumWidth(), 880))
 
-        # --- Configuration for: edit_text ---
-        self.edit_text.setStyleSheet(get_lineedit_style())
-        self.edit_text.setToolTip(
-            self.tr(
-                "在此输入文本提示，多个类别用英文句点（.）分隔，"
-                "例如：person.car.bicycle"
-            )
-        )
-
         # --- Configuration for: button_add_point ---
         self.button_add_point.setToolTip(
             self.tr("添加前景点（在目标上左键，快捷键 q）")
@@ -442,22 +416,6 @@ class AutoLabelingWidget(QWidget):
         self.button_add_rect.setText(self.tr("+Rect"))
         self.button_add_rect.setToolTip(self.tr("框住要分割的目标"))
         self.button_add_rect.clicked.connect(self.on_button_add_rect_clicked)
-
-        # --- Configuration for: add_pos_rect ---
-        self.add_pos_rect.setText(self.tr("+Rect"))
-        self.add_pos_rect.setToolTip(self.tr("在框内添加正向区域"))
-        self.add_pos_rect.clicked.connect(self.on_add_pos_rect_clicked)
-
-        # --- Configuration for: add_neg_rect ---
-        self.add_neg_rect.setText(self.tr("-Rect"))
-        self.add_neg_rect.setToolTip(self.tr("在框内添加负向区域"))
-        self.add_neg_rect.clicked.connect(self.on_add_neg_rect_clicked)
-
-        # --- Configuration for: button_run_rect ---
-        self.button_run_rect.setStyleSheet(_toolbar_highlight_btn())
-        self.button_run_rect.setText(self.tr("Run Rect"))
-        self.button_run_rect.setToolTip(self.tr("用当前框提示运行推理"))
-        self.button_run_rect.clicked.connect(self.run_prediction)
 
         # --- Configuration for: button_clear ---
         self.button_clear.setText(self.tr("Clear (b)"))
@@ -488,19 +446,6 @@ class AutoLabelingWidget(QWidget):
                 "Enable local cropping for rectangle prompts to improve accuracy "
                 "for small objects in high-resolution images"
             )
-        )
-
-        # --- Configuration for: button_skip_detection ---
-        self.button_skip_detection.setStyleSheet(_toolbar_btn())
-        self.button_skip_detection.setCheckable(True)
-        self.button_skip_detection.setChecked(False)
-        self.button_skip_detection.setToolTip(
-            self.tr(
-                "Skip detection model and use existing annotations as detection boxes"
-            )
-        )
-        self.button_skip_detection.clicked.connect(
-            self.on_skip_detection_toggled
         )
 
         # --- Configuration for: mask_fineness_slider ---
@@ -1213,8 +1158,6 @@ class AutoLabelingWidget(QWidget):
             self.button_add_point,
             self.button_remove_point,
             self.button_add_rect,
-            self.add_pos_rect,
-            self.add_neg_rect,
             self.button_clear,
             self.button_finish_object,
         ]:
@@ -1233,19 +1176,9 @@ class AutoLabelingWidget(QWidget):
                 self.button_add_rect.setStyleSheet(
                     _toolbar_toggle_btn(button_color="#90EE90")
                 )
-                self.add_pos_rect.setStyleSheet(
-                    _toolbar_toggle_btn(button_color="#90EE90")
-                )
         elif self.auto_labeling_mode.edit_mode == AutoLabelingMode.REMOVE:
             if self.auto_labeling_mode.shape_type == AutoLabelingMode.POINT:
                 self.button_remove_point.setStyleSheet(
-                    _toolbar_toggle_btn(button_color="#FFB6C1")
-                )
-            elif (
-                self.auto_labeling_mode.shape_type
-                == AutoLabelingMode.RECTANGLE
-            ):
-                self.add_neg_rect.setStyleSheet(
                     _toolbar_toggle_btn(button_color="#FFB6C1")
                 )
 
@@ -1260,22 +1193,6 @@ class AutoLabelingWidget(QWidget):
     def run_prediction(self):
         """Run prediction"""
         if self.parent.filename is not None:
-            if (
-                self.button_skip_detection.isChecked()
-                and self.parent.canvas.shapes
-                and self.model_manager.loaded_model_config
-                and self.model_manager.loaded_model_config["type"]
-                in _SKIP_DET_MODELS
-            ):
-                existing_shapes = self._extract_shapes_for_recognition()
-                if existing_shapes is not None:
-                    self.model_manager.predict_shapes_threading(
-                        self.parent.image,
-                        self.parent.filename,
-                        existing_shapes=existing_shapes,
-                    )
-                    return
-
             self.model_manager.predict_shapes_threading(
                 self.parent.image, self.parent.filename
             )
@@ -1299,16 +1216,6 @@ class AutoLabelingWidget(QWidget):
 
         self.model_manager.set_auto_labeling_marks([{"type": "auto_grid"}])
         self.run_prediction()
-
-    def run_vl_prediction(self):
-        """Run visual-language prediction"""
-        if self.parent.filename is not None and self.edit_text:
-            self.model_manager.set_auto_labeling_marks([])
-            self.model_manager.predict_shapes_threading(
-                self.parent.image,
-                self.parent.filename,
-                text_prompt=self.edit_text.text(),
-            )
 
     def _setup_download_progress_ui(self):
         """Build the download-progress row (hidden by default)."""
@@ -1492,7 +1399,6 @@ class AutoLabelingWidget(QWidget):
         for label in (
             self.input_conf,
             self.input_iou,
-            self.input_box_thres,
             self.output_label,
         ):
             label.setContentsMargins(0, 0, 0, 0)
@@ -1526,7 +1432,7 @@ class AutoLabelingWidget(QWidget):
         """Fold secondary controls behind a collapsible "More" panel.
 
         The toolbar is one scrolling row of 25+ controls. Low-frequency
-        options (AMD/TinyObj/AMG/Skip Det/thresholds/IoU/class filter/
+        options (AMD/TinyObj/AMG/thresholds/IoU/class filter/
         mask fineness) move into a wrapper that is hidden by default, so
         the primary row no longer overflows on typical window widths.
 
@@ -1546,13 +1452,10 @@ class AutoLabelingWidget(QWidget):
             "edit_conf",
             "input_iou",
             "edit_iou",
-            "input_box_thres",
             "button_class_filter",
             "button_auto_decode",
             "button_cropping",
             "button_segment_everything",
-            "button_skip_detection",
-            "button_run_rect",
             "mask_fineness_value_label",
             "mask_fineness_slider",
         )
@@ -1997,16 +1900,10 @@ class AutoLabelingWidget(QWidget):
             "button_add_point",
             "button_remove_point",
             "button_add_rect",
-            "add_pos_rect",
-            "add_neg_rect",
-            "button_run_rect",
             "button_clear",
             "button_finish_object",
-            "button_send",
-            "edit_text",
             "edit_conf",
             "edit_iou",
-            "input_box_thres",
             "input_conf",
             "input_iou",
             "output_label",
@@ -2014,7 +1911,6 @@ class AutoLabelingWidget(QWidget):
             "button_auto_decode",
             "button_cropping",
             "button_class_filter",
-            "button_skip_detection",
             "mask_fineness_slider",
             "mask_fineness_value_label",
             "button_segment_everything",
@@ -2097,36 +1993,6 @@ class AutoLabelingWidget(QWidget):
             AutoLabelingMode.ADD, AutoLabelingMode.RECTANGLE
         )
 
-    def on_add_pos_rect_clicked(self):
-        """Handle add_pos_rect click"""
-        if (
-            self.auto_labeling_mode.edit_mode == AutoLabelingMode.ADD
-            and self.auto_labeling_mode.shape_type
-            == AutoLabelingMode.RECTANGLE
-        ):
-            self.skip_auto_prediction = False
-            self.set_auto_labeling_mode(None, None)
-        else:
-            self.skip_auto_prediction = True
-            self.set_auto_labeling_mode(
-                AutoLabelingMode.ADD, AutoLabelingMode.RECTANGLE
-            )
-
-    def on_add_neg_rect_clicked(self):
-        """Handle add_neg_rect click"""
-        if (
-            self.auto_labeling_mode.edit_mode == AutoLabelingMode.REMOVE
-            and self.auto_labeling_mode.shape_type
-            == AutoLabelingMode.RECTANGLE
-        ):
-            self.skip_auto_prediction = False
-            self.set_auto_labeling_mode(None, None)
-        else:
-            self.skip_auto_prediction = True
-            self.set_auto_labeling_mode(
-                AutoLabelingMode.REMOVE, AutoLabelingMode.RECTANGLE
-            )
-
     def on_clear_clicked(self):
         """Handle clear button click"""
         self.model_manager.set_auto_labeling_marks([])
@@ -2140,34 +2006,6 @@ class AutoLabelingWidget(QWidget):
         self.clear_auto_decode_requested.emit()
         self.finish_auto_labeling_object_action_requested.emit()
         self.cache_auto_label_changed.emit()
-
-    def on_skip_detection_toggled(self):
-        """Handle skip detection button toggle"""
-        is_checked = self.button_skip_detection.isChecked()
-
-        if is_checked:
-            self.button_skip_detection.setStyleSheet(
-                _toolbar_toggle_btn(button_color="#90EE90")
-            )
-        else:
-            self.button_skip_detection.setStyleSheet(_toolbar_btn())
-
-        self.skip_detection = is_checked
-
-    def _extract_shapes_for_recognition(self):
-        """Extract shapes for text recognition"""
-        shapes_for_recognition = []
-        for shape in self.parent.canvas.shapes:
-            if shape.shape_type in ["rectangle", "rotation", "polygon"]:
-                shapes_for_recognition.append(shape)
-            else:
-                error_text = self.tr(
-                    "Existing unsupported shape type. Only rectangle, rotation and polygon shapes are supported for detection boxes."
-                )
-                self.model_manager.new_model_status.emit(error_text)
-                raise ValueError(error_text)
-
-        return shapes_for_recognition
 
     def on_mask_fineness_changed(self, value):
         """Handle mask fineness slider change"""

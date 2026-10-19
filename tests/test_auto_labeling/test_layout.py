@@ -131,23 +131,16 @@ class TestAutoLabelingLayout(unittest.TestCase):
             "button_add_point",
             "button_remove_point",
             "button_add_rect",
-            "add_pos_rect",
-            "add_neg_rect",
-            "button_run_rect",
             "button_clear",
             "button_finish_object",
-            "button_send",
-            "edit_text",
             "edit_conf",
             "edit_iou",
-            "input_box_thres",
             "input_conf",
             "input_iou",
             "output_label",
             "output_select_combobox",
             "button_auto_decode",
             "button_cropping",
-            "button_skip_detection",
             "mask_fineness_slider",
             "mask_fineness_value_label",
         )
@@ -322,9 +315,7 @@ class TestAutoLabelingLayout(unittest.TestCase):
         self.assertEqual(
             names.index("edit_conf"), names.index("input_conf") + 1
         )
-        self.assertEqual(
-            names.index("edit_iou"), names.index("input_iou") + 1
-        )
+        self.assertEqual(names.index("edit_iou"), names.index("input_iou") + 1)
 
         outer = widget.model_selection_scroll_area.widget().layout()
         self.assertLess(outer.indexOf(widget.input_conf), 0)
@@ -485,14 +476,8 @@ class TestAutoLabelingLayout(unittest.TestCase):
             self.assertIn("sam2_hiera_base-r20240801", meta)
             self.assertIn("sam2_hiera_tiny-r20240801", meta)
             self.assertNotIn("sam3_vit_h-r20260426", meta)
-            self.assertNotIn(
-                "sam2_hiera_base_video-r20240901", meta
-            )
-            self.assertNotIn(
-                "segment_anything_vit_h_quant-r20230810", meta
-            )
-            self.assertNotIn(
-                "Ultralytics", widget.model_dropdown.models_data
-            )
+            self.assertNotIn("sam2_hiera_base_video-r20240901", meta)
+            self.assertNotIn("segment_anything_vit_h_quant-r20230810", meta)
+            self.assertNotIn("Ultralytics", widget.model_dropdown.models_data)
         finally:
             shutil.rmtree(tmp, ignore_errors=True)

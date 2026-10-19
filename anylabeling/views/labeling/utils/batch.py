@@ -25,7 +25,6 @@ from anylabeling.services.auto_labeling import (
     _BATCH_PROCESSING_AUTO_GRID_MODELS,
     _BATCH_PROCESSING_INVALID_MODELS,
     _BATCH_PROCESSING_TEXT_PROMPT_MODELS,
-    _SKIP_DET_MODELS,
 )
 from anylabeling.views.labeling.logger import logger
 from anylabeling.views.labeling.provenance import stamp_model_shapes
@@ -234,44 +233,6 @@ class FailedImagesDialog(QDialog):
 def get_image_size(image_path):
     with Image.open(image_path) as img:
         return img.size
-
-
-def load_existing_shapes(image_file):
-    """
-    Loads existing shapes from the JSON file for skip detection.
-
-    Args:
-        image_file (str): The path to the image file.
-
-    Returns:
-        list: A list of Shape objects loaded from the JSON file, or None if
-              the file does not exist or contains no shapes.
-    """
-    label_file = osp.splitext(image_file)[0] + ".json"
-    if not osp.exists(label_file):
-        return None
-
-    try:
-        with io_open(label_file, "r") as f:
-            data = json.load(f)
-
-        shapes = data.get("shapes", [])
-        if not shapes:
-            return None
-
-        existing_shapes = []
-        for shape_data in shapes:
-            shape = Shape()
-            shape.load_from_dict(shape_data, close=False)
-            if shape.shape_type in ["rectangle", "rotation", "polygon"]:
-                shape.selected = True
-                existing_shapes.append(shape)
-
-        return existing_shapes if existing_shapes else None
-
-    except Exception as e:
-        logger.warning(f"Failed to load existing shapes: {e}")
-        return None
 
 
 def image_has_annotations(image_file, output_dir=None):
@@ -582,7 +543,6 @@ class BatchProcessingThread(QThread):
         image_index,
         model_type,
         text_prompt,
-        skip_detection,
         skip_existing=False,
         skip_if=None,
     ):
@@ -592,7 +552,6 @@ class BatchProcessingThread(QThread):
         self.image_index = image_index
         self.model_type = model_type
         self.text_prompt = text_prompt
-        self.skip_detection = skip_detection
         self.skip_existing = skip_existing
         self.skip_if = skip_if
         self._succeeded = 0
@@ -637,17 +596,8 @@ class BatchProcessingThread(QThread):
                         batch=True,
                     )
                 else:
-                    existing_shapes = None
-                    if (
-                        self.model_type in _SKIP_DET_MODELS
-                        and self.skip_detection
-                    ):
-                        existing_shapes = load_existing_shapes(image_file)
                     result = self.app.auto_labeling_widget.model_manager.predict_shapes(
-                        self.app.image,
-                        image_file,
-                        batch=True,
-                        existing_shapes=existing_shapes,
+                        self.app.image, image_file, batch=True
                     )
 
                 try:
@@ -703,16 +653,12 @@ def process_next_image(self, progress_dialog, batch=True):
     total_images = len(self.image_list)
     self._progress_dialog = progress_dialog
 
-    skip_detection = (
-        self.auto_labeling_widget.button_skip_detection.isChecked()
-    )
     self._batch_thread = BatchProcessingThread(
         self,
         self.image_list,
         self.image_index,
         model_type,
         self.text_prompt,
-        skip_detection,
         skip_existing=getattr(self, "_batch_skip_existing", False),
         skip_if=getattr(self, "_batch_skip_if", None),
     )

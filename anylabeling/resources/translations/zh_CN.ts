@@ -3,171 +3,120 @@
   <context>
     <name>AutoLabelingWidget</name>
     <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="177" />
+        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="176" />
         <source>收起自动标注面板</source>
         <translation>收起自动标注面板</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="179" />
+        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="178" />
         <source>选择模型的输出方式（如检测框 / 掩码）；只有提供多种输出的模型才可切换</source>
         <translation>选择模型的输出方式（如检测框 / 掩码）；只有提供多种输出的模型才可切换</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="305" />
+        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="299" />
         <source>选择用于自动标注的模型</source>
         <translation>选择用于自动标注的模型</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="313" />
+        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="307" />
         <source>Output</source>
         <translation>输出</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="317" />
+        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="311" />
         <source>Run (i)</source>
         <translation>运行（i）</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="319" />
+        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="313" />
         <source>用当前选中的模型标注这张图片
 产出的框会记录来源模型与权重摘要，之后可按模型清理</source>
         <translation>用当前选中的模型标注这张图片
 产出的框会记录来源模型与权重摘要，之后可按模型清理</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="327" />
-        <source>Box threshold</source>
-        <translation>框置信度</translation>
-    </message>
-    <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="331" />
-        <source>Send</source>
-        <translation>发送</translation>
-    </message>
-    <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="333" />
-        <source>把这张图片和输入的问题一起发给视觉语言模型</source>
-        <translation>把这张图片和输入的问题一起发给视觉语言模型</translation>
-    </message>
-    <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="352" />
+        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="335" />
         <source>Confidence threshold</source>
         <translation>置信度阈值</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="382" />
+        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="365" />
         <source>IoU threshold</source>
         <translation>交并比阈值</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="415" />
-        <source>在此输入文本提示，多个类别用英文句点（.）分隔，例如：person.car.bicycle</source>
-        <translation>在此输入文本提示，多个类别用英文句点（.）分隔，例如：person.car.bicycle</translation>
-    </message>
-    <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="423" />
+        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="397" />
         <source>添加前景点（在目标上左键，快捷键 q）</source>
         <translation>添加前景点（在目标上左键，快捷键 q）</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="433" />
+        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="407" />
         <source>移除背景点（左键，快捷键 e）</source>
         <translation>移除背景点（左键，快捷键 e）</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="447" />
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="442" />
+        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="416" />
         <source>+Rect</source>
         <translation>+矩形</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="443" />
+        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="417" />
         <source>框住要分割的目标</source>
         <translation>框住要分割的目标</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="448" />
-        <source>在框内添加正向区域</source>
-        <translation>在框内添加正向区域</translation>
-    </message>
-    <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="452" />
-        <source>-Rect</source>
-        <translation>-矩形</translation>
-    </message>
-    <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="453" />
-        <source>在框内添加负向区域</source>
-        <translation>在框内添加负向区域</translation>
-    </message>
-    <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="458" />
-        <source>Run Rect</source>
-        <translation>运行矩形</translation>
-    </message>
-    <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="459" />
-        <source>用当前框提示运行推理</source>
-        <translation>用当前框提示运行推理</translation>
-    </message>
-    <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="463" />
+        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="421" />
         <source>Clear (b)</source>
         <translation>清除</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="464" />
+        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="422" />
         <source>清除所有提示（快捷键 b）</source>
         <translation>清除所有提示（快捷键 b）</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="468" />
+        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="426" />
         <source>Finish (f)</source>
         <translation>完成</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="470" />
+        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="428" />
         <source>完成当前对象（快捷键 f）</source>
         <translation>完成当前对象（快捷键 f）</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="478" />
+        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="436" />
         <source>Enable auto mask decode mode for continuous point tracking</source>
         <translation>启用自动掩码解码模式以进行连续点跟踪</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="487" />
+        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="445" />
         <source>Enable local cropping for rectangle prompts to improve accuracy for small objects in high-resolution images</source>
         <translation>启用矩形提示的局部裁剪，以提高高分辨率图像中小对象的检测精度</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="498" />
-        <source>Skip detection model and use existing annotations as detection boxes</source>
-        <translation>跳过检测模型并使用现有标注作为检测框</translation>
-    </message>
-    <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="513" />
+        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="458" />
         <source>Adjust mask fineness: lower=finer, higher=coarser [Default: 0.001]</source>
         <translation>调整掩码精细度：值越小越精细，值越大越粗糙 [默认值: 0.001]</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="1288" />
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="530" />
+        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="1205" />
+        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="475" />
         <source>AMG</source>
         <translation>AMG</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="536" />
+        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="481" />
         <source>Automatically segment the whole image (no prompts)</source>
         <translation>自动分割整张图像（无需提示）</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="772" />
+        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="717" />
         <source>Remove Custom Model</source>
         <translation>移除自定义模型</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="773" />
+        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="718" />
         <source>Remove '%s' from the model list?
 
 Only the registry entry is removed. The config/weight files on disk are kept:
@@ -178,159 +127,154 @@ Only the registry entry is removed. The config/weight files on disk are kept:
 %s</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="778" />
+        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="723" />
         <source>(unknown)</source>
         <translation>(unknown)</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="1843" />
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="963" />
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="928" />
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="877" />
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="871" />
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="819" />
+        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="1746" />
+        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="908" />
+        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="873" />
+        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="822" />
+        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="816" />
+        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="764" />
         <source>选择 AI 模型</source>
         <translation>选择 AI 模型</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="824" />
+        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="769" />
         <source>Model removed: %s</source>
         <translation>已移除模型：%s</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="866" />
+        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="811" />
         <source>Error in loading custom model: {error}</source>
         <translation>加载自定义模型出错：{error}</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="923" />
+        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="868" />
         <source>Error in registering custom model: {error}</source>
         <translation>注册自定义模型出错：{error}</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="1100" />
+        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="1045" />
         <source>类别筛选已启用：仅标注 %s（共 %d/%d 类）</source>
         <translation>类别筛选已启用：仅标注 %s（共 %d/%d 类）</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="1106" />
+        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="1051" />
         <source>类别筛选已关闭：标注全部 %d 个类别</source>
         <translation>类别筛选已关闭：标注全部 %d 个类别</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="1182" />
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="1156" />
+        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="1127" />
+        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="1101" />
         <source>类别筛选</source>
         <translation>类别筛选</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="1190" />
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="1159" />
+        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="1135" />
+        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="1104" />
         <source>只保留所选类别的自动标注结果</source>
         <translation>只保留所选类别的自动标注结果</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="1186" />
+        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="1131" />
         <source>当前只标注：%s</source>
         <translation>当前只标注：%s</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="1594" />
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="1201" />
+        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="1497" />
+        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="1146" />
         <source>显示/隐藏更多智能标注选项</source>
         <translation>显示/隐藏更多智能标注选项</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="1203" />
+        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="1148" />
         <source>（类别筛选生效中：%d/%d 类）</source>
         <translation>（类别筛选生效中：%d/%d 类）</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="1289" />
+        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="1206" />
         <source>AMG may take a long time to process the current image. Do you want to continue?</source>
         <translation>AMG 处理当前图像可能需要较长时间。是否继续？</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="1334" />
+        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="1241" />
         <source>Cancel</source>
         <translation>取消</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="1367" />
+        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="1274" />
         <source>Cancel Inference</source>
         <translation>取消推理</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="1390" />
+        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="1297" />
         <source>Cancelling inference...</source>
         <translation>正在取消推理…</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="1753" />
+        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="1656" />
         <source>Model load failed: %s</source>
         <translation>模型加载失败：%s</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="1758" />
+        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="1661" />
         <source>模型加载失败</source>
         <translation>模型加载失败</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="1774" />
+        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="1677" />
         <source>改用 CPU 并重试</source>
         <translation>改用 CPU 并重试</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="1778" />
+        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="1681" />
         <source>重新选择模型</source>
         <translation>重新选择模型</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="1780" />
+        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="1683" />
         <source>关闭</source>
         <translation>关闭</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="1816" />
+        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="1719" />
         <source>Cancelling...</source>
         <translation>正在取消……</translation>
-    </message>
-    <message>
-        <location filename="..\..\views\labeling\widgets\auto_labeling\auto_labeling.py" line="2164" />
-        <source>Existing unsupported shape type. Only rectangle, rotation and polygon shapes are supported for detection boxes.</source>
-        <translation>存在不支持的对象类型。检测框仅支持矩形、旋转框和多边形对象。</translation>
     </message>
 </context><context>
     <name>BatchRunOptionsDialog</name>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="164" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="163" />
         <source>批量自动标注</source>
         <translation>批量自动标注</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="169" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="168" />
         <source>将从当前图（#%d）处理到最后（#%d）。
 当前图之前的图片不会处理。</source>
         <translation>将从当前图（#%d）处理到最后（#%d）。
 当前图之前的图片不会处理。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="174" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="173" />
         <source>将只处理当前这一张图。</source>
         <translation>将只处理当前这一张图。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="176" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="175" />
         <source>跳过已有标注的图片</source>
         <translation>跳过已有标注的图片</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="179" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="178" />
         <source>已有 JSON 标注的图片直接跳过，避免覆盖人工结果</source>
         <translation>已有 JSON 标注的图片直接跳过，避免覆盖人工结果</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="183" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="182" />
         <source>处理过程中可点「暂停」随时停下。失败的图片结束后可点回去检查。</source>
         <translation>处理过程中可点「暂停」随时停下。失败的图片结束后可点回去检查。</translation>
     </message>
@@ -727,22 +671,22 @@ Only the registry entry is removed. The config/weight files on disk are kept:
 </context><context>
     <name>FailedImagesDialog</name>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="204" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="203" />
         <source>失败图片</source>
         <translation>失败图片</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="208" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="207" />
         <source>以下图片自动标注失败，双击或点打开可跳转：</source>
         <translation>以下图片自动标注失败，双击或点打开可跳转：</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="216" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="215" />
         <source>打开选中图片</source>
         <translation>打开选中图片</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="219" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="218" />
         <source>关闭</source>
         <translation>关闭</translation>
     </message>
@@ -3153,48 +3097,48 @@ Original images backed up to:
         <translation>EXIF 处理完成</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="316" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="277" />
         <source>Processing completed successfully!</source>
         <translation>处理完成。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="322" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="283" />
         <source>Processing finished: %d succeeded, %d failed (of %d total).</source>
         <translation>处理结束：成功 %d 张，失败 %d 张（共 %d 张）。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="329" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="290" />
         <source>Processing completed successfully! (%d images processed)</source>
         <translation>处理完成。（共处理 %d 张图）</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="729" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="675" />
         <source>Error occurred while processing images!</source>
         <translation>处理图片时出错。</translation>
     </message>
     <message>
         <location filename="..\..\views\labeling\utils\crop.py" line="367" />
-        <location filename="..\..\views\labeling\utils\batch.py" line="752" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="698" />
         <source>Processing...</source>
         <translation>处理中...</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="753" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="699" />
         <source>暂停</source>
         <translation>暂停</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="760" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="706" />
         <source>Batch Processing</source>
         <translation>批量处理</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="856" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="802" />
         <source>Model is not loaded. Choose a mode to continue.</source>
         <translation>模型尚未加载。选择一个模式以继续。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="873" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="819" />
         <source>Invalid model type, please choose a valid model_type to run.</source>
         <translation>模型类型无效，请选择一个有效的 model_type 后再运行。</translation>
     </message>
@@ -6929,17 +6873,17 @@ Changes will not be saved until you click Save.</source>
 </context><context>
     <name>TextInputDialog</name>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="55" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="54" />
         <source>Enter Text Prompt</source>
         <translation>输入文本提示词</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="65" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="64" />
         <source>Please enter your text prompt:</source>
         <translation>请输入您的文本提示词：</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="72" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="71" />
         <source>Enter prompt here...</source>
         <translation>请输入您的文本提示词：</translation>
     </message>

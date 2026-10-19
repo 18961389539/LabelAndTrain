@@ -32,10 +32,6 @@ _AUTO_LABELING_CROPPING_MODE_MODELS = [
 ]
 
 
-# --- skip detection step ---
-_SKIP_DET_MODELS = []
-
-
 # --- skip_prediction_on_new_marks ---
 _SKIP_PREDICTION_ON_NEW_MARKS_MODELS = []
 
