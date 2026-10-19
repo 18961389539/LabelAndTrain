@@ -80,6 +80,59 @@ def pump(app, ms=120):
     app.processEvents()
 
 
+_CJK = re.compile(r"[\u4e00-\u9fff]")
+_LATIN_WORDS = re.compile(r"[A-Za-z]{2,}")
+
+
+def untranslated_copy(widget, include_menus=False, ignore=()):
+    """Copy this widget actually shows that has Latin words and no Chinese.
+
+    A ``.ui`` default string is invisible to both guards the code has:
+    ``lupdate`` scans .py, so it never enters ``zh_CN.ts``, and the
+    English-copy ratchet parses Python sources. Only a rendered widget -- on
+    a real window, with the compiled catalog installed -- shows what the user
+    actually reads.
+
+    ``ignore`` names the strings a step put in there itself: a folder's own
+    name can legitimately reach a placeholder (the properties dialog hints
+    「fresh_project」 because that is the default it would apply), and that is
+    data, not untranslated copy.
+    """
+    found = []
+    for child in widget.findChildren(QtWidgets.QWidget):
+        if not child.isVisible():
+            continue
+        # What is typed into a field is data (a folder name, a search term);
+        # its placeholder is copy -- unless it names this very dataset.
+        readers = (
+            []
+            if isinstance(child, QtWidgets.QLineEdit)
+            else ([("text", child.text)] if hasattr(child, "text") else [])
+        )
+        readers += (
+            [("placeholder", child.placeholderText)]
+            if hasattr(child, "placeholderText")
+            else []
+        )
+        for kind, read in readers:
+            text = (read() or "").strip()
+            if not text or _CJK.search(text) or not _LATIN_WORDS.search(text):
+                continue
+            if any(token and token in text for token in ignore):
+                continue
+            name = child.objectName() or type(child).__name__
+            found.append(f"{name}/{kind}: {text}")
+    if include_menus:
+        for menu in widget.findChildren(QtWidgets.QMenu):
+            for action in menu.actions():
+                text = (action.text() or "").strip()
+                if not text or _CJK.search(text):
+                    continue
+                if _LATIN_WORDS.search(text):
+                    found.append(f"menu {menu.objectName()}: {text}")
+    return found
+
+
 def shoot(widget, app, name):
     """Photograph a widget, and say out loud what the OS title bar holds.
 
@@ -779,23 +832,7 @@ def s16_class_filter_entry(ctx):
     # scans .py only, so it never enters the catalog, and the English-copy
     # ratchet parses Python sources. Only a real window can see it -- which
     # is how "Ready!" sat in the panel's status slot unnoticed.
-    english = []
-    for child in panel.findChildren(QtWidgets.QWidget):
-        if not child.isVisible():
-            continue
-        candidates = []
-        for reader in ("text", "placeholderText"):
-            read = getattr(child, reader, None)
-            if callable(read):
-                candidates.append(read())
-        for text in candidates:
-            text = (text or "").strip()
-            if not text or any("一" <= ch <= "鿿" for ch in text):
-                continue
-            if re.search(r"[A-Za-z]{2,}", text):
-                english.append(
-                    f"{child.objectName() or type(child).__name__}: {text}"
-                )
+    english = untranslated_copy(panel)
     assert not english, english
 
     panel.set_class_filter(["凹坑"])
@@ -820,6 +857,8 @@ def s16_class_filter_entry(ctx):
     assert rows == classes, rows
     assert dialog._toggle_btn.text() == "全选", dialog._toggle_btn.text()
     assert "搜索类别" in dialog._search_bar.placeholderText()
+    dialog_english = untranslated_copy(dialog)
+    assert not dialog_english, dialog_english
     shoot(dialog, ctx.app, "16c_class_filter_dialog.png")
     dialog.close()
 
@@ -828,6 +867,61 @@ def s16_class_filter_entry(ctx):
     assert panel._class_filter is None
     assert "类别筛选" not in panel._more_button.toolTip()
     panel.model_manager.loaded_model_config = None
+
+
+@step("17. 本 fork 自己的界面无未翻译英文；继承部分只报告不挡门")
+def s17_no_untranslated_english(ctx):
+    """The rule the panel now keeps, on the surfaces this fork wrote.
+
+    The fork's own dialogs are held to it. The inherited main window is
+    *measured* and printed instead: an English-source sweep across upstream
+    widgets was ruled out of scope for this fork, so the number is what a
+    future batch starts from -- and it cannot be claimed to be unknown.
+    """
+    from anylabeling.views.labeling.widgets.project_switcher import (
+        ProjectSwitcherDialog,
+    )
+
+    # What this run put on screen itself: folder names, image names, the app
+    # name. Those reach labels and placeholders as data, not as copy.
+    data = (ctx.tmp, "img_", "JLLabelingAndTrain") + tuple(
+        os.path.basename(p)
+        for p in (ctx.fresh, ctx.screws, ctx.plain)
+        if os.path.basename(p)
+    )
+    offenders = []
+
+    switcher = ProjectSwitcherDialog(ctx.win)
+    switcher.show()
+    pump(ctx.app, 250)
+    offenders += untranslated_copy(switcher, ignore=data)
+    switcher.close()
+
+    described = ctx.project_model.describe(ctx.fresh)
+    properties = ctx.ProjectPropertiesDialog(
+        ctx.win,
+        name=described["name"],
+        task=described["task"],
+        root=ctx.fresh,
+        title="项目属性",
+    )
+    properties.show()
+    pump(ctx.app, 220)
+    offenders += untranslated_copy(properties, ignore=data)
+    properties.close()
+    pump(ctx.app, 80)
+
+    assert not offenders, offenders
+
+    inherited = untranslated_copy(ctx.win, include_menus=True, ignore=data)
+    # ASCII marker first: a redirected log is gbk, where the Chinese half of
+    # this line is what a later reader cannot grep for.
+    print(
+        f"       [inherited-english] {len(inherited)} 处（上游继承，仅报告）",
+        flush=True,
+    )
+    for line in inherited[:40]:
+        print(f"         - {line}", flush=True)
 
 
 STEPS = (
@@ -847,6 +941,7 @@ STEPS = (
     s14_missing_classes_hint_once,
     s15_shortcut_keys_are_installed,
     s16_class_filter_entry,
+    s17_no_untranslated_english,
 )
 
 
