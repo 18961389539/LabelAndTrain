@@ -346,6 +346,14 @@ class ShapeModifyDialog(RangeTableDialog):
             start_idx (int): Starting frame index (inclusive).
             end_idx (int): Ending frame index (inclusive).
         """
+
+        # Imported here: session_snapshot -> smart_tools -> data_audit
+        # pulls in this widgets package, so a module-level import is
+        # circular.
+        from anylabeling.views.labeling.utils.session_snapshot import (
+            snapshot_before_label_write,
+        )
+
         deleted_count = 0
         current_dir = os.path.dirname(self.image_file_list[0])
         save_path = os.path.join(current_dir, "..", "_delete_")
@@ -371,6 +379,9 @@ class ShapeModifyDialog(RangeTableDialog):
                     )
 
                     if os.path.exists(label_file):
+                        # The file is about to vanish, so its content is the
+                        # last thing a user can get back: snapshot first.
+                        snapshot_before_label_write(label_file)
                         os.remove(label_file)
 
                     deleted_count += 1
@@ -519,6 +530,9 @@ class ShapeModifyDialog(RangeTableDialog):
                                 break
 
                     if len(shapes_to_remove) == len(all_shapes):
+                        # The file is about to vanish, so its content is the
+                        # last thing a user can get back: snapshot first.
+                        snapshot_before_label_write(label_file)
                         os.remove(label_file)
                         removed_count += len(shapes_to_remove)
                         deleted_files_count += 1

@@ -75,11 +75,18 @@ def _writer_functions():
                 if not isinstance(node, ast.FunctionDef):
                     continue
                 body = ast.get_source_segment(src, node) or ""
-                if "json.dump(" not in body:
-                    continue
                 if not any(token in body for token in LABEL_TOKENS):
                     continue
-                if "open(" not in body or '"w"' not in body:
+                rewrites = (
+                    "json.dump(" in body and "open(" in body and '"w"' in body
+                )
+                # Deleting a label file loses exactly what overwriting one
+                # would have: the shapes inside it. ``delete_image_file``
+                # moves the image to _delete_ "so you can get it back" and
+                # removed the annotation permanently -- the same promise
+                # broken in two places.
+                deletes = "os.remove(label_file)" in body
+                if not (rewrites or deletes):
                     continue
                 found.append(
                     (
@@ -96,6 +103,9 @@ def test_the_scan_finds_the_writers_this_fork_fixed():
     keys = {key for key, _node, _snap in _writer_functions()}
     for expected in (
         "anylabeling/views/labeling/utils/batch.py::save_auto_labeling_result",
+        "anylabeling/views/labeling/utils/file_lifecycle.py::delete_image_file",
+        "anylabeling/views/labeling/widgets/shape_dialog.py::delete_images_in_range",
+        "anylabeling/views/labeling/widgets/shape_dialog.py::remove_selected_shapes_in_range",
         "anylabeling/views/labeling/utils/yolo_detect.py::rename_label_across_folder",
         "anylabeling/views/labeling/widgets/shape_dialog.py::remove_selected_shapes_in_range",
         "anylabeling/views/labeling/widgets/label_dialog.py::modify_group_id",

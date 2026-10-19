@@ -758,6 +758,9 @@ def delete_image_file(widget):
         if not osp.exists(label_file):
             label_file = osp.join(osp.dirname(image_file), label_name)
         if osp.exists(label_file):
+            # The file is about to vanish, so its content is the
+            # last thing a user can get back: snapshot first.
+            snapshot_before_label_write(label_file)
             os.remove(label_file)
             logger.info(f"Label file is removed: {image_file}")
 
