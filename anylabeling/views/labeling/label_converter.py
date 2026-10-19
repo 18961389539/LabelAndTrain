@@ -608,6 +608,30 @@ class LabelConverter:
         with open(file_path, "w", encoding=encoding) as f:
             json.dump(data, f, indent=indent, ensure_ascii=ensure_ascii)
 
+    def save_label_json(self, data: Dict[str, Any], file_path: str) -> None:
+        """Write one per-image label file, keeping the version being replaced.
+
+        Every ``*_to_custom`` conversion lands in the image folder, which is
+        where a project's real annotations live -- so re-running an import over
+        an annotated folder used to truncate those files with nothing to
+        restore, from the 导入 menus as much as from the CLI. The snapshot goes
+        into the same ``.label_backups/`` runs that 智能工具 → 从备份恢复标注
+        reads, the way the editor and the shape converter already do. A failed
+        snapshot never blocks the write: losing the backup is bad, refusing to
+        import is worse, and the caller has no undo either way.
+        """
+        from anylabeling.views.labeling.utils.session_snapshot import (
+            snapshot_before_label_write,
+        )
+
+        try:
+            snapshot_before_label_write(file_path)
+        except Exception as exc:  # noqa: BLE001 - the write still happens
+            logger.warning(
+                f"Could not snapshot {file_path} before import: {exc}"
+            )
+        self.save_json(data, file_path)
+
     @staticmethod
     def read_json(file_path: str, encoding: str = "utf-8") -> Dict[str, Any]:
         with open(file_path, "r", encoding=encoding) as f:
@@ -655,7 +679,7 @@ class LabelConverter:
         self.custom_data["imagePath"] = osp.basename(image_file)
         self.custom_data["imageHeight"] = img_h
         self.custom_data["imageWidth"] = img_w
-        self.save_json(self.custom_data, output_file)
+        self.save_label_json(self.custom_data, output_file)
 
     def yolo_pose_to_custom(self, input_file, output_file, image_file):
         self.reset()
@@ -721,7 +745,7 @@ class LabelConverter:
         self.custom_data["imagePath"] = osp.basename(image_file)
         self.custom_data["imageHeight"] = img_h
         self.custom_data["imageWidth"] = img_w
-        self.save_json(self.custom_data, output_file)
+        self.save_label_json(self.custom_data, output_file)
 
     def yolo_to_custom(self, input_file, output_file, image_file, mode):
         self.reset()
@@ -769,7 +793,7 @@ class LabelConverter:
         self.custom_data["imagePath"] = osp.basename(image_file)
         self.custom_data["imageHeight"] = img_h
         self.custom_data["imageWidth"] = img_w
-        self.save_json(self.custom_data, output_file)
+        self.save_label_json(self.custom_data, output_file)
 
     def voc_to_custom(self, input_file, output_file, image_filename, mode):
         self.reset()
@@ -861,7 +885,7 @@ class LabelConverter:
 
             self.custom_data["shapes"].append(shape)
 
-        self.save_json(self.custom_data, output_file)
+        self.save_label_json(self.custom_data, output_file)
 
     def coco_to_custom(self, input_file, output_dir_path, mode):
         data = self.read_json(input_file)
@@ -1059,7 +1083,7 @@ class LabelConverter:
                 output_dir_path,
                 osp.splitext(dic_info["imagePath"])[0] + ".json",
             )
-            self.save_json(self.custom_data, output_file)
+            self.save_label_json(self.custom_data, output_file)
 
     @staticmethod
     def _bump_skip(stats, reason):
