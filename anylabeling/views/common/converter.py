@@ -617,6 +617,12 @@ def run_conversion(
                     is_empty = converter.custom_to_yolo(
                         label_file, output_file, yolo_mode, skip_empty_files
                     )
+                    if (
+                        skip_empty_files
+                        and is_empty
+                        and osp.exists(output_file)
+                    ):
+                        os.remove(output_file)
                     if not is_empty or not skip_empty_files:
                         count += 1
 
@@ -684,6 +690,12 @@ def run_conversion(
                         voc_mode,
                         skip_empty_files,
                     )
+                    if (
+                        skip_empty_files
+                        and is_empty
+                        and osp.exists(output_file)
+                    ):
+                        os.remove(output_file)
                     if not is_empty or not skip_empty_files:
                         count += 1
 

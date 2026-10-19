@@ -1344,6 +1344,17 @@ class LabelConverter:
                     f.write(f"{label}\n")
         return is_empty_file
 
+    @staticmethod
+    def _append_voc_object(root, label, difficult):
+        """Append one ``<object>``; callers add the geometry it may use."""
+        object_elem = ET.SubElement(root, "object")
+        ET.SubElement(object_elem, "name").text = label
+        ET.SubElement(object_elem, "pose").text = "Unspecified"
+        ET.SubElement(object_elem, "truncated").text = "0"
+        ET.SubElement(object_elem, "occluded").text = "0"
+        ET.SubElement(object_elem, "difficult").text = str(int(difficult))
+        return object_elem
+
     def custom_to_voc(
         self, image_file, input_file, output_dir, mode, skip_empty_files=False
     ):
@@ -1377,17 +1388,12 @@ class LabelConverter:
                 shape["points"], image_width, image_height
             )
             difficult = shape.get("difficult", False)
-            object_elem = ET.SubElement(root, "object")
-            ET.SubElement(object_elem, "name").text = label
-            ET.SubElement(object_elem, "pose").text = "Unspecified"
-            ET.SubElement(object_elem, "truncated").text = "0"
-            ET.SubElement(object_elem, "occluded").text = "0"
-            ET.SubElement(object_elem, "difficult").text = str(int(difficult))
             if shape["shape_type"] == "rectangle" and mode in [
                 "rectangle",
                 "polygon",
             ]:
                 is_emtpy_file = False
+                object_elem = self._append_voc_object(root, label, difficult)
                 if len(points) == 2:
                     logger.warning(
                         "UserWarning: Diagonal vertex mode is deprecated in X-AnyLabeling release v2.2.0 or later.\n"
@@ -1404,6 +1410,7 @@ class LabelConverter:
                 if len(points) < 3:
                     continue
                 is_emtpy_file = False
+                object_elem = self._append_voc_object(root, label, difficult)
                 xmin, ymin, xmax, ymax = self.calculate_bounding_box(points)
                 bndbox = ET.SubElement(object_elem, "bndbox")
                 ET.SubElement(bndbox, "xmin").text = str(int(xmin))
