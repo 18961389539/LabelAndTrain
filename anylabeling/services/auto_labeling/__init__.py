@@ -88,7 +88,3 @@ _BATCH_PROCESSING_INVALID_MODELS = []
 _BATCH_PROCESSING_AUTO_GRID_MODELS = [
     "segment_anything_2",
 ]
-
-
-# --- batch_processing_text_prompt_models ---
-_BATCH_PROCESSING_TEXT_PROMPT_MODELS = []

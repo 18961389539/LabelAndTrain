@@ -51,7 +51,6 @@ class TestBatchSkipIf(unittest.TestCase):
             image_list=[],
             image_index=0,
             model_type="yolov8s",
-            text_prompt="",
             skip_existing=False,
             skip_if=skip_if,
         )

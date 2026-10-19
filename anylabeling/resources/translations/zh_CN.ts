@@ -247,34 +247,34 @@ Only the registry entry is removed. The config/weight files on disk are kept:
 </context><context>
     <name>BatchRunOptionsDialog</name>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="163" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="50" />
         <source>批量自动标注</source>
         <translation>批量自动标注</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="168" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="55" />
         <source>将从当前图（#%d）处理到最后（#%d）。
 当前图之前的图片不会处理。</source>
         <translation>将从当前图（#%d）处理到最后（#%d）。
 当前图之前的图片不会处理。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="173" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="60" />
         <source>将只处理当前这一张图。</source>
         <translation>将只处理当前这一张图。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="175" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="62" />
         <source>跳过已有标注的图片</source>
         <translation>跳过已有标注的图片</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="178" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="65" />
         <source>已有 JSON 标注的图片直接跳过，避免覆盖人工结果</source>
         <translation>已有 JSON 标注的图片直接跳过，避免覆盖人工结果</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="182" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="69" />
         <source>处理过程中可点「暂停」随时停下。失败的图片结束后可点回去检查。</source>
         <translation>处理过程中可点「暂停」随时停下。失败的图片结束后可点回去检查。</translation>
     </message>
@@ -318,84 +318,84 @@ Only the registry entry is removed. The config/weight files on disk are kept:
 </context><context>
     <name>Canvas</name>
     <message>
-        <location filename="..\..\views\labeling\widgets\canvas.py" line="253" />
+        <location filename="..\..\views\labeling\widgets\canvas.py" line="251" />
         <source>Loading...</source>
         <translation>加载中...</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\canvas.py" line="531" />
+        <location filename="..\..\views\labeling\widgets\canvas.py" line="529" />
         <source>Auto Labeling</source>
         <translation>自动标注</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\canvas.py" line="533" />
+        <location filename="..\..\views\labeling\widgets\canvas.py" line="531" />
         <source>Drawing</source>
         <translation>绘制</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\canvas.py" line="535" />
+        <location filename="..\..\views\labeling\widgets\canvas.py" line="533" />
         <source>Editing</source>
         <translation>编辑</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\canvas.py" line="537" />
+        <location filename="..\..\views\labeling\widgets\canvas.py" line="535" />
         <source>Unknown</source>
         <translation>未知</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\canvas.py" line="601" />
+        <location filename="..\..\views\labeling\widgets\canvas.py" line="599" />
         <source>Click &amp; drag to erase points of shape '%s'</source>
         <translation>点击并拖动以擦除对象 '%s' 的顶点</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\canvas.py" line="1153" />
+        <location filename="..\..\views\labeling\widgets\canvas.py" line="1151" />
         <source>Click &amp; drag to adjust cuboid depth of shape '%s'</source>
         <translation>点击并拖动以调整对象：'%s' 的长方体深度</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\canvas.py" line="1160" />
+        <location filename="..\..\views\labeling\widgets\canvas.py" line="1158" />
         <source>Click &amp; drag to adjust rear edge of cuboid shape '%s'</source>
         <translation>点击并拖动以调整长方体对象：'%s' 的后边缘</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\canvas.py" line="1237" />
-        <location filename="..\..\views\labeling\widgets\canvas.py" line="1167" />
+        <location filename="..\..\views\labeling\widgets\canvas.py" line="1235" />
+        <location filename="..\..\views\labeling\widgets\canvas.py" line="1165" />
         <source>Click &amp; drag to move point of shape '%s'</source>
         <translation>点击并拖动以移动对象顶点：'%s'</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\canvas.py" line="1296" />
-        <location filename="..\..\views\labeling\widgets\canvas.py" line="1185" />
+        <location filename="..\..\views\labeling\widgets\canvas.py" line="1294" />
+        <location filename="..\..\views\labeling\widgets\canvas.py" line="1183" />
         <source>Click &amp; drag to move shape '%s'</source>
         <translation>点击并拖动以移动对象：'%s'</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\canvas.py" line="1205" />
+        <location filename="..\..\views\labeling\widgets\canvas.py" line="1203" />
         <source>Click &amp; drag to adjust cuboid %s face of shape '%s'</source>
         <translation>点击并拖动以调整长方体 %s 面（对象：'%s'）</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\canvas.py" line="1258" />
+        <location filename="..\..\views\labeling\widgets\canvas.py" line="1256" />
         <source>Click to create point of shape '%s'</source>
         <translation>点击以创建对象“%s”的顶点</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\canvas.py" line="1288" />
+        <location filename="..\..\views\labeling\widgets\canvas.py" line="1286" />
         <source>Locked shape '%s'</source>
         <translation>对象“%s”已锁定</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\canvas.py" line="2004" />
+        <location filename="..\..\views\labeling\widgets\canvas.py" line="1979" />
         <source>Group %s · %d shapes</source>
         <translation>群组 %s · %d 个对象</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\canvas.py" line="2006" />
+        <location filename="..\..\views\labeling\widgets\canvas.py" line="1981" />
         <source>Locked %s</source>
         <translation>已锁定：%s</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\canvas.py" line="2008" />
+        <location filename="..\..\views\labeling\widgets\canvas.py" line="1983" />
         <source>Click &amp; drag to move %s</source>
         <translation>单击并拖拽以移动 %s</translation>
     </message>
@@ -671,22 +671,22 @@ Only the registry entry is removed. The config/weight files on disk are kept:
 </context><context>
     <name>FailedImagesDialog</name>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="203" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="90" />
         <source>失败图片</source>
         <translation>失败图片</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="207" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="94" />
         <source>以下图片自动标注失败，双击或点打开可跳转：</source>
         <translation>以下图片自动标注失败，双击或点打开可跳转：</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="215" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="102" />
         <source>打开选中图片</source>
         <translation>打开选中图片</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="218" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="105" />
         <source>关闭</source>
         <translation>关闭</translation>
     </message>
@@ -3097,48 +3097,48 @@ Original images backed up to:
         <translation>EXIF 处理完成</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="277" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="164" />
         <source>Processing completed successfully!</source>
         <translation>处理完成。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="283" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="170" />
         <source>Processing finished: %d succeeded, %d failed (of %d total).</source>
         <translation>处理结束：成功 %d 张，失败 %d 张（共 %d 张）。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="290" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="177" />
         <source>Processing completed successfully! (%d images processed)</source>
         <translation>处理完成。（共处理 %d 张图）</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="675" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="552" />
         <source>Error occurred while processing images!</source>
         <translation>处理图片时出错。</translation>
     </message>
     <message>
         <location filename="..\..\views\labeling\utils\crop.py" line="367" />
-        <location filename="..\..\views\labeling\utils\batch.py" line="698" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="575" />
         <source>Processing...</source>
         <translation>处理中...</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="699" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="576" />
         <source>暂停</source>
         <translation>暂停</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="706" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="583" />
         <source>Batch Processing</source>
         <translation>批量处理</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="802" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="679" />
         <source>Model is not loaded. Choose a mode to continue.</source>
         <translation>模型尚未加载。选择一个模式以继续。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="819" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="696" />
         <source>Invalid model type, please choose a valid model_type to run.</source>
         <translation>模型类型无效，请选择一个有效的 model_type 后再运行。</translation>
     </message>
@@ -5383,33 +5383,33 @@ Start now?</source>
         <translation>加载模型出错：{error_message}</translation>
     </message>
     <message>
-        <location filename="..\..\services\auto_labeling\model_manager.py" line="893" />
-        <location filename="..\..\services\auto_labeling\model_manager.py" line="829" />
+        <location filename="..\..\services\auto_labeling\model_manager.py" line="880" />
+        <location filename="..\..\services\auto_labeling\model_manager.py" line="827" />
         <source>Model is not loaded. Choose a mode to continue.</source>
         <translation>模型尚未加载。选择一个模式以继续。</translation>
     </message>
     <message>
-        <location filename="..\..\services\auto_labeling\model_manager.py" line="855" />
+        <location filename="..\..\services\auto_labeling\model_manager.py" line="844" />
         <source>Inference cancelled. Result discarded.</source>
         <translation>推理已取消，结果已丢弃。</translation>
     </message>
     <message>
-        <location filename="..\..\services\auto_labeling\model_manager.py" line="865" />
+        <location filename="..\..\services\auto_labeling\model_manager.py" line="854" />
         <source>Finished inferencing AI model. Check the result.</source>
         <translation>完成 AI 模型推理，请检查结果。</translation>
     </message>
     <message>
-        <location filename="..\..\services\auto_labeling\model_manager.py" line="870" />
+        <location filename="..\..\services\auto_labeling\model_manager.py" line="859" />
         <source>Error in model prediction: {error_message}</source>
         <translation>模型推理出错：{error_message}</translation>
     </message>
     <message>
-        <location filename="..\..\services\auto_labeling\model_manager.py" line="897" />
+        <location filename="..\..\services\auto_labeling\model_manager.py" line="884" />
         <source>Inferencing AI model. Please wait...</source>
         <translation>正在进行 AI 模型推理，请稍等...</translation>
     </message>
     <message>
-        <location filename="..\..\services\auto_labeling\model_manager.py" line="915" />
+        <location filename="..\..\services\auto_labeling\model_manager.py" line="902" />
         <source>Another model is being executed. Please wait for it to finish.</source>
         <translation>另一个模型正在执行，请耐心等待。</translation>
     </message>
@@ -6869,23 +6869,6 @@ Changes will not be saved until you click Save.</source>
         <location filename="..\..\views\labeling\widgets\shape_dialog.py" line="673" />
         <source> and skipped %s out-of-bounds shapes</source>
         <translation>并跳过了 %s 个超出边界的对象</translation>
-    </message>
-</context><context>
-    <name>TextInputDialog</name>
-    <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="54" />
-        <source>Enter Text Prompt</source>
-        <translation>输入文本提示词</translation>
-    </message>
-    <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="64" />
-        <source>Please enter your text prompt:</source>
-        <translation>请输入您的文本提示词：</translation>
-    </message>
-    <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="71" />
-        <source>Enter prompt here...</source>
-        <translation>请输入您的文本提示词：</translation>
     </message>
 </context><context>
     <name>TrainingImagePreviewDialog</name>

@@ -814,9 +814,7 @@ class ModelManager(QObject):
         self,
         image,
         filename=None,
-        text_prompt=None,
         batch=False,
-        existing_shapes=None,
     ):
         """Predict shapes.
         NOTE: This function is blocking. The model can take a long time to
@@ -832,18 +830,9 @@ class ModelManager(QObject):
             return
 
         try:
-            if text_prompt is not None:
-                auto_labeling_result = model_config["model"].predict_shapes(
-                    image, filename, text_prompt=text_prompt
-                )
-            elif existing_shapes is not None:
-                auto_labeling_result = model_config["model"].predict_shapes(
-                    image, filename, existing_shapes=existing_shapes
-                )
-            else:
-                auto_labeling_result = model_config["model"].predict_shapes(
-                    image, filename
-                )
+            auto_labeling_result = model_config["model"].predict_shapes(
+                image, filename
+            )
 
             if isinstance(auto_labeling_result, AutoLabelingResult):
                 auto_labeling_result.image_path = filename
@@ -880,8 +869,6 @@ class ModelManager(QObject):
         self,
         image,
         filename=None,
-        text_prompt=None,
-        existing_shapes=None,
     ):
         """Predict shapes.
         This function starts a thread to run the prediction.
@@ -921,24 +908,9 @@ class ModelManager(QObject):
                 return
 
             self.model_execution_thread = QThread()
-            if text_prompt is not None:
-                self.model_execution_worker = GenericWorker(
-                    self.predict_shapes,
-                    image,
-                    filename,
-                    text_prompt=text_prompt,
-                )
-            elif existing_shapes is not None:
-                self.model_execution_worker = GenericWorker(
-                    self.predict_shapes,
-                    image,
-                    filename,
-                    existing_shapes=existing_shapes,
-                )
-            else:
-                self.model_execution_worker = GenericWorker(
-                    self.predict_shapes, image, filename
-                )
+            self.model_execution_worker = GenericWorker(
+                self.predict_shapes, image, filename
+            )
             self.model_execution_worker.finished.connect(
                 self.model_execution_thread.quit
             )

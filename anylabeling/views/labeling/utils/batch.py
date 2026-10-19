@@ -24,7 +24,6 @@ from anylabeling.views.labeling.utils.theme import get_theme
 from anylabeling.services.auto_labeling import (
     _BATCH_PROCESSING_AUTO_GRID_MODELS,
     _BATCH_PROCESSING_INVALID_MODELS,
-    _BATCH_PROCESSING_TEXT_PROMPT_MODELS,
 )
 from anylabeling.views.labeling.logger import logger
 from anylabeling.views.labeling.provenance import stamp_model_shapes
@@ -43,118 +42,6 @@ from anylabeling.views.labeling.utils.style import (
 from anylabeling.views.labeling.widgets.popup import Popup
 
 __all__ = ["run_all_images"]
-
-
-class TextInputDialog(QDialog):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.init_ui()
-
-    def init_ui(self):
-        self.setWindowTitle(self.tr("Enter Text Prompt"))
-        self.setFixedSize(400, 180)
-        self.setWindowFlags(
-            Qt.WindowType.Dialog | Qt.WindowType.MSWindowsFixedSizeDialogHint
-        )
-
-        layout = QVBoxLayout()
-        layout.setContentsMargins(24, 24, 24, 24)
-        layout.setSpacing(12)
-
-        prompt_label = QLabel(self.tr("Please enter your text prompt:"))
-        prompt_label.setStyleSheet(
-            f"font-size: 13px; color: {get_theme()['text']}; font-weight: 500;"
-        )
-        layout.addWidget(prompt_label)
-
-        self.text_input = QLineEdit()
-        self.text_input.setPlaceholderText(self.tr("Enter prompt here..."))
-        layout.addWidget(self.text_input)
-
-        button_box = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok
-            | QDialogButtonBox.StandardButton.Cancel
-        )
-        button_box.accepted.connect(self.accept)
-        button_box.rejected.connect(self.reject)
-        ok_button = button_box.button(QDialogButtonBox.StandardButton.Ok)
-        cancel_button = button_box.button(
-            QDialogButtonBox.StandardButton.Cancel
-        )
-        ok_button.setProperty("class", "primary-button")
-        cancel_button.setProperty("class", "secondary-button")
-        layout.addWidget(button_box)
-
-        self.setLayout(layout)
-        t = get_theme()
-        self.setStyleSheet(f"""
-            QDialog {{
-                background-color: {t["background"]};
-                border-radius: 10px;
-            }}
-
-            QLineEdit {{
-                border: 1px solid {t["border"]};
-                border-radius: {t["radius_lg"]};
-                background-color: {t["background_secondary"]};
-                font-size: 13px;
-                height: 36px;
-                padding: 0 12px;
-                color: {t["text"]};
-            }}
-
-            QLineEdit:hover {{
-                background-color: {t["background_hover"]};
-            }}
-
-            QLineEdit:focus {{
-                border: 2px solid {t["highlight"]};
-                background-color: {t["background_secondary"]};
-            }}
-
-            QPushButton {{
-                min-width: 100px;
-                height: 36px;
-                border-radius: {t["radius_lg"]};
-                font-weight: 500;
-                font-size: 13px;
-            }}
-
-            .primary-button {{
-                background-color: {t["primary_solid"]};
-                color: {t["on_primary"]};
-                border: 2px solid {t["primary_solid"]};
-            }}
-
-            .primary-button:hover {{
-                background-color: {t["primary_solid_hover"]};
-                border-color: {t["primary_solid_hover"]};
-            }}
-
-            .primary-button:pressed {{
-                background-color: {t["primary_solid_pressed"]};
-                border-color: {t["primary_solid_pressed"]};
-            }}
-
-            .secondary-button {{
-                background-color: {t["surface"]};
-                color: {t["text"]};
-                border: 1px solid {t["border"]};
-            }}
-
-            .secondary-button:hover {{
-                background-color: {t["background_hover"]};
-            }}
-
-            .secondary-button:pressed {{
-                background-color: {t["surface"]};
-            }}
-        """)
-
-    def get_input_text(self):
-        if self.exec() == QDialog.DialogCode.Accepted:
-            return self.text_input.text().strip()
-        return ""
 
 
 class BatchRunOptionsDialog(QDialog):
@@ -339,7 +226,6 @@ def _reset_batch_processing_state(self):
     self._batch_processing_active = False
     self._batch_skip_if = None
     for attribute in (
-        "text_prompt",
         "image_index",
         "current_index",
     ):
@@ -542,7 +428,6 @@ class BatchProcessingThread(QThread):
         image_list,
         image_index,
         model_type,
-        text_prompt,
         skip_existing=False,
         skip_if=None,
     ):
@@ -551,7 +436,6 @@ class BatchProcessingThread(QThread):
         self.image_list = image_list
         self.image_index = image_index
         self.model_type = model_type
-        self.text_prompt = text_prompt
         self.skip_existing = skip_existing
         self.skip_if = skip_if
         self._succeeded = 0
@@ -588,17 +472,11 @@ class BatchProcessingThread(QThread):
                     )
                     continue
 
-                if self.text_prompt:
-                    result = self.app.auto_labeling_widget.model_manager.predict_shapes(
-                        self.app.image,
-                        image_file,
-                        text_prompt=self.text_prompt,
-                        batch=True,
-                    )
-                else:
-                    result = self.app.auto_labeling_widget.model_manager.predict_shapes(
+                result = (
+                    self.app.auto_labeling_widget.model_manager.predict_shapes(
                         self.app.image, image_file, batch=True
                     )
+                )
 
                 try:
                     saved = save_auto_labeling_result(
@@ -658,7 +536,6 @@ def process_next_image(self, progress_dialog, batch=True):
         self.image_list,
         self.image_index,
         model_type,
-        self.text_prompt,
         skip_existing=getattr(self, "_batch_skip_existing", False),
         skip_if=getattr(self, "_batch_skip_if", None),
     )
@@ -852,7 +729,6 @@ def run_all_images(
     else:
         self.current_index = self.fn_to_index[str(self.filename)]
         self.image_index = self.current_index
-    self.text_prompt = ""
 
     model_type = self.auto_labeling_widget.model_manager.loaded_model_config[
         "type"
@@ -863,10 +739,5 @@ def run_all_images(
             [{"type": "auto_grid"}]
         )
         _start_batch_processing(self)
-    elif model_type in _BATCH_PROCESSING_TEXT_PROMPT_MODELS:
-        text_input_dialog = TextInputDialog(parent=self)
-        self.text_prompt = text_input_dialog.get_input_text()
-        if self.text_prompt:
-            _start_batch_processing(self)
     else:
         _start_batch_processing(self)
