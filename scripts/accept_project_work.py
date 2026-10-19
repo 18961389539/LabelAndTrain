@@ -881,6 +881,12 @@ def s17_no_untranslated_english(ctx):
     from anylabeling.views.labeling.widgets.project_switcher import (
         ProjectSwitcherDialog,
     )
+    from anylabeling.views.labeling.widgets.overview_dialog import (
+        OverviewDialog,
+    )
+    from anylabeling.views.labeling.widgets.shape_converter_dialog import (
+        ShapeConverterDialog,
+    )
 
     # What this run put on screen itself: folder names, image names, the app
     # name. Those reach labels and placeholders as data, not as copy.
@@ -910,6 +916,25 @@ def s17_no_untranslated_english(ctx):
     offenders += untranslated_copy(properties, ignore=data)
     properties.close()
     pump(ctx.app, 80)
+
+    # The two dialogs that read the open project: 形状转换器 (a bulk rewrite
+    # tool, so its copy is worth money) and 统计总览. The latter runs its own
+    # modal loop from ``__init__``, so the scan has to step over that call --
+    # a step that blocks on a dialog is the one failure mode this harness
+    # cannot afford (it looks exactly like a slow run).
+    ctx.widget.import_image_folder(ctx.fresh)
+    pump(ctx.app, 300)
+    OverviewDialog.exec = lambda _self: 0
+    try:
+        for kind in (ShapeConverterDialog, OverviewDialog):
+            dialog = kind(ctx.widget)
+            dialog.show()
+            pump(ctx.app, 250)
+            offenders += untranslated_copy(dialog, ignore=data)
+            dialog.close()
+            pump(ctx.app, 80)
+    finally:
+        del OverviewDialog.exec
 
     assert not offenders, offenders
 
