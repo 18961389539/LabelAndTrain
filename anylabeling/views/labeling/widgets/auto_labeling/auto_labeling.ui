@@ -152,7 +152,7 @@ padding: 0 4px;
 font-size: 12px;</string>
        </property>
        <property name="text">
-        <string>Ready!</string>
+        <string>未选择模型</string>
        </property>
       </widget>
      </item>

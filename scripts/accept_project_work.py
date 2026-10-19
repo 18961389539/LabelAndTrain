@@ -23,6 +23,7 @@ Exit code 0 when every step passed, 1 otherwise.
 
 import json
 import os
+import re
 import shutil
 import sys
 import tempfile
@@ -706,6 +707,129 @@ def s15_shortcut_keys_are_installed(ctx):
         assert live, f"{name} ({key}) has an action that is never installed"
 
 
+@step("16. 类别筛选：入口、勾选列表与项目记忆在真实窗口里成立")
+def s16_class_filter_entry(ctx):
+    """The dialog and the setter existed; nothing on screen could reach them.
+
+    Real window, real compiled catalog. This is also the only machine check
+    that the shipped ``zh_CN.qm`` carries the inherited dialog's Chinese --
+    its sources are English (``Filter Classes`` / ``Select All``), and 14
+    offscreen steps assert the wiring without ever resolving a string.
+    """
+    from anylabeling.services.auto_labeling.__base__.yolo import YOLO
+    from anylabeling.views.labeling import project_settings
+    from anylabeling.views.labeling.widgets.auto_labeling.auto_labeling import (
+        _dataset_dir_for,
+    )
+    from anylabeling.views.labeling.widgets.classes_filter_dialog import (
+        ClassesFilterDialog,
+    )
+
+    panel = ctx.widget.auto_labeling_widget
+    classes = ["划痕", "凹坑", "气泡"]
+
+    class _StubYolo:
+        """The real setter, so the indices checked here are production's."""
+
+        set_auto_labeling_filter_classes = (
+            YOLO.set_auto_labeling_filter_classes
+        )
+
+        def unload(self):
+            pass
+
+    model = _StubYolo()
+    model.classes = classes
+    model.filter_classes = "unset"
+    panel.model_manager.loaded_model_config = {
+        "model": model,
+        "type": "yolov8",
+        "display_name": "桩模型",
+        "classes": classes,
+    }
+
+    project_dir = os.path.join(ctx.tmp, "class_filter_project")
+    os.makedirs(project_dir, exist_ok=True)
+    ctx.widget._project_dataset_dir = project_dir
+    assert _dataset_dir_for(panel) == project_dir
+
+    # Open the panel the way the user does (the same call the shortcut makes):
+    # "not hidden" is a local flag, and a control inside a panel nobody
+    # opened would still pass that check.
+    if not panel.isVisible():
+        ctx.widget.toggle_auto_labeling_widget()
+    pump(ctx.app, 200)
+    assert panel.isVisible(), "智能标注面板没有打开"
+
+    panel.apply_project_class_filter()
+    assert not panel.button_class_filter.isHidden(), "支持筛选却没有入口"
+    assert "类别筛选" in panel.button_class_filter.text()
+    assert panel._more_panel.isHidden()
+    # Nothing is filtered yet, so the visible row must not claim otherwise.
+    assert "类别筛选" not in panel._more_button.toolTip()
+
+    panel._more_button.click()
+    pump(ctx.app, 150)
+    assert panel.button_class_filter.isVisible()
+    assert panel.button_class_filter.width() > 0
+    shoot(panel, ctx.app, "16a_more_panel_filter.png")
+
+    # Nothing on the rendered panel may be untranslated English. A `.ui`
+    # default string is invisible to both guards the code has: `lupdate`
+    # scans .py only, so it never enters the catalog, and the English-copy
+    # ratchet parses Python sources. Only a real window can see it -- which
+    # is how "Ready!" sat in the panel's status slot unnoticed.
+    english = []
+    for child in panel.findChildren(QtWidgets.QWidget):
+        if not child.isVisible():
+            continue
+        candidates = []
+        for reader in ("text", "placeholderText"):
+            read = getattr(child, reader, None)
+            if callable(read):
+                candidates.append(read())
+        for text in candidates:
+            text = (text or "").strip()
+            if not text or any("一" <= ch <= "鿿" for ch in text):
+                continue
+            if re.search(r"[A-Za-z]{2,}", text):
+                english.append(
+                    f"{child.objectName() or type(child).__name__}: {text}"
+                )
+    assert not english, english
+
+    panel.set_class_filter(["凹坑"])
+    assert model.filter_classes == [1], model.filter_classes
+    assert "1/3" in panel.button_class_filter.text()
+    assert project_settings.class_filter(project_dir) == ["凹坑"]
+    # The panel is open here, so the filter names itself on its own button.
+    assert "类别筛选" not in panel._more_button.toolTip()
+
+    # 收起之后，筛选状态改由看得见的那个按钮承担
+    panel._more_button.click()
+    pump(ctx.app, 120)
+    assert not panel.button_class_filter.isVisible()
+    assert "类别筛选" in panel._more_button.toolTip()
+    shoot(panel, ctx.app, "16b_more_button_marked.png")
+
+    dialog = ClassesFilterDialog(classes, ["凹坑"], ctx.win)
+    dialog.show()
+    pump(ctx.app, 220)
+    assert dialog.windowTitle() == "筛选类别", dialog.windowTitle()
+    rows = [dialog._list.item(i).text() for i in range(dialog._list.count())]
+    assert rows == classes, rows
+    assert dialog._toggle_btn.text() == "全选", dialog._toggle_btn.text()
+    assert "搜索类别" in dialog._search_bar.placeholderText()
+    shoot(dialog, ctx.app, "16c_class_filter_dialog.png")
+    dialog.close()
+
+    # 换模型时状态与标记都不能留下上一个人的痕迹
+    panel.hide_labeling_widgets()
+    assert panel._class_filter is None
+    assert "类别筛选" not in panel._more_button.toolTip()
+    panel.model_manager.loaded_model_config = None
+
+
 STEPS = (
     s1_project_menu,
     s2_new_project,
@@ -722,6 +846,7 @@ STEPS = (
     s13_open_project_folder_entry,
     s14_missing_classes_hint_once,
     s15_shortcut_keys_are_installed,
+    s16_class_filter_entry,
 )
 
 
