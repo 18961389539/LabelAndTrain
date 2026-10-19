@@ -5,15 +5,15 @@
 本分支（JLLabelingAndTrain）只有一种安装方式：**克隆本仓库源码安装**。它没有发布到 PyPI，也没有预编译安装包——`pip` 上的 `x-anylabeling-cvhub` 与上游 GitHub Releases 里的安装包都是**上游 X-AnyLabeling 的产物**，装上后没有本仓库 README 所写的这些功能。
 
 > [!NOTE]
-> **高级功能说明**：以下高级功能仅适用于 Git 克隆方式，如需使用，请先参考对应的文档进行配置。
+> **本构建带的功能**（下面每一项都能在界面里点到，链接指向本仓库文档）：
 >
-> 0. **远程推理服务指南**：基于 X-AnyLabeling-Server 的远程推理服务 - [安装指南](https://github.com/CVHub520/X-AnyLabeling-Server)
-> 1. **视频目标追踪**：基于 Segment Anything 的视频目标追踪（[SAM 2](../../examples/interactive_video_object_segmentation/sam2/README.md) | [SAM 3](../../examples/interactive_video_object_segmentation/sam3/README.md)）
-> 2. **目标候选框生成**：基于 UPN 的目标候选框生成 - [安装指南](../../examples/detection/hbb/README.md)
-> 3. **交互式检测分割**：基于视觉和文本提示的交互式目标检测和分割 - [安装指南](../../examples/detection/hbb/README.md)
-> 4. **智能检测分割**：基于视觉提示、文本提示或免提示模式的目标检测与分割（[YOLOE](../../examples/grounding/yoloe/README.md) | [SAM 3](../../examples/grounding/sam3/README.md) | [LocateAnything](../../examples/grounding/locateanything/README.md)）
-> 5. **一键训练平台**：基于 Ultralytics 框架的一键训练平台 - [安装指南](../../examples/training/ultralytics/README_zh-CN.md)
-> 6. **全模态视觉推理**：基于 Rex-Omni 的目标检测、关键点检测（人、手、动物）、OCR、指向理解和视觉提示定位（[安装指南](../../examples/vision_language/rexomni/README.md)）
+> 1. **交互式分割**：SAM2 前景/背景点提示与 AMG 免提示全图分割。内置模型清单里只有 SAM2 两个尺寸，其它模型要靠「自定义模型」注册 - [自定义模型](./custom_model.md)
+> 2. **YOLO 系列自动标注**：检测 / 实例分割 / 姿态 / 分类，以及 YOLOv8+SAM2 组合；置信度与 IoU 阈值、**类别筛选**（只回灌选中的类别，按项目记住）都在智能标注面板的「更多」里 - [用户指南](./user_guide.md)
+> 3. **YOLO 导入导出**：HBB / Seg / OBB / Pose 四种模式，读写同一份 `classes.txt`，导出清单与参数跟随项目 - [命令行与转换](./cli.md)
+> 4. **一键训练**：基于 Ultralytics 的训练面板，加上漏标扫描、阈值校准、数据体检、迭代看板这条「标注 → 训练 → 回灌」闭环 - [本分支功能](./fork_features.md)
+> 5. **项目管理**：多项目切换与续点、按项目保存的标签列表与输出目录与模型与类别筛选、复核状态与打回、项目内搜索、项目包导出、标注快照与恢复 - [本分支功能](./fork_features.md)
+>
+> 上游有、**本分支没有**的高级功能，别在这里找：远程推理服务（X-AnyLabeling-Server）、视频目标追踪（SAM2/SAM3 video）、UPN 候选框生成、以及靠文本提示工作的全模态模型（YOLOE、SAM 3、LocateAnything、Rex-Omni）—— 本分支的模型类型里没有这些，界面里也没有能触发它们的入口。需要它们请用上游 X-AnyLabeling。
 
 ### 1.1 前置条件
 

@@ -5,15 +5,15 @@
 This fork (JLLabelingAndTrain) installs one way only: **from this repository's source**. It is not published on PyPI and ships no prebuilt package — the `x-anylabeling-cvhub` wheel and the installers under upstream's GitHub Releases belong to **X-AnyLabeling itself**, and neither contains the features this repository's README describes.
 
 > [!NOTE]
-> **Advanced Features**: The following advanced features are only available through Git clone installation. Please refer to the corresponding documentation for configuration instructions.
+> **What this build ships** (every item below is reachable in the interface; the links point at this repository's docs):
 >
-> 0. **Remote Inference Service**: X-AnyLabeling-Server based remote inference service - [Installation Guide](https://github.com/CVHub520/X-AnyLabeling-Server)
-> 1. **Video Object Tracking**: Segment Anything video object tracking ([SAM 2](../../examples/interactive_video_object_segmentation/sam2/README.md) | [SAM 3](../../examples/interactive_video_object_segmentation/sam3/README.md))
-> 2. **Bounding Box Generation**: UPN-based bounding box generation - [Installation Guide](../../examples/detection/hbb/README.md)
-> 3. **Interactive Detection & Segmentation**: Interactive object detection and segmentation with visual and text prompts - [Installation Guide](../../examples/detection/hbb/README.md)
-> 4. **Smart Detection & Segmentation**: Detection and segmentation with visual prompts, text prompts, or prompt-free modes ([YOLOE](../../examples/grounding/yoloe/README.md) | [SAM 3](../../examples/grounding/sam3/README.md) | [LocateAnything](../../examples/grounding/locateanything/README.md))
-> 5. **One-Click Training Platform**: Ultralytics framework-based training platform - [Installation Guide](../../examples/training/ultralytics/README.md)
-> 6. **Multimodal Vision Model**: Rex-Omni based object detection, keypoint detection (person/hand/animal), OCR, Pointing, visual prompt localization - [Installation Guide](../../examples/vision_language/rexomni/README.md)
+> 1. **Interactive segmentation**: SAM2 foreground/background point prompts plus prompt-free AMG full-image segmentation. The built-in model list holds only the two SAM2 sizes; every other model comes in through 自定义模型 - [custom models](./custom_model.md)
+> 2. **YOLO auto-labeling**: detection / instance segmentation / pose / classification, plus the YOLOv8+SAM2 combo; confidence and IoU thresholds and the **class filter** (emit only the selected classes, remembered per project) live under 更多 in the auto-labeling panel - [user guide](./user_guide.md)
+> 3. **YOLO import/export**: HBB / Seg / OBB / Pose against one shared `classes.txt`; the export manifest and the export parameters travel with the project - [CLI and conversion](./cli.md)
+> 4. **One-click training**: the Ultralytics training panel plus the missed-label scan, threshold calibration, data check and iteration board that close the label → train → feed-back loop - [user guide](./user_guide.md)
+> 5. **Project management**: switching and resume points, per-project label list / output dir / model / class filter, review states and rework, in-project search, project bundles and label snapshots - [user guide](./user_guide.md)
+>
+> Advanced features that exist upstream but **not in this fork**, so do not look for them here: the remote inference service (X-AnyLabeling-Server), video object tracking (SAM2/SAM3 video), UPN bounding-box generation, and the text-prompt multimodal models (YOLOE, SAM 3, LocateAnything, Rex-Omni). This build has no model types for them and no interface path that could trigger them; use upstream X-AnyLabeling if you need those.
 
 ### 1.1 Prerequisites
 
