@@ -51,7 +51,7 @@ Additionally, it is highly recommended to import the exported `*.onnx` file usin
 
 After preparing the ONNX file, find and copy the corresponding configuration from the [Model Zoo](./model_zoo.md).
 
-Taking [yolov5s.yaml](../../anylabeling/configs/auto_labeling/yolov5s.yaml) as an example, let's look at its content:
+Taking [yolov5s.yaml](https://github.com/CVHub520/X-AnyLabeling/blob/main/anylabeling/configs/auto_labeling/yolov5s.yaml) as an example, let's look at its content:
 
 ```YAML
 type: yolov5
@@ -160,7 +160,7 @@ The exported `.engine` file may include a JSON metadata header written by Ultral
 
 - **Configure the model**
 
-Refer to [yolo26s_trt.yaml](../../anylabeling/configs/auto_labeling/yolo26s_trt.yaml), point `model_path` to the `.engine` file, and explicitly set `engine: trt`:
+Refer to [yolo26s_trt.yaml](https://github.com/CVHub520/X-AnyLabeling/blob/main/anylabeling/configs/auto_labeling/yolo26s_trt.yaml), point `model_path` to the `.engine` file, and explicitly set `engine: trt`:
 
 ```YAML
 type: yolo26
@@ -188,7 +188,7 @@ Here, we use a multi-class semantic segmentation model, `U-Net`, as an example. 
 
 Export the `ONNX` model, ensuring the output node dimension is `[1, C, H, W]`, where `C` is the total number of classes (including the background class).
 
-> ONNX is not the only supported format; an adapter may use PyTorch, OpenVINO, or TensorRT instead. For a SAM 2 video-tracking example, see the [installation guide](../../examples/interactive_video_object_segmentation/sam2/README.md), [configuration](../../anylabeling/configs/auto_labeling/sam2_hiera_base_video.yaml), and [implementation](../../anylabeling/services/auto_labeling/segment_anything_2_video.py).
+> ONNX is not the only format: this build's YOLO adapter supports onnxruntime (default), `dnn` (OpenCV DNN) and `trt` (TensorRT) through `engine`. Video object tracking is **not part of this build** (SAM2/SAM3 video belongs to upstream), so the [installation guide](../../examples/interactive_video_object_segmentation/sam2/README.md), [configuration](https://github.com/CVHub520/X-AnyLabeling/blob/main/anylabeling/configs/auto_labeling/sam2_hiera_base_video.yaml) and [implementation](https://github.com/CVHub520/X-AnyLabeling/blob/main/anylabeling/services/auto_labeling/segment_anything_2_video.py) above show what upstream looks like and have no counterpart here.
 
 **b. Define Configuration File**
 

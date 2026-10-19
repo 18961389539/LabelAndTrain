@@ -51,7 +51,7 @@ python export.py --weights yolov5s.pt --include onnx
 
 准备好 ONNX 文件后，在[模型列表](./model_zoo.md)中找到并复制对应模型的配置文件。
 
-以 [yolov5s.yaml](../../anylabeling/configs/auto_labeling/yolov5s.yaml) 为例，其内容如下：
+以 [yolov5s.yaml](https://github.com/CVHub520/X-AnyLabeling/blob/main/anylabeling/configs/auto_labeling/yolov5s.yaml) 为例，其内容如下：
 
 ```YAML
 type: yolov5
@@ -160,7 +160,7 @@ uv pip install tensorrt cuda-python
 
 - **配置模型**
 
-参考 [yolo26s_trt.yaml](../../anylabeling/configs/auto_labeling/yolo26s_trt.yaml) 配置，将 `model_path` 指向 `.engine` 文件，并显式指定 `engine: trt`：
+参考 [yolo26s_trt.yaml](https://github.com/CVHub520/X-AnyLabeling/blob/main/anylabeling/configs/auto_labeling/yolo26s_trt.yaml) 配置，将 `model_path` 指向 `.engine` 文件，并显式指定 `engine: trt`：
 
 ```YAML
 type: yolo26
@@ -189,7 +189,7 @@ engine: trt
 
 导出 `ONNX` 模型，确保输出节点的维度为 `[1, C, H, W]`，其中 `C` 为总的类别数（包含背景类）。
 
-> ONNX 并非唯一可用格式，也可以根据适配器需要使用 PyTorch、OpenVINO 或 TensorRT。以 SAM 2 视频目标追踪为例，可参考[安装指南](../../examples/interactive_video_object_segmentation/sam2/README.md)、[配置文件](../../anylabeling/configs/auto_labeling/sam2_hiera_base_video.yaml)和[推理实现](../../anylabeling/services/auto_labeling/segment_anything_2_video.py)。
+> ONNX 并非唯一可用格式：本构建的 YOLO 适配器按 `engine` 支持默认的 onnxruntime、`dnn`（OpenCV DNN）与 `trt`（TensorRT）。但**视频目标追踪不在本构建里**（SAM2/SAM3 video 属于上游）；上面链接里的[安装指南](../../examples/interactive_video_object_segmentation/sam2/README.md)、[配置文件](https://github.com/CVHub520/X-AnyLabeling/blob/main/anylabeling/configs/auto_labeling/sam2_hiera_base_video.yaml)与[推理实现](https://github.com/CVHub520/X-AnyLabeling/blob/main/anylabeling/services/auto_labeling/segment_anything_2_video.py)都只是上游的样子，照抄到本仓库不会有对应功能。
 
 **b. 定义配置文件**
 
