@@ -29,6 +29,9 @@ from anylabeling.views.labeling.logger import logger
 from anylabeling.views.labeling.provenance import stamp_model_shapes
 from anylabeling.views.labeling.shape import Shape
 from anylabeling.views.labeling.utils._io import io_open
+from anylabeling.views.labeling.utils.session_snapshot import (
+    snapshot_before_label_write,
+)
 from anylabeling.views.labeling.utils.yolo_detect import (
     merge_class_names,
     write_yolo_detect_sidecar,
@@ -291,6 +294,7 @@ def save_classification_predictions(self, image_file, predictions):
     else:
         data.pop("predictions", None)
 
+    snapshot_before_label_write(label_file)
     with io_open(label_file, "w") as handle:
         json.dump(data, handle, ensure_ascii=False, indent=2)
     return True
@@ -372,6 +376,11 @@ def save_auto_labeling_result(self, image_file, auto_labeling_result):
                 "description": new_description,
             }
 
+        # A batch run rewrites the label file of every image it touches, and
+        # with 保留已有标注 off that means the model's shapes replace whatever
+        # a person drew -- hundreds of files, no undo. The pre-run state goes
+        # into the same .label_backups/ runs the single-image save uses.
+        snapshot_before_label_write(label_file)
         with io_open(label_file, "w") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
 
