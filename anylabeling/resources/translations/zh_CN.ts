@@ -1,4 +1,5 @@
-<?xml version='1.0' encoding='utf-8'?>
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE TS>
 <TS version="2.0">
   <context>
     <name>AutoLabelingWidget</name>
@@ -247,34 +248,34 @@ Only the registry entry is removed. The config/weight files on disk are kept:
 </context><context>
     <name>BatchRunOptionsDialog</name>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="50" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="53" />
         <source>批量自动标注</source>
         <translation>批量自动标注</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="55" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="58" />
         <source>将从当前图（#%d）处理到最后（#%d）。
 当前图之前的图片不会处理。</source>
         <translation>将从当前图（#%d）处理到最后（#%d）。
 当前图之前的图片不会处理。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="60" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="63" />
         <source>将只处理当前这一张图。</source>
         <translation>将只处理当前这一张图。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="62" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="65" />
         <source>跳过已有标注的图片</source>
         <translation>跳过已有标注的图片</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="65" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="68" />
         <source>已有 JSON 标注的图片直接跳过，避免覆盖人工结果</source>
         <translation>已有 JSON 标注的图片直接跳过，避免覆盖人工结果</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="69" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="72" />
         <source>处理过程中可点「暂停」随时停下。失败的图片结束后可点回去检查。</source>
         <translation>处理过程中可点「暂停」随时停下。失败的图片结束后可点回去检查。</translation>
     </message>
@@ -671,22 +672,22 @@ Only the registry entry is removed. The config/weight files on disk are kept:
 </context><context>
     <name>FailedImagesDialog</name>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="90" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="93" />
         <source>失败图片</source>
         <translation>失败图片</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="94" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="97" />
         <source>以下图片自动标注失败，双击或点打开可跳转：</source>
         <translation>以下图片自动标注失败，双击或点打开可跳转：</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="102" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="105" />
         <source>打开选中图片</source>
         <translation>打开选中图片</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="105" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="108" />
         <source>关闭</source>
         <translation>关闭</translation>
     </message>
@@ -766,52 +767,52 @@ Only the registry entry is removed. The config/weight files on disk are kept:
 </context><context>
     <name>LabelDialog</name>
     <message>
-        <location filename="..\..\views\labeling\widgets\label_dialog.py" line="1399" />
+        <location filename="..\..\views\labeling\widgets\label_dialog.py" line="1406" />
         <source>Enter object label</source>
         <translation>输入对象标签</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\label_dialog.py" line="1461" />
+        <location filename="..\..\views\labeling\widgets\label_dialog.py" line="1468" />
         <source>Group ID</source>
         <translation>群组编号</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\label_dialog.py" line="1471" />
+        <location filename="..\..\views\labeling\widgets\label_dialog.py" line="1478" />
         <source>困难标志</source>
         <translation>困难标志</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\label_dialog.py" line="1477" />
+        <location filename="..\..\views\labeling\widgets\label_dialog.py" line="1484" />
         <source>Enter linking, e.g., [0,1]</source>
         <translation>输入链接，如：[0,1]</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\label_dialog.py" line="1491" />
+        <location filename="..\..\views\labeling\widgets\label_dialog.py" line="1498" />
         <source>Add</source>
         <translation>新增</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\label_dialog.py" line="1528" />
+        <location filename="..\..\views\labeling\widgets\label_dialog.py" line="1535" />
         <source>Label description</source>
         <translation>标签描述</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\label_dialog.py" line="1603" />
+        <location filename="..\..\views\labeling\widgets\label_dialog.py" line="1610" />
         <source>Duplicate Entry</source>
         <translation>重复输入</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\label_dialog.py" line="1604" />
+        <location filename="..\..\views\labeling\widgets\label_dialog.py" line="1611" />
         <source>This linking pair already exists.</source>
         <translation>当前链接已存在。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\label_dialog.py" line="1620" />
+        <location filename="..\..\views\labeling\widgets\label_dialog.py" line="1627" />
         <source>Invalid Input</source>
         <translation>无效输入</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\label_dialog.py" line="1621" />
+        <location filename="..\..\views\labeling\widgets\label_dialog.py" line="1628" />
         <source>Please enter a valid list of linking pairs like [1,2].</source>
         <translation>请输入有效链接，如：[1,2]</translation>
     </message>
@@ -834,78 +835,78 @@ Only the registry entry is removed. The config/weight files on disk are kept:
 </context><context>
     <name>LabelModifyDialog</name>
     <message>
-        <location filename="..\..\views\labeling\widgets\label_dialog.py" line="798" />
+        <location filename="..\..\views\labeling\widgets\label_dialog.py" line="805" />
         <source>Label Change Manager</source>
         <translation>标签管理器</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\label_dialog.py" line="894" />
-        <location filename="..\..\views\labeling\widgets\label_dialog.py" line="830" />
+        <location filename="..\..\views\labeling\widgets\label_dialog.py" line="901" />
+        <location filename="..\..\views\labeling\widgets\label_dialog.py" line="837" />
         <source>Double-click to copy label text</source>
         <translation>双击复制标签文本</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\label_dialog.py" line="848" />
+        <location filename="..\..\views\labeling\widgets\label_dialog.py" line="855" />
         <source>起始：</source>
         <translation type="unfinished">起始：</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\label_dialog.py" line="858" />
+        <location filename="..\..\views\labeling\widgets\label_dialog.py" line="865" />
         <source>结束：</source>
         <translation type="unfinished">结束：</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\label_dialog.py" line="1016" />
+        <location filename="..\..\views\labeling\widgets\label_dialog.py" line="1023" />
         <source>Label copied to clipboard</source>
         <translation>标签已复制到剪贴板</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\label_dialog.py" line="1029" />
+        <location filename="..\..\views\labeling\widgets\label_dialog.py" line="1036" />
         <source>Select All</source>
         <translation>全选</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\label_dialog.py" line="1030" />
+        <location filename="..\..\views\labeling\widgets\label_dialog.py" line="1037" />
         <source>Deselect All</source>
         <translation>取消全选</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\label_dialog.py" line="1108" />
+        <location filename="..\..\views\labeling\widgets\label_dialog.py" line="1115" />
         <source>Labels modified successfully!</source>
         <translation>标签修改成功！</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\label_dialog.py" line="1116" />
+        <location filename="..\..\views\labeling\widgets\label_dialog.py" line="1123" />
         <source>An error occurred while updating the labels.</source>
         <translation>更新标签时发生错误。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\label_dialog.py" line="1313" />
+        <location filename="..\..\views\labeling\widgets\label_dialog.py" line="1320" />
         <source>将重写 %1 个标注文件，删除 %2 个标注框，重命名 %3 个标注框。</source>
         <translation>将重写 %1 个标注文件，删除 %2 个标注框，重命名 %3 个标注框。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\label_dialog.py" line="1321" />
+        <location filename="..\..\views\labeling\widgets\label_dialog.py" line="1328" />
         <source>范围：第 %1–%2 张，共 %3 张。</source>
         <translation>范围：第 %1–%2 张，共 %3 张。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\label_dialog.py" line="1329" />
+        <location filename="..\..\views\labeling\widgets\label_dialog.py" line="1336" />
         <source>确认批量修改</source>
         <translation>确认批量修改</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\label_dialog.py" line="1330" />
+        <location filename="..\..\views\labeling\widgets\label_dialog.py" line="1337" />
         <source>此操作不可撤销，是否继续？</source>
         <translation>此操作不可撤销，是否继续？</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\label_dialog.py" line="1358" />
+        <location filename="..\..\views\labeling\widgets\label_dialog.py" line="1365" />
         <source>Invalid Range</source>
         <translation>无效范围</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\label_dialog.py" line="1359" />
+        <location filename="..\..\views\labeling\widgets\label_dialog.py" line="1366" />
         <source>Please enter a valid range.</source>
         <translation>请输入有效范围。</translation>
     </message>
@@ -1171,13 +1172,13 @@ Only the registry entry is removed. The config/weight files on disk are kept:
         <location filename="..\..\views\labeling\utils\upload.py" line="267" />
         <location filename="..\..\views\labeling\utils\upload.py" line="211" />
         <location filename="..\..\views\labeling\utils\upload.py" line="102" />
-        <location filename="..\..\views\labeling\utils\export.py" line="1307" />
-        <location filename="..\..\views\labeling\utils\export.py" line="1269" />
-        <location filename="..\..\views\labeling\utils\export.py" line="1095" />
-        <location filename="..\..\views\labeling\utils\export.py" line="1051" />
-        <location filename="..\..\views\labeling\utils\export.py" line="812" />
-        <location filename="..\..\views\labeling\utils\export.py" line="780" />
-        <location filename="..\..\views\labeling\utils\export.py" line="670" />
+        <location filename="..\..\views\labeling\utils\export.py" line="1344" />
+        <location filename="..\..\views\labeling\utils\export.py" line="1306" />
+        <location filename="..\..\views\labeling\utils\export.py" line="1132" />
+        <location filename="..\..\views\labeling\utils\export.py" line="1088" />
+        <location filename="..\..\views\labeling\utils\export.py" line="846" />
+        <location filename="..\..\views\labeling\utils\export.py" line="814" />
+        <location filename="..\..\views\labeling\utils\export.py" line="699" />
         <location filename="..\..\views\labeling\utils\export.py" line="173" />
         <location filename="..\..\views\labeling\utils\crop.py" line="368" />
         <location filename="..\..\views\labeling\utils\crop.py" line="325" />
@@ -1191,9 +1192,9 @@ Only the registry entry is removed. The config/weight files on disk are kept:
         <location filename="..\..\views\labeling\utils\visualization.py" line="201" />
         <location filename="..\..\views\labeling\utils\upload.py" line="456" />
         <location filename="..\..\views\labeling\utils\upload.py" line="217" />
-        <location filename="..\..\views\labeling\utils\export.py" line="1275" />
-        <location filename="..\..\views\labeling\utils\export.py" line="1057" />
-        <location filename="..\..\views\labeling\utils\export.py" line="676" />
+        <location filename="..\..\views\labeling\utils\export.py" line="1312" />
+        <location filename="..\..\views\labeling\utils\export.py" line="1094" />
+        <location filename="..\..\views\labeling\utils\export.py" line="705" />
         <location filename="..\..\views\labeling\utils\crop.py" line="330" />
         <location filename="..\..\views\labeling\label_widget.py" line="891" />
         <source>OK</source>
@@ -3097,48 +3098,48 @@ Original images backed up to:
         <translation>EXIF 处理完成</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="164" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="167" />
         <source>Processing completed successfully!</source>
         <translation>处理完成。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="170" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="173" />
         <source>Processing finished: %d succeeded, %d failed (of %d total).</source>
         <translation>处理结束：成功 %d 张，失败 %d 张（共 %d 张）。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="177" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="180" />
         <source>Processing completed successfully! (%d images processed)</source>
         <translation>处理完成。（共处理 %d 张图）</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="552" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="561" />
         <source>Error occurred while processing images!</source>
         <translation>处理图片时出错。</translation>
     </message>
     <message>
         <location filename="..\..\views\labeling\utils\crop.py" line="367" />
-        <location filename="..\..\views\labeling\utils\batch.py" line="575" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="584" />
         <source>Processing...</source>
         <translation>处理中...</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="576" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="585" />
         <source>暂停</source>
         <translation>暂停</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="583" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="592" />
         <source>Batch Processing</source>
         <translation>批量处理</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="679" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="688" />
         <source>Model is not loaded. Choose a mode to continue.</source>
         <translation>模型尚未加载。选择一个模式以继续。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\batch.py" line="696" />
+        <location filename="..\..\views\labeling\utils\batch.py" line="705" />
         <source>Invalid model type, please choose a valid model_type to run.</source>
         <translation>模型类型无效，请选择一个有效的 model_type 后再运行。</translation>
     </message>
@@ -3168,9 +3169,9 @@ Original images backed up to:
     <message>
         <location filename="..\..\views\labeling\utils\upload.py" line="427" />
         <location filename="..\..\views\labeling\utils\upload.py" line="196" />
-        <location filename="..\..\views\labeling\utils\export.py" line="1254" />
-        <location filename="..\..\views\labeling\utils\export.py" line="1007" />
-        <location filename="..\..\views\labeling\utils\export.py" line="557" />
+        <location filename="..\..\views\labeling\utils\export.py" line="1291" />
+        <location filename="..\..\views\labeling\utils\export.py" line="1044" />
+        <location filename="..\..\views\labeling\utils\export.py" line="562" />
         <location filename="..\..\views\labeling\utils\crop.py" line="289" />
         <source>Browse</source>
         <translation>浏览</translation>
@@ -3190,9 +3191,9 @@ Original images backed up to:
         <location filename="..\..\views\labeling\utils\upload.py" line="527" />
         <location filename="..\..\views\labeling\utils\upload.py" line="274" />
         <location filename="..\..\views\labeling\utils\upload.py" line="109" />
-        <location filename="..\..\views\labeling\utils\export.py" line="1314" />
-        <location filename="..\..\views\labeling\utils\export.py" line="1102" />
-        <location filename="..\..\views\labeling\utils\export.py" line="819" />
+        <location filename="..\..\views\labeling\utils\export.py" line="1351" />
+        <location filename="..\..\views\labeling\utils\export.py" line="1139" />
+        <location filename="..\..\views\labeling\utils\export.py" line="853" />
         <location filename="..\..\views\labeling\utils\crop.py" line="375" />
         <source>Progress</source>
         <translation>进度</translation>
@@ -3294,7 +3295,7 @@ Original images backed up to:
         <translation>当前标签列表</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="1199" />
+        <location filename="..\..\views\labeling\utils\export.py" line="1236" />
         <location filename="..\..\views\labeling\utils\export.py" line="192" />
         <source>Select a specific classes file</source>
         <translation>选择类别文件</translation>
@@ -3320,145 +3321,150 @@ Original images backed up to:
         <translation>旋转框有顶点落在画面外</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="304" />
+        <location filename="..\..\views\labeling\utils\export.py" line="303" />
+        <source>旋转框越界顶点裁剪后面积为零（整个框在画面外）</source>
+        <translation>旋转框越界顶点裁剪后面积为零（整个框在画面外）</translation>
+    </message>
+    <message>
+        <location filename="..\..\views\labeling\utils\export.py" line="309" />
         <source>形状类型 %s 无法作为姿态关键点导出</source>
         <translation>形状类型 %s 无法作为姿态关键点导出</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="312" />
+        <location filename="..\..\views\labeling\utils\export.py" line="317" />
         <source>形状类型 %1$s 不属于 %2$s 导出</source>
         <translation>形状类型 %1$s 不属于 %2$s 导出</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="336" />
+        <location filename="..\..\views\labeling\utils\export.py" line="341" />
         <source>导出完成：%d/%d 张图，%d 个标注</source>
         <translation>导出完成：%d/%d 张图，%d 个标注</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="343" />
+        <location filename="..\..\views\labeling\utils\export.py" line="348" />
         <source>按「仅导出已确认图片」跳过 %d 张（未检查或需返工）</source>
         <translation>按「仅导出已确认图片」跳过 %d 张（未检查或需返工）</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="351" />
+        <location filename="..\..\views\labeling\utils\export.py" line="356" />
         <source>已复制 %d 张图片</source>
         <translation>已复制 %d 张图片</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="356" />
+        <location filename="..\..\views\labeling\utils\export.py" line="361" />
         <source>已写入 %s</source>
         <translation>已写入 %s</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="361" />
+        <location filename="..\..\views\labeling\utils\export.py" line="366" />
         <source>已写入 %s（train/val 需按布局补填）</source>
         <translation>已写入 %s（train/val 需按布局补填）</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="368" />
+        <location filename="..\..\views\labeling\utils\export.py" line="373" />
         <source>已写入 %s（本次的类别来源、筛选条件与跳过明细）</source>
         <translation>已写入 %s（本次的类别来源、筛选条件与跳过明细）</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="377" />
+        <location filename="..\..\views\labeling\utils\export.py" line="382" />
         <source>没有标签文件（按空标注处理）：%d 张</source>
         <translation>没有标签文件（按空标注处理）：%d 张</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="386" />
+        <location filename="..\..\views\labeling\utils\export.py" line="391" />
         <source>跳过 %d 个无法转换的标注：</source>
         <translation>跳过 %d 个无法转换的标注：</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="396" />
+        <location filename="..\..\views\labeling\utils\export.py" line="401" />
         <source>若不应跳过，请检查类别列表与形状类型（例如 hbb 只导出矩形框）。</source>
         <translation>若不应跳过，请检查类别列表与形状类型（例如 hbb 只导出矩形框）。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="408" />
+        <location filename="..\..\views\labeling\utils\export.py" line="413" />
         <source>已复制输出路径</source>
         <translation>已复制输出路径</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="412" />
+        <location filename="..\..\views\labeling\utils\export.py" line="417" />
         <source>复制输出路径失败</source>
         <translation>复制输出路径失败</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="427" />
+        <location filename="..\..\views\labeling\utils\export.py" line="432" />
         <source>打开输出目录</source>
         <translation>打开输出目录</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="433" />
+        <location filename="..\..\views\labeling\utils\export.py" line="438" />
         <source>复制输出路径</source>
         <translation>复制输出路径</translation>
     </message>
     <message>
         <location filename="..\..\views\labeling\utils\upload.py" line="343" />
-        <location filename="..\..\views\labeling\utils\export.py" line="457" />
+        <location filename="..\..\views\labeling\utils\export.py" line="462" />
         <source>Select a specific yolo-pose config file</source>
         <translation>选择 yolo-pose 配置文件</translation>
     </message>
     <message>
         <location filename="..\..\views\labeling\utils\upload.py" line="357" />
-        <location filename="..\..\views\labeling\utils\export.py" line="1186" />
-        <location filename="..\..\views\labeling\utils\export.py" line="470" />
+        <location filename="..\..\views\labeling\utils\export.py" line="1223" />
+        <location filename="..\..\views\labeling\utils\export.py" line="475" />
         <source>Invalid pose config file:
 %s</source>
         <translation>姿态配置文件无效：
 %s</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="489" />
+        <location filename="..\..\views\labeling\utils\export.py" line="494" />
         <source>The class list is empty - nothing can be exported.</source>
         <translation>类别列表为空，没有可导出的内容。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="1211" />
-        <location filename="..\..\views\labeling\utils\export.py" line="968" />
-        <location filename="..\..\views\labeling\utils\export.py" line="510" />
+        <location filename="..\..\views\labeling\utils\export.py" line="1248" />
+        <location filename="..\..\views\labeling\utils\export.py" line="1005" />
+        <location filename="..\..\views\labeling\utils\export.py" line="515" />
         <source>Export options</source>
         <translation>导出选项</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="1222" />
-        <location filename="..\..\views\labeling\utils\export.py" line="979" />
-        <location filename="..\..\views\labeling\utils\export.py" line="521" />
+        <location filename="..\..\views\labeling\utils\export.py" line="1259" />
+        <location filename="..\..\views\labeling\utils\export.py" line="1016" />
+        <location filename="..\..\views\labeling\utils\export.py" line="526" />
         <source>Export path</source>
         <translation>导出路径</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="1244" />
-        <location filename="..\..\views\labeling\utils\export.py" line="1238" />
-        <location filename="..\..\views\labeling\utils\export.py" line="997" />
-        <location filename="..\..\views\labeling\utils\export.py" line="991" />
-        <location filename="..\..\views\labeling\utils\export.py" line="547" />
-        <location filename="..\..\views\labeling\utils\export.py" line="541" />
+        <location filename="..\..\views\labeling\utils\export.py" line="1281" />
+        <location filename="..\..\views\labeling\utils\export.py" line="1275" />
+        <location filename="..\..\views\labeling\utils\export.py" line="1034" />
+        <location filename="..\..\views\labeling\utils\export.py" line="1028" />
+        <location filename="..\..\views\labeling\utils\export.py" line="552" />
+        <location filename="..\..\views\labeling\utils\export.py" line="546" />
         <source>Select Export Directory</source>
         <translation>选择导出目录</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="1018" />
-        <location filename="..\..\views\labeling\utils\export.py" line="568" />
+        <location filename="..\..\views\labeling\utils\export.py" line="1055" />
+        <location filename="..\..\views\labeling\utils\export.py" line="573" />
         <source>Export Options</source>
         <translation>导出选项</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="1023" />
-        <location filename="..\..\views\labeling\utils\export.py" line="573" />
+        <location filename="..\..\views\labeling\utils\export.py" line="1060" />
+        <location filename="..\..\views\labeling\utils\export.py" line="578" />
         <source>Save with images?</source>
         <translation>同时复制图片？</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="1029" />
-        <location filename="..\..\views\labeling\utils\export.py" line="579" />
+        <location filename="..\..\views\labeling\utils\export.py" line="1066" />
+        <location filename="..\..\views\labeling\utils\export.py" line="584" />
         <source>Skip empty labels?</source>
         <translation>跳过空标注？</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="1033" />
-        <location filename="..\..\views\labeling\utils\export.py" line="585" />
+        <location filename="..\..\views\labeling\utils\export.py" line="1070" />
+        <location filename="..\..\views\labeling\utils\export.py" line="590" />
         <source>Skip empty labels / 跳过空标注
 
 默认关闭：空标注（确认无目标的负样本图）会导出为空文件，作为背景样本参与 YOLO 训练。
@@ -3471,12 +3477,30 @@ Original images backed up to:
 勾选后：空标注的图片不会导出对应标签文件，这些负样本将从训练数据中排除（通常不建议，除非你确实不要背景样本）。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="599" />
+        <location filename="..\..\views\labeling\utils\export.py" line="606" />
+        <source>越界旋转框裁剪到图像内</source>
+        <translation>越界旋转框裁剪到图像内</translation>
+    </message>
+    <message>
+        <location filename="..\..\views\labeling\utils\export.py" line="614" />
+        <source>OBB 越界处理 / out-of-bounds rotations
+
+默认：任一顶点落在图像外的旋转框不导出，只计入导出结果。
+
+勾选后：把越界顶点逐点裁剪到图像边缘再导出；完全在图像外、裁剪后退化为零面积的框仍然跳过。逐点裁剪会改变框的形状，勾选前请确认这正是你要的结果。</source>
+        <translation>OBB 越界处理 / out-of-bounds rotations
+
+默认：任一顶点落在图像外的旋转框不导出，只计入导出结果。
+
+勾选后：把越界顶点逐点裁剪到图像边缘再导出；完全在图像外、裁剪后退化为零面积的框仍然跳过。逐点裁剪会改变框的形状，勾选前请确认这正是你要的结果。</translation>
+    </message>
+    <message>
+        <location filename="..\..\views\labeling\utils\export.py" line="628" />
         <source>仅导出「已确认」的图片</source>
         <translation>仅导出「已确认」的图片</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="605" />
+        <location filename="..\..\views\labeling\utils\export.py" line="634" />
         <source>Only export confirmed images / 仅导出已确认的图片
 
 默认关闭：导出当前文件夹里的全部图片，含未检查与「需返工」的。
@@ -3491,29 +3515,29 @@ Original images backed up to:
 训练侧本来就有同样的过滤（只用已检查的图片），勾上它可以让导出与训练集合保持一致。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="622" />
+        <location filename="..\..\views\labeling\utils\export.py" line="651" />
         <source>在导出目录写入 classes.txt（%d 个类别）</source>
         <translation>在导出目录写入 classes.txt（%d 个类别）</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="631" />
+        <location filename="..\..\views\labeling\utils\export.py" line="660" />
         <source>勾选后会在导出目录生成 classes.txt，类别顺序与本次导出所用的列表一致；训练前不必再手工摆一份。
 类别来源：%s</source>
         <translation>勾选后会在导出目录生成 classes.txt，类别顺序与本次导出所用的列表一致；训练前不必再手工摆一份。
 类别来源：%s</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="639" />
+        <location filename="..\..\views\labeling\utils\export.py" line="668" />
         <source>项目标签列表</source>
         <translation>项目标签列表</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="645" />
+        <location filename="..\..\views\labeling\utils\export.py" line="674" />
         <source>写入导出记录（%s）</source>
         <translation>写入导出记录（%s）</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="650" />
+        <location filename="..\..\views\labeling\utils\export.py" line="679" />
         <source>写入导出记录 export_manifest.json / export record
 
 勾选后会在导出目录生成一份 JSON，记下本次导出的类别列表及其来源、筛选条件（仅已确认 / 跳过空标注 / 复制图片）、导出与跳过的数量，以及源数据的检查结果（无标注 / 空标注 / 读不出的文件 / 不在类别表里的标签）。
@@ -3526,51 +3550,51 @@ Original images backed up to:
 训练不读这个文件，删掉也不影响；它是为了几个月后还能回答「这批标签是怎么导出来的」。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="703" />
+        <location filename="..\..\views\labeling\utils\export.py" line="732" />
         <source>Export cancelled.
 The current labels could not be saved first.</source>
         <translation>已取消导出。
 无法先保存当前标签列表。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="737" />
+        <location filename="..\..\views\labeling\utils\export.py" line="771" />
         <source>没有「已确认」的图片可导出（共 %d 张未确认）。
 先在文件列表里把要看过的图标成「已检查」，或取消勾选「仅导出已确认的图片」。</source>
         <translation>没有「已确认」的图片可导出（共 %d 张未确认）。
 先在文件列表里把要看过的图标成「已检查」，或取消勾选「仅导出已确认的图片」。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="759" />
+        <location filename="..\..\views\labeling\utils\export.py" line="793" />
         <source>导出前检查</source>
         <translation>导出前检查</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="762" />
+        <location filename="..\..\views\labeling\utils\export.py" line="796" />
         <source>这批数据无法完整导出。</source>
         <translation>这批数据无法完整导出。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="769" />
+        <location filename="..\..\views\labeling\utils\export.py" line="803" />
         <source>继续导出：类别不在表里的形状不会出现在结果里；读不出来的标注文件会让本轮导出中断，留下不完整的目录。</source>
         <translation>继续导出：类别不在表里的形状不会出现在结果里；读不出来的标注文件会让本轮导出中断，留下不完整的目录。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="776" />
+        <location filename="..\..\views\labeling\utils\export.py" line="810" />
         <source>仍然导出</source>
         <translation>仍然导出</translation>
     </message>
     <message>
         <location filename="..\..\views\labeling\utils\visualization.py" line="347" />
-        <location filename="..\..\views\labeling\utils\export.py" line="1306" />
-        <location filename="..\..\views\labeling\utils\export.py" line="1094" />
-        <location filename="..\..\views\labeling\utils\export.py" line="811" />
+        <location filename="..\..\views\labeling\utils\export.py" line="1343" />
+        <location filename="..\..\views\labeling\utils\export.py" line="1131" />
+        <location filename="..\..\views\labeling\utils\export.py" line="845" />
         <source>Exporting...</source>
         <translation>正在导出…</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="1328" />
-        <location filename="..\..\views\labeling\utils\export.py" line="1138" />
-        <location filename="..\..\views\labeling\utils\export.py" line="925" />
+        <location filename="..\..\views\labeling\utils\export.py" line="1365" />
+        <location filename="..\..\views\labeling\utils\export.py" line="1175" />
+        <location filename="..\..\views\labeling\utils\export.py" line="962" />
         <source>Exporting annotations successfully!
 Results have been saved to:
 %s</source>
@@ -3579,7 +3603,7 @@ Results have been saved to:
 %s</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\export.py" line="1173" />
+        <location filename="..\..\views\labeling\utils\export.py" line="1210" />
         <source>Select a specific coco-pose config file</source>
         <translation>选择 coco-pose 配置文件</translation>
     </message>
@@ -3685,13 +3709,13 @@ Results have been saved to:
     </message>
     <message>
         <location filename="..\..\views\labeling\widgets\attributes_controller.py" line="452" />
-        <location filename="..\..\views\labeling\utils\file_lifecycle.py" line="855" />
+        <location filename="..\..\views\labeling\utils\file_lifecycle.py" line="858" />
         <source>Error saving label data</source>
         <translation>保存标签数据时出错</translation>
     </message>
     <message>
         <location filename="..\..\views\labeling\widgets\attributes_controller.py" line="455" />
-        <location filename="..\..\views\labeling\utils\file_lifecycle.py" line="858" />
+        <location filename="..\..\views\labeling\utils\file_lifecycle.py" line="861" />
         <source>&lt;b&gt;%s&lt;/b&gt;</source>
         <translation>&lt;b&gt;%s&lt;/b&gt;</translation>
     </message>
@@ -3805,32 +3829,32 @@ This warning will only be shown once. Do you want to continue?</source>
         <translation> · 文件夹 %1 个文件</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\missing_classes_hint.py" line="107" />
+        <location filename="..\..\views\labeling\utils\missing_classes_hint.py" line="132" />
         <source>还没有类别</source>
         <translation>还没有类别</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\missing_classes_hint.py" line="110" />
+        <location filename="..\..\views\labeling\utils\missing_classes_hint.py" line="135" />
         <source>当前没有预定义类别。导入 classes.txt 或打开标签管理器后再画框，可以减少每张图重复输入。</source>
         <translation>当前没有预定义类别。导入 classes.txt 或打开标签管理器后再画框，可以减少每张图重复输入。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\missing_classes_hint.py" line="117" />
+        <location filename="..\..\views\labeling\utils\missing_classes_hint.py" line="142" />
         <source>导入 classes.txt</source>
         <translation>导入 classes.txt</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\missing_classes_hint.py" line="121" />
+        <location filename="..\..\views\labeling\utils\missing_classes_hint.py" line="146" />
         <source>打开标签管理器</source>
         <translation>打开标签管理器</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\missing_classes_hint.py" line="125" />
+        <location filename="..\..\views\labeling\utils\missing_classes_hint.py" line="150" />
         <source>不再提示</source>
         <translation>不再提示</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\missing_classes_hint.py" line="129" />
+        <location filename="..\..\views\labeling\utils\missing_classes_hint.py" line="154" />
         <source>稍后再说</source>
         <translation>稍后再说</translation>
     </message>
@@ -4229,13 +4253,13 @@ This warning will only be shown once. Do you want to continue?</source>
         <translation>跳到首个结果</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="2023" />
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1904" />
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1612" />
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1535" />
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1443" />
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1383" />
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1286" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="2048" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1929" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1637" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1560" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1468" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1408" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1311" />
         <location filename="..\..\views\labeling\utils\smart_tools.py" line="858" />
         <location filename="..\..\views\labeling\utils\smart_tools.py" line="560" />
         <location filename="..\..\views\labeling\utils\smart_tools.py" line="455" />
@@ -4279,11 +4303,11 @@ This warning will only be shown once. Do you want to continue?</source>
         <translation>各类阈值</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="2033" />
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1622" />
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1545" />
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1453" />
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1393" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="2058" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1647" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1570" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1478" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1418" />
         <location filename="..\..\views\labeling\utils\smart_tools.py" line="571" />
         <source>当前没有可分析的图片。</source>
         <translation>当前没有可分析的图片。</translation>
@@ -4396,185 +4420,185 @@ This warning will only be shown once. Do you want to continue?</source>
         <translation>已补充 %1 个标注框。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1321" />
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1297" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1346" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1322" />
         <source>迭代收益看板</source>
         <translation>迭代收益看板</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1298" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1323" />
         <source>每次训练并回灌标注后会自动追加一轮记录。</source>
         <translation>每次训练并回灌标注后会自动追加一轮记录。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1303" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1328" />
         <source>轮次</source>
         <translation>轮次</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1308" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1333" />
         <source>系统建议</source>
         <translation>系统建议</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1311" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1336" />
         <source>下一步</source>
         <translation>下一步</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1407" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1432" />
         <source>太棒了，暂无待复核图片。</source>
         <translation>太棒了，暂无待复核图片。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1420" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1445" />
         <source>已到复核队列末尾。</source>
         <translation>已到复核队列末尾。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1428" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1453" />
         <source>待复核队列 %1/%2</source>
         <translation>待复核队列 %1/%2</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1462" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1487" />
         <source>正在查找重复图片…</source>
         <translation>正在查找重复图片…</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1477" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1502" />
         <source>没有发现可归档的重复图片。</source>
         <translation>没有发现可归档的重复图片。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1485" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1510" />
         <source>一键去重归档</source>
         <translation>一键去重归档</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1486" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1511" />
         <source>将归档 %1 张重复图片及其标注到「%2」文件夹，是否继续？</source>
         <translation>将归档 %1 张重复图片及其标注到「%2」文件夹，是否继续？</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1508" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1533" />
         <source>已归档 %1 项（打开「%2」文件夹可查）</source>
         <translation>已归档 %1 项（打开「%2」文件夹可查）</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1592" />
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1568" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1617" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1593" />
         <source>训练建议</source>
         <translation>训练建议</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1569" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1594" />
         <source>训练前预检与下一轮超参初值，可按推荐手动填入训练面板。</source>
         <translation>训练前预检与下一轮超参初值，可按推荐手动填入训练面板。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1575" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1600" />
         <source>预检</source>
         <translation>预检</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1579" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1604" />
         <source>推荐初值</source>
         <translation>推荐初值</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1644" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1669" />
         <source>未记录来源</source>
         <translation>未记录来源</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1756" />
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1671" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1781" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1696" />
         <source>旧轮模型框盘点</source>
         <translation>旧轮模型框盘点</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1672" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1697" />
         <source>双击条目可跳转到对应图片；勾选条目后可删除。被锁定的框、来源不明的框以及期间被改动过的框都不会被删除。</source>
         <translation>双击条目可跳转到对应图片；勾选条目后可删除。被锁定的框、来源不明的框以及期间被改动过的框都不会被删除。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1679" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1704" />
         <source>概览</source>
         <translation>概览</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1682" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1707" />
         <source>当前模型：%1</source>
         <translation>当前模型：%1</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1687" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1712" />
         <source>未加载</source>
         <translation>未加载</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1693" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1718" />
         <source>可清理的旧轮模型框 %1 个</source>
         <translation>可清理的旧轮模型框 %1 个</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1696" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1721" />
         <source>由其它模型产生，未被本轮结果覆盖</source>
         <translation>由其它模型产生，未被本轮结果覆盖</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1702" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1727" />
         <source>本轮模型框 %1 个</source>
         <translation>本轮模型框 %1 个</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1709" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1734" />
         <source>人工框 %1 个</source>
         <translation>人工框 %1 个</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1716" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1741" />
         <source>来源不明 %1 个</source>
         <translation>来源不明 %1 个</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1719" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1744" />
         <source>早于来源记录功能，不参与清理</source>
         <translation>早于来源记录功能，不参与清理</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1728" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1753" />
         <source>来自 %1（%2 个）</source>
         <translation>来自 %1（%2 个）</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1735" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1760" />
         <source>可清理项</source>
         <translation>可清理项</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1738" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1763" />
         <source>没有其它模型留下的框</source>
         <translation>没有其它模型留下的框</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1747" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1772" />
         <source>删除所选</source>
         <translation>删除所选</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1768" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1793" />
         <source>请先在列表中选择要删除的框。</source>
         <translation>请先在列表中选择要删除的框。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1788" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1813" />
         <source>删除旧轮模型框</source>
         <translation>删除旧轮模型框</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1789" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1814" />
         <source>将从 %1 个文件中删除选中的 %2 个框。
 锁定、来源不明以及报告之后被改动过的框会自动跳过。
 当前打开的图片删除后可用 Ctrl+Z 撤销；其余文件删除前会先备份到 .label_backups，之后可用「从备份恢复标注」取回。</source>
@@ -4583,58 +4607,58 @@ This warning will only be shown once. Do you want to continue?</source>
 当前打开的图片删除后可用 Ctrl+Z 撤销；其余文件删除前会先备份到 .label_backups，之后可用「从备份恢复标注」取回。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1841" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1866" />
         <source>备份失败，已放弃删除，标注文件未作修改。</source>
         <translation>备份失败，已放弃删除，标注文件未作修改。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1849" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1874" />
         <source>已删除 %1 个框（涉及 %2 个文件），备份在 %3</source>
         <translation>已删除 %1 个框（涉及 %2 个文件），备份在 %3</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1857" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1882" />
         <source>未备份</source>
         <translation>未备份</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1861" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1886" />
         <source>；当前图片可直接 Ctrl+Z 撤销</source>
         <translation>；当前图片可直接 Ctrl+Z 撤销</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1868" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1893" />
         <source>没有框被删除。</source>
         <translation>没有框被删除。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1914" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1939" />
         <source>没有找到标注备份（%1 下没有快照）。</source>
         <translation>没有找到标注备份（%1 下没有快照）。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1921" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1946" />
         <source>%1（%2 个文件）</source>
         <translation>%1（%2 个文件）</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1925" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1950" />
         <source> · 自动快照</source>
         <translation> · 自动快照</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1955" />
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1933" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1980" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1958" />
         <source>从备份恢复标注</source>
         <translation>从备份恢复标注</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1934" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1959" />
         <source>选择要恢复的备份（最新在前）：</source>
         <translation>选择要恢复的备份（最新在前）：</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1956" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1981" />
         <source>将用备份 %1 中的 %2 个文件覆盖当前标注。
 被覆盖的文件会先写入一个新的备份；选错了就在列表里再选更新的那一项。
 当前打开且有未保存改动的图片不会被覆盖。</source>
@@ -4643,73 +4667,73 @@ This warning will only be shown once. Do you want to continue?</source>
 当前打开且有未保存改动的图片不会被覆盖。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1974" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1999" />
         <source>备份当前标注失败，已放弃恢复，文件未作修改。</source>
         <translation>备份当前标注失败，已放弃恢复，文件未作修改。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1989" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="2014" />
         <source>已恢复 %1 个标注文件，被覆盖的版本备份在 %2</source>
         <translation>已恢复 %1 个标注文件，被覆盖的版本备份在 %2</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="1999" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="2024" />
         <source>没有文件被恢复。</source>
         <translation>没有文件被恢复。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="2051" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="2076" />
         <source>至少需要一张已标注图片作为模板。</source>
         <translation>至少需要一张已标注图片作为模板。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="2060" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="2085" />
         <source>没有未标注的图片需要预标注。</source>
         <translation>没有未标注的图片需要预标注。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="2076" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="2101" />
         <source>正在匹配相似模板并生成预标注…</source>
         <translation>正在匹配相似模板并生成预标注…</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="2091" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="2116" />
         <source>匹配失败：%1</source>
         <translation>匹配失败：%1</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="2104" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="2129" />
         <source>没有找到与已标注模板足够相似的未标注图片。</source>
         <translation>没有找到与已标注模板足够相似的未标注图片。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="2167" />
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="2113" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="2192" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="2138" />
         <source>智能模板预标注</source>
         <translation>智能模板预标注</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="2114" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="2139" />
         <source>每张未标注图片按相似度匹配一张已标注模板生成预标注框，请先人工抽查再批量写入。</source>
         <translation>每张未标注图片按相似度匹配一张已标注模板生成预标注框，请先人工抽查再批量写入。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="2133" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="2158" />
         <source>可预标注的图片</source>
         <translation>可预标注的图片</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="2137" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="2162" />
         <source>写入预标注</source>
         <translation>写入预标注</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="2147" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="2172" />
         <source>已写入 %1 项，%2 项失败。</source>
         <translation>已写入 %1 项，%2 项失败。</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\utils\smart_tools.py" line="2157" />
+        <location filename="..\..\views\labeling\utils\smart_tools.py" line="2182" />
         <source>已写入 %1 张图片的预标注。</source>
         <translation>已写入 %1 张图片的预标注。</translation>
     </message>
@@ -5033,12 +5057,12 @@ Results have been saved to:
         <translation>未安装 ultralytics，无法打开训练窗口。&lt;br&gt;请先安装：&lt;br&gt;&lt;code&gt;pip install ultralytics&lt;/code&gt;&lt;br&gt;或&lt;br&gt;&lt;code&gt;uv pip install ultralytics --torch-backend=auto&lt;/code&gt;</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="4451" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="4452" />
         <source>Feed Back Now</source>
         <translation>立即回填</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="4452" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="4453" />
         <source>Training weights loaded. Re-run auto-labeling on unlabeled and pending-review images; the Iteration Gains Board updates automatically when done.
 Confirmed empty labels (negatives) are skipped.
 
@@ -5053,7 +5077,7 @@ Start now?</source>
 现在开始吗？</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="4461" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="4462" />
         <source>Check the next-step suggestions in the Iteration Gains Board later.</source>
         <translation>稍后可在迭代收益看板查看下一步建议。</translation>
     </message>
@@ -6829,44 +6853,44 @@ Changes will not be saved until you click Save.</source>
         <translation>已删除 %s 个标注文件</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\shape_dialog.py" line="394" />
+        <location filename="..\..\views\labeling\widgets\shape_dialog.py" line="405" />
         <source>Deleted %s image files</source>
         <translation>已删除 %s 个图片文件</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\shape_dialog.py" line="563" />
-        <location filename="..\..\views\labeling\widgets\shape_dialog.py" line="460" />
+        <location filename="..\..\views\labeling\widgets\shape_dialog.py" line="594" />
+        <location filename="..\..\views\labeling\widgets\shape_dialog.py" line="479" />
         <source>Processing...</source>
         <translation>处理中...</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\shape_dialog.py" line="564" />
-        <location filename="..\..\views\labeling\widgets\shape_dialog.py" line="461" />
+        <location filename="..\..\views\labeling\widgets\shape_dialog.py" line="595" />
+        <location filename="..\..\views\labeling\widgets\shape_dialog.py" line="480" />
         <source>Cancel</source>
         <translation>取消</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\shape_dialog.py" line="467" />
+        <location filename="..\..\views\labeling\widgets\shape_dialog.py" line="486" />
         <source>Removing Shapes</source>
         <translation>正在移除对象</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\shape_dialog.py" line="540" />
+        <location filename="..\..\views\labeling\widgets\shape_dialog.py" line="563" />
         <source>Removed %s shapes</source>
         <translation>已移除 %s 个对象</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\shape_dialog.py" line="570" />
+        <location filename="..\..\views\labeling\widgets\shape_dialog.py" line="601" />
         <source>Adding Shapes</source>
         <translation>正在添加对象</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\shape_dialog.py" line="670" />
+        <location filename="..\..\views\labeling\widgets\shape_dialog.py" line="702" />
         <source>Added %s shapes</source>
         <translation>已添加 %s 个对象</translation>
     </message>
     <message>
-        <location filename="..\..\views\labeling\widgets\shape_dialog.py" line="673" />
+        <location filename="..\..\views\labeling\widgets\shape_dialog.py" line="705" />
         <source> and skipped %s out-of-bounds shapes</source>
         <translation>并跳过了 %s 个超出边界的对象</translation>
     </message>
@@ -7031,7 +7055,7 @@ Changes will not be saved until you click Save.</source>
         <translation>数据集概要：</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="3772" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="3773" />
         <location filename="..\..\views\training\ultralytics_dialog.py" line="2622" />
         <location filename="..\..\views\training\ultralytics_dialog.py" line="825" />
         <source>Validation Error</source>
@@ -7759,8 +7783,8 @@ Changes will not be saved until you click Save.</source>
         <translation>配置导入成功</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="4217" />
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="4161" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="4218" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="4162" />
         <location filename="..\..\views\training\ultralytics_dialog.py" line="2640" />
         <location filename="..\..\views\training\ultralytics_dialog.py" line="2630" />
         <location filename="..\..\views\training\ultralytics_dialog.py" line="2346" />
@@ -7844,7 +7868,7 @@ Changes will not be saved until you click Save.</source>
         <translation>请选择处理方式：</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="4049" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="4050" />
         <location filename="..\..\views\training\ultralytics_dialog.py" line="2445" />
         <source>Resume Training</source>
         <translation>继续训练</translation>
@@ -7969,14 +7993,14 @@ Directory:
         <translation>保存配置</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="4040" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="4041" />
         <location filename="..\..\views\training\ultralytics_dialog.py" line="2718" />
         <source>Previous</source>
         <translation>上一步</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="4059" />
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="3973" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="4060" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="3974" />
         <location filename="..\..\views\training\ultralytics_dialog.py" line="2724" />
         <source>Start Training</source>
         <translation>开始训练</translation>
@@ -8022,8 +8046,8 @@ Directory:
         <translation>点击可翻看这些图片</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="4541" />
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="3496" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="4542" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="3497" />
         <location filename="..\..\views\training\ultralytics_dialog.py" line="3001" />
         <location filename="..\..\views\training\ultralytics_dialog.py" line="2996" />
         <location filename="..\..\views\training\ultralytics_dialog.py" line="2990" />
@@ -8036,7 +8060,7 @@ Directory:
         <translation>训练留下了占用 %1 的数据集副本，分布在 %2 个旧目录里。</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="3933" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="3934" />
         <location filename="..\..\views\training\ultralytics_dialog.py" line="3046" />
         <source>... and %1 more</source>
         <translation>… 还有 %1 项</translation>
@@ -8099,7 +8123,7 @@ Directory:
         <translation>重试训练</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="3953" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="3954" />
         <location filename="..\..\views\training\ultralytics_dialog.py" line="3300" />
         <source>Back to Config</source>
         <translation>返回配置</translation>
@@ -8145,283 +8169,283 @@ Directory:
         <translation>%s —— 训练子进程意外结束，请查看上方训练日志。</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="3409" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="3410" />
         <source>Training Status</source>
         <translation>训练状态</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="3412" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="3413" />
         <source>Ready to train</source>
         <translation>准备训练</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="3417" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="3418" />
         <source>Progress:</source>
         <translation>进度：</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="3434" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="3435" />
         <source>Clear Logs</source>
         <translation>清除日志</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="3435" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="3436" />
         <source>Are you sure you want to clear all training logs?</source>
         <translation>确定要清除所有训练日志吗？</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="3450" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="3451" />
         <source>Training Logs</source>
         <translation>训练日志</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="3465" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="3466" />
         <source>Clear</source>
         <translation>清除</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="3469" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="3470" />
         <source>Copy</source>
         <translation>复制</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="3477" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="3478" />
         <source>Training Images</source>
         <translation>训练图像</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="3566" />
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="3558" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="3567" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="3559" />
         <source>Info</source>
         <translation>信息</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="3559" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="3560" />
         <source>Could not open this directory:
 %1</source>
         <translation>无法打开该目录：
 %1</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="3567" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="3568" />
         <source>No training directory available</source>
         <translation>无可用的训练目录</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="3573" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="3574" />
         <source>Confirm Stop</source>
         <translation>确认停止</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="3574" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="3575" />
         <source>Are you sure you want to stop the training?</source>
         <translation>确定要停止训练吗？</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="3582" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="3583" />
         <source>Stopping training...</source>
         <translation>正在停止训练...</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="3584" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="3585" />
         <source>Cancel to stop training</source>
         <translation>取消以停止训练</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="3794" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="3795" />
         <source>Dataset is still being prepared...</source>
         <translation>数据集仍在准备中…</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="3807" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="3808" />
         <source>Preparing training...</source>
         <translation>正在准备训练...</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="4025" />
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="4019" />
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="3814" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="4026" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="4020" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="3815" />
         <source>Training Error</source>
         <translation>训练错误</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="3831" />
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="3829" />
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="3822" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="3832" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="3830" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="3823" />
         <source>Preparing dataset...</source>
         <translation>正在准备数据集…</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="3834" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="3835" />
         <source>Preparing dataset in the background...</source>
         <translation>正在后台准备数据集…</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="3880" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="3881" />
         <source>%1 label file(s) could not be read; they are NOT in the dataset.</source>
         <translation>有 %1 个标注文件无法读取，它们不会被放进数据集。</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="3886" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="3887" />
         <source>%1 label file(s) failed to convert; they are NOT in the dataset.</source>
         <translation>有 %1 个标注文件转换失败，它们不会被放进数据集。</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="3892" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="3893" />
         <source>%1 shape(s) were dropped by the converter (not representable in this task).</source>
         <translation>转换器丢弃了 %1 个标注（这种形状无法表示在当前任务里）。</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="3918" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="3919" />
         <source>%1 label file(s) exist but could not be read, so they were left out of the dataset:</source>
         <translation>有 %1 个标注文件存在但读不出来，已排除在数据集之外：</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="3924" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="3925" />
         <source>%1 label file(s) could not be converted, so they were left out of the dataset:</source>
         <translation>有 %1 个标注文件转换失败，已排除在数据集之外：</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="3939" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="3940" />
         <source>They are not negative samples: nothing in them reaches the model. The full list is in the dataset's manifest.json and dataset_info.txt.</source>
         <translation>它们不是负样本：里面的内容根本不会进入模型。完整清单在数据集的 manifest.json 和 dataset_info.txt 里。</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="3946" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="3947" />
         <source>Dataset Incomplete</source>
         <translation>数据集不完整</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="3949" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="3950" />
         <source>Train Anyway</source>
         <translation>仍然训练</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="3980" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="3981" />
         <source>Dataset Error</source>
         <translation>数据集错误</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="3981" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="3982" />
         <source>Failed to prepare dataset:
 %s</source>
         <translation>数据集准备失败：
 %s</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="3987" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="3988" />
         <source>Dataset preparation returned no output directory.</source>
         <translation>数据集准备未返回输出目录。</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="4002" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="4003" />
         <source>Training cancelled: fix the listed label files first.</source>
         <translation>训练已取消：请先修好列出的标注文件。</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="4030" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="4031" />
         <source>Open Directory</source>
         <translation>打开目录</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="4035" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="4036" />
         <source>Stop Training</source>
         <translation>停止训练</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="4051" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="4052" />
         <source>Continue this run from weights/last.pt</source>
         <translation>从 weights/last.pt 继续这次训练</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="4065" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="4066" />
         <source>Export</source>
         <translation>导出</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="4071" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="4072" />
         <source>Use for Auto-labeling</source>
         <translation>用于自动标注</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="4074" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="4075" />
         <source>Export ONNX and load it into the auto-labeling panel</source>
         <translation>导出 ONNX 并加载到自动标注面板</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="4108" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="4109" />
         <source>Export started...</source>
         <translation>导出已开始...</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="4130" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="4131" />
         <source>Export Successful</source>
         <translation>导出成功</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="4267" />
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="4187" />
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="4151" />
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="4145" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="4268" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="4188" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="4152" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="4146" />
         <source>Export Error</source>
         <translation>导出错误</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="4146" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="4147" />
         <source>Failed to export ONNX; not loaded into auto-labeling.
 %1</source>
         <translation>ONNX 导出失败，未加载到自动标注。
 %1</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="4218" />
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="4162" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="4219" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="4163" />
         <source>No training project available for export</source>
         <translation>没有可供导出的训练项目</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="4227" />
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="4172" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="4228" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="4173" />
         <source>Model Not Found</source>
         <translation>未找到模型</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="4208" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="4209" />
         <source>Not supported yet</source>
         <translation>暂不支持</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="4209" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="4210" />
         <source>No auto-labeling type for this task yet; export the weights and load the model manually. Supported: detect / segment / pose / classify (ONNX).</source>
         <translation>这个任务还没有对应的自动标注类型；请自行导出权重并手动加载模型。已支持：检测 / 分割 / 姿态 / 分类（ONNX）。</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="4228" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="4229" />
         <source>Model weights not found at: %1</source>
         <translation>未找到模型权重：%1</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="4242" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="4243" />
         <source>The existing ONNX export is older than best.pt; exporting again.</source>
         <translation>已有的 ONNX 导出比 best.pt 旧，正在重新导出。</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="4251" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="4252" />
         <source>Auto-labeling export cancelled: dependencies missing.</source>
         <translation>自动标注导出已取消：缺少依赖。</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="4259" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="4260" />
         <source>Exporting ONNX for auto-labeling...</source>
         <translation>正在为自动标注导出 ONNX…</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="4287" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="4288" />
         <source>Missing Export Dependencies</source>
         <translation>缺少导出依赖</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="4288" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="4289" />
         <source>Exporting to %1 needs these packages:
 %2
 
@@ -8438,32 +8462,32 @@ Choosing No cancels the export. Nothing is installed without asking.</source>
 选择「否」会取消导出。未经询问不会安装任何东西。</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="4370" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="4371" />
         <source>Missing pose config</source>
         <translation>缺少姿态配置</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="4371" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="4372" />
         <source>Pose feedback needs the same pose config used for training (classes: class name -&gt; keypoint name list). Fill in Pose Config on the Data tab and retry.</source>
         <translation>姿态回填需要与训练时相同的姿态配置（classes：类别名 → 关键点名列表）。请在数据页填好姿态配置后重试。</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="4381" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="4382" />
         <source>Missing classes</source>
         <translation>缺少类别</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="4382" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="4383" />
         <source>Could not read class names from the labels; check the data config and retry.</source>
         <translation>无法从标注中读出类别名；请检查数据配置后重试。</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="4394" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="4395" />
         <source>Training weights · %1</source>
         <translation>训练权重 · %1</translation>
     </message>
     <message>
-        <location filename="..\..\views\training\ultralytics_dialog.py" line="4446" />
+        <location filename="..\..\views\training\ultralytics_dialog.py" line="4447" />
         <source>Current iteration suggestion: %1</source>
         <translation>当前迭代建议：%1</translation>
     </message>
