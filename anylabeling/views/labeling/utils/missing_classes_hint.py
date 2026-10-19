@@ -39,7 +39,9 @@ def asked_roots():
 
 
 def _root_key(root):
-    return osp.normcase(osp.abspath(str(root)))
+    # realpath also folds /var -> /private/var on macOS and junctions on
+    # Windows, so two spellings of one folder stay one project.
+    return osp.normcase(osp.realpath(str(root)))
 
 
 def _schedule(widget, dataset_dir):

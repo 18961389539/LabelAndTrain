@@ -15,6 +15,10 @@ import pytest
 from anylabeling.views.labeling import project_settings
 from anylabeling.views.labeling.utils import missing_classes_hint
 
+#: Kept alive: a QApplication without a reference is garbage-collected at
+#: interpreter exit and takes the process down with it (exit 127).
+_APP = None
+
 
 class _Labels:
     def __init__(self, count):
@@ -164,11 +168,16 @@ def test_reopening_after_a_project_switch_is_silent(tmp_path):
 
 
 def test_two_spellings_of_one_folder_are_one_project(tmp_path):
-    """Case and separator noise must not buy the annotator a second dialog."""
+    """Separator noise must not buy the annotator a second dialog.
+
+    Uppercasing counts as the same spelling only where ``normcase`` folds
+    case (Windows); on POSIX it names a different directory.
+    """
     root = str(tmp_path)
     missing_classes_hint.maybe_prompt(_Widget(), root)
     missing_classes_hint.maybe_prompt(_Widget(), root + os.sep)
-    missing_classes_hint.maybe_prompt(_Widget(), root.upper())
+    if os.path.normcase("A") != "A":
+        missing_classes_hint.maybe_prompt(_Widget(), root.upper())
     assert len(_Box.shown) == 1
 
 
@@ -323,7 +332,8 @@ def test_a_retry_after_the_view_is_destroyed_is_dropped():
     """
     from PyQt6 import QtWidgets, sip
 
-    (QtWidgets.QApplication.instance() or QtWidgets.QApplication([]))
+    global _APP
+    _APP = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
 
     class _View(QtWidgets.QWidget):
         def __init__(self):

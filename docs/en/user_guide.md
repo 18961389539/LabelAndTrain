@@ -461,7 +461,7 @@ Supports COCO format (`*.json`) labels for object detection, instance segmentati
 2. Select the task type.
 3. Provide the required configuration file.
 4. Click OK.
-5. Export path defaults to an `annotations` subfolder, saving a single `*.json` file. Sample: [`annotations`](../../assets/annotations).
+5. Export path defaults to an `annotations` subfolder, saving a single `*.json` file. Sample: [`annotations`](../../assets/Annotations).
 
 ### 4.4 DOTA Format
 

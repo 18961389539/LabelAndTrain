@@ -90,7 +90,7 @@ def note_icc_profile(widget, filename, image_data):
     if not reason:
         return False
     logger.warning(f"Invalid embedded ICC profile in {filename}: {reason}")
-    key = osp.normcase(osp.abspath(str(filename)))
+    key = osp.normcase(osp.realpath(str(filename)))
     if key in _ICC_WARNED:
         return True
     _ICC_WARNED.add(key)

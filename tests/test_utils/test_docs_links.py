@@ -9,6 +9,7 @@ without the file behind it.
 """
 
 import io
+import os
 import re
 from pathlib import Path
 
@@ -18,6 +19,31 @@ REPO = Path(__file__).resolve().parents[2]
 RELATIVE_LINK = re.compile(r"\]\((?!https?:|#|mailto:)([^)\s]+)")
 
 
+def resolves_with_exact_case(path, target):
+    """True when every component of the relative link matches on disk.
+
+    ``Path.exists()`` is case-insensitive on Windows and macOS, so a link to
+    ``assets/annotations`` passed there while Linux CI failed on
+    ``assets/Annotations`` -- the same class of bug the Windows machine cannot
+    see without this walk.
+    """
+    current = path.parent
+    for part in target.replace("\\", "/").split("/"):
+        if part in ("", "."):
+            continue
+        if part == "..":
+            current = current.parent
+            continue
+        try:
+            names = os.listdir(current)
+        except OSError:
+            return False
+        if part not in names:
+            return False
+        current = current / part
+    return current.exists()
+
+
 def doc_files():
     paths = sorted((REPO / "docs").rglob("*.md"))
     for name in ("README.md", "README_zh-CN.md"):
@@ -25,6 +51,13 @@ def doc_files():
         if candidate.is_file():
             paths.append(candidate)
     return paths
+
+
+def test_the_case_check_is_exact_not_just_existing():
+    """Windows answers True to the lowercase spelling; this walk must not."""
+    page = REPO / "docs" / "zh_cn" / "page.md"
+    assert resolves_with_exact_case(page, "../../assets/Annotations")
+    assert not resolves_with_exact_case(page, "../../assets/annotations")
 
 
 def test_the_guard_itself_has_something_to_check():
@@ -40,7 +73,10 @@ def test_relative_links_resolve(path):
     broken = []
     for match in RELATIVE_LINK.finditer(text):
         target = match.group(1).split("#")[0]
-        if target and not (path.parent / target).resolve().exists():
+        if target and (
+            not (path.parent / target).resolve().exists()
+            or not resolves_with_exact_case(path, target)
+        ):
             broken.append(match.group(1))
     assert not broken, (
         f"{path.relative_to(REPO)}: {len(broken)} broken relative link(s), "

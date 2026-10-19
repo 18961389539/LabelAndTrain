@@ -212,9 +212,15 @@ class TestNoteIccProfile(unittest.TestCase):
     def test_path_spelling_does_not_double_the_notice(self):
         one = osp.abspath("C:/imgs/card.jpg")
         file_lifecycle.note_icc_profile(self.widget, one, self.bad)
-        file_lifecycle.note_icc_profile(
-            self.widget, one.upper() + os.sep, self.bad
-        )
+        # Separator and "." noise is spelling everywhere; case folding is
+        # spelling only where normcase folds it (Windows). On POSIX the
+        # upper-cased path names a different file.
+        noisy = osp.join(osp.dirname(one), ".", osp.basename(one)) + os.sep
+        file_lifecycle.note_icc_profile(self.widget, noisy, self.bad)
+        if osp.normcase("A") != "A":
+            file_lifecycle.note_icc_profile(
+                self.widget, one.upper() + os.sep, self.bad
+            )
         self.assertEqual(len(self.widget.lines), 1)
 
 

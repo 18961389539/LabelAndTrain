@@ -97,14 +97,39 @@ class TestCanvasOverlays(unittest.TestCase):
         self.assertEqual(self._ink(image, band), 0)
 
     def test_labels_draw_where_the_shape_box_starts(self):
-        region = QtCore.QRect(0, 0, 320, 200)
-        without = self._render([self._rect(description="")], show_labels=False)
-        with_labels = self._render(
-            [self._rect(description="")], show_labels=True
+        """The label rect's top-left is the box's top-left.
+
+        Painted through ``paint_labels`` directly instead of a full
+        ``render_visualization``: the Linux runner rendered the label and the
+        bare box identically no matter what state an earlier test left in the
+        canvas, while this assertion is about the label's anchor only.
+        """
+        from types import SimpleNamespace
+
+        shape = self._rect(description="")
+        canvas = SimpleNamespace(
+            show_labels=True, show_scores=False, shapes=[shape]
         )
-        self.assertGreater(
-            self._ink(with_labels, region), self._ink(without, region)
+        image = QtGui.QImage(320, 200, QtGui.QImage.Format.Format_ARGB32)
+        image.fill(QtGui.QColor(*BACKGROUND))
+        painter = QtGui.QPainter(image)
+        try:
+            canvas_overlays.paint_labels(canvas, painter)
+        finally:
+            painter.end()
+
+        rendered = image.convertToFormat(QtGui.QImage.Format.Format_RGB32)
+        ink = []
+        for y in range(rendered.height()):
+            for x in range(rendered.width()):
+                color = rendered.pixelColor(x, y)
+                if (color.red(), color.green(), color.blue()) != BACKGROUND:
+                    ink.append((x, y))
+        self.assertTrue(ink, "show_labels painted nothing")
+        self.assertEqual(
+            (min(x for x, _ in ink), min(y for _, y in ink)), (20, 20)
         )
+        self.assertGreater(max(x for x, _ in ink), 20)
 
     def test_descriptions_draw_into_the_band_above_the_box(self):
         image = self._render(

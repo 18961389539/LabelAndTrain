@@ -1556,6 +1556,7 @@ class LabelConverter:
                                 points = rectangle_from_diagonal(points)
                             pose_data[group_id]["rectangle"] = points
                             pose_data[group_id]["box_label"] = label
+                            pose_data[group_id]["difficult"] = difficult
                         else:
                             x, y = points[0]
                             difficult = shape.get("difficult", False)
@@ -1676,7 +1677,7 @@ class LabelConverter:
                         "iscrowd": 0,
                         "keypoints": keypoints,
                         "num_keypoints": num_keypoints,
-                        "ignore": int(difficult),
+                        "ignore": int(data.get("difficult", False)),
                         "segmentation": [],
                     }
                     coco_data["annotations"].append(annotation)

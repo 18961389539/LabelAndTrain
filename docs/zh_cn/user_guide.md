@@ -486,7 +486,7 @@ X-AnyLabeling 支持导入和导出目标检测、实例分割及关键点检测
 
 导出路径默认保存在当前图片目录的同级目录下的 `annotations` 文件夹内。
 
-> COCO 格式的对应标签文件样式可参考 [annotations](../../assets/annotations) 目录。
+> COCO 格式的对应标签文件样式可参考 [annotations](../../assets/Annotations) 目录。
 
 ### 4.4 DOTA标签
 
