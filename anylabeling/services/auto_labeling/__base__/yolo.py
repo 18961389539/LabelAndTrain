@@ -224,12 +224,25 @@ class YOLO(Model):
         Args:
             class_names (List[str]): Selected class names. An empty list
                 or a selection of all classes disables the filter (None).
+
+        ``classes`` is a name list for most models and an ``{id: name}`` map
+        for those that index it by class id (the YOLOv8+SAM2 combo reads
+        ``self.classes[int(class_id)]`` after re-assigning the raw config
+        value). Enumerating a map yields its ids, so no name ever matches and
+        the index list comes out empty -- and an empty ``classes`` mask
+        suppresses *every* detection. Taking the names first is what keeps
+        the filter from silencing a model that spells them as a map.
         """
-        if not class_names or len(class_names) == len(self.classes):
+        names = (
+            list(self.classes.values())
+            if isinstance(self.classes, dict)
+            else list(self.classes)
+        )
+        if not class_names or len(class_names) == len(names):
             self.filter_classes = None
         else:
             self.filter_classes = [
-                i for i, c in enumerate(self.classes) if c in class_names
+                i for i, name in enumerate(names) if name in class_names
             ]
 
     def inference(self, blob):

@@ -26,6 +26,7 @@ try:
     from PyQt6.QtCore import Qt
 
     from anylabeling import config
+    from anylabeling.services.auto_labeling.__base__.yolo import YOLO
     from anylabeling.views.labeling import project_settings
     from anylabeling.views.labeling.widgets.classes_filter_dialog import (
         ClassesFilterDialog,
@@ -151,6 +152,44 @@ class TestProjectClassFilterStorage(unittest.TestCase):
 
 
 @unittest.skipUnless(PYQT_AVAILABLE, "PyQt6 is required")
+class TestModelSideFilterSemantics(unittest.TestCase):
+    """The production setter, on both shapes a model's classes can take.
+
+    These call ``YOLO.set_auto_labeling_filter_classes`` itself rather than
+    a copy of it: the panel's promise is only as good as what the model does
+    with the names it hands over.
+    """
+
+    def _apply(self, classes, selected):
+        holder = type(
+            "M", (), {"classes": classes, "filter_classes": "unset"}
+        )()
+        YOLO.set_auto_labeling_filter_classes(holder, selected)
+        return holder.filter_classes
+
+    def test_name_list_subset_becomes_indices(self):
+        self.assertEqual(self._apply(["person", "car", "dog"], ["car"]), [1])
+
+    def test_name_list_all_or_nothing_disables_the_filter(self):
+        self.assertIsNone(self._apply(["person", "car"], ["person", "car"]))
+        self.assertIsNone(self._apply(["person", "car"], []))
+
+    def test_id_name_map_is_matched_on_names(self):
+        """The regression: enumerating the map yielded ids, and matched none.
+
+        An empty index list is not "nothing selected" downstream -- the mask
+        built from it hides every class, so picking one class of a combo
+        model used to switch the model off entirely.
+        """
+        self.assertEqual(self._apply({0: "person", 1: "car"}, ["car"]), [1])
+
+    def test_id_name_map_with_every_name_disables_the_filter(self):
+        self.assertIsNone(
+            self._apply({0: "person", 1: "car"}, ["person", "car"])
+        )
+
+
+@unittest.skipUnless(PYQT_AVAILABLE, "PyQt6 is required")
 class TestPanelClassFilter(unittest.TestCase):
     """The real panel: entry, application, memory and the marks it leaves."""
 
@@ -238,6 +277,27 @@ class TestPanelClassFilter(unittest.TestCase):
         self._load(model)
         self.assertEqual(self.panel._loaded_model_classes(), ["p", "c"])
         self.assertTrue(self.panel.set_class_filter(["c"]))
+
+    def test_a_map_of_classes_filters_on_the_real_setter(self):
+        """Panel and combo model have to agree on what the names mean.
+
+        The YOLOv8+SAM2 combo keeps ``classes`` as the ``{id: name}`` map its
+        config carried, so the panel's flattening and the model's own
+        matching are two sides of one promise.
+        """
+
+        class _ComboModel:
+            classes = {0: "person", 1: "car"}
+            filter_classes = "unset"
+
+            set_auto_labeling_filter_classes = (
+                YOLO.set_auto_labeling_filter_classes
+            )
+
+        model = self._load(_ComboModel())
+        self.assertEqual(self.panel._loaded_model_classes(), ["person", "car"])
+        self.assertTrue(self.panel.set_class_filter(["car"]))
+        self.assertEqual(model.filter_classes, [1])
 
     def test_a_model_without_the_setter_has_no_entry(self):
         self._load(_PlainModel(["person", "car"]))
