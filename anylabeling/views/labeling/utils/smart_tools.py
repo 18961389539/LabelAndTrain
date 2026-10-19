@@ -989,6 +989,10 @@ def run_missing_scan(parent, iou_threshold=0.5, min_score=DEFAULT_ACCEPT):
 
 def _write_missing(parent, results):
     """Append accepted predictions to their label files."""
+    from anylabeling.views.labeling.utils.session_snapshot import (
+        snapshot_before_label_write,
+    )
+
     directory = label_dir_for(parent)
     written = 0
     for image_path, payloads in results:
@@ -1014,6 +1018,7 @@ def _write_missing(parent, results):
             shapes.append(payload)
             written += 1
         try:
+            snapshot_before_label_write(label_file)
             with open(label_file, "w", encoding="utf-8") as handle:
                 json.dump(data, handle, ensure_ascii=False, indent=2)
         except OSError as exc:
@@ -2197,6 +2202,9 @@ def run_template_propagation(parent):
 
 def _write_prelabels(parent, batch):
     """Write planned shapes into each target label json. Returns ``(n, n_fail)``."""
+    from anylabeling.views.labeling.utils.session_snapshot import (
+        snapshot_before_label_write,
+    )
     from anylabeling.views.labeling.utils.shape_propagate import _image_size
 
     written = 0
@@ -2226,6 +2234,7 @@ def _write_prelabels(parent, batch):
         shapes = data.setdefault("shapes", [])
         shapes.extend(item["shapes"])
         try:
+            snapshot_before_label_write(label_file)
             with open(label_file, "w", encoding="utf-8") as handle:
                 json.dump(data, handle, ensure_ascii=False, indent=2)
             written += 1

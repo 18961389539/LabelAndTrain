@@ -182,3 +182,108 @@ def test_classification_predictions_snapshot_before_rewriting(tmp_path):
     assert live["predictions"]["classes"][0]["label"] == "scratch"
     saved = _read(_backups(str(tmp_path))[0])
     assert "predictions" not in saved, "the snapshot is the pre-run file"
+
+
+def test_class_rename_snapshots_every_file_it_rewrites(tmp_path):
+    from anylabeling.views.labeling.utils import yolo_detect
+
+    label_dir = tmp_path / "labels"
+    label_dir.mkdir()
+    (label_dir / "classes.txt").write_text("凹坑\n", encoding="utf-8")
+    image = _image(tmp_path, "part.png")
+    target = label_dir / "part.json"
+    target.write_text(
+        json.dumps(
+            {
+                "shapes": [
+                    {
+                        "label": "凹坑",
+                        "points": [[1.0, 2.0], [3.0, 4.0]],
+                        "shape_type": "rectangle",
+                        "flags": {},
+                    }
+                ],
+                "imageWidth": 100,
+                "imageHeight": 80,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    changed = yolo_detect.rename_label_across_folder(
+        [image], str(label_dir), "凹坑", "dented"
+    )
+    assert changed >= 1
+    assert [s["label"] for s in _read(str(target))["shapes"]] == ["dented"]
+    backups = _backups(str(label_dir))
+    assert len(backups) == 1, backups
+    assert [s["label"] for s in _read(backups[0])["shapes"]] == [
+        "凹坑"
+    ], "a rename across a folder is one undo point, not one per file"
+
+
+def test_template_prelabels_snapshot_their_target(tmp_path):
+    from anylabeling.views.labeling.utils import smart_tools
+
+    image = _image(tmp_path)
+    label_file = _human_label(tmp_path, image)
+    item = {
+        "label_file": label_file,
+        "target": image,
+        "shapes": [
+            {
+                "label": "scratch",
+                "points": [[10.0, 20.0], [40.0, 60.0]],
+                "shape_type": "rectangle",
+                "flags": {},
+                "source": "model",
+            }
+        ],
+    }
+
+    written, failed = smart_tools._write_prelabels(None, [item])
+    assert (written, failed) == (1, 0)
+    assert [s["label"] for s in _read(label_file)["shapes"]] == [
+        "凹坑",
+        "scratch",
+    ]
+    saved = _read(_backups(str(tmp_path))[0])
+    assert [s["label"] for s in saved["shapes"]] == ["凹坑"]
+
+
+class _Parent:
+    """What ``label_dir_for`` reads: an open file, no separate output dir."""
+
+    def __init__(self, image_path):
+        self.output_dir = None
+        self.filename = image_path
+
+    def _current_model_identity(self):
+        return "run_07"
+
+    def _current_model_version(self):
+        return "v1"
+
+
+def test_missing_scan_write_snapshots_its_file(tmp_path):
+    from anylabeling.views.labeling.utils import smart_tools
+
+    image = _image(tmp_path)
+    label_file = _human_label(tmp_path, image)
+    payload = {
+        "label": "scratch",
+        "points": [[5.0, 5.0], [9.0, 9.0]],
+        "shape_type": "rectangle",
+        "flags": {},
+        "source": "model",
+    }
+
+    written = smart_tools._write_missing(_Parent(image), [(image, [payload])])
+
+    assert written == 1
+    assert [s["label"] for s in _read(label_file)["shapes"]] == [
+        "凹坑",
+        "scratch",
+    ]
+    saved = _read(_backups(str(tmp_path))[0])
+    assert [s["label"] for s in saved["shapes"]] == ["凹坑"]

@@ -332,6 +332,14 @@ def rename_label_across_folder(
                 shape["label"] = new_label
                 changed = True
         if changed:
+            # Renaming a class touches every label file that mentions it, so
+            # the pre-rename version goes into the same .label_backups/ runs
+            # the editor uses: one undo point for the whole rename.
+            from anylabeling.views.labeling.utils.session_snapshot import (
+                snapshot_before_label_write,
+            )
+
+            snapshot_before_label_write(json_path)
             with open(json_path, "w", encoding="utf-8") as handle:
                 json.dump(data, handle, indent=2, ensure_ascii=False)
             json_changed += 1
