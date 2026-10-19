@@ -9,6 +9,7 @@ from anylabeling.config import get_config, get_work_directory, save_config
 from PyQt6 import uic
 from PyQt6.QtCore import Qt, pyqtSignal, pyqtSlot, QPoint, QTimer
 from PyQt6.QtWidgets import (
+    QDialog,
     QDoubleSpinBox,
     QFileDialog,
     QHBoxLayout,
@@ -68,6 +69,9 @@ from anylabeling.views.labeling.widgets.auto_labeling.custom_model_config import
 from anylabeling.views.labeling.widgets.searchable_model_dropdown import (
     _get_models_config_path,
     SearchableModelDropdownPopup,
+)
+from anylabeling.views.labeling.widgets.classes_filter_dialog import (
+    ClassesFilterDialog,
 )
 
 _TOOLBAR_COMPACT = True
@@ -221,6 +225,7 @@ class AutoLabelingWidget(QWidget):
         self._setup_download_progress_ui()
         self._setup_prediction_cancel_ui()
         self._setup_status_dot_ui()
+        self._setup_class_filter_button()
         self._setup_more_panel()
         self.model_manager.download_progress.connect(
             self._on_download_progress
@@ -253,6 +258,11 @@ class AutoLabelingWidget(QWidget):
             self.button_cropping.setEnabled(enable)
             self.button_segment_everything.setEnabled(enable)
             self.button_skip_detection.setEnabled(enable)
+            # Changing the class set mid-run would split one batch into two
+            # different expectations, so this one follows the other tools.
+            self.button_class_filter.setEnabled(
+                enable and self._class_filter_supported()
+            )
             # The cancel affordance is *always* clickable while inference
             # runs, so the user is never trapped waiting for a long AMG
             # prediction with no way out.
@@ -1013,6 +1023,190 @@ class AutoLabelingWidget(QWidget):
         self.on_model_selected(provider, model_name)
         return True
 
+    def _loaded_model(self):
+        config = getattr(self.model_manager, "loaded_model_config", None)
+        if not isinstance(config, dict):
+            return None
+        return config.get("model")
+
+    def _loaded_model_classes(self):
+        """The loaded model's class names, in the model's own order.
+
+        Read off the model rather than its config dict, because the model
+        turns an index filter on by position in ``model.classes``: a list
+        that does not line up with that order would filter the wrong ids.
+        """
+        model = self._loaded_model()
+        classes = getattr(model, "classes", None)
+        if classes is None:
+            return []
+        if isinstance(classes, dict):
+            classes = list(classes.values())
+        names = []
+        for name in classes:
+            text = "" if name is None else str(name).strip()
+            if text:
+                names.append(text)
+        return names
+
+    def _class_filter_supported(self):
+        model = self._loaded_model()
+        if model is None:
+            return False
+        if not hasattr(model, "set_auto_labeling_filter_classes"):
+            return False
+        return bool(self._loaded_model_classes())
+
+    def set_class_filter(self, class_names, persist=True, notify=True):
+        """Restrict the model to ``class_names``; None/[] means all of them.
+
+        Names the loaded model does not have are dropped instead of passed
+        through: an unknown name yields an empty index list, and the mask
+        built from it suppresses *every* class -- so a remembered filter
+        from another model, or a renamed class, would read as "the model
+        stopped working" rather than as a stale memory.
+        """
+        if not self._class_filter_supported():
+            self._class_filter = None
+            self._refresh_class_filter_button()
+            return False
+        classes = self._loaded_model_classes()
+        requested = {str(name).strip() for name in (class_names or [])}
+        matched = [name for name in classes if name in requested]
+        effective = (
+            matched if matched and len(matched) < len(classes) else None
+        )
+        self.model_manager.set_auto_labeling_filter_classes(effective or [])
+        self._class_filter = effective
+        if persist:
+            from anylabeling.views.labeling import project_settings
+
+            dataset_dir = _dataset_dir_for(self)
+            if dataset_dir:
+                project_settings.remember_class_filter(
+                    self, dataset_dir, effective
+                )
+        self._refresh_class_filter_button()
+        if notify:
+            self._report_class_filter(classes, effective)
+        return True
+
+    def _report_class_filter(self, classes, effective):
+        """Say what the filter now does; a silent filter is the bug here."""
+        status = getattr(self.parent, "status", None)
+        if not callable(status):
+            return
+        if effective:
+            text = self.tr("类别筛选已启用：仅标注 %s（共 %d/%d 类）") % (
+                "、".join(effective),
+                len(effective),
+                len(classes),
+            )
+        else:
+            text = self.tr("类别筛选已关闭：标注全部 %d 个类别") % len(classes)
+        try:
+            status(text)
+        except Exception:  # noqa: BLE001 - a status line is never critical
+            logger.debug("Could not report the class filter state")
+
+    def apply_project_class_filter(self):
+        """Put the loaded model on this project's remembered filter.
+
+        Also the reset path: a project that remembers nothing has to end up
+        with no filter, or the selection made for the previous project
+        follows the model across the switch and whole classes of boxes go
+        missing with nothing on screen to explain it.
+        """
+        if not self._class_filter_supported():
+            self._class_filter = None
+            self._refresh_class_filter_button()
+            return False
+        from anylabeling.views.labeling import project_settings
+
+        dataset_dir = _dataset_dir_for(self)
+        remembered = (
+            project_settings.class_filter(dataset_dir) if dataset_dir else None
+        )
+        self.set_class_filter(remembered, persist=False, notify=False)
+        return True
+
+    def open_class_filter_dialog(self):
+        """Pick which of the model's classes auto-labeling may emit."""
+        if not self._class_filter_supported():
+            return
+        classes = self._loaded_model_classes()
+        active = self._class_filter
+        dialog = ClassesFilterDialog(
+            classes,
+            [name for name in active if name in classes] if active else None,
+            self,
+        )
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        self.set_class_filter(dialog.get_selected_classes())
+
+    def _setup_class_filter_button(self):
+        """Build the 类别筛选 entry before the More panel reparents it.
+
+        Starts hidden: only a model that both has classes and understands
+        the filter gets to show it, and that question is answered by the
+        first load, not by construction.
+        """
+        self._class_filter = None
+        self.button_class_filter = QPushButton(self.tr("类别筛选"))
+        self.button_class_filter.setStyleSheet(_toolbar_btn())
+        self.button_class_filter.setToolTip(
+            self.tr("只保留所选类别的自动标注结果")
+        )
+        self.button_class_filter.clicked.connect(self.open_class_filter_dialog)
+        self.button_class_filter.hide()
+
+    def _refresh_class_filter_button(self):
+        """Reflect the filter in the toolbar, including when it is hidden.
+
+        The button sits in the More panel, which starts collapsed, so an
+        active filter would be invisible exactly when it is doing the most
+        work. The 更多 button carries the mark in that case: dropping whole
+        classes silently is the failure this panel keeps eliminating.
+        """
+        button = getattr(self, "button_class_filter", None)
+        if button is None:
+            return
+        supported = self._class_filter_supported()
+        if not supported:
+            self._class_filter = None
+        button.setVisible(supported)
+        button.setEnabled(supported)
+        classes = self._loaded_model_classes() if supported else []
+        active = self._class_filter
+        base_text = self.tr("类别筛选")
+        if active:
+            button.setText(f"{base_text} {len(active)}/{len(classes)}")
+            button.setStyleSheet(_toolbar_ready_btn())
+            button.setToolTip(self.tr("当前只标注：%s") % "、".join(active))
+        else:
+            button.setText(base_text)
+            button.setStyleSheet(_toolbar_btn())
+            button.setToolTip(self.tr("只保留所选类别的自动标注结果"))
+
+        more_button = getattr(self, "_more_button", None)
+        more_panel = getattr(self, "_more_panel", None)
+        if more_button is None or more_panel is None:
+            return
+        marked = bool(active) and more_panel.isHidden()
+        more_button.setStyleSheet(
+            _toolbar_ready_btn() if marked else _toolbar_btn()
+        )
+        more_button.setToolTip(
+            self.tr("显示/隐藏更多智能标注选项")
+            + (
+                self.tr("（类别筛选生效中：%d/%d 类）")
+                % (len(active), len(classes))
+                if marked
+                else ""
+            )
+        )
+
     def update_button_colors(self):
         """Update button colors"""
         for button in [
@@ -1332,7 +1526,7 @@ class AutoLabelingWidget(QWidget):
         """Fold secondary controls behind a collapsible "More" panel.
 
         The toolbar is one scrolling row of 25+ controls. Low-frequency
-        options (AMD/TinyObj/AMG/Skip Det/thresholds/IoU/
+        options (AMD/TinyObj/AMG/Skip Det/thresholds/IoU/class filter/
         mask fineness) move into a wrapper that is hidden by default, so
         the primary row no longer overflows on typical window widths.
 
@@ -1353,6 +1547,7 @@ class AutoLabelingWidget(QWidget):
             "input_iou",
             "edit_iou",
             "input_box_thres",
+            "button_class_filter",
             "button_auto_decode",
             "button_cropping",
             "button_segment_everything",
@@ -1468,6 +1663,7 @@ class AutoLabelingWidget(QWidget):
         self._more_button.setText("更多 ▴" if checked else "更多 ▾")
         self._update_model_selection_scroll_area_height()
         self._save_more_panel_expanded(checked)
+        self._refresh_class_filter_button()
 
     @staticmethod
     def _format_bytes(n):
@@ -1676,6 +1872,7 @@ class AutoLabelingWidget(QWidget):
     def on_new_model_loaded(self, model_config):
         """Enable model select combobox"""
         self._apply_loaded_model_class_fallback(model_config)
+        self.apply_project_class_filter()
         self.model_selection_button.setEnabled(True)
         self._apply_model_button_state(model_config)
 
@@ -1789,6 +1986,12 @@ class AutoLabelingWidget(QWidget):
 
     def hide_labeling_widgets(self):
         """Hide labeling widgets by default"""
+        # A model that is being replaced takes its class filter with it:
+        # drop the state first, so the mark it leaves on the 更多 button
+        # cannot outlive the model it describes. The hide loop below still
+        # hides the filter button itself, supported model or not.
+        self._class_filter = None
+        self._refresh_class_filter_button()
         widgets = [
             "button_run",
             "button_add_point",
@@ -1810,6 +2013,7 @@ class AutoLabelingWidget(QWidget):
             "output_select_combobox",
             "button_auto_decode",
             "button_cropping",
+            "button_class_filter",
             "button_skip_detection",
             "mask_fineness_slider",
             "mask_fineness_value_label",

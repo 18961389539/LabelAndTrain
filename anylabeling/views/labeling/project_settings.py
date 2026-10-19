@@ -43,7 +43,17 @@ MODEL_KEY = "last_model"
 #: the entry that turns the advice back on.
 HINT_KEY = "missing_classes_hint"
 
-UI_KEYS = ("labels", "output_dir", MODEL_KEY, HINT_KEY)
+#: ``CLASS_FILTER_KEY`` is the auto-labeling 类别筛选 selection: the class
+#: names that model is allowed to emit. Absent means "all classes", which is
+#: why the panel never stores an empty list -- an empty filter would read back
+#: as a model that detects nothing.
+#:
+#: Names, not indices: the same project is normally re-opened with the same
+#: model, and names survive a class list that grew. Names the current model
+#: does not have are dropped when the memory is applied.
+CLASS_FILTER_KEY = "class_filter"
+
+UI_KEYS = ("labels", "output_dir", MODEL_KEY, HINT_KEY, CLASS_FILTER_KEY)
 
 #: Datasets whose settings already failed to save this session. One
 #: warning per dataset: a run of folder switches would otherwise stack
@@ -222,6 +232,51 @@ def restore_model(widget, dataset_dir):
         return bool(restore(provider, model))
     except Exception as e:  # noqa: BLE001 - opening a project must not raise
         _logger().warning(f"Could not restore the project's model: {e}")
+        return False
+
+
+def remember_class_filter(widget, dataset_dir, class_names):
+    """Persist which classes this project lets the model emit.
+
+    An empty selection is stored as "no key" rather than ``[]``: the panel
+    reads a missing key as "all classes", while an empty list is a filter
+    that matches nothing -- exactly the difference between resetting a
+    project and muting a model.
+    """
+    if not dataset_dir:
+        return False
+    value = [str(name) for name in class_names] if class_names else None
+    ok = update_values(dataset_dir, **{CLASS_FILTER_KEY: value})
+    if not ok:
+        report_write_failure(widget, dataset_dir, "class filter")
+    return ok
+
+
+def class_filter(dataset_dir):
+    """The remembered class names, or ``None`` for "all classes"."""
+    stored = get_value(dataset_dir, CLASS_FILTER_KEY)
+    if not isinstance(stored, list) or not stored:
+        return None
+    return [str(name) for name in stored if name]
+
+
+def restore_class_filter(widget, dataset_dir):
+    """Re-apply the project's class filter onto the loaded model.
+
+    Runs after ``restore_model``. Two cases need it: a model that was
+    already loaded (so no load signal fires to carry the filter), and a
+    project that remembers *no* filter while the model still carries one
+    from the project before it -- a filter left dangling across a project
+    switch would silently drop whole classes of boxes here.
+    """
+    panel = getattr(widget, "auto_labeling_widget", None)
+    apply_fn = getattr(panel, "apply_project_class_filter", None)
+    if not dataset_dir or not callable(apply_fn):
+        return False
+    try:
+        return bool(apply_fn())
+    except Exception as e:  # noqa: BLE001 - opening a project must not raise
+        _logger().warning(f"Could not restore the project's class filter: {e}")
         return False
 
 
@@ -454,6 +509,7 @@ def end_project_switch(widget, dataset_dir):
         return
     _restore_labels(widget, dataset_dir)
     restore_model(widget, dataset_dir)
+    restore_class_filter(widget, dataset_dir)
     try:
         from anylabeling.views.labeling.project_registry import (
             record_project,
