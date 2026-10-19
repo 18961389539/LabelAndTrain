@@ -108,7 +108,14 @@ BUDGETS = {
     # (tests/test_canvas/test_canvas_overlays.py now pins what each overlay
     # draws, and that the module needs nothing but the read surface). This is
     # the headroom the next canvas feature needed.
-    "anylabeling/views/labeling/widgets/canvas.py": 3414,
+    # Lowered 3414 -> 3380 on 2026-10-19: the background-hiding band was
+    # unreachable and went -- `hide_background_shapes` had no caller, so
+    # `_hide_backround` was permanently False, the 14 `set_hiding()` calls were
+    # no-ops, and both paint guards (`selected or not _hide_backround`) reduced
+    # to a visibility test. Both guards reduced by inspection -- the flag had
+    # exactly one writer and it had no caller -- so no pixel can differ; the
+    # canvas ink tests are here in case that reasoning is ever wrong.
+    "anylabeling/views/labeling/widgets/canvas.py": 3380,
 }
 
 

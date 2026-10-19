@@ -161,8 +161,6 @@ class Canvas(
         self.scale = 1.0
         self.pixmap = QtGui.QPixmap()
         self.visible = {}
-        self._hide_backround = False
-        self.hide_backround = False
         self.h_shape = None
         self.prev_h_shape = None
         self.h_vertex = None
@@ -1549,7 +1547,6 @@ class Canvas(
                         if self.create_mode == "circle":
                             self.current.shape_type = "circle"
                         self.line.points = [pos, pos]
-                        self.set_hiding()
                         self.drawing_polygon.emit(True)
                         self.update()
                 elif self.out_off_pixmap(pos) and self.create_mode in [
@@ -1566,7 +1563,6 @@ class Canvas(
                         self.current = Shape(shape_type=self.create_mode)
                         self.current.add_point(pos)
                         self.line.points = [pos, pos]
-                        self.set_hiding()
                         self.drawing_polygon.emit(True)
                         self.update()
                 elif self.out_off_pixmap(pos) and self.create_mode in [
@@ -1579,7 +1575,6 @@ class Canvas(
                     self.current = Shape(shape_type=self.create_mode)
                     self.current.add_point(pos)
                     self.line.points = [pos, pos]
-                    self.set_hiding()
                     self.drawing_polygon.emit(True)
                     self.update()
             elif self.editing():
@@ -1737,19 +1732,6 @@ class Canvas(
         self.store_shapes()
         return True
 
-    def hide_background_shapes(self, value):
-        """Set hide background - hide other shapes when some shapes are selected"""
-        self.hide_backround = value
-        if self.selected_shapes:
-            # Only hide other shapes if there is a current selection.
-            # Otherwise the user will not be able to select a shape.
-            self.set_hiding(True)
-            self.update()
-
-    def set_hiding(self, enable=True):
-        """Set background hiding"""
-        self._hide_backround = self.hide_backround if enable else False
-
     def can_close_shape(self):
         """Check if a shape can be closed (number of points > 2)"""
         return self.drawing() and self.current and len(self.current) > 2
@@ -1800,7 +1782,6 @@ class Canvas(
     def select_shapes(self, shapes):
         """Select some shapes"""
         self._selected_group_id = None
-        self.set_hiding()
         self.selection_changed.emit(shapes)
         self.update()
 
@@ -1810,7 +1791,6 @@ class Canvas(
         if self.selected_vertex():  # A vertex is marked for selection.
             index, shape = self.h_vertex, self.h_shape
             if shape.shape_type == "cuboid":
-                self.set_hiding()
                 if shape not in self.selected_shapes:
                     if multiple_selection_mode:
                         self.selection_changed.emit(
@@ -1825,7 +1805,6 @@ class Canvas(
                 return
             shape.highlight_vertex(index, shape.MOVE_VERTEX)
             if shape.shape_type == "rotation":
-                self.set_hiding()
                 if shape not in self.selected_shapes:
                     if multiple_selection_mode:
                         self.selection_changed.emit(
@@ -1838,7 +1817,6 @@ class Canvas(
                     self.h_shape_is_selected = True
                 self.calculate_offsets(point)
                 return
-            self.set_hiding()
             if shape not in self.selected_shapes:
                 if multiple_selection_mode:
                     self.selection_changed.emit(self.selected_shapes + [shape])
@@ -1853,7 +1831,6 @@ class Canvas(
             and self.h_shape.shape_type == "cuboid"
         ):
             shape = self.h_shape
-            self.set_hiding()
             if shape not in self.selected_shapes:
                 if multiple_selection_mode:
                     self.selection_changed.emit(self.selected_shapes + [shape])
@@ -1868,7 +1845,6 @@ class Canvas(
         else:
             for shape in self._shape_hit_candidates(point):
                 self._selected_group_id = None
-                self.set_hiding()
                 if shape not in self.selected_shapes:
                     if multiple_selection_mode:
                         self.selection_changed.emit(
@@ -1986,7 +1962,6 @@ class Canvas(
         self.h_edge = None
         self.h_cuboid_face = None
         self.h_shape_is_selected = False
-        self.set_hiding()
         self.selection_changed.emit(shapes)
         self.calculate_offsets(point)
         self.prev_point = point
@@ -2092,7 +2067,6 @@ class Canvas(
         """Deselect all shapes"""
         self._selected_group_id = None
         if self.selected_shapes:
-            self.set_hiding(False)
             self.selection_changed.emit([])
             self.h_shape_is_selected = False
             self.h_cuboid_face = None
@@ -2464,10 +2438,7 @@ class Canvas(
                     continue
                 if shape.shape_type == "circle" and len(shape.points) < 2:
                     continue
-                if not (
-                    (shape.selected or not self._hide_backround)
-                    and self.is_visible(shape)
-                ):
+                if not self.is_visible(shape):
                     continue
 
                 mask_path = QtGui.QPainterPath()
@@ -2541,9 +2512,7 @@ class Canvas(
     def _paint_degrees(self, p):
         # Draw degrees
         for shape in self.shapes:
-            if (
-                shape.selected or not self._hide_backround
-            ) and self.is_visible(shape):
+            if self.is_visible(shape):
                 shape.hovered = shape == self.h_shape
                 shape.fill = (
                     self._fill_drawing
@@ -2847,14 +2816,12 @@ class Canvas(
         if self.current.shape_type == "rectangle":
             if not self.clip_rectangle_to_pixmap(self.current):
                 self.current = None
-                self.set_hiding(False)
                 self.drawing_polygon.emit(False)
                 self.update()
                 return
         elif self.current.shape_type == "rotation":
             if not self.clip_rotation_to_pixmap(self.current):
                 self.current = None
-                self.set_hiding(False)
                 self.drawing_polygon.emit(False)
                 self.update()
                 return
@@ -2864,7 +2831,6 @@ class Canvas(
         self.shapes.append(self.current)
         self.store_shapes()
         self.current = None
-        self.set_hiding(False)
         self.new_shape.emit()
         self.update()
         if self.is_auto_labeling:

@@ -144,7 +144,6 @@ class ModeController:
                 return
             if widget.canvas.current is not None:
                 widget.canvas.current = None
-                widget.canvas.set_hiding(False)
                 widget.canvas.drawing_polygon.emit(False)
                 widget.canvas.update()
             self.toggle_draw_mode(True, preserve_brush_mode=True)

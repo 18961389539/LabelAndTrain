@@ -207,7 +207,6 @@ class CanvasRotationMixin:
     def _start_rotation_handle_drag(
         self, shape, pos, multiple_selection_mode, modifiers
     ):
-        self.set_hiding()
         if shape not in self.selected_shapes:
             if multiple_selection_mode:
                 self.selection_changed.emit(self.selected_shapes + [shape])
