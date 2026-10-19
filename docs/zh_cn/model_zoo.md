@@ -1,8 +1,9 @@
 # X-AnyLabeling 模型库
 
-> **归档页面：上游功能。** 本构建为 YOLO-only，不包含该面板。此页面描述的是上游
-> X-AnyLabeling，而非 JLLabelingAndTrain。参见 [README](../../README_zh-CN.md)
-> 的「Fork 范围」一节。
+> **归档页面：上游功能。** 本构建可加载 **8 种模型类型**（YOLO 系列与 SAM2），
+> 内置配置文件只有 **2 个**（SAM2 tiny / base），其余模型要靠「自定义模型」注册；
+> 上游那约 90 个模型的配置面板不在本构建里。此页描述的是上游 X-AnyLabeling，
+> 而非 JLLabelingAndTrain。参见 [README](../../README_zh-CN.md) 的「分支范围」一节。
 
 
 > ModelScope 模型集合：[X-AnyLabeling](https://www.modelscope.cn/collections/X-AnyLabeling-7b0e1798bcda43)

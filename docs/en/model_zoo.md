@@ -1,8 +1,11 @@
 # X-AnyLabeling Model Zoo
 
-> **Archived: an upstream feature.** This build is YOLO-only and ships no such
-> panel; the page describes upstream X-AnyLabeling, not JLLabelingAndTrain.
-> See "Fork scope" in the [README](../../README.md).
+> **Archived: an upstream feature.** This build can load **8 model types** (the
+> YOLO family and SAM2) and ships **2** built-in config files (SAM2 tiny / base);
+> anything else is registered by you as a custom model. Upstream's ~90-model
+> config panel is not part of this build, and this page describes upstream
+> X-AnyLabeling, not JLLabelingAndTrain. See "Fork scope" in the
+> [README](../../README.md).
 
 
 
