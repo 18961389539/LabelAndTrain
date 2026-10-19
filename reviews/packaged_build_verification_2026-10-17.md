@@ -76,7 +76,15 @@ torchvision / ultralytics 8.4 装进同一个 venv 之后，「CPU 版」把整�
 
 ## 4. 还剩什么
 
-- 打包版**功能面**只验到「启动 + 装载文件夹 + 标题与设备行」。真正逐项点打包版 UI 需要
-  UI Automation（`ui-visual-verification` 记的办法），本轮未做。
+- 打包版**功能面**只验到「启动 + 装载文件夹 + 标题与设备行」。逐项点打包版 UI 需要 Windows
+  UI Automation 桥接，而本机 venv 里没有 `comtypes` / `pywinauto` / `uiautomation`，Qt 子控件
+  又没有 HWND（ctypes + user32 读不到按钮树）。**2026-10-19 决定：不为验证引入新依赖**，
+  打包版逐项目击保持为人工步骤。
+  （若哪天想在**不**加 Python 依赖的前提下自动化这一段：PowerShell 的
+  `System.Windows.Automation` 在这台机器上读到过 Qt 对话框的文本，可作起点。）
+  同一批界面在源码侧已有机器守卫：`scripts/accept_project_work.py` 现在 17 步，覆盖项目菜单、
+  新建/切换/关闭、进度列、项目内搜索、设备子菜单、快捷键装载、还没有类别提示、类别筛选
+  入口与对话框，以及「面板上不得出现未翻译英文」的可见控件扫描。打包版与源码的差异因此
+  收敛到「资源是否打进去了」，而不是「界面是否行为正确」。
 - `dist/` 里 9 月 29 日的 `beta.6-CPU.exe` 已经落后当前源码 7 周、落后几十条提交。
   要不要重新发布一个正式产物（以及是否顺手升 version），由你定。
