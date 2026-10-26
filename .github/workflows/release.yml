@@ -127,7 +127,7 @@ jobs:
               done
           } || true
 
-      - name: Collect artifacts and checksums
+      - name: Collect artifacts
         shell: bash
         run: |
           mkdir release
@@ -135,7 +135,6 @@ jobs:
           # the packaging step has already zipped around.
           find dist -maxdepth 1 -type f -name 'JLLabelingAndTrain-*' -exec cp {} release/ \;
           ls -l release/
-          cd release && sha256sum JLLabelingAndTrain-* > SHA256SUMS.txt
 
       - uses: actions/upload-artifact@v4
         with:
@@ -161,6 +160,18 @@ jobs:
         with:
           path: artifacts/
           merge-multiple: true
+
+      - name: Build one checksum file for every asset
+        shell: bash
+        run: |
+          cd artifacts
+          # Do not let each matrix job write its own SHA256SUMS.txt: with
+          # merge-multiple the last platform's file won, and the beta.7
+          # release published a checksum file listing macOS only while three
+          # other binaries sat beside it. Hash the merged set once instead.
+          sha256sum JLLabelingAndTrain-* | grep -v '\.sha256$' > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+          cd ..
 
       - name: Generate release notes
         run: |
