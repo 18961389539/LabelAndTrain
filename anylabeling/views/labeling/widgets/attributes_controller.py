@@ -457,6 +457,18 @@ def save_attributes(widget, _shapes):
         return False
 
 
+def merge_action_enabled(widget):
+    """True when the selection is one the union can represent exactly."""
+    selected = list(widget.canvas.selected_shapes)
+    kinds = {shape.shape_type for shape in selected}
+    return (
+        len(selected) > 1
+        and not any(shape.locked for shape in selected)
+        and len(kinds) == 1
+        and next(iter(kinds)) in ("rectangle", "polygon")
+    )
+
+
 def shape_selection_changed(widget, selected_shapes):
     if widget.canvas.is_brush_mode:
         target = widget.canvas._brush_target_shape
@@ -474,11 +486,8 @@ def shape_selection_changed(widget, selected_shapes):
         shape.selected = False
     widget.label_list.clearSelection()
     widget.canvas.selected_shapes = selected_shapes
-    allow_merge_shape_type = {"rectangle": 0, "polygon": 0}
     for shape in widget.canvas.selected_shapes:
         shape.selected = True
-        if shape.shape_type in ["rectangle", "polygon"]:
-            allow_merge_shape_type[shape.shape_type] += 1
         item = widget.label_list.find_item_by_shape(shape)
         # NOTE: Handle the case when the shape is not found
         if item is not None:
@@ -503,14 +512,7 @@ def shape_selection_changed(widget, selected_shapes):
         and not selected_shapes[0].locked
     )
     widget.actions.edit_brush_mode.setEnabled(can_brush_edit)
-    widget.actions.union_selection.setEnabled(
-        not has_locked
-        and not all(value > 0 for value in allow_merge_shape_type.values())
-        and (
-            allow_merge_shape_type["rectangle"] > 1
-            or allow_merge_shape_type["polygon"] > 1
-        )
-    )
+    widget.actions.union_selection.setEnabled(merge_action_enabled(widget))
     widget.refresh_shape_lock_action()
 
     selected_count = len(widget.canvas.selected_shapes)

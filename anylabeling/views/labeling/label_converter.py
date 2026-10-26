@@ -619,8 +619,27 @@ class LabelConverter:
         ensure_ascii: bool = False,
         encoding: str = "utf-8",
     ) -> None:
-        with open(file_path, "w", encoding=encoding) as f:
-            json.dump(data, f, indent=indent, ensure_ascii=ensure_ascii)
+        """Write beside the target and swap it in; a failure keeps the old file."""
+        directory = osp.dirname(osp.abspath(file_path)) or "."
+        os.makedirs(directory, exist_ok=True)
+        fd, temporary_file = tempfile.mkstemp(
+            prefix=".xal_convert_", suffix=".tmp", dir=directory
+        )
+        try:
+            with os.fdopen(fd, "w", encoding=encoding) as f:
+                json.dump(data, f, indent=indent, ensure_ascii=ensure_ascii)
+                f.flush()
+                os.fsync(f.fileno())
+            from anylabeling.views.labeling.utils._io import safe_replace
+
+            safe_replace(temporary_file, file_path)
+            temporary_file = None
+        finally:
+            if temporary_file and osp.exists(temporary_file):
+                try:
+                    os.remove(temporary_file)
+                except OSError:
+                    pass
 
     def save_label_json(self, data: Dict[str, Any], file_path: str) -> None:
         """Write one per-image label file, keeping the version being replaced.
@@ -901,203 +920,250 @@ class LabelConverter:
 
         self.save_label_json(self.custom_data, output_file)
 
-    def coco_to_custom(self, input_file, output_dir_path, mode):
-        data = self.read_json(input_file)
+    def _coco_bbox_shape(self, dic_info, label, difficult, group_id):
+        bbox = dic_info["bbox"]
+        xmin, ymin, width, height = bbox[0], bbox[1], bbox[2], bbox[3]
+        return {
+            "label": label,
+            "shape_type": "rectangle",
+            "flags": {},
+            "points": [
+                [xmin, ymin],
+                [xmin + width, ymin],
+                [xmin + width, ymin + height],
+                [xmin, ymin + height],
+            ],
+            "group_id": group_id,
+            "description": None,
+            "difficult": difficult,
+            "attributes": {},
+        }
 
-        if mode in ["rectangle", "polygon"]:
-            if not self.classes:
-                for cat in data["categories"]:
-                    self.classes.append(cat["name"])
-        elif mode == "pose":
-            if not self.pose_classes:
-                for cat in data["categories"]:
-                    self.pose_classes[cat["name"]] = cat["keypoints"]
-                self.classes = list(self.pose_classes.keys())
+    def _coco_annotation_shapes(
+        self, dic_info, label_info, mode, image_info, image_ids
+    ):
+        """Turn one COCO annotation into shapes; raises on bad input."""
+        if not isinstance(dic_info, dict):
+            raise ValueError("annotation is not an object")
+        difficult = bool(int(str(dic_info.get("ignore", "0"))))
+        label = label_info[dic_info["category_id"]]
+        image_id = dic_info["image_id"]
 
-        total_info, label_info, image_info = {}, {}, {}
+        if mode == "rectangle":
+            return image_id, [
+                self._coco_bbox_shape(dic_info, label, difficult, None)
+            ]
 
-        # map category_id to name
-        for dic_info in data["categories"]:
-            label_info[dic_info["id"]] = dic_info["name"]
-
-        # map image_id to info
-        for dic_info in data["images"]:
-            total_info[dic_info["id"]] = {
-                "imageWidth": dic_info["width"],
-                "imageHeight": dic_info["height"],
-                "imagePath": osp.basename(dic_info["file_name"]),
-                "shapes": [],
-            }
-        image_ids = {}
-        for dic_info in data["annotations"]:
-            difficult = bool(int(str(dic_info.get("ignore", "0"))))
-            label = label_info[dic_info["category_id"]]
-            image_id = dic_info["image_id"]
-
-            if mode == "rectangle":
-                shape_type = "rectangle"
-                bbox = dic_info["bbox"]
-                xmin = bbox[0]
-                ymin = bbox[1]
-                width = bbox[2]
-                height = bbox[3]
-                xmax = xmin + width
-                ymax = ymin + height
-                points = [
-                    [xmin, ymin],
-                    [xmax, ymin],
-                    [xmax, ymax],
-                    [xmin, ymax],
-                ]
-                shape = {
-                    "label": label,
-                    "shape_type": shape_type,
-                    "flags": {},
-                    "points": points,
-                    "group_id": None,
-                    "description": None,
-                    "difficult": difficult,
-                    "attributes": {},
-                }
-                total_info[dic_info["image_id"]]["shapes"].append(shape)
-
-            elif mode == "polygon":
-                shape_type = "polygon"
-                segmentations_list = []
-
-                for segmentation in dic_info["segmentation"]:
-                    if (
-                        isinstance(segmentation, dict)
-                        and "counts" in segmentation
-                    ):
-                        polygons = _rle_to_polygons(segmentation)
-                        if polygons is None:
-                            logger.warning(
-                                "Unreadable COCO RLE segmentation for image "
-                                f"{dic_info['image_id']}; that object is not "
-                                "imported."
-                            )
-                        else:
-                            if not polygons:
-                                logger.warning(
-                                    "COCO RLE segmentation for image "
-                                    f"{dic_info['image_id']} holds no "
-                                    "outline; that object is not imported."
-                                )
-                            segmentations_list.extend(polygons)
-                        continue
-
-                    if not isinstance(segmentation, list):
-                        continue
-
-                    if len(segmentation) < 6 or len(segmentation) % 2 != 0:
-                        continue
-                    segmentations_list.append(segmentation)
-
-                if len(segmentations_list) == 0:
+        if mode == "pose":
+            image_ids[image_id] = image_ids.get(image_id, 0) + 1
+            group_id = image_ids[image_id]
+            shapes = [
+                self._coco_bbox_shape(dic_info, label, difficult, group_id)
+            ]
+            keypoints = dic_info["keypoints"]
+            kpt_names = self.pose_classes[label]
+            has_visible = len(kpt_names) * 3 == len(keypoints)
+            interval = 3 if has_visible else 2
+            for i in range(0, len(keypoints), interval):
+                x = keypoints[i]
+                y = keypoints[i + 1]
+                flag = keypoints[i + 2] if has_visible else 0
+                if x == 0 and y == 0 and flag == 0:
                     continue
-
-                group_id = None
-                if len(segmentations_list) > 1:
-                    if image_id not in image_info:
-                        image_info[image_id] = 1
-                    else:
-                        image_info[image_id] += 1
-                    group_id = image_info[image_id]
-
-                for segmentation in segmentations_list:
-                    points = []
-                    seen_points = set()
-                    for i in range(0, len(segmentation), 2):
-                        point = (segmentation[i], segmentation[i + 1])
-                        if point not in seen_points:
-                            points.append([point[0], point[1]])
-                            seen_points.add(point)
-
-                    if not points:
-                        continue
-
-                    shape = {
-                        "label": label,
-                        "shape_type": shape_type,
-                        "flags": {},
-                        "points": points,
-                        "group_id": group_id,
-                        "description": None,
-                        "difficult": difficult,
-                        "attributes": {},
-                    }
-                    total_info[dic_info["image_id"]]["shapes"].append(shape)
-
-            elif mode == "pose":
-                if image_id not in image_ids:
-                    image_ids[image_id] = 0
-                else:
-                    image_ids[image_id] += 1
-                # bbox
-                shape_type = "rectangle"
-                bbox = dic_info["bbox"]
-                xmin = bbox[0]
-                ymin = bbox[1]
-                width = bbox[2]
-                height = bbox[3]
-                xmax = xmin + width
-                ymax = ymin + height
-                points = [
-                    [xmin, ymin],
-                    [xmax, ymin],
-                    [xmax, ymax],
-                    [xmin, ymax],
-                ]
-                shape = {
-                    "label": label,
-                    "shape_type": shape_type,
-                    "flags": {},
-                    "points": points,
-                    "group_id": image_ids[image_id],
-                    "description": None,
-                    "difficult": difficult,
-                    "attributes": {},
-                }
-                total_info[dic_info["image_id"]]["shapes"].append(shape)
-                # keypoints
-                keypoints = dic_info["keypoints"]
-                kpt_names = self.pose_classes[label]
-                if len(kpt_names) * 3 == len(keypoints):
-                    has_visible = True
-                else:
-                    has_visible = False
-                interval = 3 if has_visible else 2
-                for i in range(0, len(keypoints), interval):
-                    x = keypoints[i]
-                    y = keypoints[i + 1]
-                    flag = keypoints[i + 2] if has_visible else 0
-                    if x == 0 and y == 0 and flag == 0:
-                        continue
-                    shape = {
+                shapes.append(
+                    {
                         "label": kpt_names[i // interval],
                         "shape_type": "point",
                         "flags": {},
                         "points": [[x, y]],
-                        "group_id": image_ids[image_id],
+                        "group_id": group_id,
                         "description": None,
                         "difficult": flag == 1,
                         "attributes": {},
                     }
-                    total_info[dic_info["image_id"]]["shapes"].append(shape)
+                )
+            return image_id, shapes
+
+        segmentations_list = []
+        for segmentation in dic_info["segmentation"]:
+            if isinstance(segmentation, dict) and "counts" in segmentation:
+                polygons = _rle_to_polygons(segmentation)
+                if polygons is None:
+                    logger.warning(
+                        "Unreadable COCO RLE segmentation for image "
+                        f"{image_id}; that object is not imported."
+                    )
+                else:
+                    if not polygons:
+                        logger.warning(
+                            "COCO RLE segmentation for image "
+                            f"{image_id} holds no outline; that object is "
+                            "not imported."
+                        )
+                    segmentations_list.extend(polygons)
+                continue
+            if not isinstance(segmentation, list):
+                continue
+            if len(segmentation) < 6 or len(segmentation) % 2 != 0:
+                continue
+            segmentations_list.append(segmentation)
+
+        if not segmentations_list:
+            return image_id, []
+        group_id = None
+        if len(segmentations_list) > 1:
+            image_info[image_id] = image_info.get(image_id, 0) + 1
+            group_id = image_info[image_id]
+
+        shapes = []
+        for segmentation in segmentations_list:
+            points = []
+            seen_points = set()
+            for i in range(0, len(segmentation), 2):
+                point = (segmentation[i], segmentation[i + 1])
+                if point not in seen_points:
+                    points.append([point[0], point[1]])
+                    seen_points.add(point)
+            if not points:
+                continue
+            shapes.append(
+                {
+                    "label": label,
+                    "shape_type": "polygon",
+                    "flags": {},
+                    "points": points,
+                    "group_id": group_id,
+                    "description": None,
+                    "difficult": difficult,
+                    "attributes": {},
+                }
+            )
+        return image_id, shapes
+
+    def coco_to_custom(self, input_file, output_dir_path, mode, cancel=None):
+        """Import a COCO file, one annotation at a time.
+
+        A malformed annotation (unknown category/image, short bbox, bad
+        keypoints) is logged and counted instead of aborting the file:
+        external COCO exports routinely contain a few. Returns a report
+        with ``images`` / ``written`` / ``skipped`` / ``failed`` /
+        ``cancelled``; ``cancel`` is polled between annotations and images.
+        """
+        data = self.read_json(input_file)
+        if not isinstance(data, dict):
+            raise ValueError("COCO file must contain a JSON object")
+        categories = data.get("categories")
+        images = data.get("images")
+        annotations = data.get("annotations", [])
+        if (
+            not isinstance(categories, list)
+            or not isinstance(images, list)
+            or not isinstance(annotations, list)
+        ):
+            raise ValueError(
+                "COCO file must contain categories, images and "
+                "annotations lists"
+            )
+
+        skipped = []
+        label_info = {}
+        pose_names = {}
+        for cat in categories:
+            if not isinstance(cat, dict):
+                skipped.append((None, f"category is not an object: {cat!r}"))
+                continue
+            try:
+                name = cat["name"]
+                label_info[cat["id"]] = name
+                if isinstance(cat.get("keypoints"), list):
+                    pose_names[name] = cat["keypoints"]
+            except (KeyError, TypeError) as exc:
+                skipped.append((None, f"invalid category: {exc}"))
+
+        if mode in ("rectangle", "polygon"):
+            if not self.classes:
+                self.classes = list(label_info.values())
+        elif mode == "pose":
+            if not self.pose_classes:
+                self.pose_classes = pose_names
+                self.classes = list(self.pose_classes.keys())
+        else:
+            raise ValueError(f"Unsupported COCO mode: {mode}")
+
+        total_info = {}
+        for image in images:
+            if not isinstance(image, dict):
+                skipped.append((None, f"image is not an object: {image!r}"))
+                continue
+            try:
+                total_info[image["id"]] = {
+                    "imageWidth": image["width"],
+                    "imageHeight": image["height"],
+                    "imagePath": osp.basename(image["file_name"]),
+                    "shapes": [],
+                }
+            except (KeyError, TypeError) as exc:
+                skipped.append((image.get("id"), f"invalid image: {exc}"))
+
+        image_info, image_ids = {}, {}
+        cancelled = False
+        for dic_info in annotations:
+            if cancel is not None and cancel():
+                cancelled = True
+                break
+            try:
+                image_id, shapes = self._coco_annotation_shapes(
+                    dic_info, label_info, mode, image_info, image_ids
+                )
+            except Exception as exc:  # noqa: BLE001 - one annotation
+                logger.warning(f"Skipping COCO annotation: {exc}")
+                skipped.append(
+                    (
+                        (
+                            dic_info.get("image_id")
+                            if isinstance(dic_info, dict)
+                            else None
+                        ),
+                        str(exc),
+                    )
+                )
+                continue
+            if image_id not in total_info:
+                skipped.append((image_id, "annotation for an unknown image"))
+                continue
+            total_info[image_id]["shapes"].extend(shapes)
+
+        report = {
+            "images": len(total_info),
+            "written": 0,
+            "skipped": skipped,
+            "failed": [],
+            "cancelled": cancelled,
+        }
+        if cancelled:
+            return report
 
         for dic_info in total_info.values():
-            self.reset()
-            self.custom_data["shapes"] = dic_info["shapes"]
-            self.custom_data["imagePath"] = dic_info["imagePath"]
-            self.custom_data["imageHeight"] = dic_info["imageHeight"]
-            self.custom_data["imageWidth"] = dic_info["imageWidth"]
-
+            if cancel is not None and cancel():
+                report["cancelled"] = True
+                break
             output_file = osp.join(
                 output_dir_path,
                 osp.splitext(dic_info["imagePath"])[0] + ".json",
             )
-            self.save_label_json(self.custom_data, output_file)
+            try:
+                self.reset()
+                self.custom_data["shapes"] = dic_info["shapes"]
+                self.custom_data["imagePath"] = dic_info["imagePath"]
+                self.custom_data["imageHeight"] = dic_info["imageHeight"]
+                self.custom_data["imageWidth"] = dic_info["imageWidth"]
+                self.save_label_json(self.custom_data, output_file)
+            except Exception as exc:  # noqa: BLE001 - report and continue
+                logger.warning(f"Could not write {output_file}: {exc}")
+                report["failed"].append((output_file, str(exc)))
+            else:
+                report["written"] += 1
+        return report
 
     @staticmethod
     def _bump_skip(stats, reason):

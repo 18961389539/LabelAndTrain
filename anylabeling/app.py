@@ -176,6 +176,33 @@ def _handle_fatal_startup_error():
     sys.exit(1)
 
 
+def _show_config_recovery_warning(warning, logger):
+    """Tell the user their config was unreadable but the app recovered.
+
+    Silent recovery would look like the app forgot every setting; the
+    startup crash dialog would mean they cannot work at all. This is the
+    middle ground: it names the file and where the original was moved.
+    """
+    backup = warning.get("backup")
+    detail = (
+        "配置文件无法读取，程序已按默认设置启动。\n\n"
+        f"文件：{warning.get('path', '')}\n"
+        + (f"原文件已备份到：\n{backup}\n" if backup else "原文件未能备份。\n")
+        + "\n本次运行的设置修改会写入新的配置文件。"
+    )
+    try:
+        box = QtWidgets.QMessageBox()
+        box.setIcon(QtWidgets.QMessageBox.Icon.Warning)
+        box.setWindowTitle("JLLabelingAndTrain - 配置无法读取")
+        box.setText(detail)
+        box.setDetailedText(str(warning.get("error", "")))
+        box.exec()
+        return box
+    except Exception as e:  # noqa: BLE001
+        logger.warning(f"Could not show the config recovery warning: {e}")
+        return None
+
+
 def _install_runtime_exception_hook(logger):
     """Keep uncaught slot exceptions from killing the process.
 
@@ -589,6 +616,10 @@ def _main():
         settings.clear()
         settings.sync()
         return
+
+    config_warning = anylabeling_config.take_config_load_warning()
+    if config_warning:
+        _show_config_recovery_warning(config_warning, logger)
 
     win = MainWindow(
         app,

@@ -248,3 +248,16 @@ class FileReviewController:
             widget._refresh_file_progress()
         except Exception as e:  # noqa: BLE001
             logger.warning(f"Failed to apply checked batch: {e}")
+
+    def apply_low_conf_batch(self, start_index, flags):
+        """Apply a batch of low-confidence results to file rows by index."""
+        widget = self._widget
+        try:
+            for offset, flag in enumerate(flags):
+                row = start_index + offset
+                item = widget.file_list_widget.item(row)
+                if item is not None:
+                    filelist_items.set_file_item_low_conf(widget, item, flag)
+            widget._refresh_file_progress()
+        except Exception as e:  # noqa: BLE001
+            logger.warning(f"Failed to apply low-confidence batch: {e}")

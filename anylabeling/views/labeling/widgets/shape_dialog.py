@@ -347,9 +347,9 @@ class ShapeModifyDialog(RangeTableDialog):
             end_idx (int): Ending frame index (inclusive).
         """
 
-        # Imported here: session_snapshot -> smart_tools -> data_audit
-        # pulls in this widgets package, so a module-level import is
-        # circular.
+        # Imported at the write site: the label-write path only needs the
+        # snapshot here, and keeping it local avoids loading the backup
+        # stack into every dialog import.
         from anylabeling.views.labeling.utils.session_snapshot import (
             snapshot_before_label_write,
         )
@@ -464,9 +464,9 @@ class ShapeModifyDialog(RangeTableDialog):
             end_idx (int): Ending frame index (inclusive).
         """
 
-        # Imported here: session_snapshot -> smart_tools -> data_audit
-        # pulls in this widgets package, so a module-level import is
-        # circular.
+        # Imported at the write site: the label-write path only needs the
+        # snapshot here, and keeping it local avoids loading the backup
+        # stack into every dialog import.
         from anylabeling.views.labeling.utils.session_snapshot import (
             snapshot_before_label_write,
         )
@@ -579,9 +579,9 @@ class ShapeModifyDialog(RangeTableDialog):
             end_idx (int): Ending frame index (inclusive).
         """
 
-        # Imported here: session_snapshot -> smart_tools -> data_audit
-        # pulls in this widgets package, so a module-level import is
-        # circular.
+        # Imported at the write site: the label-write path only needs the
+        # snapshot here, and keeping it local avoids loading the backup
+        # stack into every dialog import.
         from anylabeling.views.labeling.utils.session_snapshot import (
             snapshot_before_label_write,
         )

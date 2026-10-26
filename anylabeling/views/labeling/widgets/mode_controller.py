@@ -13,6 +13,8 @@ keep calling the widget as before.
 
 from anylabeling.services.auto_labeling.types import AutoLabelingMode
 
+from .attributes_controller import merge_action_enabled
+
 
 class ModeController:
     """Holds the widget's draw/brush/edit mode behaviour; widget delegates."""
@@ -30,7 +32,9 @@ class ModeController:
         widget.actions.undo_last_point.setEnabled(drawing)
         widget.actions.undo.setEnabled(not drawing)
         widget.actions.delete.setEnabled(not drawing)
-        widget.actions.union_selection.setEnabled(not drawing)
+        widget.actions.union_selection.setEnabled(
+            not drawing and merge_action_enabled(widget)
+        )
         widget.update_labeling_instruction()
 
     def toggle_draw_mode(

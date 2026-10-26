@@ -18,7 +18,7 @@ from unittest import mock
 
 from anylabeling.views.labeling.utils import file_lifecycle
 from anylabeling.views.labeling.utils import session_snapshot
-from anylabeling.views.labeling.utils import smart_tools
+from anylabeling.views.labeling.utils import label_backup
 
 
 class SessionSnapshotTestCase(unittest.TestCase):
@@ -46,7 +46,7 @@ class SessionSnapshotTestCase(unittest.TestCase):
         )
 
     def runs(self):
-        return smart_tools.list_label_backups(self.label_dir)
+        return label_backup.list_label_backups(self.label_dir)
 
 
 class TestSnapshotBeforeWrite(SessionSnapshotTestCase):
@@ -90,11 +90,11 @@ class TestSnapshotBeforeWrite(SessionSnapshotTestCase):
         self.assertNotEqual(run_a, run_b)
         self.assertEqual(
             osp.dirname(run_a),
-            osp.join(self.label_dir, smart_tools.BACKUP_ROOT_NAME),
+            osp.join(self.label_dir, label_backup.BACKUP_ROOT_NAME),
         )
         self.assertEqual(
             osp.dirname(run_b),
-            osp.join(other, smart_tools.BACKUP_ROOT_NAME),
+            osp.join(other, label_backup.BACKUP_ROOT_NAME),
         )
 
     def test_a_new_session_starts_a_new_run(self):
@@ -112,7 +112,7 @@ class TestSessionRunsReachThePicker(SessionSnapshotTestCase):
         run = session_snapshot.snapshot_before_label_write(path)
         runs = self.runs()
         self.assertEqual([name for name, _p, _c in runs], [osp.basename(run)])
-        self.assertTrue(smart_tools.is_session_snapshot(runs[0][1]))
+        self.assertTrue(label_backup.is_session_snapshot(runs[0][1]))
 
     def test_the_marker_is_not_counted_as_a_label(self):
         path = self.write_label("a.json", "before")
@@ -122,10 +122,10 @@ class TestSessionRunsReachThePicker(SessionSnapshotTestCase):
 
     def test_a_batch_run_carries_no_marker(self):
         path = self.write_label("a.json", "before")
-        run = smart_tools.backup_label_files(
+        run = label_backup.backup_label_files(
             [path], self.label_dir, "20260929_101112"
         )
-        self.assertFalse(smart_tools.is_session_snapshot(run))
+        self.assertFalse(label_backup.is_session_snapshot(run))
 
     def test_a_failed_copy_does_not_stop_the_write(self):
         path = self.write_label("a.json", "before")

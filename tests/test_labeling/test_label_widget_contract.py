@@ -34,6 +34,7 @@ EXTRACTED_MODULES = [
         "file_list_ops.py",
         "label_editing.py",
         "panel_visibility.py",
+        "shape_union.py",
     )
 ]
 

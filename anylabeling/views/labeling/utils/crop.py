@@ -1,3 +1,4 @@
+import hashlib
 import json
 import multiprocessing
 import os
@@ -130,12 +131,38 @@ def crop_and_save(
         logger.error(f"Error saving image: {str(e)}")
 
 
+def duplicate_stem_suffixes(image_files):
+    """Path digests for images whose stem is shared.
+
+    Crops are named from the image stem, so ``a/photo.png`` and
+    ``b/photo.png`` would both write ``photo_1-rectangle.jpg`` and the
+    second would overwrite the first. Only colliding images get a suffix,
+    so ordinary exports keep their names.
+    """
+    stems = {}
+    for image_file in image_files:
+        stems.setdefault(osp.splitext(osp.basename(image_file))[0], []).append(
+            image_file
+        )
+    suffixes = {}
+    for paths in stems.values():
+        if len(paths) < 2:
+            continue
+        for path in paths:
+            digest = hashlib.md5(
+                osp.abspath(path).encode("utf-8")
+            ).hexdigest()[:8]
+            suffixes[path] = f"_{digest}"
+    return suffixes
+
+
 def process_single_image(args):
     """Process a single image with cropping parameters
 
     Args:
         args: Tuple containing
-        (image_file, label_dir_path, save_path, min_width, min_height, label_start_indices)
+        (image_file, label_dir_path, save_path, min_width, min_height,
+        label_start_indices, stem_suffix)
     """
     (
         image_file,
@@ -144,6 +171,7 @@ def process_single_image(args):
         min_width,
         min_height,
         label_start_indices,
+        stem_suffix,
     ) = args
     try:
         image_name = osp.basename(image_file)
@@ -159,7 +187,7 @@ def process_single_image(args):
 
         shapes = data.get("shapes", [])
         image_path = Path(image_file)
-        orig_filename = image_path.stem
+        orig_filename = image_path.stem + stem_suffix
 
         try:
             image = cv2.imdecode(
@@ -406,6 +434,7 @@ def save_crop(self):
                             )
 
         current_indices = {label: 1 for label in label_counts}
+        suffixes = duplicate_stem_suffixes(image_file_list)
 
         process_args = [
             (
@@ -415,6 +444,7 @@ def save_crop(self):
                 min_width_spin.value(),
                 min_height_spin.value(),
                 current_indices.copy(),
+                suffixes.get(image_file, ""),
             )
             for image_file in image_file_list
         ]

@@ -2,6 +2,7 @@ import contextlib
 import io
 import json
 import os
+import shutil
 import tempfile
 import time
 
@@ -66,6 +67,66 @@ def safe_replace(src: str, dst: str, attempts: int = 5, delay: float = 0.15):
         f"索引器/残留进程），或目标目录对该用户不可写。请先关闭占用方后"
         f"重试。最后错误: {last_exc}"
     ) from last_exc
+
+
+def copy_file_atomic(source: str, target: str) -> None:
+    """Copy ``source`` over ``target`` without ever truncating ``target``.
+
+    ``shutil.copy2`` opens the destination for writing first, so a
+    disk-full or interrupted restore leaves a truncated label where a
+    valid one used to be. The bytes and metadata go to a temp file beside
+    the target, which is swapped in only once complete.
+    """
+    directory = os.path.dirname(os.path.abspath(target))
+    os.makedirs(directory, exist_ok=True)
+    temporary_file = None
+    try:
+        fd, temporary_file = tempfile.mkstemp(
+            prefix=".xal_copy_", suffix=".tmp", dir=directory
+        )
+        with open(source, "rb") as src, os.fdopen(fd, "wb") as dst:
+            shutil.copyfileobj(src, dst)
+            dst.flush()
+            os.fsync(dst.fileno())
+        shutil.copystat(source, temporary_file)
+        safe_replace(temporary_file, target)
+        temporary_file = None
+    finally:
+        if temporary_file and os.path.exists(temporary_file):
+            try:
+                os.remove(temporary_file)
+            except OSError:
+                pass
+
+
+def save_text(
+    text: str, file_path: str, *, encoding: str = "utf-8", newline=None
+) -> None:
+    """Write text atomically (temp file + fsync + replace).
+
+    Used for the class list and ``data.yaml`` an export leaves beside the
+    labels: a half-written file silently changes the class order or drops
+    a name for whatever reads it next.
+    """
+    directory = os.path.dirname(os.path.abspath(file_path))
+    os.makedirs(directory, exist_ok=True)
+    temporary_file = None
+    try:
+        fd, temporary_file = tempfile.mkstemp(
+            prefix=".xal_", suffix=".tmp", dir=directory
+        )
+        with os.fdopen(fd, "w", encoding=encoding, newline=newline) as handle:
+            handle.write(text)
+            handle.flush()
+            os.fsync(handle.fileno())
+        safe_replace(temporary_file, file_path)
+        temporary_file = None
+    finally:
+        if temporary_file and os.path.exists(temporary_file):
+            try:
+                os.remove(temporary_file)
+            except OSError:
+                pass
 
 
 def save_json(

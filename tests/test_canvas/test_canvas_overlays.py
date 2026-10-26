@@ -166,6 +166,22 @@ class TestCanvasOverlays(unittest.TestCase):
         image = self._render([marker], show_labels=True)
         self.assertEqual(self._ink(image, QtCore.QRect(0, 0, 200, 20)), 0)
 
+    def test_saved_visualization_uses_the_canvas_shape_opacity(self):
+        """The adjustment panel's opacity must reach the saved image.
+
+        The scratch canvas is built fresh, so any paint state not copied
+        onto it silently falls back to a default -- the saved picture then
+        shows annotations the screen is hiding.
+        """
+        whole = QtCore.QRect(0, 0, 320, 200)
+        self.canvas.shape_opacity = 0.0
+        hidden = self._render([self._rect(description="")])
+        self.assertEqual(self._ink(hidden, whole), 0)
+
+        self.canvas.shape_opacity = 1.0
+        visible = self._render([self._rect(description="")])
+        self.assertGreater(self._ink(visible, whole), 0)
+
     def test_the_module_needs_only_what_it_reads(self):
         """The split is safe because the overlays never write canvas state.
 

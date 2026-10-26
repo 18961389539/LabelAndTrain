@@ -17,7 +17,7 @@ try:
         audit_dataset,
         format_category_title,
     )
-    from anylabeling.views.labeling.utils.smart_tools import run_review_jump
+    from anylabeling.views.labeling.utils.smart_review import run_review_jump
 
     _AUDIT_AVAILABLE = True
 except Exception:

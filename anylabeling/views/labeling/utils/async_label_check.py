@@ -8,6 +8,7 @@ This module moves that IO to a worker thread and streams results back so
 the file panel appears instantly and the dots fill in shortly after.
 """
 
+import json
 import os.path as osp
 import re
 from typing import List, Optional
@@ -21,6 +22,8 @@ from anylabeling.views.labeling.schema import (
     REVIEW_REJECTED,
     REVIEW_UNCHECKED,
 )
+from .active_learning import needs_review
+from .quality import shapes_have_low_confidence
 
 CHECKED_FIELD_PATTERN = re.compile(r'"checked"\s*:\s*(true|false)')
 REVIEW_STATE_PATTERN = re.compile(
@@ -82,6 +85,32 @@ def label_file_review_info(label_file):
     return state, reviewed_at, note
 
 
+def label_file_low_conf(label_file, thresholds=None):
+    """Whether a label file holds a box the review band flags as uncertain.
+
+    This is the expensive half of the row metadata: it needs the shapes, not
+    just the review header. The background checker runs it after the cheap
+    review pass, so opening a folder no longer parses every JSON on the UI
+    thread; an unreadable file is not low-confidence here (data_audit and
+    export_check report it as corrupted separately).
+    """
+    try:
+        # Close the file before parsing: json.load() would keep it open for
+        # the whole parse, and on Windows that window is enough for a delete
+        # or a temp-folder cleanup to fail with "file in use".
+        with open(label_file, "r", encoding="utf-8") as handle:
+            raw = handle.read()
+        data = json.loads(raw)
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+        return False
+    if not isinstance(data, dict):
+        return False
+    shapes = data.get("shapes")
+    if thresholds:
+        return needs_review(shapes, thresholds=thresholds)
+    return shapes_have_low_confidence(shapes)
+
+
 def _label_file_review_state(label_file: str) -> str:
     """Scan a label JSON for its review state without a full parse.
 
@@ -98,22 +127,32 @@ def _label_file_checked(label_file: str) -> bool:
 
 
 class LabelCheckWorker(QObject):
-    """Checks label files on a background thread, in batches."""
+    """Checks label files on a background thread, in batches.
+
+    Two passes share one job: the cheap review-header pass first (the dots
+    appear quickly), then the shape-scoring pass that fills the
+    low-confidence roles. Both are off the UI thread; the low-confidence
+    count in the progress label is allowed to stay ``…`` until the second
+    pass finishes.
+    """
 
     batch_ready = pyqtSignal(
         int, list
     )  # (start_index, [(state, ts, note), ...])
+    low_conf_ready = pyqtSignal(int, list)  # (start_index, [bool, ...])
     finished = pyqtSignal()
 
     def __init__(
         self,
         label_files: List[str],
         batch_size: int = 200,
+        thresholds=None,
         parent=None,
     ):
         super().__init__(parent)
         self.label_files = label_files
         self.batch_size = batch_size
+        self.thresholds = thresholds
         self._should_stop = False
 
     def stop(self):
@@ -128,10 +167,23 @@ class LabelCheckWorker(QObject):
             if len(results) >= self.batch_size:
                 self.batch_ready.emit(i + 1 - len(results), results)
                 results = []
-        if results:
-            start = len(self.label_files) - len(results)
-            if not self._should_stop:
-                self.batch_ready.emit(start, results)
+        if results and not self._should_stop:
+            self.batch_ready.emit(
+                len(self.label_files) - len(results), results
+            )
+
+        low_conf = []
+        batch_start = 0
+        for i, label_file in enumerate(self.label_files):
+            if self._should_stop:
+                break
+            low_conf.append(label_file_low_conf(label_file, self.thresholds))
+            if len(low_conf) >= self.batch_size:
+                self.low_conf_ready.emit(batch_start, low_conf)
+                batch_start = i + 1
+                low_conf = []
+        if low_conf and not self._should_stop:
+            self.low_conf_ready.emit(batch_start, low_conf)
         self.finished.emit()
 
 
@@ -144,25 +196,39 @@ class AsyncLabelChecker(QObject):
         self.thread = None
         self._cleanup_slot = None
 
-    def start(self, label_files: List[str], on_batch=None):
+    def start(
+        self,
+        label_files: List[str],
+        on_batch=None,
+        on_low_conf=None,
+        thresholds=None,
+    ):
         """Start a background pass.  Any previous pass is stopped first.
 
         Args:
             label_files: Label JSON paths aligned with the file list rows.
             on_batch: Optional callable(start_index, checked_list) invoked
-                from the main thread as batches arrive.
+                from the main thread as review batches arrive.
+            on_low_conf: Optional callable(start_index, flags) for the
+                shape-scoring pass.
+            thresholds: Per-class calibration for the low-confidence pass.
         """
         self.stop()
         self._on_batch = on_batch
+        self._on_low_conf = on_low_conf
 
         self.thread = QtCore.QThread(self)
-        self.worker = LabelCheckWorker(label_files)
+        self.worker = LabelCheckWorker(label_files, thresholds=thresholds)
         self.worker.moveToThread(self.thread)
 
         self.thread.started.connect(self.worker.run)
         if on_batch is not None:
             self.worker.batch_ready.connect(
                 lambda start, checks: self._forward_batch(start, checks)
+            )
+        if on_low_conf is not None:
+            self.worker.low_conf_ready.connect(
+                lambda start, flags: self._forward_low_conf(start, flags)
             )
         self.worker.finished.connect(self._cleanup)
         self.thread.start()
@@ -174,6 +240,16 @@ class AsyncLabelChecker(QObject):
                 cb(start, checks)
             except Exception as e:  # noqa: BLE001
                 logger.warning(f"Label-check batch callback failed: {e}")
+
+    def _forward_low_conf(self, start, flags):
+        cb = getattr(self, "_on_low_conf", None)
+        if cb is not None:
+            try:
+                cb(start, flags)
+            except Exception as e:  # noqa: BLE001
+                logger.warning(
+                    f"Label-check low-confidence callback failed: {e}"
+                )
 
     def _cleanup(self):
         try:

@@ -543,9 +543,40 @@ def _resume_remembered_file(widget):
     return True
 
 
+def duplicate_output_stems(image_files):
+    """Stems that would share one label file in an output-directory import.
+
+    Labels are keyed by the image's basename there, so two images with the
+    same stem in different subfolders (or the same folder with different
+    extensions) would overwrite each other's annotations.
+    """
+    by_stem = {}
+    for image_file in image_files:
+        stem = osp.splitext(osp.basename(image_file))[0]
+        by_stem.setdefault(stem, []).append(image_file)
+    return sorted(stem for stem, paths in by_stem.items() if len(paths) > 1)
+
+
 def import_image_folder(widget, dirpath, pattern=None, load=True):
     if not widget.may_continue() or not dirpath:
         return
+
+    scanned = utils.scan_all_images(dirpath)
+    if widget.output_dir:
+        collisions = duplicate_output_stems(scanned)
+        if collisions:
+            widget.error_message(
+                QCoreApplication.translate(
+                    "LabelingWidget", "无法导入：标注文件会重名"
+                ),
+                QCoreApplication.translate(
+                    "LabelingWidget",
+                    "这个文件夹里有多张同名图片，而输出目录按文件名保存标注，"
+                    "它们会互相覆盖：<br>%s<br>"
+                    "请改名或分目录后重试。",
+                ).replace("%s", "、".join(collisions[:5])),
+            )
+            return
 
     widget.last_open_dir = dirpath
     _record_recent_dir(widget, dirpath)
@@ -584,9 +615,7 @@ def import_image_folder(widget, dirpath, pattern=None, load=True):
     widget.async_label_checker.stop()
     widget.file_list_widget.setUpdatesEnabled(False)
     try:
-        for file_index, filename in enumerate(
-            utils.scan_all_images(dirpath), start=1
-        ):
+        for file_index, filename in enumerate(scanned, start=1):
             if search_pattern:
                 if search_pattern.mode == "index":
                     if search_pattern.index != file_index:
@@ -637,6 +666,7 @@ def import_image_folder(widget, dirpath, pattern=None, load=True):
 
     if image_files and widget._config.get("exif_scan_enabled", True):
         widget.async_exif_scanner.start_scan(image_files)
+    widget._low_conf_scan_pending = bool(label_files)
     widget._refresh_file_panel()
     if pattern is None and image_files:
         widget._load_classes_from_folder(dirpath)
@@ -652,6 +682,12 @@ def import_image_folder(widget, dirpath, pattern=None, load=True):
         widget.async_label_checker.start(
             label_files,
             on_batch=(lambda s, i: _apply_checked_batch(widget, s, i)),
+            on_low_conf=(
+                lambda s, flags: _apply_low_conf_batch(
+                    widget, s, flags, len(label_files)
+                )
+            ),
+            thresholds=widget._load_active_thresholds(),
         )
 
 
@@ -853,7 +889,11 @@ def save_labels(widget, filename):
         # disable allows next and previous image to proceed
         # widget.filename = filename
         return True
-    except LabelFileError as e:
+    except (LabelFileError, OSError) as e:
+        # A read-only directory, a full disk or a locked file used to
+        # escape this function as an exception (only LabelFileError was
+        # caught), so callers could not tell the save had failed. Report
+        # it the same way and keep the bool contract.
         widget.error_message(
             QCoreApplication.translate(
                 "LabelingWidget", "Error saving label data"
@@ -863,11 +903,57 @@ def save_labels(widget, filename):
         return False
 
 
+def save_file(widget):
+    """Save the open image; returns False when nothing was written."""
+    assert not widget.image.isNull(), "cannot save empty image"
+    if widget.label_file:
+        # DL20180323 - overwrite when in directory
+        return widget._save_file(widget.label_file.filename)
+    if widget.output_file:
+        # Closing on a failed write would discard exactly what the user
+        # asked to keep.
+        if not widget._save_file(widget.output_file):
+            return False
+        widget.close()
+        return True
+    return widget._save_file(widget.save_file_dialog())
+
+
+def save_file_as(widget):
+    assert not widget.image.isNull(), "cannot save empty image"
+    return widget._save_file(widget.save_file_dialog())
+
+
+def save_file_to(widget, filename):
+    # An explicit save supersedes the debounced one; without this the
+    # timer would fire ~400ms later and rewrite the same file again.
+    widget._cancel_pending_auto_save()
+    if filename and widget.save_labels(filename):
+        widget.add_recent_file(filename)
+        widget.set_clean()
+        widget._show_save_feedback(True)
+        return True
+    widget._show_save_feedback(False)
+    return False
+
+
 def _apply_checked_batch(widget, start_index, info_list):
     """Delegates to filelist.controller (AsyncLabelChecker callback)."""
     # Built on demand: the controller is stateless, and light test
     # stubs never carry an instance.
     FileReviewController(widget).apply_checked_batch(start_index, info_list)
+
+
+def _apply_low_conf_batch(widget, start_index, flags, total):
+    """Apply one background low-confidence batch, then finish the ``…``.
+
+    The progress slot shows ``…`` until the last batch arrives; a stopped
+    scan leaves it pending, and the next import resets it.
+    """
+    FileReviewController(widget).apply_low_conf_batch(start_index, flags)
+    if start_index + len(flags) >= total:
+        widget._low_conf_scan_pending = False
+        widget._refresh_file_progress()
 
 
 def _maybe_focus_low_confidence_shapes(widget):

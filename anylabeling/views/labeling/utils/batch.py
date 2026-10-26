@@ -47,6 +47,15 @@ from anylabeling.views.labeling.widgets.popup import Popup
 __all__ = ["run_all_images"]
 
 
+def _batch_progress_text(done, total):
+    """The batch progress label, in the app's Chinese UI copy."""
+    return (
+        QCoreApplication.translate("LabelingWidget", "进度：%1/%2")
+        .replace("%1", str(done))
+        .replace("%2", str(total))
+    )
+
+
 class BatchRunOptionsDialog(QDialog):
     def __init__(self, parent, current_position, total_count):
         super().__init__(parent)
@@ -477,7 +486,7 @@ class BatchProcessingThread(QThread):
                     self.image_index += 1
                     self.progress_updated.emit(
                         self.image_index,
-                        f"Progress: {self.image_index}/{total_images}",
+                        _batch_progress_text(self.image_index, total_images),
                     )
                     continue
 
@@ -510,7 +519,7 @@ class BatchProcessingThread(QThread):
                 self.image_index += 1
                 self.progress_updated.emit(
                     self.image_index,
-                    f"Progress: {self.image_index}/{total_images}",
+                    _batch_progress_text(self.image_index, total_images),
                 )
 
             self.app.image_index = self.image_index
@@ -599,7 +608,7 @@ def show_progress_dialog_and_process(self):
     initial_progress = min(self.image_index, len(self.image_list))
     progress_dialog.setValue(initial_progress)
     progress_dialog.setLabelText(
-        f"Progress: {initial_progress}/{len(self.image_list)}"
+        _batch_progress_text(initial_progress, len(self.image_list))
     )
     progress_bar = progress_dialog.findChild(QtWidgets.QProgressBar)
 
@@ -611,7 +620,9 @@ def show_progress_dialog_and_process(self):
         )
 
         def update_progress(value):
-            progress_dialog.setLabelText(f"{value}/{len(self.image_list)}")
+            progress_dialog.setLabelText(
+                _batch_progress_text(value, len(self.image_list))
+            )
 
         progress_bar.valueChanged.connect(update_progress)
 

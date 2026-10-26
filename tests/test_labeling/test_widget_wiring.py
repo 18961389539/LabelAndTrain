@@ -76,7 +76,27 @@ def build_labeling_widget(filename=None):
     app_config.current_config_file = TEMPLATE_CONFIG
     LabelingWidget.menu = lambda self, title: QtWidgets.QMenu(title)
     parent = QtWidgets.QWidget()
-    return LabelingWidget(parent, filename=filename), parent
+    widget = LabelingWidget(parent, filename=filename)
+
+    # Tests clean up temp folders via deleteLater; the background scanners
+    # may still have a label/image open, and Windows refuses to delete an
+    # open file. Stop them synchronously before scheduling the widget's
+    # deletion (the low-confidence pass made the window long enough).
+    original_delete_later = widget.deleteLater
+
+    def _delete_later():
+        try:
+            widget.async_label_checker.stop()
+        except (RuntimeError, AttributeError):
+            pass
+        try:
+            widget.async_exif_scanner.stop_scan()
+        except (RuntimeError, AttributeError):
+            pass
+        original_delete_later()
+
+    widget.deleteLater = _delete_later
+    return widget, parent
 
 
 @unittest.skipUnless(PYQT_AVAILABLE, "PyQt6 is required")
@@ -323,9 +343,11 @@ class TestStaleCleanupOnOpenFile(unittest.TestCase):
             self.app = QtWidgets.QApplication([])
         from PIL import Image
 
-        from anylabeling.views.labeling.utils import smart_tools
+        from anylabeling.views.labeling.provenance import shape_marker
+        from anylabeling.views.labeling.utils import smart_stale
 
-        self.smart_tools = smart_tools
+        self.shape_marker = shape_marker
+        self.smart_stale = smart_stale
         self.tmp = tempfile.TemporaryDirectory()
         self.image = os.path.join(self.tmp.name, "a.png")
         Image.new("RGB", (20, 20), "white").save(self.image)
@@ -396,7 +418,7 @@ class TestStaleCleanupOnOpenFile(unittest.TestCase):
         self.widget.dirty = dirty
         ref = {
             "index": 0,
-            "marker": self.smart_tools.shape_marker(shapes[0]),
+            "marker": self.shape_marker(shapes[0]),
             "label_file": self.label,
         }
         dialog = SimpleNamespace(
@@ -404,11 +426,11 @@ class TestStaleCleanupOnOpenFile(unittest.TestCase):
             reject=lambda: None,
         )
         with mock.patch.object(
-            self.smart_tools.QMessageBox,
+            self.smart_stale.QMessageBox,
             "question",
-            return_value=self.smart_tools.QMessageBox.StandardButton.Yes,
+            return_value=self.smart_stale.QMessageBox.StandardButton.Yes,
         ):
-            self.smart_tools._delete_reported_stale(self.widget, dialog)
+            self.smart_stale._delete_reported_stale(self.widget, dialog)
         import json
 
         with open(self.label, "r", encoding="utf-8") as handle:
@@ -515,6 +537,10 @@ class TestWidgetLaunchedWithFolder(unittest.TestCase):
         # QSettings keeps its ini file open on Windows, so the folder it lives
         # in cannot always be removed the moment the widget is released.
         self.tmp.ignore_cleanup_errors = True
+
+    def test_file_list_uses_uniform_item_sizes(self):
+        """A 3000-row list must not measure the whole model on every scroll."""
+        self.assertTrue(self.widget.file_list_widget.uniformItemSizes())
         self.tmp.cleanup()
 
     def test_folder_contents_are_loaded(self):

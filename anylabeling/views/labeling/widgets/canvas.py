@@ -2760,6 +2760,7 @@ class Canvas(
         scratch.show_attributes = self.show_attributes
         scratch.show_linking = self.show_linking
         scratch.mask_opacity = self.mask_opacity
+        scratch.shape_opacity = self.shape_opacity
         scratch.attr_background_color = self.attr_background_color
         scratch.attr_border_color = self.attr_border_color
         scratch.attr_text_color = self.attr_text_color

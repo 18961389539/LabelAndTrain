@@ -181,6 +181,23 @@ def test_import_refuses_zip_slip(tmp_path):
     assert not (tmp_path / "escaped.txt").exists()
 
 
+def test_a_failed_extraction_removes_the_half_imported_folder(tmp_path):
+    """中途失败留下的半成品既不像项目也不能重导，必须清掉。"""
+    archive = tmp_path / "plates.zip"
+    with zipfile.ZipFile(str(archive), "w", zipfile.ZIP_STORED) as bundle:
+        bundle.writestr("plates/a.txt", b"first")
+        bundle.writestr("plates/b.txt", b"CONTENT_B")
+    data = archive.read_bytes()
+    assert data.count(b"CONTENT_B") == 1
+    archive.write_bytes(data.replace(b"CONTENT_B", b"XONTENT_B"))
+
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    with pytest.raises((zipfile.BadZipFile, OSError)):
+        project_bundle.import_bundle(str(archive), str(elsewhere))
+    assert not (elsewhere / "plates").exists()
+
+
 def test_import_cancels_cleanly(tmp_path):
     root = tmp_path / "plates"
     _make_project(str(root))

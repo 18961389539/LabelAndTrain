@@ -35,6 +35,7 @@ SETTERS = {
     "addItem",
     "setLabel",
     "setTitle",
+    "setLabelText",
 }
 CONSTRUCTORS = {
     "QLabel",
@@ -70,8 +71,25 @@ def _is_caption(node):
         and not node.value.startswith(
             ("%", "<", "http", "/", "./", "C:", "f:")
         )
+        # Markup fragments inside an f-string are structural, not copy.
+        and "<" not in node.value
+        and ">" not in node.value
         and len(node.value.strip()) > 2
     )
+
+
+def _caption_nodes(call):
+    """Literal text the call passes to a setter, including f-string parts."""
+    if not call.args:
+        return []
+    argument = call.args[0]
+    if isinstance(argument, ast.JoinedStr):
+        return [
+            part
+            for part in argument.values
+            if isinstance(part, ast.Constant) and isinstance(part.value, str)
+        ]
+    return [argument]
 
 
 def _scan():
@@ -95,8 +113,9 @@ def _scan():
                 )
                 if callee not in SETTERS | CONSTRUCTORS:
                     continue
-                if _is_caption(node.args[0]):
-                    found.append((rel, node.args[0].value.strip()))
+                for caption in _caption_nodes(node):
+                    if _is_caption(caption):
+                        found.append((rel, caption.value.strip()))
     return found
 
 

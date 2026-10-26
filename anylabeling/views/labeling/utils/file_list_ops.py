@@ -57,6 +57,62 @@ def _checked_targets(widget):
     return targets
 
 
+def refresh_file_progress(widget):
+    """Update the annotation progress summary label.
+
+    The low-confidence count reads only the role the background scan has
+    already filled. Parsing every label file here was the cold-import
+    freeze: 3000 JSONs on the UI thread before the file list could be used.
+    While the scan is pending the slot shows ``…`` rather than a
+    misleading zero.
+    """
+    total = widget.file_list_widget.count()
+    annotated = 0
+    checked = 0
+    review = 0
+    rework = 0
+    for row in range(total):
+        item = widget.file_list_widget.item(row)
+        if bool(item.data(FILE_ANNOTATION_ROLE)):
+            annotated += 1
+        if widget._file_item_annotation_checked(item):
+            checked += 1
+        if bool(item.data(FILE_LOW_CONF_ROLE)):
+            review += 1
+        if item.data(FILE_REVIEW_ROLE) == REVIEW_REJECTED:
+            rework += 1
+    if total <= 0:
+        widget.file_progress_label.setText("")
+        return
+    review_text = (
+        "…"
+        if getattr(widget, "_low_conf_scan_pending", False)
+        else str(review)
+    )
+    first_line = (
+        QCoreApplication.translate(
+            "LabelingWidget", "已标 %1/%2 · 已检查 %3 · 待复核 %4 · 需返工 %5"
+        )
+        .replace("%1", str(annotated))
+        .replace("%2", str(total))
+        .replace("%3", str(checked))
+        .replace("%4", review_text)
+        .replace("%5", str(rework))
+    )
+    threshold_text = (
+        QCoreApplication.translate("LabelingWidget", "已校准阈值")
+        if widget._load_active_thresholds()
+        else QCoreApplication.translate("LabelingWidget", "默认阈值")
+    )
+    filter_text = widget.file_filter_combo.currentText()
+    second_line = (
+        QCoreApplication.translate("LabelingWidget", "筛选：%1 · 阈值来源：%2")
+        .replace("%1", filter_text)
+        .replace("%2", threshold_text)
+    )
+    widget.file_progress_label.setText(f"{first_line}\n{second_line}")
+
+
 def set_all_items_checked(widget, mode):
     """Bulk-toggle the checkbox column: ``all`` / ``none`` / ``invert``.
 

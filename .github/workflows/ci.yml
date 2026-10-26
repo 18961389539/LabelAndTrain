@@ -92,7 +92,7 @@ jobs:
           exit $code
 
       # Unit tests cover the pieces; this covers the seams between them --
-      # real widget, real image folder, Qt offscreen, 13 steps. It earned its
+      # real widget, real image folder, Qt offscreen, 17 checks. It earned its
       # place here on 2026-10-10: two real bugs (a project record written into
       # the opened folder's *parent*, so two datasets in one directory shared
       # a single record; and the training window deriving its project from

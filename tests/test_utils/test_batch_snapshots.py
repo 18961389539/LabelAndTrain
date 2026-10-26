@@ -9,6 +9,7 @@ hundreds of files with nothing to restore.
 
 import json
 import os
+from unittest import mock
 
 import pytest
 
@@ -223,7 +224,7 @@ def test_class_rename_snapshots_every_file_it_rewrites(tmp_path):
 
 
 def test_template_prelabels_snapshot_their_target(tmp_path):
-    from anylabeling.views.labeling.utils import smart_tools
+    from anylabeling.views.labeling.utils import smart_prelabel
 
     image = _image(tmp_path)
     label_file = _human_label(tmp_path, image)
@@ -241,7 +242,7 @@ def test_template_prelabels_snapshot_their_target(tmp_path):
         ],
     }
 
-    written, failed = smart_tools._write_prelabels(None, [item])
+    written, failed = smart_prelabel._write_prelabels(None, [item])
     assert (written, failed) == (1, 0)
     assert [s["label"] for s in _read(label_file)["shapes"]] == [
         "凹坑",
@@ -249,6 +250,36 @@ def test_template_prelabels_snapshot_their_target(tmp_path):
     ]
     saved = _read(_backups(str(tmp_path))[0])
     assert [s["label"] for s in saved["shapes"]] == ["凹坑"]
+
+
+def test_template_prelabels_count_a_failed_write(tmp_path):
+    from anylabeling.views.labeling.utils import smart_prelabel
+
+    image = _image(tmp_path)
+    label_file = _human_label(tmp_path, image)
+    item = {
+        "label_file": label_file,
+        "target": image,
+        "shapes": [
+            {
+                "label": "scratch",
+                "points": [[10.0, 20.0], [40.0, 60.0]],
+                "shape_type": "rectangle",
+                "flags": {},
+                "source": "model",
+            }
+        ],
+    }
+
+    with mock.patch.object(
+        smart_prelabel,
+        "save_json",
+        side_effect=OSError("disk full"),
+    ):
+        result = smart_prelabel._write_prelabels(None, [item])
+
+    assert result == (0, 1)
+    assert [s["label"] for s in _read(label_file)["shapes"]] == ["凹坑"]
 
 
 class _Parent:
@@ -266,7 +297,7 @@ class _Parent:
 
 
 def test_missing_scan_write_snapshots_its_file(tmp_path):
-    from anylabeling.views.labeling.utils import smart_tools
+    from anylabeling.views.labeling.utils import smart_missing
 
     image = _image(tmp_path)
     label_file = _human_label(tmp_path, image)
@@ -278,12 +309,40 @@ def test_missing_scan_write_snapshots_its_file(tmp_path):
         "source": "model",
     }
 
-    written = smart_tools._write_missing(_Parent(image), [(image, [payload])])
+    written, failed = smart_missing._write_missing(
+        _Parent(image), [(image, [payload])]
+    )
 
-    assert written == 1
+    assert (written, failed) == (1, 0)
     assert [s["label"] for s in _read(label_file)["shapes"]] == [
         "凹坑",
         "scratch",
     ]
     saved = _read(_backups(str(tmp_path))[0])
     assert [s["label"] for s in saved["shapes"]] == ["凹坑"]
+
+
+def test_missing_scan_counts_a_failed_write(tmp_path):
+    from anylabeling.views.labeling.utils import smart_missing
+
+    image = _image(tmp_path)
+    label_file = _human_label(tmp_path, image)
+    payload = {
+        "label": "scratch",
+        "points": [[5.0, 5.0], [9.0, 9.0]],
+        "shape_type": "rectangle",
+        "flags": {},
+        "source": "model",
+    }
+
+    with mock.patch.object(
+        smart_missing,
+        "save_json",
+        side_effect=OSError("disk full"),
+    ):
+        result = smart_missing._write_missing(
+            _Parent(image), [(image, [payload])]
+        )
+
+    assert result == (0, 1)
+    assert [s["label"] for s in _read(label_file)["shapes"]] == ["凹坑"]

@@ -154,6 +154,46 @@ def _shortcut_consumers():
     return keys
 
 
+def _hidden_shortcut_keys():
+    """Shortcut keys bound to a hidden QAction by the runtime applier."""
+    text = APPLIER.read_text(encoding="utf-8")
+    return set(
+        re.findall(
+            r'shortcut_map\["shortcuts\.([a-z_0-9]+)"\]\s*=\s*\(?\s*'
+            r"self\._ensure_hidden_shortcut_action",
+            text,
+        )
+    )
+
+
+def _action_namespace_keys():
+    """Keyword names of the ``widget.actions = Struct(...)`` namespace."""
+    tree = ast.parse(LABEL_WIDGET.read_text(encoding="utf-8"))
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Assign):
+            continue
+        if not any(
+            isinstance(target, ast.Attribute) and target.attr == "actions"
+            for target in node.targets
+        ):
+            continue
+        call = node.value
+        func_name = (
+            getattr(call.func, "attr", "")
+            if isinstance(call, ast.Call)
+            else ""
+        )
+        if func_name == "Struct":
+            return {keyword.arg for keyword in call.keywords}
+    return set()
+
+
+def _applier_action_references():
+    """``self._widget.actions.X`` handles the runtime applier reaches for."""
+    text = APPLIER.read_text(encoding="utf-8")
+    return set(re.findall(r"self\._widget\.actions\.([a-z_0-9]+)", text))
+
+
 @unittest.skipUnless(
     SCHEMA_AVAILABLE, "Settings schema dependencies are unavailable"
 )
@@ -251,4 +291,33 @@ class TestShortcutBindings(unittest.TestCase):
             stale,
             [],
             "the settings dialog describes shortcuts that no longer exist",
+        )
+
+    def test_no_hidden_shortcut_duplicates_a_menu_action(self):
+        """Two actions on one key make Qt trigger neither of them."""
+        visible = {
+            value
+            for kind, value in _action_shortcuts().values()
+            if kind == "config"
+        }
+        hidden = _hidden_shortcut_keys()
+        self.assertTrue(hidden, "the hidden-shortcut map was not found")
+        self.assertEqual(
+            sorted(hidden & visible),
+            [],
+            "these keys are bound to both a menu action and a hidden "
+            "action; Qt treats the shortcut as ambiguous and fires neither",
+        )
+
+    def test_every_action_the_applier_binds_exists_on_the_widget(self):
+        """A handle the namespace does not expose crashes at startup."""
+        namespace = _action_namespace_keys()
+        self.assertTrue(namespace, "the actions namespace was not found")
+        missing = sorted(_applier_action_references() - namespace)
+        self.assertEqual(
+            missing,
+            [],
+            "the runtime applier reaches for action handles the widget "
+            "does not expose; the shortcut map is built during startup, so "
+            "one missing name takes the whole application down",
         )

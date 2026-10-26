@@ -15,6 +15,7 @@ from PyQt6.QtWidgets import (
 
 from anylabeling.views.labeling.label_converter import LabelConverter
 from anylabeling.views.labeling.logger import logger
+from anylabeling.views.labeling.utils._io import save_text
 from anylabeling.views.labeling.schema import (
     REVIEW_UNCHECKED,
     is_review_confirmed,
@@ -236,9 +237,7 @@ def split_images_by_review(image_list, label_path_for, only_confirmed):
 def _write_classes_file(save_path, classes):
     """Drop the class list next to the exported labels."""
     target = osp.join(save_path, "classes.txt")
-    with open(target, "w", encoding="utf-8") as handle:
-        for name in classes:
-            handle.write(f"{name}\n")
+    save_text("".join(f"{name}\n" for name in classes), target)
     return target
 
 
@@ -253,18 +252,17 @@ def _write_data_yaml(save_path, classes):
     and the exact mistake that makes an export silently drop a class.
     """
     target = osp.join(save_path, "data.yaml")
-    with open(target, "w", encoding="utf-8") as handle:
-        handle.write(
-            "# Written by JLLabelingAndTrain export. Fill in path/train/val\n"
-            "# to match your dataset layout before training, e.g.:\n"
-            "#   path: <this directory>\n"
-            "#   train: images/train\n"
-            "#   val: images/val\n"
-        )
-        handle.write(f"nc: {len(classes)}\n")
-        handle.write("names:\n")
-        for name in classes:
-            handle.write(f"- {name}\n")
+    lines = [
+        "# Written by JLLabelingAndTrain export. Fill in path/train/val\n",
+        "# to match your dataset layout before training, e.g.:\n",
+        "#   path: <this directory>\n",
+        "#   train: images/train\n",
+        "#   val: images/val\n",
+        f"nc: {len(classes)}\n",
+        "names:\n",
+    ]
+    lines.extend(f"- {name}\n" for name in classes)
+    save_text("".join(lines), target)
     return target
 
 

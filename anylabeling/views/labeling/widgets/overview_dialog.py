@@ -1,6 +1,7 @@
 import os
 import csv
 import json
+import tempfile
 import zipfile
 
 from PyQt6 import QtWidgets
@@ -79,6 +80,70 @@ def _get_overview_style() -> str:
             border-color: {t["background"]};
         }}
     """
+
+
+def _unique_export_zip(directory):
+    """``export_data.zip``, or the first free numbered name beside it."""
+    path = os.path.join(directory, "export_data.zip")
+    if not os.path.exists(path):
+        return path
+    index = 2
+    while True:
+        candidate = os.path.join(directory, f"export_data_{index}.zip")
+        if not os.path.exists(candidate):
+            return candidate
+        index += 1
+
+
+def write_overview_export(directory, label_infos, shape_infos_data, headers):
+    """Zip the overview tables without touching existing files.
+
+    The previous version wrote three scratch files into the chosen folder
+    and deleted them afterwards -- but the user may have chosen that folder
+    because their dataset lives there, where the cleanup deletes a real
+    ``classes.txt``. Scratch files live in a temp dir now, and the archive
+    goes to a free name through a ``.part`` file so a crash cannot leave a
+    truncated ``export_data.zip`` where the old one used to be.
+    """
+    zip_path = _unique_export_zip(directory)
+    part_path = zip_path + ".part"
+    try:
+        with tempfile.TemporaryDirectory(prefix="xal_overview_") as tmp:
+            label_infos_path = os.path.join(tmp, "label_infos.csv")
+            with open(
+                label_infos_path, "w", newline="", encoding="utf-8-sig"
+            ) as csvfile:
+                writer = csv.writer(csvfile)
+                for row in label_infos:
+                    writer.writerow(row)
+
+            shape_infos_path = os.path.join(tmp, "shape_infos.csv")
+            with open(
+                shape_infos_path, "w", newline="", encoding="utf-8-sig"
+            ) as csvfile:
+                writer = csv.writer(csvfile)
+                writer.writerow(headers)
+                for row in shape_infos_data:
+                    writer.writerow(row)
+
+            classes_path = os.path.join(tmp, "classes.txt")
+            classes = [row[0] for row in label_infos[1:-1]]
+            with open(classes_path, "w", encoding="utf-8") as handle:
+                handle.write("\n".join(classes))
+
+            with zipfile.ZipFile(part_path, "w") as zf:
+                zf.write(label_infos_path, "label_infos.csv")
+                zf.write(shape_infos_path, "shape_infos.csv")
+                zf.write(classes_path, "classes.txt")
+        os.replace(part_path, zip_path)
+        return zip_path
+    except Exception:
+        try:
+            if os.path.exists(part_path):
+                os.remove(part_path)
+        except OSError:
+            pass
+        raise
 
 
 class OverviewDialog(RangeTableDialog):
@@ -423,45 +488,9 @@ class OverviewDialog(RangeTableDialog):
             )
             headers, shape_infos_data = self.get_shape_infos_table(shape_infos)
 
-            label_infos_path = os.path.join(directory, "label_infos.csv")
-            shape_infos_path = os.path.join(directory, "shape_infos.csv")
-            classes_path = os.path.join(directory, "classes.txt")
-            zip_path = os.path.join(directory, "export_data.zip")
-
-            # Write label_infos.csv
-            with open(
-                label_infos_path, "w", newline="", encoding="utf-8-sig"
-            ) as csvfile:
-                writer = csv.writer(csvfile)
-                for row in label_infos:
-                    writer.writerow(row)
-
-            # Write shape_infos.csv
-            with open(
-                shape_infos_path, "w", newline="", encoding="utf-8-sig"
-            ) as csvfile:
-                writer = csv.writer(csvfile)
-                writer.writerow(headers)
-                for row in shape_infos_data:
-                    writer.writerow(row)
-
-            # Write classes.txt
-            classes = [
-                row[0] for row in label_infos[1:-1]
-            ]  # Exclude header and total
-            with open(classes_path, "w", encoding="utf-8") as f:
-                f.write("\n".join(classes))
-
-            # Create zip file
-            with zipfile.ZipFile(zip_path, "w") as zf:
-                zf.write(label_infos_path, os.path.basename(label_infos_path))
-                zf.write(shape_infos_path, os.path.basename(shape_infos_path))
-                zf.write(classes_path, os.path.basename(classes_path))
-
-            # Clean up temporary files
-            os.remove(label_infos_path)
-            os.remove(shape_infos_path)
-            os.remove(classes_path)
+            zip_path = write_overview_export(
+                directory, label_infos, shape_infos_data, headers
+            )
 
             template = self.tr(
                 "Exporting annotations successfully!\n"
@@ -482,7 +511,7 @@ class OverviewDialog(RangeTableDialog):
 
             popup = Popup(
                 self.tr(
-                    f"Error occurred while exporting annotations statistics file."
+                    "Error occurred while exporting annotations statistics file."
                 ),
                 self.parent,
                 icon=new_icon_path("error", "svg"),

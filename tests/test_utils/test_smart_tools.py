@@ -6,7 +6,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 try:
     from PyQt6 import QtWidgets
 
-    from anylabeling.views.labeling.utils.smart_tools import (
+    from anylabeling.views.labeling.utils.smart_ui import (
         RESULT_CATEGORY_ROLE,
         RESULT_PATH_ROLE,
         _ResultDialog,
@@ -73,9 +73,11 @@ class TestApplyStaleDeletions(unittest.TestCase):
     def setUp(self):
         import tempfile
 
-        from anylabeling.views.labeling.utils import smart_tools
+        from anylabeling.views.labeling.utils import label_backup
+        from anylabeling.views.labeling.utils import smart_stale as smart_tools
 
         self.smart_tools = smart_tools
+        self.label_backup = label_backup
         self.tmp = tempfile.TemporaryDirectory()
 
     def tearDown(self):
@@ -228,9 +230,11 @@ class TestStaleAuditDialog(unittest.TestCase):
         os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
         from PyQt6 import QtWidgets
 
-        from anylabeling.views.labeling.utils import smart_tools
+        from anylabeling.views.labeling.utils import label_backup
+        from anylabeling.views.labeling.utils import smart_stale as smart_tools
 
         self.smart_tools = smart_tools
+        self.label_backup = label_backup
         self.app = QtWidgets.QApplication.instance()
         if self.app is None:
             self.app = QtWidgets.QApplication([])
@@ -375,11 +379,13 @@ class TestStaleDeleteBackup(unittest.TestCase):
         import os
         import tempfile
 
-        from anylabeling.views.labeling.utils import smart_tools
+        from anylabeling.views.labeling.utils import label_backup
+        from anylabeling.views.labeling.utils import smart_stale as smart_tools
 
         self.json = json
         self.os = os
         self.smart_tools = smart_tools
+        self.label_backup = label_backup
         self.tmp = tempfile.TemporaryDirectory()
         self.label = os.path.join(self.tmp.name, "a.json")
         self.stale = {
@@ -435,7 +441,7 @@ class TestStaleDeleteBackup(unittest.TestCase):
         from unittest import mock
 
         with mock.patch.object(
-            self.smart_tools.shutil, "copy2", side_effect=OSError("locked")
+            self.label_backup.shutil, "copy2", side_effect=OSError("locked")
         ):
             counts = self.smart_tools.apply_stale_deletions(
                 {self.label: [self.ref]}, "run_07", label_dir=self.tmp.name
@@ -444,6 +450,35 @@ class TestStaleDeleteBackup(unittest.TestCase):
         self.assertEqual(counts["deleted"], 0)
         self.assertEqual(self._live_labels(), ["cat", "dog"])
         self.assertEqual(self._backups(), [])
+
+    def test_a_failed_multi_file_snapshot_leaves_no_partial_run(self):
+        from unittest import mock
+
+        second = self.os.path.join(self.tmp.name, "b.json")
+        with open(self.label, "r", encoding="utf-8") as handle:
+            content = handle.read()
+        with open(second, "w", encoding="utf-8") as handle:
+            handle.write(content)
+        original_copy = self.label_backup.shutil.copy2
+        calls = []
+
+        def flaky_copy(source, target):
+            calls.append(target)
+            if len(calls) == 2:
+                raise OSError("locked")
+            return original_copy(source, target)
+
+        with mock.patch.object(
+            self.label_backup.shutil, "copy2", side_effect=flaky_copy
+        ):
+            result = self.label_backup.backup_label_files(
+                [self.label, second], self.tmp.name, "20260923_101112"
+            )
+
+        self.assertIsNone(result)
+        self.assertEqual(
+            self.label_backup.list_label_backups(self.tmp.name), []
+        )
 
     def test_no_label_dir_still_snapshots_before_deleting(self):
         """A caller that forgets the folder must not mean "no undo"."""
@@ -467,7 +502,7 @@ class TestStaleDeleteBackup(unittest.TestCase):
         from unittest import mock
 
         with mock.patch.object(
-            self.smart_tools.shutil, "copy2", side_effect=OSError("locked")
+            self.label_backup.shutil, "copy2", side_effect=OSError("locked")
         ):
             counts = self.smart_tools.apply_stale_deletions(
                 {self.label: [self.ref]}, "run_07"
@@ -503,7 +538,7 @@ class TestStaleDeleteBackup(unittest.TestCase):
             self.os.makedirs(self.os.path.join(root, name), exist_ok=True)
         self.os.makedirs(self.os.path.join(root, "notes"), exist_ok=True)
 
-        with mock.patch.object(self.smart_tools, "BACKUP_KEEP_RUNS", 1):
+        with mock.patch.object(self.label_backup, "BACKUP_KEEP_RUNS", 1):
             self.smart_tools.apply_stale_deletions(
                 {self.label: [self.ref]}, "run_07", label_dir=self.tmp.name
             )
@@ -533,16 +568,20 @@ class TestBackupRestore(unittest.TestCase):
         import json
         import tempfile
 
-        from anylabeling.views.labeling.utils import smart_tools
+        from anylabeling.views.labeling.utils import label_backup
+        from anylabeling.views.labeling.utils import smart_backup
+        from anylabeling.views.labeling.utils import smart_stale
 
         self.json = json
-        self.smart_tools = smart_tools
+        self.smart_stale = smart_stale
+        self.smart_backup = smart_backup
+        self.label_backup = label_backup
         self.tmp = tempfile.TemporaryDirectory()
         self.label = os.path.join(self.tmp.name, "a.json")
         self._write([("cat", "model", "run_01"), ("dog", "human", None)])
         self.ref = {
             "index": 0,
-            "marker": smart_tools.shape_marker(
+            "marker": smart_stale.shape_marker(
                 {"label": "cat", "points": [[0, 0], [10, 10]]}
             ),
         }
@@ -572,7 +611,7 @@ class TestBackupRestore(unittest.TestCase):
             ]
 
     def _delete(self):
-        return self.smart_tools.apply_stale_deletions(
+        return self.smart_stale.apply_stale_deletions(
             {self.label: [self.ref]}, "run_07", label_dir=self.tmp.name
         )
 
@@ -580,9 +619,9 @@ class TestBackupRestore(unittest.TestCase):
         self._delete()
         self.assertEqual(self._live_labels(), ["dog"])
 
-        runs = self.smart_tools.list_label_backups(self.tmp.name)
+        runs = self.label_backup.list_label_backups(self.tmp.name)
         self.assertEqual(len(runs), 1)
-        result = self.smart_tools.restore_label_backup(
+        result = self.label_backup.restore_label_backup(
             runs[0][1], self.tmp.name
         )
 
@@ -592,14 +631,14 @@ class TestBackupRestore(unittest.TestCase):
         # Choosing the wrong run must be reversible: the state the restore
         # overwrote got its own snapshot.
         self.assertEqual(
-            len(self.smart_tools.list_label_backups(self.tmp.name)), 2
+            len(self.label_backup.list_label_backups(self.tmp.name)), 2
         )
 
     def test_restore_leaves_the_dirty_open_file_alone(self):
         self._delete()
-        runs = self.smart_tools.list_label_backups(self.tmp.name)
+        runs = self.label_backup.list_label_backups(self.tmp.name)
 
-        result = self.smart_tools.restore_label_backup(
+        result = self.label_backup.restore_label_backup(
             runs[0][1], self.tmp.name, skip_files={self.label}
         )
 
@@ -607,19 +646,53 @@ class TestBackupRestore(unittest.TestCase):
         self.assertEqual(result["skipped"], 1)
         self.assertEqual(self._live_labels(), ["dog"])
 
+    def test_a_failed_restore_copy_leaves_the_target_untouched(self):
+        import os
+        from unittest import mock
+
+        from anylabeling.views.labeling.utils import _io
+
+        self._delete()
+        runs = self.label_backup.list_label_backups(self.tmp.name)
+        with open(self.label, "rb") as handle:
+            before = handle.read()
+
+        def partial_copy(source, target, *args, **kwargs):
+            target.write(source.read(7))
+            raise OSError("disk full")
+
+        with mock.patch.object(_io.shutil, "copyfileobj", partial_copy):
+            result = self.label_backup.restore_label_backup(
+                runs[0][1], self.tmp.name
+            )
+
+        self.assertEqual(result["restored"], 0)
+        self.assertEqual(result["skipped"], 1)
+        self.assertFalse(result["backup_failed"])
+        with open(self.label, "rb") as handle:
+            self.assertEqual(handle.read(), before)
+        self.assertEqual(
+            [
+                name
+                for name in os.listdir(self.tmp.name)
+                if name.startswith(".xal_copy_")
+            ],
+            [],
+        )
+
     def test_two_snapshots_in_one_second_stay_separate(self):
         stamp = "20260923_101112"
-        first = self.smart_tools.backup_label_files(
+        first = self.label_backup.backup_label_files(
             [self.label], self.tmp.name, stamp
         )
         self._write([("only", "human", None)])
-        second = self.smart_tools.backup_label_files(
+        second = self.label_backup.backup_label_files(
             [self.label], self.tmp.name, stamp
         )
 
         self.assertNotEqual(first, second)
         self.assertEqual(
-            len(self.smart_tools.list_label_backups(self.tmp.name)), 2
+            len(self.label_backup.list_label_backups(self.tmp.name)), 2
         )
         inner = os.path.join(second, "a.json")
         with open(inner, "r", encoding="utf-8") as handle:
@@ -632,11 +705,11 @@ class TestBackupRestore(unittest.TestCase):
         from unittest import mock
 
         self._delete()
-        runs = self.smart_tools.list_label_backups(self.tmp.name)
+        runs = self.label_backup.list_label_backups(self.tmp.name)
         with mock.patch.object(
-            self.smart_tools.shutil, "copy2", side_effect=OSError("locked")
+            self.label_backup.shutil, "copy2", side_effect=OSError("locked")
         ):
-            result = self.smart_tools.restore_label_backup(
+            result = self.label_backup.restore_label_backup(
                 runs[0][1], self.tmp.name
             )
 
@@ -648,7 +721,7 @@ class TestBackupRestore(unittest.TestCase):
         from unittest import mock
 
         self._delete()
-        runs = self.smart_tools.list_label_backups(self.tmp.name)
+        runs = self.label_backup.list_label_backups(self.tmp.name)
         entries = [f"{name}（{count} 个文件）" for name, _p, count in runs]
 
         class _Parent:
@@ -664,17 +737,17 @@ class TestBackupRestore(unittest.TestCase):
         parent = _Parent(self.tmp.name)
         with (
             mock.patch.object(
-                self.smart_tools.QInputDialog,
+                self.smart_backup.QInputDialog,
                 "getItem",
                 return_value=(entries[0], True),
             ),
             mock.patch.object(
-                self.smart_tools.QMessageBox,
+                self.smart_backup.QMessageBox,
                 "question",
-                return_value=self.smart_tools.QMessageBox.StandardButton.Yes,
+                return_value=self.smart_backup.QMessageBox.StandardButton.Yes,
             ),
-            mock.patch.object(self.smart_tools, "_notify"),
+            mock.patch.object(self.smart_backup, "_notify"),
         ):
-            self.smart_tools.run_backup_restore(parent)
+            self.smart_backup.run_backup_restore(parent)
 
         self.assertEqual(self._live_labels(), ["cat", "dog"])

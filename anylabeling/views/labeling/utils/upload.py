@@ -18,6 +18,8 @@ from anylabeling.views.labeling.logger import logger
 from anylabeling.views.labeling.widgets import Popup
 from anylabeling.views.labeling.utils.qt import new_icon_path
 from anylabeling.views.labeling.utils.style import *
+from anylabeling.config import save_config
+from anylabeling.views.labeling import project_context, project_settings
 from anylabeling.views.labeling.utils.export import (
     _check_filename_exist,
     resolve_classes_for_yolo,
@@ -26,7 +28,9 @@ from anylabeling.views.labeling.utils.theme import get_theme
 
 
 class UploadCocoThread(QThread):
-    finished = pyqtSignal(bool, str)
+    # Deliberately not ``finished``: that name collides with QThread's own
+    # zero-argument signal, which Qt emits when run() returns.
+    upload_finished = pyqtSignal(bool, str, dict)
 
     def __init__(self, converter, input_file, output_dir_path, mode):
         super().__init__()
@@ -39,16 +43,17 @@ class UploadCocoThread(QThread):
         try:
             time.sleep(1)
 
-            self.converter.coco_to_custom(
+            report = self.converter.coco_to_custom(
                 input_file=self.input_file,
                 output_dir_path=self.output_dir_path,
                 mode=self.mode,
+                cancel=self.isInterruptionRequested,
             )
 
-            self.finished.emit(True, "")
+            self.upload_finished.emit(True, "", report or {})
 
         except Exception as e:
-            self.finished.emit(False, str(e))
+            self.upload_finished.emit(False, str(e), {})
 
 
 def upload_coco_annotation(self, mode):
@@ -117,24 +122,30 @@ def upload_coco_annotation(self, mode):
         LabelConverter(), input_file, output_dir_path, mode
     )
 
-    def on_upload_finished(success, error_msg):
+    def on_upload_finished(success, error_msg, report):
         progress_dialog.close()
         if success:
             # update and refresh the current canvas
             self.load_file(self.filename)
 
-            popup = Popup(
-                QCoreApplication.translate(
-                    "LabelingWidget", f"Uploading annotations successfully!"
-                ),
-                self,
-                icon=new_icon_path("copy-green", "svg"),
-            )
-            popup.show_popup(self, popup_height=65, position="center")
+            skipped = report.get("skipped") or []
+            failed = report.get("failed") or []
+            if skipped or failed:
+                _report_coco_import_problems(self, report)
+            elif not report.get("cancelled"):
+                popup = Popup(
+                    QCoreApplication.translate(
+                        "LabelingWidget",
+                        "Uploading annotations successfully!",
+                    ),
+                    self,
+                    icon=new_icon_path("copy-green", "svg"),
+                )
+                popup.show_popup(self, popup_height=65, position="center")
         else:
-            message = (
-                f"Error occurred while uploading annotations: {str(error_msg)}"
-            )
+            message = QCoreApplication.translate(
+                "LabelingWidget", "上传标注时出错：%s"
+            ) % str(error_msg)
             logger.error(message)
             popup = Popup(
                 message,
@@ -143,12 +154,12 @@ def upload_coco_annotation(self, mode):
             )
             popup.show_popup(self, position="center")
 
-    self.upload_thread.finished.connect(on_upload_finished)
+    self.upload_thread.upload_finished.connect(on_upload_finished)
 
     progress_dialog.show()
     self.upload_thread.start()
 
-    progress_dialog.canceled.connect(self.upload_thread.terminate)
+    progress_dialog.canceled.connect(self.upload_thread.requestInterruption)
 
 
 def upload_voc_annotation(self, mode):
@@ -279,57 +290,217 @@ def upload_voc_annotation(self, mode):
         get_progress_dialog_style(color=get_theme()["text"], height=20)
     )
 
+    def _progress(index, total):
+        progress_dialog.setValue(index + 1)
+        QtWidgets.QApplication.processEvents()
+
     try:
-        for i, image_path in enumerate(image_list):
-            image_filename = osp.basename(image_path)
-            label_filename = osp.splitext(image_filename)[0] + ".xml"
-            if label_filename not in label_file_list:
-                continue
-
-            input_file = osp.join(label_dir_path, label_filename)
-            output_file = osp.join(
-                output_dir_path, osp.splitext(image_filename)[0] + ".json"
-            )
-            converter.voc_to_custom(
-                input_file=input_file,
-                output_file=output_file,
-                image_filename=image_filename,
-                mode=mode,
-            )
-
-            progress_dialog.setValue(i)
-            if progress_dialog.wasCanceled():
-                break
-
+        result = import_voc_labels(
+            converter,
+            image_list,
+            label_file_list,
+            label_dir_path,
+            output_dir_path,
+            mode,
+            progress=_progress,
+            is_cancelled=progress_dialog.wasCanceled,
+        )
         progress_dialog.close()
-        template = QCoreApplication.translate(
-            "LabelingWidget",
-            "Uploading annotations successfully!\n"
-            "Results have been saved to:\n"
-            "%s",
-        )
-        message_text = template % output_dir_path
-        popup = Popup(
-            message_text,
-            self,
-            icon=new_icon_path("copy-green", "svg"),
-        )
-        popup.show_popup(self, popup_height=65, position="center")
-
         # update and refresh the current canvas
         self.load_file(self.filename)
 
+        if result["failed"]:
+            _report_import_failures(self, result)
+        elif not result["cancelled"]:
+            template = QCoreApplication.translate(
+                "LabelingWidget",
+                "Uploading annotations successfully!\n"
+                "Results have been saved to:\n"
+                "%s",
+            )
+            popup = Popup(
+                template % output_dir_path,
+                self,
+                icon=new_icon_path("copy-green", "svg"),
+            )
+            popup.show_popup(self, popup_height=65, position="center")
+
     except Exception as e:
         progress_dialog.close()
-        message = f"Error occurred while uploading annotations: {str(e)}"
+        message = QCoreApplication.translate(
+            "LabelingWidget", "上传标注时出错：%s"
+        ) % str(e)
         logger.error(message)
-
         popup = Popup(
             message,
             self,
             icon=new_icon_path("error", "svg"),
         )
         popup.show_popup(self, position="center")
+
+
+def _report_coco_import_problems(parent, report):
+    skipped = report.get("skipped") or []
+    failed = report.get("failed") or []
+    box = QtWidgets.QMessageBox(parent)
+    box.setIcon(QtWidgets.QMessageBox.Icon.Warning)
+    box.setWindowTitle(
+        QCoreApplication.translate(
+            "LabelingWidget", "Error occurred while processing images!"
+        )
+    )
+    box.setText(
+        QCoreApplication.translate(
+            "LabelingWidget",
+            "已写入 %d 张图片；%d 条标注无法读取，%d 张图片写入失败。",
+        )
+        % (report.get("written", 0), len(skipped), len(failed))
+    )
+    details = []
+    for image_id, reason in skipped[:20]:
+        details.append(reason if image_id is None else f"{image_id}: {reason}")
+    for path, error in failed[:20]:
+        details.append(f"{path}: {error}")
+    if details:
+        box.setDetailedText("\n".join(details))
+    box.exec()
+
+
+def import_yolo_labels(
+    converter,
+    image_file_list,
+    label_file_list,
+    label_dir_path,
+    image_dir_path,
+    output_dir_path,
+    mode,
+    preserve_existing,
+    progress=None,
+    is_cancelled=None,
+):
+    """Import one YOLO folder, one file at a time.
+
+    A malformed line, a missing image or an unreadable existing JSON must
+    not abandon the rest of the folder: the pair goes into ``failed`` with
+    its reason and the loop continues. Returns
+    ``{"imported", "attempted", "failed", "cancelled"}`` so the caller can
+    report what actually happened.
+    """
+    result = {"imported": 0, "attempted": 0, "failed": [], "cancelled": False}
+    for index, image_filename in enumerate(image_file_list):
+        if is_cancelled is not None and is_cancelled():
+            result["cancelled"] = True
+            break
+        if image_filename.endswith(".json"):
+            continue
+        label_filename = osp.splitext(image_filename)[0] + ".txt"
+        if label_filename not in label_file_list:
+            continue
+        data_filename = osp.splitext(image_filename)[0] + ".json"
+        input_file = osp.join(label_dir_path, label_filename)
+        output_file = osp.join(output_dir_path, data_filename)
+        image_file = osp.join(image_dir_path, image_filename)
+        result["attempted"] += 1
+        try:
+            existing_shapes = []
+            if preserve_existing and osp.exists(output_file):
+                with open(output_file, "r", encoding="utf-8") as handle:
+                    existing_data = json.load(handle)
+                existing_shapes = existing_data.get("shapes", [])
+
+            if mode in ("hbb", "seg"):
+                converter.yolo_to_custom(
+                    input_file, output_file, image_file, mode
+                )
+            elif mode == "obb":
+                converter.yolo_obb_to_custom(
+                    input_file, output_file, image_file
+                )
+            elif mode == "pose":
+                converter.yolo_pose_to_custom(
+                    input_file, output_file, image_file
+                )
+            else:
+                raise ValueError(f"Unsupported YOLO mode: {mode}")
+
+            if preserve_existing and existing_shapes:
+                with open(output_file, "r", encoding="utf-8") as handle:
+                    new_data = json.load(handle)
+                new_data["shapes"] = existing_shapes + new_data.get(
+                    "shapes", []
+                )
+                converter.save_label_json(new_data, output_file)
+        except Exception as exc:  # noqa: BLE001 - one bad file, not a batch
+            logger.warning(f"YOLO import failed for {output_file}: {exc}")
+            result["failed"].append((output_file, str(exc)))
+        else:
+            result["imported"] += 1
+        if progress is not None:
+            progress(index, len(image_file_list))
+    return result
+
+
+def import_voc_labels(
+    converter,
+    image_list,
+    label_file_list,
+    label_dir_path,
+    output_dir_path,
+    mode,
+    progress=None,
+    is_cancelled=None,
+):
+    """Import VOC XMLs one image at a time; one bad XML is not a batch."""
+    result = {"imported": 0, "attempted": 0, "failed": [], "cancelled": False}
+    for index, image_path in enumerate(image_list):
+        if is_cancelled is not None and is_cancelled():
+            result["cancelled"] = True
+            break
+        image_filename = osp.basename(image_path)
+        label_filename = osp.splitext(image_filename)[0] + ".xml"
+        if label_filename not in label_file_list:
+            continue
+        input_file = osp.join(label_dir_path, label_filename)
+        output_file = osp.join(
+            output_dir_path, osp.splitext(image_filename)[0] + ".json"
+        )
+        result["attempted"] += 1
+        try:
+            converter.voc_to_custom(
+                input_file=input_file,
+                output_file=output_file,
+                image_filename=image_filename,
+                mode=mode,
+            )
+        except Exception as exc:  # noqa: BLE001 - one bad file, not a batch
+            logger.warning(f"VOC import failed for {output_file}: {exc}")
+            result["failed"].append((output_file, str(exc)))
+        else:
+            result["imported"] += 1
+        if progress is not None:
+            progress(index, len(image_list))
+    return result
+
+
+def _report_import_failures(parent, result):
+    box = QtWidgets.QMessageBox(parent)
+    box.setIcon(QtWidgets.QMessageBox.Icon.Warning)
+    box.setWindowTitle(
+        QCoreApplication.translate(
+            "LabelingWidget", "Error occurred while processing images!"
+        )
+    )
+    box.setText(
+        QCoreApplication.translate(
+            "LabelingWidget",
+            "Processing finished: %d succeeded, %d failed " "(of %d total).",
+        )
+        % (result["imported"], len(result["failed"]), result["attempted"])
+    )
+    box.setDetailedText(
+        "\n".join(f"{path}: {error}" for path, error in result["failed"][:20])
+    )
+    box.exec()
 
 
 def upload_yolo_annotation(self, mode, LABEL_OPACITY):
@@ -532,68 +703,25 @@ def upload_yolo_annotation(self, mode, LABEL_OPACITY):
         get_progress_dialog_style(color=get_theme()["text"], height=20)
     )
 
+    def _progress(index, total):
+        progress_dialog.setValue(index + 1)
+        QtWidgets.QApplication.processEvents()
+
     try:
-        for i, image_filename in enumerate(image_file_list):
-            if image_filename.endswith(".json"):
-                continue
-            label_filename = osp.splitext(image_filename)[0] + ".txt"
-            data_filename = osp.splitext(image_filename)[0] + ".json"
-            if label_filename not in label_file_list:
-                continue
-            input_file = osp.join(label_dir_path, label_filename)
-            output_file = osp.join(output_dir_path, data_filename)
-            image_file = osp.join(image_dir_path, image_filename)
-
-            existing_shapes = []
-            if preserve_existing and osp.exists(output_file):
-                with open(output_file, "r", encoding="utf-8") as f:
-                    existing_data = json.load(f)
-                    existing_shapes = existing_data.get("shapes", [])
-
-            if mode in ["hbb", "seg"]:
-                converter.yolo_to_custom(
-                    input_file=input_file,
-                    output_file=output_file,
-                    image_file=image_file,
-                    mode=mode,
-                )
-            elif mode == "obb":
-                converter.yolo_obb_to_custom(
-                    input_file=input_file,
-                    output_file=output_file,
-                    image_file=image_file,
-                )
-            elif mode == "pose":
-                converter.yolo_pose_to_custom(
-                    input_file=input_file,
-                    output_file=output_file,
-                    image_file=image_file,
-                )
-
-            # Merge with existing shapes if needed
-            if preserve_existing and existing_shapes:
-                with open(output_file, "r", encoding="utf-8") as f:
-                    new_data = json.load(f)
-                new_data["shapes"] = existing_shapes + new_data.get(
-                    "shapes", []
-                )
-                with open(output_file, "w", encoding="utf-8") as f:
-                    json.dump(new_data, f, indent=2, ensure_ascii=False)
-
-            progress_dialog.setValue(i)
-            if progress_dialog.wasCanceled():
-                break
-
+        result = import_yolo_labels(
+            converter,
+            image_file_list,
+            label_file_list,
+            label_dir_path,
+            image_dir_path,
+            output_dir_path,
+            mode,
+            preserve_existing,
+            progress=_progress,
+            is_cancelled=progress_dialog.wasCanceled,
+        )
         progress_dialog.close()
         self.load_file(self.filename)
-        popup = Popup(
-            QCoreApplication.translate(
-                "LabelingWidget", "Upload completed successfully!"
-            ),
-            self,
-            icon=new_icon_path("copy-green", "svg"),
-        )
-        popup.show_popup(self, position="center")
 
         # Initialize unique labels
         for label in labels:
@@ -605,17 +733,64 @@ def upload_yolo_annotation(self, mode, LABEL_OPACITY):
                     item, label, rgb, LABEL_OPACITY
                 )
 
+        if result["failed"]:
+            _report_import_failures(self, result)
+        elif not result["cancelled"]:
+            popup = Popup(
+                QCoreApplication.translate(
+                    "LabelingWidget", "Upload completed successfully!"
+                ),
+                self,
+                icon=new_icon_path("copy-green", "svg"),
+            )
+            popup.show_popup(self, position="center")
+
     except Exception as e:
         progress_dialog.close()
-        message = f"Error occurred while uploading annotations: {str(e)}"
+        message = QCoreApplication.translate(
+            "LabelingWidget", "上传标注时出错：%s"
+        ) % str(e)
         logger.error(message)
-
         popup = Popup(
             message,
             self,
             icon=new_icon_path("error", "svg"),
         )
         popup.show_popup(self, position="center")
+
+
+def sanitize_label_list(lines):
+    """One class per line: strip, drop blanks, keep the first occurrence."""
+    labels = []
+    seen = set()
+    for line in lines:
+        name = line.strip()
+        if not name or name in seen:
+            continue
+        seen.add(name)
+        labels.append(name)
+    return labels
+
+
+def apply_uploaded_labels(widget, labels):
+    """Make an imported class list the open project's list, and persist it.
+
+    The action used to update only the two in-memory widgets: the config and
+    the project record kept the old names, so the import vanished at restart
+    and training/export still used the previous classes. Digit shortcuts are
+    re-assigned so the imported list is usable immediately.
+    """
+    widget._config["labels"] = list(labels)
+    save_config(widget._config)
+    widget.load_labels(labels)
+    widget.label_dialog.label_list.clear()
+    widget.label_dialog.label_list.addItems(labels)
+    if widget.label_dialog._sort_labels:
+        widget.label_dialog.sort_labels()
+    widget.digit_shortcut_controller.assign_label_digits(labels)
+    dataset_dir = project_context.current_dataset_dir(widget)
+    if dataset_dir:
+        project_settings.save_current_labels(widget, dataset_dir)
 
 
 def upload_label_classes_file(self):
@@ -632,8 +807,8 @@ def upload_label_classes_file(self):
         return
 
     try:
-        with open(file_path, "r", encoding="utf-8") as f:
-            labels = [line.strip() for line in f.readlines()]
+        with open(file_path, "r", encoding="utf-8-sig") as f:
+            labels = sanitize_label_list(f.readlines())
 
         if not labels:
             popup = Popup(
@@ -671,30 +846,21 @@ def upload_label_classes_file(self):
         if response.exec() != QtWidgets.QMessageBox.StandardButton.Ok:
             return
 
-        # Update unique_label_list
-        self.unique_label_list.clear()
-        self.load_labels(labels)
-
-        # Update label_dialog.label_list
-        self.label_dialog.label_list.clear()
-        self.label_dialog.label_list.addItems(labels)
-        if self.label_dialog._sort_labels:
-            self.label_dialog.sort_labels()
+        apply_uploaded_labels(self, labels)
 
         popup = Popup(
             QCoreApplication.translate(
-                "LabelingWidget",
-                f"Successfully loaded {len(set(labels))} labels!",
-            ),
+                "LabelingWidget", "已加载 %1 个类别。"
+            ).replace("%1", str(len(labels))),
             self,
             icon=new_icon_path("copy-green", "svg"),
         )
         popup.show_popup(self, position="center")
 
     except Exception as e:
-        message = (
-            f"Error occurred while uploading label classes file: {str(e)}"
-        )
+        message = QCoreApplication.translate(
+            "LabelingWidget", "上传类别文件时出错：%s"
+        ) % str(e)
         logger.error(message)
 
         popup = Popup(
@@ -843,6 +1009,46 @@ def validate_shape_attributes_config(attributes_data):
     return attributes, widget_types
 
 
+def validate_label_flags(data):
+    """Normalize a label -> flag-names mapping from a flags file."""
+    if not isinstance(data, dict):
+        raise ValueError("flags file must contain a label-to-flags mapping")
+    result = {}
+    for label, names in data.items():
+        if not isinstance(label, str) or not label.strip():
+            raise ValueError(f"invalid label in flags file: {label!r}")
+        if names is None:
+            names = []
+        if not isinstance(names, list) or not all(
+            isinstance(name, str) and name.strip() for name in names
+        ):
+            raise ValueError(f"flags for {label!r} must be a list of names")
+        result[label.strip()] = [name.strip() for name in names]
+    return result
+
+
+def persist_shape_attributes(widget, attributes):
+    """Make an imported attributes schema survive the session."""
+    canvas = widget._config.get("canvas")
+    if not isinstance(canvas, dict):
+        canvas = {}
+        widget._config["canvas"] = canvas
+    canvas["attributes"] = attributes
+    save_config(widget._config)
+
+
+def persist_label_flags(widget, flags):
+    """Make an imported label-flags schema survive the session."""
+    widget._config["label_flags"] = flags
+    save_config(widget._config)
+
+
+def persist_image_flags(widget, flags):
+    """Make an imported image-flag name list survive the session."""
+    widget._config["flags"] = list(flags)
+    save_config(widget._config)
+
+
 def upload_shape_attrs_file(self, LABEL_OPACITY):
     filter = "Shape Attributes Files (*.json);;All Files (*)"
     file_path, _ = QtWidgets.QFileDialog.getOpenFileName(
@@ -865,6 +1071,7 @@ def upload_shape_attrs_file(self, LABEL_OPACITY):
         )
         self.attributes = attributes
         self.attribute_widget_types = widget_types
+        persist_shape_attributes(self, attributes)
         for label in self.attributes:
             if not self.unique_label_list.find_items_by_label(label):
                 item = self.unique_label_list.create_item_from_label(label)
@@ -895,8 +1102,7 @@ def upload_shape_attrs_file(self, LABEL_OPACITY):
 
         popup = Popup(
             QCoreApplication.translate(
-                "LabelingWidget",
-                f"Uploading shape attributes file successfully!",
+                "LabelingWidget", "形状属性文件导入成功。"
             ),
             self,
             icon=new_icon_path("copy-green", "svg"),
@@ -904,9 +1110,9 @@ def upload_shape_attrs_file(self, LABEL_OPACITY):
         popup.show_popup(self, popup_height=65, position="center")
 
     except Exception as e:
-        message = (
-            f"Error occurred while uploading shape attributes file: {str(e)}"
-        )
+        message = QCoreApplication.translate(
+            "LabelingWidget", "上传形状属性文件时出错：%s"
+        ) % str(e)
         logger.error(message)
 
         popup = Popup(
@@ -933,7 +1139,8 @@ def upload_label_flags_file(self, LABEL_OPACITY):
     try:
         with open(file_path, "r", encoding="utf-8") as f:
             # Each line in the file is an flag-level flag
-            self.label_flags = yaml.safe_load(f)
+            self.label_flags = validate_label_flags(yaml.safe_load(f))
+            persist_label_flags(self, self.label_flags)
             for label in list(self.label_flags.keys()):
                 if not self.unique_label_list.find_items_by_label(label):
                     item = self.unique_label_list.create_item_from_label(label)
@@ -948,7 +1155,7 @@ def upload_label_flags_file(self, LABEL_OPACITY):
 
         popup = Popup(
             QCoreApplication.translate(
-                "LabelingWidget", f"Uploading flags file successfully!"
+                "LabelingWidget", "标签标志文件导入成功。"
             ),
             self,
             icon=new_icon_path("copy-green", "svg"),
@@ -956,7 +1163,9 @@ def upload_label_flags_file(self, LABEL_OPACITY):
         popup.show_popup(self, popup_height=65, position="center")
 
     except Exception as e:
-        message = f"Error occurred while uploading flags file: {str(e)}"
+        message = QCoreApplication.translate(
+            "LabelingWidget", "上传标签标志文件时出错：%s"
+        ) % str(e)
         logger.error(message)
 
         popup = Popup(
@@ -981,18 +1190,31 @@ def upload_image_flags_file(self):
         return
 
     try:
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, "r", encoding="utf-8-sig") as f:
             # Each line in the file is an image-level flag
-            self.image_flags = f.read().splitlines()
-            self.load_flags({k: False for k in self.image_flags})
-        self.flag_dock.show()
+            flags = sanitize_label_list(f.read().splitlines())
+        if not flags:
+            popup = Popup(
+                QCoreApplication.translate(
+                    "LabelingWidget", "文件中没有标志。"
+                ),
+                self,
+                icon=new_icon_path("error", "svg"),
+            )
+            popup.show_popup(self, position="center")
+            return
 
-        # update and refresh the current canvas
-        self.load_file(self.filename)
+        self.image_flags = flags
+        persist_image_flags(self, flags)
+        self.load_flags({name: False for name in flags})
+        self.flag_dock.show()
+        # No reload here: loading the file again read the old flags back from
+        # disk, because nothing had saved the imported list yet.
+        self.set_dirty()
 
         popup = Popup(
             QCoreApplication.translate(
-                "LabelingWidget", f"Uploading flags file successfully!"
+                "LabelingWidget", "图像标志文件导入成功。"
             ),
             self,
             icon=new_icon_path("copy-green", "svg"),
@@ -1000,7 +1222,9 @@ def upload_image_flags_file(self):
         popup.show_popup(self, popup_height=65, position="center")
 
     except Exception as e:
-        message = f"Error occurred while uploading flags file: {str(e)}"
+        message = QCoreApplication.translate(
+            "LabelingWidget", "上传图像标志文件时出错：%s"
+        ) % str(e)
         logger.error(message)
         popup = Popup(
             message,

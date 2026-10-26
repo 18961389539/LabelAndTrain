@@ -17,4 +17,5 @@ def isolate_config(tmp_path, monkeypatch):
     """Redirect all config I/O away from the user's home directory."""
     monkeypatch.setattr(config, "_work_directory", str(tmp_path))
     monkeypatch.setattr(config, "current_config_file", None)
+    monkeypatch.setattr(config, "_config_load_warning", None)
     yield

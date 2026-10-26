@@ -95,6 +95,100 @@ class ModelManager(QObject):
 
         self.load_model_configs()
 
+    @staticmethod
+    def _configured_custom_models():
+        """The rc's custom-model entries, minus structurally unusable ones.
+
+        ``custom_models`` is user-editable: ``null``, a mapping or a list
+        of strings used to crash ModelManager while it was being built.
+        Entries without a string ``config_file`` could never be loaded
+        anyway, so they are dropped here and the next save repairs the rc.
+        """
+        models = get_config().get("custom_models", [])
+        if not isinstance(models, list):
+            logger.warning(
+                "Ignoring custom_models: expected a list, got "
+                f"{type(models).__name__}"
+            )
+            return []
+        usable = []
+        for model in models:
+            if not isinstance(model, dict):
+                logger.warning(
+                    f"Ignoring custom model entry that is not a mapping: "
+                    f"{model!r}"
+                )
+                continue
+            if not isinstance(model.get("config_file"), str):
+                logger.warning(
+                    "Ignoring custom model entry without a config_file"
+                )
+                continue
+            usable.append(dict(model))
+        return usable
+
+    def _load_one_model_config(self, model):
+        """Parse one model entry, or return ``None`` when it is unusable.
+
+        The entry can be a packaged config or a user's; the latter is
+        validated for the three fields the panel shows or indexes by
+        (``name``, ``type``, ``display_name``). A skipped user entry stays
+        in ``custom_models`` -- the file may only be unreadable today --
+        but never reaches the model list.
+        """
+        config_file = model["config_file"]
+        is_custom = model.get("is_custom_model", False)
+        try:
+            if config_file.startswith(":/"):  # Config in resources
+                config_file_name = config_file[2:]
+                resource_path = pkg_resources.files(
+                    auto_labeling_configs
+                ).joinpath("auto_labeling", config_file_name)
+                config_content = resource_path.read_text(encoding="utf-8")
+                model_config = yaml.safe_load(config_content)
+            else:  # Config file is in local file system
+                with open(config_file, "r", encoding="utf-8") as f:
+                    model_config = yaml.safe_load(f)
+        except (OSError, UnicodeDecodeError, yaml.YAMLError) as exc:
+            logger.error(f"Skipping model config {config_file}: {exc}")
+            return None
+        if not isinstance(model_config, dict):
+            logger.error(
+                f"Skipping model config {config_file}: expected a "
+                f"mapping, got {type(model_config).__name__}"
+            )
+            return None
+        if config_file.startswith(":/"):
+            model_config["config_file"] = str(config_file)
+        else:
+            model_config["config_file"] = os.path.normpath(
+                os.path.abspath(config_file)
+            )
+        model_config["is_custom_model"] = is_custom
+        if not is_custom:
+            return model_config
+        if not self.is_valid_custom_model_name(model_config.get("name")):
+            logger.error(
+                f"Skipping custom model {config_file}: invalid 'name' field."
+            )
+            return None
+        if model_config.get("type") not in _CUSTOM_MODELS:
+            logger.error(
+                f"Skipping custom model {config_file}: unsupported type "
+                f"{model_config.get('type')!r}."
+            )
+            return None
+        display_name = model_config.get("display_name")
+        if not isinstance(display_name, str) or not display_name.strip():
+            logger.error(
+                f"Skipping custom model {config_file}: invalid "
+                "'display_name' field."
+            )
+            return None
+        if not model_config["name"].startswith("_custom_"):
+            model_config["name"] = f"_custom_{model_config['name']}"
+        return model_config
+
     def load_model_configs(self):
         """Load model configs"""
         # Load list of default models
@@ -104,7 +198,7 @@ class ModelManager(QObject):
             model_list = yaml.safe_load(f)
 
         # Load list of custom models
-        custom_models = get_config().get("custom_models", [])
+        custom_models = self._configured_custom_models()
         for custom_model in custom_models:
             custom_model["is_custom_model"] = True
 
@@ -123,35 +217,9 @@ class ModelManager(QObject):
         # Load model configs
         model_configs = []
         for model in model_list:
-            model_config = {}
-            config_file = model["config_file"]
-            if config_file.startswith(":/"):  # Config file is in resources
-                config_file_name = config_file[2:]
-                resource_path = pkg_resources.files(
-                    auto_labeling_configs
-                ).joinpath("auto_labeling", config_file_name)
-                config_content = resource_path.read_text(encoding="utf-8")
-                model_config = yaml.safe_load(config_content)
-                model_config["config_file"] = str(config_file)
-            else:  # Config file is in local file system
-                with open(config_file, "r", encoding="utf-8") as f:
-                    model_config = yaml.safe_load(f)
-                    model_config["config_file"] = os.path.normpath(
-                        os.path.abspath(config_file)
-                    )
-            is_custom = model.get("is_custom_model", False)
-            model_config["is_custom_model"] = is_custom
-            if is_custom and not self.is_valid_custom_model_name(
-                model_config.get("name")
-            ):
-                logger.error(
-                    "Skipping custom model with an invalid 'name' field."
-                )
-                continue
-            if is_custom and not model_config["name"].startswith("_custom_"):
-                model_config["name"] = f"_custom_{model_config['name']}"
-
-            model_configs.append(model_config)
+            model_config = self._load_one_model_config(model)
+            if model_config is not None:
+                model_configs.append(model_config)
 
         # Sort by last used
         for i, model_config in enumerate(model_configs):
@@ -248,7 +316,7 @@ class ModelManager(QObject):
         """
         config_file = os.path.normpath(os.path.abspath(config_file))
         config = get_config()
-        custom_models = config.get("custom_models", [])
+        custom_models = self._configured_custom_models()
         kept = []
         removed = False
         for model in custom_models:
@@ -272,44 +340,34 @@ class ModelManager(QObject):
             logger.info(f"Removed custom model config: {config_file}")
         return removed
 
-    def load_custom_model(self, config_file, pin=False):
-        """Run custom model loading in a thread"""
-        config_file = os.path.normpath(os.path.abspath(config_file))
-        if (
-            self.model_download_thread is not None
-            and self.is_model_download_running()
-        ):
-            logger.info(
-                "Another model is being loaded. Please wait for it to finish."
-            )
-            return False
+    def _read_custom_model_config(self, config_file):
+        """Parse and validate a custom model YAML, or report why not.
 
-        # Check config file path
-        if not config_file or not os.path.isfile(config_file):
-            logger.error(
-                "An error occurred while loading the custom model: "
-                "The model path is invalid."
-            )
-            self.new_model_status.emit(
-                self.tr("Error in loading custom model: Invalid path.")
-            )
-            return False
-
-        # Check config file content
-        model_config = {}
+        Returns the completed mapping, or ``None`` after emitting the
+        user-facing refusal, so the caller only has to stop.
+        """
         try:
             with open(config_file, "r", encoding="utf-8") as f:
                 model_config = yaml.safe_load(f)
-                model_config["config_file"] = os.path.abspath(config_file)
-        except Exception as e:
+        except (OSError, UnicodeDecodeError, yaml.YAMLError) as e:
             logger.error(
                 "An error occurred while loading the custom model: "
-                "The config file is invalid."
+                f"The config file is invalid: {e}"
             )
             self.new_model_status.emit(
                 self.tr("Error in loading custom model: Invalid config file.")
             )
-            return False
+            return None
+        if not isinstance(model_config, dict):
+            logger.error(
+                "An error occurred while loading the custom model: "
+                "The config file is not a mapping."
+            )
+            self.new_model_status.emit(
+                self.tr("Error in loading custom model: Invalid config file.")
+            )
+            return None
+        model_config["config_file"] = os.path.abspath(config_file)
 
         if (
             "type" not in model_config
@@ -335,7 +393,7 @@ class ModelManager(QObject):
             else:
                 logger.error(
                     "An error occurred while loading the custom model: "
-                    "The model type {model_config['type']} is not supported."
+                    f"The model type {model_config['type']} is not supported."
                 )
             self.new_model_status.emit(
                 self.tr(
@@ -343,7 +401,7 @@ class ModelManager(QObject):
                 )
             )
             self.model_loaded.emit({})
-            return False
+            return None
 
         if not self.is_valid_custom_model_name(model_config["name"]):
             logger.error(
@@ -355,10 +413,39 @@ class ModelManager(QObject):
                 self.tr("Error in loading custom model: Invalid model name.")
             )
             self.model_loaded.emit({})
+            return None
+        return model_config
+
+    def load_custom_model(self, config_file, pin=False):
+        """Run custom model loading in a thread"""
+        config_file = os.path.normpath(os.path.abspath(config_file))
+        if (
+            self.model_download_thread is not None
+            and self.is_model_download_running()
+        ):
+            logger.info(
+                "Another model is being loaded. Please wait for it to finish."
+            )
+            return False
+
+        # Check config file path
+        if not config_file or not os.path.isfile(config_file):
+            logger.error(
+                "An error occurred while loading the custom model: "
+                "The model path is invalid."
+            )
+            self.new_model_status.emit(
+                self.tr("Error in loading custom model: Invalid path.")
+            )
+            return False
+
+        # Check config file content
+        model_config = self._read_custom_model_config(config_file)
+        if model_config is None:
             return False
 
         # Add or replace custom model
-        custom_models = get_config().get("custom_models", [])
+        custom_models = self._configured_custom_models()
         if pin:
             model_config["keep"] = True
         matched_index = None

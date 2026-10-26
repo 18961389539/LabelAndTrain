@@ -114,6 +114,26 @@ def _settings_translation_markers() -> None:
         "Set polygon simplification tolerance in image pixels. "
         "Use 0 to preserve the extracted contour.",
     )
+    QCoreApplication.translate("SettingsDialog", "画笔撤销步数")
+    QCoreApplication.translate(
+        "SettingsDialog", "画笔编辑时可回退的笔画数上限。"
+    )
+    QCoreApplication.translate("SettingsDialog", "画笔撤销内存上限 (MB)")
+    QCoreApplication.translate(
+        "SettingsDialog", "画笔撤销历史占用的内存上限，单位 MB。"
+    )
+    QCoreApplication.translate("SettingsDialog", "属性背景色")
+    QCoreApplication.translate(
+        "SettingsDialog", "标注属性框的背景色（RGBA，0-255）。"
+    )
+    QCoreApplication.translate("SettingsDialog", "属性边框色")
+    QCoreApplication.translate(
+        "SettingsDialog", "标注属性框的边框色（RGBA，0-255）。"
+    )
+    QCoreApplication.translate("SettingsDialog", "属性文字色")
+    QCoreApplication.translate(
+        "SettingsDialog", "标注属性框的文字色（RGBA，0-255）。"
+    )
     QCoreApplication.translate("SettingsDialog", "Default Depth Vector")
     QCoreApplication.translate("SettingsDialog", "Min Depth")
     QCoreApplication.translate("SettingsDialog", "Mask Opacity")
@@ -976,55 +996,72 @@ def _non_shortcut_fields() -> list[SettingField]:
         ),
         SettingField(
             "canvas.brush.max_undo_steps",
-            "画笔撤销步数",
+            QT_TRANSLATE_NOOP(SETTINGS_TRANSLATION_CONTEXT, "画笔撤销步数"),
             "int",
             "Canvas",
             "Interaction",
             "Brush",
             minimum=1,
             maximum=200,
-            description="画笔编辑时可回退的笔画数上限。",
+            description=QT_TRANSLATE_NOOP(
+                SETTINGS_TRANSLATION_CONTEXT,
+                "画笔编辑时可回退的笔画数上限。",
+            ),
         ),
         SettingField(
             "canvas.brush.max_undo_memory_mb",
-            "画笔撤销内存上限 (MB)",
+            QT_TRANSLATE_NOOP(
+                SETTINGS_TRANSLATION_CONTEXT, "画笔撤销内存上限 (MB)"
+            ),
             "int",
             "Canvas",
             "Interaction",
             "Brush",
             minimum=1,
             maximum=4096,
-            description="画笔撤销历史占用的内存上限，单位 MB。",
+            description=QT_TRANSLATE_NOOP(
+                SETTINGS_TRANSLATION_CONTEXT,
+                "画笔撤销历史占用的内存上限，单位 MB。",
+            ),
         ),
         SettingField(
             "canvas.attributes.background_color",
-            "属性背景色",
+            QT_TRANSLATE_NOOP(SETTINGS_TRANSLATION_CONTEXT, "属性背景色"),
             "color",
             "Canvas",
             "Interaction",
             "Attributes",
             channels=4,
-            description="标注属性框的背景色（RGBA，0-255）。",
+            description=QT_TRANSLATE_NOOP(
+                SETTINGS_TRANSLATION_CONTEXT,
+                "标注属性框的背景色（RGBA，0-255）。",
+            ),
         ),
         SettingField(
             "canvas.attributes.border_color",
-            "属性边框色",
+            QT_TRANSLATE_NOOP(SETTINGS_TRANSLATION_CONTEXT, "属性边框色"),
             "color",
             "Canvas",
             "Interaction",
             "Attributes",
             channels=4,
-            description="标注属性框的边框色（RGBA，0-255）。",
+            description=QT_TRANSLATE_NOOP(
+                SETTINGS_TRANSLATION_CONTEXT,
+                "标注属性框的边框色（RGBA，0-255）。",
+            ),
         ),
         SettingField(
             "canvas.attributes.text_color",
-            "属性文字色",
+            QT_TRANSLATE_NOOP(SETTINGS_TRANSLATION_CONTEXT, "属性文字色"),
             "color",
             "Canvas",
             "Interaction",
             "Attributes",
             channels=4,
-            description="标注属性框的文字色（RGBA，0-255）。",
+            description=QT_TRANSLATE_NOOP(
+                SETTINGS_TRANSLATION_CONTEXT,
+                "标注属性框的文字色（RGBA，0-255）。",
+            ),
         ),
         SettingField(
             "canvas.cuboid.default_depth_vector",

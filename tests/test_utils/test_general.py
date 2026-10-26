@@ -107,6 +107,7 @@ def test_batch_crop_rejects_label_path_traversal(tmp_path):
             0,
             0,
             {"../outside": 1},
+            "",
         )
     )
 

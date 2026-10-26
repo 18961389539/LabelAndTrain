@@ -56,6 +56,12 @@ class TestUploadShapeAttributes(unittest.TestCase):
         if cls.app is None:
             cls.app = QtWidgets.QApplication([])
 
+    def setUp(self):
+        # Imported schemas are persisted now; never touch the real config.
+        patcher = patch("anylabeling.views.labeling.utils.upload.save_config")
+        self.addCleanup(patcher.stop)
+        patcher.start()
+
     def test_validate_shape_attributes_config_accepts_supported_widgets(self):
         config = {
             "car": {
@@ -100,9 +106,7 @@ class TestUploadShapeAttributes(unittest.TestCase):
                 "unknown widget property",
                 {
                     "car": {"color": ["red"]},
-                    "__widget_types__": {
-                        "car": {"visibility": "radiobutton"}
-                    },
+                    "__widget_types__": {"car": {"visibility": "radiobutton"}},
                 },
                 [
                     "label='car'",
@@ -132,9 +136,7 @@ class TestUploadShapeAttributes(unittest.TestCase):
                 "empty radiobutton",
                 {
                     "car": {"visibility": []},
-                    "__widget_types__": {
-                        "car": {"visibility": "radiobutton"}
-                    },
+                    "__widget_types__": {"car": {"visibility": "radiobutton"}},
                 },
                 ["property='visibility'", "widget_type='radiobutton'"],
             ),
@@ -142,9 +144,7 @@ class TestUploadShapeAttributes(unittest.TestCase):
                 "invalid lineedit",
                 {
                     "car": {"vehicle_id": []},
-                    "__widget_types__": {
-                        "car": {"vehicle_id": "lineedit"}
-                    },
+                    "__widget_types__": {"car": {"vehicle_id": "lineedit"}},
                 },
                 ["widget_type='lineedit'", "expected='a string'"],
             ),
@@ -152,9 +152,7 @@ class TestUploadShapeAttributes(unittest.TestCase):
                 "invalid group_id",
                 {
                     "car": {"occluded_by": ["1"]},
-                    "__widget_types__": {
-                        "car": {"occluded_by": "group_id"}
-                    },
+                    "__widget_types__": {"car": {"occluded_by": "group_id"}},
                 },
                 ["widget_type='group_id'", "expected='an empty list'"],
             ),
@@ -194,15 +192,19 @@ class TestUploadShapeAttributes(unittest.TestCase):
                 _settings_runtime_applier=runtime_applier,
             )
 
-            with patch.object(
-                QtWidgets.QFileDialog,
-                "getOpenFileName",
-                return_value=(file, ""),
-            ), patch(
-                "anylabeling.views.labeling.utils.upload.Popup"
-            ) as popup, patch(
-                "anylabeling.views.labeling.utils.upload.logger.error"
-            ) as log_error:
+            with (
+                patch.object(
+                    QtWidgets.QFileDialog,
+                    "getOpenFileName",
+                    return_value=(file, ""),
+                ),
+                patch(
+                    "anylabeling.views.labeling.utils.upload.Popup"
+                ) as popup,
+                patch(
+                    "anylabeling.views.labeling.utils.upload.logger.error"
+                ) as log_error,
+            ):
                 upload_shape_attrs_file(widget, 128)
 
             self.assertIs(widget.attributes, attributes)
@@ -235,6 +237,7 @@ class TestUploadShapeAttributes(unittest.TestCase):
             )
             widget = SimpleNamespace(
                 tr=lambda text: text,
+                _config={"canvas": {}},
                 attributes={"car": {"color": ["red", "blue"]}},
                 attribute_widget_types={},
                 unique_label_list=SimpleNamespace(
@@ -259,17 +262,18 @@ class TestUploadShapeAttributes(unittest.TestCase):
             LabelingWidget.update_attributes(widget, 0)
             old_container = widget.grid_layout_container
 
-            with patch.object(
-                QtWidgets.QFileDialog,
-                "getOpenFileName",
-                return_value=(file, ""),
-            ), patch("anylabeling.views.labeling.utils.upload.Popup"):
+            with (
+                patch.object(
+                    QtWidgets.QFileDialog,
+                    "getOpenFileName",
+                    return_value=(file, ""),
+                ),
+                patch("anylabeling.views.labeling.utils.upload.Popup"),
+            ):
                 upload_shape_attrs_file(widget, 128)
 
             self.assertIsNot(widget.grid_layout_container, old_container)
-            combo = widget.grid_layout_container.findChild(
-                QtWidgets.QComboBox
-            )
+            combo = widget.grid_layout_container.findChild(QtWidgets.QComboBox)
             self.assertEqual(
                 [combo.itemText(index) for index in range(combo.count())],
                 ["small", "large"],
@@ -295,9 +299,7 @@ class TestUploadShapeAttributes(unittest.TestCase):
                             "auto_switch_to_edit_mode": initially_enabled
                         },
                         unique_label_list=SimpleNamespace(
-                            find_items_by_label=Mock(
-                                return_value=[object()]
-                            )
+                            find_items_by_label=Mock(return_value=[object()])
                         ),
                         shape_attributes=SimpleNamespace(show=Mock()),
                         scroll_area=SimpleNamespace(show=Mock()),
@@ -307,13 +309,16 @@ class TestUploadShapeAttributes(unittest.TestCase):
                     widget._settings_runtime_applier = applier
                     applier.set_auto_switch_to_edit_mode(initially_enabled)
 
-                    with patch.object(
-                        QtWidgets.QFileDialog,
-                        "getOpenFileName",
-                        return_value=(file, ""),
-                    ), patch(
-                        "anylabeling.views.labeling.utils.upload.Popup"
-                    ) as popup:
+                    with (
+                        patch.object(
+                            QtWidgets.QFileDialog,
+                            "getOpenFileName",
+                            return_value=(file, ""),
+                        ),
+                        patch(
+                            "anylabeling.views.labeling.utils.upload.Popup"
+                        ) as popup,
+                    ):
                         upload_shape_attrs_file(widget, 128)
                         upload_shape_attrs_file(widget, 128)
 

@@ -16,6 +16,9 @@ them -- the paths that only exist when everything is wired together:
  10. close project          -> back to an empty canvas (project L1)
  11. project task           -> training window, both ways (project L4)
  12. auto label -> provenance -> review -> YOLO export (the loop's own seam)
+ 13. union selection      -> shape_union (refuses loss, merges one region)
+ 14. uploaded class list  -> config copy + project record
+ 15. imported image flags -> config copy + real flag dock
 
 Run it before a machine-verification pass (or before a release) to
 catch runtime wiring breaks the unit tests cannot see:
@@ -36,6 +39,8 @@ import shutil
 import sys
 import tempfile
 import traceback
+
+import yaml
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -507,6 +512,116 @@ def run_project_task(widget, app, tmp):
         app.processEvents()
 
 
+@step("15. imported image flags persist and stay on the canvas")
+def run_image_flags(widget, tmp, config_path):
+    """The real dialog-free tail: config write, flag dock, dirty state."""
+    from unittest import mock
+
+    from anylabeling.views.labeling.utils import upload as upload_module
+
+    flags_path = os.path.join(tmp, "flags.txt")
+    with open(flags_path, "w", encoding="utf-8") as handle:
+        handle.write("occluded\n\n lost \noccluded\n")
+
+    with (
+        mock.patch.object(
+            upload_module.QtWidgets.QFileDialog,
+            "getOpenFileName",
+            return_value=(flags_path, ""),
+        ),
+        mock.patch.object(upload_module, "Popup"),
+    ):
+        upload_module.upload_image_flags_file(widget)
+
+    assert widget.image_flags == ["occluded", "lost"]
+    assert widget.flag_widget.count() == 2
+    assert [
+        widget.flag_widget.item(index).text()
+        for index in range(widget.flag_widget.count())
+    ] == ["occluded", "lost"]
+    with open(config_path, encoding="utf-8") as handle:
+        saved = yaml.safe_load(handle)
+    assert saved["flags"] == ["occluded", "lost"], saved.get("flags")
+    assert widget.dirty, "imported flags must reach the save path"
+
+
+@step("14. uploaded class list persists to config and project record")
+def run_uploaded_classes(widget, folder, config_path):
+    """The real save path, not a stubbed one: config file + project record."""
+    from anylabeling.views.labeling import project_model
+    from anylabeling.views.labeling.utils import upload
+
+    widget.import_image_folder(folder)
+    upload.apply_uploaded_labels(widget, ["smoke_a", "smoke_b"])
+
+    assert widget._config["labels"] == ["smoke_a", "smoke_b"]
+    with open(config_path, encoding="utf-8") as handle:
+        saved = yaml.safe_load(handle)
+    assert saved["labels"] == ["smoke_a", "smoke_b"], saved.get("labels")
+    assert project_model.describe(folder)["labels"] == [
+        "smoke_a",
+        "smoke_b",
+    ]
+
+
+@step("13. union selection -- disjoint refused, connected merged")
+def run_union_selection(widget, image_path):
+    """A disjoint merge is refused; a connected one replaces both shapes."""
+    from anylabeling.views.labeling.shape import Shape
+
+    widget.load_file(image_path)
+
+    def polygon(points):
+        shape = Shape(label="merge", shape_type="polygon")
+        shape.points = [QtCore.QPointF(x, y) for x, y in points]
+        shape.close()
+        return shape
+
+    def reset(shapes):
+        widget.label_list.clear()
+        widget.canvas.selected_shapes = []
+        widget.canvas.shapes = []
+        widget.load_shapes(shapes)
+        widget.shape_selection_changed(shapes)
+
+    left = polygon([(10, 10), (60, 10), (60, 60), (10, 60)])
+    far = polygon([(100, 10), (160, 10), (160, 60), (100, 60)])
+    reset([left, far])
+    assert widget.actions.union_selection.isEnabled()
+    widget.union_selection()
+    assert (
+        len(widget.canvas.shapes) == 2
+    ), "a disjoint union must leave every shape in place"
+    assert len(widget.label_list) == 2
+
+    a = polygon([(10, 10), (60, 10), (60, 60), (10, 60)])
+    b = polygon([(40, 40), (100, 40), (100, 100), (40, 100)])
+    reset([a, b])
+    widget.union_selection()
+    assert (
+        len(widget.canvas.shapes) == 1
+    ), "a connected union must replace both shapes with one"
+    assert len(widget.label_list) == 1
+    merged = widget.canvas.shapes[0]
+    assert merged.label == "merge" and merged.shape_type == "polygon"
+    xs = [p.x() for p in merged.points]
+    ys = [p.y() for p in merged.points]
+    for actual, expected in zip(
+        (min(xs), min(ys), max(xs), max(ys)), (10, 10, 100, 100)
+    ):
+        assert abs(actual - expected) < 2, (actual, expected)
+
+    # The merge is one edit: a single Ctrl+Z must bring both originals back
+    # rather than resurrect one and then empty the image.
+    widget.undo_shape_edit()
+    app = QtWidgets.QApplication.instance()
+    app.processEvents()
+    assert (
+        len(widget.canvas.shapes) == 2
+    ), "one undo must restore both merged shapes"
+    assert len(widget.label_list) == 2
+
+
 def main():
     app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
     tmp = tempfile.mkdtemp(prefix="smoke_widget_paths_")
@@ -736,6 +851,9 @@ def main():
     s10()
     s11()
     s12()
+    run_union_selection(widget, images[0])
+    run_uploaded_classes(widget, tmp, config_copy)
+    run_image_flags(widget, tmp, config_copy)
 
     print("")
     print("=== smoke summary ===", flush=True)

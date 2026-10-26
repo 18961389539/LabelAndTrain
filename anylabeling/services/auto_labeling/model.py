@@ -1,5 +1,6 @@
 import os
 import pathlib
+import re
 import yaml
 import urllib.request
 import time
@@ -18,6 +19,10 @@ from anylabeling.config import get_config, get_work_directory
 from anylabeling.views.labeling.logger import logger
 from anylabeling.views.labeling.label_file import LabelFile, LabelFileError
 from anylabeling.views.labeling import utils
+
+
+class InvalidRangeError(OSError):
+    """The server answered a resume request with a range we cannot use."""
 
 
 def _check_model_worker(model_path):
@@ -334,6 +339,27 @@ class Model(metaclass=ModelMeta):
         return dest_path, part_path
 
     @staticmethod
+    def _verify_download(downloaded, total_size):
+        """Refuse an empty body or one that ended before its announced size.
+
+        A server that closes the stream cleanly after a partial body is
+        not an exception: without this check the truncated file was
+        renamed into place and reported as a completed download, only to
+        fail much later inside the model loader.
+        """
+        if downloaded == 0:
+            raise OSError("empty download")
+        if total_size > 0 and downloaded < total_size:
+            raise OSError(
+                f"incomplete download: {downloaded} of {total_size} bytes"
+            )
+        if total_size > 0 and downloaded > total_size:
+            raise OSError(
+                f"download size mismatch: {downloaded} bytes, "
+                f"expected {total_size}"
+            )
+
+    @staticmethod
     def _describe_network_error(exc):
         """Turn a low-level download exception into something readable.
 
@@ -390,20 +416,142 @@ class Model(metaclass=ModelMeta):
             ).format(detail=str(exc)[:80])
         return QCoreApplication.translate("Model", "unknown error")
 
+    @staticmethod
+    def _discard_part(part_path):
+        """Remove a partial download, ignoring an already-missing file."""
+        try:
+            if os.path.exists(part_path):
+                os.remove(part_path)
+        except OSError:
+            logger.warning(f"Could not remove partial download: {part_path}")
+
+    @staticmethod
+    def _download_plan(response, resume_from):
+        """Return ``(open_mode, start_offset, total_size)``.
+
+        A 206 is usable only when its range starts exactly where the
+        partial file ends; ``Content-Range``'s total keeps the completeness
+        check honest even when only the remainder was transferred.
+        """
+        status = getattr(response, "status", 200)
+        length = int(response.headers.get("Content-Length", 0) or 0)
+        if status == 206:
+            header = str(response.headers.get("Content-Range", "")).strip()
+            match = re.match(r"bytes (\d+)-(\d+)/(\d+|\*)$", header)
+            if not match or int(match.group(1)) != resume_from:
+                raise InvalidRangeError(
+                    f"unexpected partial response: {header!r}"
+                )
+            total = 0 if match.group(3) == "*" else int(match.group(3))
+            if total <= 0:
+                total = resume_from + length
+            return ("ab" if resume_from > 0 else "wb"), resume_from, total
+        return "wb", 0, length
+
+    @staticmethod
+    def _must_restart(exc):
+        """True when keeping the partial file cannot help a retry."""
+        if isinstance(exc, InvalidRangeError):
+            return True
+        return isinstance(exc, HTTPError) and 400 <= exc.code < 500
+
+    def _announce_attempt(self, url, attempt):
+        try:
+            host = urlparse(url).netloc
+        except Exception:  # noqa
+            host = ""
+        if attempt > 0:
+            self._emit_stage(
+                QCoreApplication.translate(
+                    "Model",
+                    "Retrying connection to {host} "
+                    "(attempt {attempt}/{total})...",
+                ).format(
+                    host=host or "server",
+                    attempt=attempt + 1,
+                    total=self.MAX_RETRIES,
+                )
+            )
+        else:
+            self._emit_stage(
+                QCoreApplication.translate(
+                    "Model", "Connecting to {host}..."
+                ).format(host=host or "server")
+            )
+
+    def _announce_size(self, dest_path, total_size):
+        if total_size > 0:
+            self._emit_stage(
+                QCoreApplication.translate(
+                    "Model",
+                    "Downloading {file_name} ({size_mb:.1f} MB)...",
+                ).format(
+                    file_name=os.path.basename(dest_path),
+                    size_mb=total_size / (1024 * 1024),
+                )
+            )
+        else:
+            self._emit_stage(
+                QCoreApplication.translate(
+                    "Model",
+                    "Downloading {file_name} (size unknown)...",
+                ).format(file_name=os.path.basename(dest_path))
+            )
+
+    def _stream_to_part(
+        self, response, part_path, mode, start, total_size, progress_callback
+    ):
+        downloaded = start
+        with open(part_path, mode) as handle:
+            while True:
+                self._check_cancelled()
+                chunk = response.read(self.DOWNLOAD_CHUNK_SIZE)
+                if not chunk:
+                    return downloaded
+                handle.write(chunk)
+                downloaded += len(chunk)
+                if progress_callback:
+                    progress_callback(downloaded, total_size)
+
+    def _wait_before_retry(self, reason, attempt):
+        delay = self.RETRY_DELAY * (attempt + 1)
+        logger.warning(
+            f"Connection failed ({reason}), retrying in {delay}s... "
+            f"(Attempt {attempt + 1}/{self.MAX_RETRIES} failed)"
+        )
+        for remaining in range(delay, 0, -1):
+            self._emit_stage(
+                QCoreApplication.translate(
+                    "Model",
+                    "{reason}. Retrying in {remaining}s... "
+                    "(attempt {attempt}/{total})",
+                ).format(
+                    reason=reason,
+                    remaining=remaining,
+                    attempt=attempt + 1,
+                    total=self.MAX_RETRIES,
+                )
+            )
+            self._check_cancelled()
+            time.sleep(1)
+
     def download_with_retry(
         self, url, dest_path, progress_callback, model_directory=None
     ):
-        """Download file with retry mechanism and cancellation support.
+        """Download a file with cancellation, integrity checks and resume.
 
-        Uses chunk-based downloading so the cancel flag can be checked
-        between chunks, giving the user near-instant cancellation. A
-        per-read socket timeout also bounds how long
-        ``response.read()`` may block when the remote stays connected but
-        stops sending bytes.
+        Cancellation is checked between chunks, and a per-read socket
+        timeout bounds a stalled stream. A retry after a short transfer
+        continues from the bytes already on disk with an HTTP ``Range``
+        request; a server that ignores the range is restarted from zero.
+        Resume is deliberately scoped to this call: a part left by an
+        earlier process cannot be proven to belong to the same URL, so the
+        first attempt starts clean.
         """
         dest_path, part_path = self._ensure_download_paths(
             dest_path, model_directory
         )
+        self._discard_part(part_path)
 
         # Enforce a default socket timeout for the duration of the
         # download so a stalled stream cannot block indefinitely. We
@@ -412,40 +560,27 @@ class Model(metaclass=ModelMeta):
         socket.setdefaulttimeout(self.DOWNLOAD_TIMEOUT)
         try:
             for attempt in range(self.MAX_RETRIES):
+                dest_path, part_path = self._ensure_download_paths(
+                    dest_path, model_directory
+                )
+                resume_from = (
+                    os.path.getsize(part_path)
+                    if os.path.exists(part_path)
+                    else 0
+                )
                 try:
+                    self._check_cancelled()
                     if attempt > 0:
                         logger.warning(
                             f"Retry attempt {attempt + 1}/{self.MAX_RETRIES}"
                         )
-                    self._check_cancelled()
+                    self._announce_attempt(url, attempt)
 
-                    try:
-                        host = urlparse(url).netloc
-                    except Exception:  # noqa
-                        host = ""
-                    if attempt > 0:
-                        self._emit_stage(
-                            QCoreApplication.translate(
-                                "Model",
-                                "Retrying connection to {host} "
-                                "(attempt {attempt}/{total})...",
-                            ).format(
-                                host=host or "server",
-                                attempt=attempt + 1,
-                                total=self.MAX_RETRIES,
-                            )
-                        )
-                    else:
-                        self._emit_stage(
-                            QCoreApplication.translate(
-                                "Model",
-                                "Connecting to {host}...",
-                            ).format(host=host or "server")
-                        )
-
-                    req = urllib.request.Request(url)
+                    request = urllib.request.Request(url)
+                    if resume_from > 0:
+                        request.add_header("Range", f"bytes={resume_from}-")
                     response = urllib.request.urlopen(
-                        req, timeout=self.DOWNLOAD_TIMEOUT
+                        request, timeout=self.DOWNLOAD_TIMEOUT
                     )
                     # Apply per-read timeout to the now-open socket so a
                     # stalled stream is bounded (default-timeout only
@@ -453,43 +588,19 @@ class Model(metaclass=ModelMeta):
                     _set_response_socket_timeout(
                         response, self.DOWNLOAD_TIMEOUT
                     )
-                    total_size = int(response.headers.get("Content-Length", 0))
-                    downloaded = 0
-                    if total_size > 0:
-                        self._emit_stage(
-                            QCoreApplication.translate(
-                                "Model",
-                                "Downloading {file_name} ({size_mb:.1f} MB)...",
-                            ).format(
-                                file_name=os.path.basename(dest_path),
-                                size_mb=total_size / (1024 * 1024),
-                            )
-                        )
-                    else:
-                        self._emit_stage(
-                            QCoreApplication.translate(
-                                "Model",
-                                "Downloading {file_name} " "(size unknown)...",
-                            ).format(file_name=os.path.basename(dest_path))
-                        )
-
-                    dest_path, part_path = self._ensure_download_paths(
-                        dest_path, model_directory
+                    mode, start, total_size = self._download_plan(
+                        response, resume_from
                     )
-                    with open(part_path, "wb") as f:
-                        while True:
-                            self._check_cancelled()
-                            chunk = response.read(self.DOWNLOAD_CHUNK_SIZE)
-                            if not chunk:
-                                break
-                            f.write(chunk)
-                            downloaded += len(chunk)
-                            if progress_callback:
-                                progress_callback(downloaded, total_size)
-
-                    dest_path, part_path = self._ensure_download_paths(
-                        dest_path, model_directory
+                    self._announce_size(dest_path, total_size)
+                    downloaded = self._stream_to_part(
+                        response,
+                        part_path,
+                        mode,
+                        start,
+                        total_size,
+                        progress_callback,
                     )
+                    self._verify_download(downloaded, total_size)
                     os.replace(part_path, dest_path)
                     self._emit_stage(
                         QCoreApplication.translate(
@@ -503,44 +614,17 @@ class Model(metaclass=ModelMeta):
                     return True
 
                 except DownloadCancelledError:
-                    if os.path.exists(part_path):
-                        _, part_path = self._ensure_download_paths(
-                            dest_path, model_directory
-                        )
-                        os.remove(part_path)
+                    self._discard_part(part_path)
                     raise
 
                 except (URLError, socket.timeout, OSError) as e:
-                    if os.path.exists(part_path):
-                        _, part_path = self._ensure_download_paths(
-                            dest_path, model_directory
-                        )
-                        os.remove(part_path)
+                    if self._must_restart(e):
+                        self._discard_part(part_path)
                     reason = self._describe_network_error(e)
-                    delay = self.RETRY_DELAY * (attempt + 1)
                     if attempt < self.MAX_RETRIES - 1:
-                        logger.warning(
-                            f"Connection failed ({reason}), "
-                            f"retrying in {delay}s... "
-                            f"(Attempt {attempt + 1}/{self.MAX_RETRIES} failed)"
-                        )
-                        for remaining in range(delay, 0, -1):
-                            self._emit_stage(
-                                QCoreApplication.translate(
-                                    "Model",
-                                    "{reason}. Retrying in "
-                                    "{remaining}s... "
-                                    "(attempt {attempt}/{total})",
-                                ).format(
-                                    reason=reason,
-                                    remaining=remaining,
-                                    attempt=attempt + 1,
-                                    total=self.MAX_RETRIES,
-                                )
-                            )
-                            self._check_cancelled()
-                            time.sleep(1)
+                        self._wait_before_retry(reason, attempt)
                     else:
+                        self._discard_part(part_path)
                         logger.warning(
                             f"All download attempts failed "
                             f"({self.MAX_RETRIES} tries)"

@@ -33,7 +33,7 @@ import time
 
 from anylabeling.views.labeling.logger import logger
 
-from anylabeling.views.labeling.utils.smart_tools import (
+from anylabeling.views.labeling.utils.label_backup import (
     SESSION_SNAPSHOT_MARKER,
     backup_label_files,
 )

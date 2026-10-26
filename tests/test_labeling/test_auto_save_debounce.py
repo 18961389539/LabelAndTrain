@@ -117,6 +117,22 @@ class TestAutoSaveDebounce(unittest.TestCase):
         self.widget._flush_auto_save()
         self.assertFalse(self.widget.dirty)
 
+    def test_save_labels_reports_an_os_error_instead_of_raising(self):
+        from anylabeling.views.labeling.label_file import LabelFile
+
+        messages = []
+        self.widget.error_message = lambda title, message: messages.append(
+            (title, message)
+        )
+
+        with mock.patch.object(
+            LabelFile, "save", side_effect=OSError("disk full")
+        ):
+            result = self.widget.save_labels(self.label)
+
+        self.assertFalse(result)
+        self.assertEqual(len(messages), 1)
+
     def test_explicit_save_supersedes_the_scheduled_write(self):
         with mock.patch.object(
             self.widget, "save_labels", return_value=True

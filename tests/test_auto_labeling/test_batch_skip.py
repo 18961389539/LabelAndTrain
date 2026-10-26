@@ -43,6 +43,19 @@ class TestImageHasAnnotations(unittest.TestCase):
 
 
 @unittest.skipUnless(PYQT_AVAILABLE, "PyQt6 is required")
+class TestBatchProgressText(unittest.TestCase):
+    def test_the_progress_label_is_chinese(self):
+        from anylabeling.views.labeling.utils.batch import (
+            _batch_progress_text,
+        )
+
+        text = _batch_progress_text(3, 10)
+
+        self.assertEqual(text, "进度：3/10")
+        self.assertNotIn("Progress", text)
+
+
+@unittest.skipUnless(PYQT_AVAILABLE, "PyQt6 is required")
 class TestBatchSkipIf(unittest.TestCase):
     def test_thread_stores_skip_if(self):
         skip_if = lambda path: path.endswith("skip.jpg")

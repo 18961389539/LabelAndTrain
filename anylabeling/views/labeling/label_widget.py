@@ -9,8 +9,6 @@ import threading
 import time
 from typing import Optional
 
-import cv2
-import numpy as np
 from PyQt6 import QtCore, QtGui, QtWidgets
 from PyQt6.QtCore import QCoreApplication, Qt, pyqtSlot
 from PyQt6.QtGui import QFontMetrics
@@ -92,18 +90,20 @@ from .utils.yolo_detect import (
     rename_label_across_folder,
     write_yolo_detect_sidecar,
 )
-from .utils.smart_tools import (
-    run_backup_restore,
-    run_duplicate_archive,
-    run_missing_scan,
-    run_review_jump,
+from .utils.smart_analysis import (
     run_smart_analysis,
-    run_stale_model_audit,
-    run_template_propagation,
     run_threshold_calibration,
+)
+from .utils.smart_archive import run_duplicate_archive
+from .utils.smart_backup import run_backup_restore
+from .utils.smart_missing import run_missing_scan
+from .utils.smart_prelabel import run_template_propagation
+from .utils.smart_review import (
+    run_review_jump,
     run_training_advice,
     show_iteration_dashboard,
 )
+from .utils.smart_stale import run_stale_model_audit
 from .utils.shortcuts_help import (
     build_shortcut_rows,
     filter_shortcut_rows,
@@ -143,10 +143,12 @@ from .utils import file_lifecycle
 from .utils import file_navigation
 from .utils import file_list_ops
 from .utils import label_editing
+from .utils import shape_union
 from .utils import shortcuts_help
 from .utils import device_menu
 from .utils import missing_classes_hint
 from .utils import smart_tools_menu
+from .utils import exit_cleanup
 from .utils.file_lifecycle import (
     _report_inherited_shapes,
     move_file_to_delete_folder,  # noqa: F401 -- test imports stay valid
@@ -553,6 +555,10 @@ class LabelingWidget(LabelDialog):
         self.file_list_widget = QtWidgets.QListWidget()
         self.file_list_widget.setObjectName("FileList")
         self.file_list_widget.setIconSize(QtCore.QSize(12, 12))
+        # Every row is one icon plus one line. Without this Qt measures the
+        # whole 3000-row model on scrollToItem (27 ms per switch), even when
+        # the target is already visible.
+        self.file_list_widget.setUniformItemSizes(True)
         self.file_status_icons = {
             "checked": _create_file_status_icon(FILE_CHECKED_COLOR, True),
             "annotated": _create_file_status_icon(FILE_ANNOTATED_COLOR, True),
@@ -1722,81 +1728,8 @@ class LabelingWidget(LabelDialog):
         clipboard.setText(coordinates_str)
 
     def union_selection(self):
-        if any(shape.locked for shape in self.canvas.selected_shapes):
-            return
-        rectangle_shapes, polygon_shapes = [], []
-        for shape in self.canvas.selected_shapes:
-            points = shape.points
-            if shape.shape_type == "rectangle":
-                xmin, ymin = (points[0].x(), points[0].y())
-                xmax, ymax = (points[2].x(), points[2].y())
-                rectangle_shapes.append([xmin, ymin, xmax, ymax])
-            else:
-                polygon_shapes.append([(p.x(), p.y()) for p in points])
-
-        union_shape = shape.copy()
-
-        if len(rectangle_shapes) > 0:
-            min_x = min([bbox[0] for bbox in rectangle_shapes])
-            min_y = min([bbox[1] for bbox in rectangle_shapes])
-            max_x = max([bbox[2] for bbox in rectangle_shapes])
-            max_y = max([bbox[3] for bbox in rectangle_shapes])
-
-            union_shape.points[0].setX(min_x)
-            union_shape.points[0].setY(min_y)
-            union_shape.points[1].setX(max_x)
-            union_shape.points[1].setY(min_y)
-            union_shape.points[2].setX(max_x)
-            union_shape.points[2].setY(max_y)
-            union_shape.points[3].setX(min_x)
-            union_shape.points[3].setY(max_y)
-        else:
-            # Create a blank mask
-            min_x = min([min(p[0] for p in poly) for poly in polygon_shapes])
-            min_y = min([min(p[1] for p in poly) for poly in polygon_shapes])
-            max_x = max([max(p[0] for p in poly) for poly in polygon_shapes])
-            max_y = max([max(p[1] for p in poly) for poly in polygon_shapes])
-
-            width = int(max_x - min_x + 10)
-            height = int(max_y - min_y + 10)
-            mask = np.zeros((height, width), dtype=np.uint8)
-
-            # Draw all polygons on the mask
-            for polygon in polygon_shapes:
-                contour = np.array(polygon, dtype=np.int32)
-                shifted_contour = contour - np.array(
-                    [min_x - 5, min_y - 5], dtype=np.int32
-                )
-                shifted_contour = shifted_contour.reshape((-1, 1, 2))
-                cv2.fillPoly(mask, [shifted_contour], 255)
-
-            # Find contours of the merged shape
-            merged_contours, _ = cv2.findContours(
-                mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
-            )
-            if merged_contours:
-                largest_contour = max(merged_contours, key=cv2.contourArea)
-                epsilon = 0.001 * cv2.arcLength(largest_contour, True)
-                approx_contour = cv2.approxPolyDP(
-                    largest_contour, epsilon, True
-                )
-                approx_contour = approx_contour.reshape(-1, 2) + np.array(
-                    [min_x - 5, min_y - 5], dtype=np.int32
-                )
-                union_shape.points = [
-                    QtCore.QPointF(float(x), float(y))
-                    for x, y in approx_contour
-                ]
-
-        # Append merged shape and remove selected shapes
-        self.add_label(union_shape)
-        self.remove_labels(self.canvas.delete_selected())
-        self.set_dirty()
-
-        # Update UI state
-        if self.no_shape():
-            for action in self.actions.on_shapes_present:
-                action.setEnabled(False)
+        """Delegates to shape_union (merging rules stay there)."""
+        shape_union.union_selection(self)
 
     # Trainer
     def start_training(self, mode):
@@ -2598,45 +2531,8 @@ class LabelingWidget(LabelDialog):
         self._refresh_file_progress()
 
     def _refresh_file_progress(self):
-        """Update the annotation progress summary label."""
-        total = self.file_list_widget.count()
-        annotated = 0
-        checked = 0
-        review = 0
-        rework = 0
-        for row in range(total):
-            item = self.file_list_widget.item(row)
-            if bool(item.data(FILE_ANNOTATION_ROLE)):
-                annotated += 1
-            if self._file_item_annotation_checked(item):
-                checked += 1
-            if self._file_item_has_low_conf(item):
-                review += 1
-            if item.data(FILE_REVIEW_ROLE) == REVIEW_REJECTED:
-                rework += 1
-        if total <= 0:
-            self.file_progress_label.setText("")
-            return
-        first_line = (
-            self.tr("已标 %1/%2 · 已检查 %3 · 待复核 %4 · 需返工 %5")
-            .replace("%1", str(annotated))
-            .replace("%2", str(total))
-            .replace("%3", str(checked))
-            .replace("%4", str(review))
-            .replace("%5", str(rework))
-        )
-        threshold_text = (
-            self.tr("已校准阈值")
-            if self._load_active_thresholds()
-            else self.tr("默认阈值")
-        )
-        filter_text = self.file_filter_combo.currentText()
-        second_line = (
-            self.tr("筛选：%1 · 阈值来源：%2")
-            .replace("%1", filter_text)
-            .replace("%2", threshold_text)
-        )
-        self.file_progress_label.setText(f"{first_line}\n{second_line}")
+        """Delegates to file_list_ops (wiring and tests stay)."""
+        file_list_ops.refresh_file_progress(self)
 
     def _refresh_file_panel(self):
         self._apply_file_filter()
@@ -3730,8 +3626,18 @@ class LabelingWidget(LabelDialog):
 
     # QT Overload
     def closeEvent(self, event):
+        if not exit_cleanup.batch_allows_close(self):
+            QMessageBox.warning(
+                self,
+                self.tr("批量自动标注"),
+                self.tr("正在停止批量标注，请处理完当前图片再关闭窗口。"),
+            )
+            event.ignore()
+            return
         if not self.may_continue():
             event.ignore()
+            return
+        exit_cleanup.cancel_model_work(self)
         self.settings.setValue(
             "filename", self.filename if self.filename else ""
         )
@@ -4009,19 +3915,13 @@ class LabelingWidget(LabelDialog):
             self.file_list_widget.repaint()
 
     def save_file(self, _value=False):
-        assert not self.image.isNull(), "cannot save empty image"
-        if self.label_file:
-            # DL20180323 - overwrite when in directory
-            self._save_file(self.label_file.filename)
-        elif self.output_file:
-            self._save_file(self.output_file)
-            self.close()
-        else:
-            self._save_file(self.save_file_dialog())
+        return file_lifecycle.save_file(self)
 
     def save_file_as(self, _value=False):
-        assert not self.image.isNull(), "cannot save empty image"
-        self._save_file(self.save_file_dialog())
+        return file_lifecycle.save_file_as(self)
+
+    def _save_file(self, filename):
+        return file_lifecycle.save_file_to(self, filename)
 
     def save_file_dialog(self):
         caption = self.tr("%s - Choose File") % __appname__
@@ -4060,17 +3960,6 @@ class LabelingWidget(LabelDialog):
         if isinstance(filename, tuple):
             filename, _ = filename
         return filename
-
-    def _save_file(self, filename):
-        # An explicit save supersedes the debounced one; without this the
-        # timer would fire ~400ms later and rewrite the same file again.
-        self._cancel_pending_auto_save()
-        if filename and self.save_labels(filename):
-            self.add_recent_file(filename)
-            self.set_clean()
-            self._show_save_feedback(True)
-        else:
-            self._show_save_feedback(False)
 
     def _show_save_feedback(self, ok):
         """Show a short, non-modal feedback about the last save operation.
@@ -4223,8 +4112,10 @@ class LabelingWidget(LabelDialog):
             self._pending_inherited_shapes = False
             return True
         if answer == mb.StandardButton.Save:
-            self.save_file()
-            return True
+            # A failed save must keep the user on the image; closing or
+            # switching away would throw the dirty state away right after
+            # they asked to keep it.
+            return bool(self.save_file())
         # answer == mb.Cancel
         return False
 
@@ -6059,6 +5950,7 @@ def _build_actions(widget):
         fill_drawing=fill_drawing,
         shape_converter=shape_converter,
         run_history=run_history,
+        shortcuts_help=shortcuts_help,
         save_crop=save_crop,
         ultralytics_train=ultralytics_train,
         save_auto=save_auto,

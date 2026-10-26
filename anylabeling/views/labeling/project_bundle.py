@@ -19,6 +19,7 @@ from __future__ import annotations
 import json
 import os
 import os.path as osp
+import shutil
 import zipfile
 
 from anylabeling.views.labeling.project import PROJECT_DIR_NAME
@@ -189,42 +190,50 @@ def import_bundle(zip_path, parent_dir, progress=None, cancel=None):
     if osp.exists(target):
         raise ValueError(f"target already exists: {target}")
 
-    with zipfile.ZipFile(str(zip_path)) as bundle:
-        entries = [
-            name for name in bundle.namelist() if not name.endswith("/")
-        ]
-        # 先全量校验、后写一个字节：整体拒绝必须真的是整体 —— 一半条目
-        # 已落盘才发现越界，"拒绝"就只剩一个空壳目录。
-        rels = {}
-        for name in entries:
-            # 条目自带顶层目录前缀（导出时加的）；target 已经是
-            # parent/<top>，所以按**去掉前缀后的相对路径**落位 ——
-            # 不剥掉这一层，整个项目就会翻倍嵌进 plates/plates/。
-            rel = name[len(top) + 1 :] if name.startswith(top + "/") else name
-            rels[name] = rel
-            _safe_target(target, rel)
-        total = len(entries)
-        done = 0
-        written = 0
-        for name in entries:
-            if cancel is not None and cancel():
-                try:
-                    import shutil
-
+    try:
+        with zipfile.ZipFile(str(zip_path)) as bundle:
+            entries = [
+                name for name in bundle.namelist() if not name.endswith("/")
+            ]
+            # 先全量校验、后写一个字节：整体拒绝必须真的是整体 —— 一半条目
+            # 已落盘才发现越界，"拒绝"就只剩一个空壳目录。
+            rels = {}
+            for name in entries:
+                # 条目自带顶层目录前缀（导出时加的）；target 已经是
+                # parent/<top>，所以按**去掉前缀后的相对路径**落位 ——
+                # 不剥掉这一层，整个项目就会翻倍嵌进 plates/plates/。
+                rel = (
+                    name[len(top) + 1 :]
+                    if name.startswith(top + "/")
+                    else name
+                )
+                rels[name] = rel
+                _safe_target(target, rel)
+            total = len(entries)
+            done = 0
+            written = 0
+            for name in entries:
+                if cancel is not None and cancel():
                     shutil.rmtree(target, ignore_errors=True)
-                except OSError:
-                    pass
-                return {"root": target, "files": 0, "cancelled": True}
-            arc_target = _safe_target(target, rels[name])
-            os.makedirs(osp.dirname(arc_target), exist_ok=True)
-            with bundle.open(name) as source, open(arc_target, "wb") as dest:
-                while True:
-                    chunk = source.read(1024 * 1024)
-                    if not chunk:
-                        break
-                    dest.write(chunk)
-            written += 1
-            done += 1
-            if progress is not None:
-                progress(done, total, name)
+                    return {"root": target, "files": 0, "cancelled": True}
+                arc_target = _safe_target(target, rels[name])
+                os.makedirs(osp.dirname(arc_target), exist_ok=True)
+                with (
+                    bundle.open(name) as source,
+                    open(arc_target, "wb") as dest,
+                ):
+                    while True:
+                        chunk = source.read(1024 * 1024)
+                        if not chunk:
+                            break
+                        dest.write(chunk)
+                written += 1
+                done += 1
+                if progress is not None:
+                    progress(done, total, name)
+    except Exception:
+        # 解包中途失败会留下一个"看起来像项目"的半成品，而重新导入又
+        # 会因 target 已存在被拒绝。归档本身完好，删掉它能干净重来。
+        shutil.rmtree(target, ignore_errors=True)
+        raise
     return {"root": target, "files": written}

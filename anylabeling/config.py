@@ -3,6 +3,9 @@ import os
 import os.path as osp
 import shutil
 import copy
+import tempfile
+from datetime import datetime
+
 import yaml
 import importlib.resources as pkg_resources
 
@@ -11,6 +14,8 @@ from anylabeling.views.labeling.logger import logger
 
 current_config_file = None
 _work_directory = None
+#: Details of the last unreadable config file, for the startup dialog.
+_config_load_warning = None
 _LEGACY_KEY_MAP = {
     "epsilon": "canvas.epsilon",
     "show_cross_line": "canvas.crosshair.show",
@@ -170,18 +175,170 @@ def normalize_user_config(config):
     return normalized
 
 
+def _backup_unreadable_config(path):
+    """Move the broken file aside so its contents are not lost."""
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    backup = f"{path}.invalid-{stamp}"
+    if osp.exists(backup):
+        backup = f"{path}.invalid-{stamp}-{os.getpid()}"
+    try:
+        os.replace(path, backup)
+        return backup
+    except OSError:
+        pass
+    try:
+        shutil.copyfile(path, backup)
+        return backup
+    except OSError:
+        return None
+
+
+def _record_config_load_warning(path, error):
+    global _config_load_warning, current_config_file
+    backup = _backup_unreadable_config(path)
+    _config_load_warning = {
+        "path": osp.abspath(path),
+        "error": str(error),
+        "backup": backup,
+    }
+    if current_config_file and osp.abspath(current_config_file) == osp.abspath(
+        path
+    ):
+        # The file is gone (or unusable); do not try to load it again on
+        # the next get_config() call, and let save_config() fall back to
+        # the default rc file.
+        current_config_file = None
+    summary = (
+        str(error).splitlines()[0] if str(error) else type(error).__name__
+    )
+    logger.error(
+        f"Ignoring unreadable config {path}: {summary}. "
+        f"Starting from defaults; original kept at {backup or 'nowhere'}."
+    )
+
+
+def take_config_load_warning():
+    """Return and clear the details of the last unreadable config."""
+    global _config_load_warning
+    warning = _config_load_warning
+    _config_load_warning = None
+    return warning
+
+
+def _load_user_config(config_file_or_yaml):
+    """Parse user config from inline YAML or a file path; never raise on
+    a corrupt *file*.
+
+    A config file that cannot be parsed used to abort startup with an
+    unhandled traceback (an empty file crashed on ``None.get``, a typo
+    raised ``ParserError``). The annotations are safe, but the app could
+    not open at all until the file was fixed by hand. Falling back to the
+    template keeps the app usable; the broken file is moved aside so the
+    user can still inspect or repair it.
+    """
+    if not config_file_or_yaml:
+        return {}
+
+    try:
+        parsed = yaml.safe_load(config_file_or_yaml)
+    except yaml.YAMLError:
+        parsed = None
+    if isinstance(parsed, dict):
+        return parsed
+
+    path = str(config_file_or_yaml)
+    try:
+        with open(path, encoding="utf-8-sig") as f:
+            content = f.read()
+    except FileNotFoundError:
+        # An explicitly requested config that does not exist is a real
+        # error; the startup crash dialog explains it.
+        raise
+    except (OSError, UnicodeDecodeError) as exc:
+        _record_config_load_warning(path, exc)
+        return {}
+
+    if not content.strip():
+        return {}
+    try:
+        loaded = yaml.safe_load(content)
+    except yaml.YAMLError as exc:
+        _record_config_load_warning(path, exc)
+        return {}
+    if loaded is None:
+        return {}
+    if not isinstance(loaded, dict):
+        _record_config_load_warning(
+            path,
+            ValueError(f"expected a mapping, got {type(loaded).__name__}"),
+        )
+        return {}
+    return loaded
+
+
+def _write_yaml_atomic(file_path, data):
+    """Write YAML beside the target, then replace it in one step.
+
+    A crash or full disk mid-dump used to leave a truncated rc, which
+    then crashed the next startup. Raises ``OSError`` when the write
+    fails; the old file is untouched in that case.
+    """
+    directory = osp.dirname(file_path) or "."
+    os.makedirs(directory, exist_ok=True)
+    fd, temporary_file = tempfile.mkstemp(
+        prefix=".xanylabelingrc_", suffix=".tmp", dir=directory
+    )
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            yaml.safe_dump(data, f, allow_unicode=True)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(temporary_file, file_path)
+        temporary_file = None
+    finally:
+        if temporary_file and osp.exists(temporary_file):
+            try:
+                os.remove(temporary_file)
+            except OSError:
+                pass
+
+
+def _is_shipped_template(path):
+    """True when ``path`` is the bundled defaults file, not a user config."""
+    try:
+        template = pkg_resources.files(anylabeling_configs) / (
+            "jllabeling_config.yaml"
+        )
+        return osp.normcase(osp.realpath(str(template))) == osp.normcase(
+            osp.realpath(path)
+        )
+    except Exception:  # noqa
+        return False
+
+
 def save_config(config):
     # Write back to the file the session loaded from (a --config path) so
     # reads and writes stay symmetric; inline YAML strings and the default
     # startup path (None) fall through to the work-directory rc file.
     if current_config_file and osp.isfile(current_config_file):
-        user_config_file = current_config_file
+        if _is_shipped_template(current_config_file):
+            # The template is the shipped default, not a user config.
+            # Writing it back turned a settings change into a permanent
+            # edit of the install (and, in tests, poisoned every later
+            # run); the work-directory rc is the right destination.
+            logger.error(
+                "Refusing to overwrite the bundled default config; "
+                "saving to the work-directory rc instead."
+            )
+            user_config_file = osp.join(
+                get_work_directory(), ".xanylabelingrc"
+            )
+        else:
+            user_config_file = current_config_file
     else:
         user_config_file = osp.join(get_work_directory(), ".xanylabelingrc")
     try:
-        os.makedirs(osp.dirname(user_config_file), exist_ok=True)
-        with open(user_config_file, "w", encoding="utf-8") as f:
-            yaml.safe_dump(config, f, allow_unicode=True)
+        _write_yaml_atomic(user_config_file, config)
         return True
     except Exception:  # noqa
         logger.exception(f"Failed to save config: {user_config_file}")
@@ -215,8 +372,17 @@ def get_default_config():
 
     config = copy.deepcopy(_load_template_config())
 
-    if not osp.exists(osp.join(work_dir, ".xanylabelingrc")):
-        save_config(config)
+    if not osp.exists(new_cfg_file):
+        # Write the work-directory rc only. save_config() honours
+        # --config, which may point at a user-authored file: seeding the
+        # defaults through it used to overwrite that file on a machine
+        # whose work directory had no rc yet.
+        try:
+            _write_yaml_atomic(new_cfg_file, config)
+        except Exception:  # noqa
+            logger.exception(
+                f"Failed to create the default config: {new_cfg_file}"
+            )
 
     return config
 
@@ -260,11 +426,9 @@ def get_config(
     if not config_file_or_yaml:
         config_file_or_yaml = current_config_file
 
-    config_from_yaml = yaml.safe_load(config_file_or_yaml)
-    if not isinstance(config_from_yaml, dict):
-        with open(config_file_or_yaml, encoding="utf-8") as f:
-            config_from_yaml = yaml.safe_load(f)
-    config_from_yaml = normalize_user_config(config_from_yaml)
+    config_from_yaml = normalize_user_config(
+        _load_user_config(config_file_or_yaml)
+    )
     _apply_config_migrations(config_from_yaml)
     update_dict(config, config_from_yaml, validate_item=validate_config_item)
     if show_msg:

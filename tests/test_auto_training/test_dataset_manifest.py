@@ -111,6 +111,42 @@ def test_manifest_records_the_exact_annotations(dataset_root, tmp_path):
     assert os.path.isfile(manifest["data_yaml"])
 
 
+def test_a_failed_data_yaml_write_aborts_the_build(
+    dataset_root, tmp_path, monkeypatch
+):
+    monkeypatch.setattr(general, "save_yaml_config", lambda *a, **k: False)
+
+    with pytest.raises(OSError, match="dataset YAML"):
+        _build(tmp_path, dataset_root, seed=42)
+
+    # The failed build must not leave a half dataset under the root.
+    leftover = [
+        os.path.join(root, name)
+        for root, _, files in os.walk(dataset_root)
+        for name in files
+    ]
+    assert leftover == []
+
+
+def test_a_failed_manifest_write_aborts_and_cleans_up(
+    dataset_root, tmp_path, monkeypatch
+):
+    def boom(*args, **kwargs):
+        raise OSError("disk full")
+
+    monkeypatch.setattr(general, "save_json_atomic", boom)
+
+    with pytest.raises(OSError, match="disk full"):
+        _build(tmp_path, dataset_root, seed=42)
+
+    leftover = [
+        os.path.join(root, name)
+        for root, _, files in os.walk(dataset_root)
+        for name in files
+    ]
+    assert leftover == []
+
+
 def test_same_seed_reproduces_the_split(dataset_root, tmp_path):
     first, _ = _build(tmp_path, dataset_root, seed=7)
     second, _ = _build(tmp_path, dataset_root, seed=7)
@@ -147,7 +183,9 @@ def test_hash_reveals_annotations_edited_after_the_run(dataset_root, tmp_path):
     assert general.file_sha1(label_path) != recorded
 
 
-def test_manifest_records_seed_source_for_pinned_splits(dataset_root, tmp_path):
+def test_manifest_records_seed_source_for_pinned_splits(
+    dataset_root, tmp_path
+):
     images = _make_dataset(tmp_path, count=4)
     out = create_yolo_dataset(
         images,
@@ -169,9 +207,7 @@ def test_manifest_records_seed_source_for_pinned_splits(dataset_root, tmp_path):
 def test_manifest_loader_accepts_dir_or_yaml(dataset_root, tmp_path):
     out, _ = _build(tmp_path, dataset_root, seed=11)
     assert load_dataset_manifest(out)["seed"] == 11
-    assert (
-        load_dataset_manifest(os.path.join(out, "data.yaml"))["seed"] == 11
-    )
+    assert load_dataset_manifest(os.path.join(out, "data.yaml"))["seed"] == 11
 
 
 def test_two_builds_in_the_same_second_do_not_overwrite(

@@ -23,14 +23,7 @@ ROOT = os.path.join(REPO, "anylabeling", "views", "labeling")
 #: one fails too -- which is how the two "obvious" exemptions below turned out
 #: to be functions the scan never matches (they write text and marker files,
 #: not `json.dump`).
-EXEMPT = {
-    # 导入 YOLO merges the imported shapes with the ones it read back. The
-    # converter already copied that file's pre-import state in this same run,
-    # so a second copy of import output buries the undo point in noise.
-    "anylabeling/views/labeling/utils/upload.py::upload_yolo_annotation": (
-        "merge after import; the converter snapshotted pre-import state"
-    ),
-}
+EXEMPT = {}
 
 LABEL_TOKENS = (
     "label_file",

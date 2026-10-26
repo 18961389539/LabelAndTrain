@@ -729,6 +729,11 @@ class _StubMessageBox:
         cls.last_question = args[-1] if args else ""
         return None
 
+    @classmethod
+    def critical(cls, *args, **kwargs):  # noqa: N802
+        cls.last_question = args[-1] if args else ""
+        return None
+
     def setIcon(self, icon):  # noqa: N802
         self.icon = icon
 
@@ -867,6 +872,37 @@ class TestTheGuardRunsBeforeTrainingStarts:
         # status does not stay stuck on "preparing".
         assert started == []
         assert dialog.training_status == "idle"
+
+    def test_a_refused_start_returns_to_idle(self, tmp_path, monkeypatch):
+        """A failed manager start must not leave the build phase on screen.
+
+        The dataset is already built when the manager answers; the dialog
+        used to keep "preparing" and its progress format while no work was
+        running, so the retry looked like it had silently done nothing.
+        """
+        _parent, dialog = _build_dialog(tmp_path, monkeypatch)
+        dataset = tmp_path / "ds"
+        dataset.mkdir()
+        dialog._dataset_report = {}
+        dialog._dataset_pending_config = {"basic": {}, "checkpoint": {}}
+        dialog.training_status = "preparing"
+        dialog.start_training_button.setEnabled(True)
+        monkeypatch.setattr(
+            dialog, "get_training_args", lambda *a, **k: {"data": "x"}
+        )
+
+        class _RefusingManager:
+            @staticmethod
+            def start_training(_args):
+                return False, "Training is already in progress"
+
+        monkeypatch.setattr(dialog, "training_manager", _RefusingManager())
+
+        dialog._on_dataset_preparation_finished(str(dataset), "")
+
+        assert dialog.training_status == "idle"
+        assert dialog.start_training_button.isEnabled()
+        assert "already in progress" in dialog.log_display.toPlainText()
 
 
 class TestClassesFilterIsChecked:

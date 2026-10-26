@@ -1,5 +1,6 @@
 import hashlib
 import json
+import logging
 import os
 import re
 import shutil
@@ -7,7 +8,7 @@ import random
 from datetime import datetime
 from typing import List
 
-from ._io import load_yaml_config, save_yaml_config
+from ._io import load_yaml_config, save_json_atomic, save_yaml_config
 from .config import (
     get_dataset_path,
     TASK_LABEL_MAPPINGS,
@@ -248,7 +249,61 @@ def partition_images(
     }
 
 
+def _discard_partial_dataset(report):
+    """Remove the directory a failed build created, if there is one."""
+    dataset_dir = (report or {}).get("dataset_dir")
+    if not dataset_dir:
+        return
+    try:
+        shutil.rmtree(dataset_dir)
+    except OSError as exc:
+        logging.getLogger(__name__).warning(
+            f"Could not remove the partial dataset {dataset_dir}: {exc}"
+        )
+
+
 def create_yolo_dataset(
+    image_list: List[str],
+    task_type: str,
+    dataset_ratio: float,
+    data_file: str,
+    output_dir: str = None,
+    pose_cfg_file: str = None,
+    skip_empty_files: bool = False,
+    only_checked_files: bool = False,
+    seed: int = None,
+    seed_source: str = "generated",
+    report: dict = None,
+) -> str:
+    """Build a dataset; a failed build removes what it had written.
+
+    A half-built folder under the trainer's dataset root looks like a
+    usable dataset to the cleanup tools and occupies the disk until the
+    user finds it; removing it keeps a failed build from leaving a
+    misleading artifact. The caller's ``report`` still describes the
+    failure's context.
+    """
+    build_report = report if report is not None else {}
+    try:
+        return _build_yolo_dataset(
+            image_list,
+            task_type,
+            dataset_ratio,
+            data_file,
+            output_dir,
+            pose_cfg_file,
+            skip_empty_files,
+            only_checked_files,
+            seed=seed,
+            seed_source=seed_source,
+            report=build_report,
+        )
+    except Exception:
+        _discard_partial_dataset(build_report)
+        raise
+
+
+def _build_yolo_dataset(
     image_list: List[str],
     task_type: str,
     dataset_ratio: float,
@@ -457,6 +512,9 @@ def create_yolo_dataset(
             val_labels_dir,
         ]:
             os.makedirs(dir_path, exist_ok=True)
+    if report is not None:
+        # Earliest point at which a failure has something to clean up.
+        report["dataset_dir"] = temp_dir
 
     partitioned = partition_images(
         image_list, task_type, output_dir, only_checked_files
@@ -576,7 +634,8 @@ def create_yolo_dataset(
         data["train"] = "images/train"
         data["val"] = "images/val"
 
-    save_yaml_config(data, yaml_file)
+    if not save_yaml_config(data, yaml_file):
+        raise OSError(f"Could not write the dataset YAML: {yaml_file}")
 
     if task_type == "Classify":
         train_pairs = train_valid_images
@@ -616,8 +675,7 @@ def create_yolo_dataset(
         + _manifest_entries(val_valid_images, "val", label_digests),
     }
     manifest_file = os.path.join(temp_dir, "manifest.json")
-    with open(manifest_file, "w", encoding="utf-8") as f:
-        json.dump(manifest, f, ensure_ascii=False, indent=2)
+    save_json_atomic(manifest, manifest_file)
 
     if report is not None:
         report.update(

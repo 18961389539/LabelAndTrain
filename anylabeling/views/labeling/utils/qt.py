@@ -209,6 +209,11 @@ def apply_application_font(font_family):
     app.setFont(app_font)
 
 
+#: The EXIF fixer writes rotated originals under this folder inside the
+#: dataset. Scanning it back in would show every image twice.
+EXIF_BACKUP_DIR_NAME = "x-anylabeling-exif-backup"
+
+
 def scan_all_images(folder_path):
     try:
         extensions = get_supported_image_extensions()
@@ -216,7 +221,8 @@ def scan_all_images(folder_path):
         images = []
         folder_path = osp.normpath(osp.abspath(folder_path))
 
-        for root, _, files in os.walk(folder_path):
+        for root, dirs, files in os.walk(folder_path):
+            dirs[:] = [name for name in dirs if name != EXIF_BACKUP_DIR_NAME]
             for file in files:
                 if file.lower().endswith(tuple(extensions)):
                     relative_path = osp.normpath(osp.join(root, file))

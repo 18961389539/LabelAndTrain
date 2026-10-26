@@ -52,9 +52,218 @@ def test_download_with_retry_keeps_tls_certificate_verification(
     assert captured_contexts
 
 
-def test_download_with_retry_rejects_part_path_symlink(
-    tmp_path, monkeypatch
-):
+class ShortResponse(FakeResponse):
+    """The server announced 10 bytes, then closed after six."""
+
+    headers = {"Content-Length": "10"}
+
+    def __init__(self):
+        self.chunks = [b"secure", b""]
+
+
+class EmptyResponse(FakeResponse):
+    headers = {"Content-Length": "0"}
+
+    def __init__(self):
+        self.chunks = [b""]
+
+
+def test_a_short_download_is_never_installed(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        auto_model.urllib.request,
+        "urlopen",
+        lambda *args, **kwargs: ShortResponse(),
+    )
+    monkeypatch.setattr(auto_model, "get_config", lambda: {})
+    model = DummyModel({}, lambda _: None)
+    model.MAX_RETRIES = 1
+    dest_path = tmp_path / "model.onnx"
+
+    with pytest.raises(OSError, match="incomplete download"):
+        model.download_with_retry(
+            "https://example.com/model.onnx", str(dest_path), None
+        )
+
+    assert not dest_path.exists()
+    assert not (tmp_path / "model.onnx.part").exists()
+
+
+class OverlongResponse(FakeResponse):
+    """The server sent more bytes than the announced Content-Length."""
+
+    headers = {"Content-Length": "5"}
+
+    def __init__(self):
+        self.chunks = [b"1234567890", b""]
+
+
+def test_a_body_longer_than_announced_is_rejected(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        auto_model.urllib.request,
+        "urlopen",
+        lambda *args, **kwargs: OverlongResponse(),
+    )
+    monkeypatch.setattr(auto_model, "get_config", lambda: {})
+    model = DummyModel({}, lambda _: None)
+    model.MAX_RETRIES = 1
+    dest_path = tmp_path / "model.onnx"
+
+    with pytest.raises(OSError, match="size mismatch"):
+        model.download_with_retry(
+            "https://example.com/model.onnx", str(dest_path), None
+        )
+
+    assert not dest_path.exists()
+    assert not (tmp_path / "model.onnx.part").exists()
+
+
+def test_an_empty_download_is_never_installed(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        auto_model.urllib.request,
+        "urlopen",
+        lambda *args, **kwargs: EmptyResponse(),
+    )
+    monkeypatch.setattr(auto_model, "get_config", lambda: {})
+    model = DummyModel({}, lambda _: None)
+    model.MAX_RETRIES = 1
+    dest_path = tmp_path / "model.onnx"
+
+    with pytest.raises(OSError, match="empty download"):
+        model.download_with_retry(
+            "https://example.com/model.onnx", str(dest_path), None
+        )
+
+    assert not dest_path.exists()
+    assert not (tmp_path / "model.onnx.part").exists()
+
+
+class RangeAcceptedResponse(FakeResponse):
+    """The server continued from byte 6 and announced the full size."""
+
+    status = 206
+
+    def __init__(self):
+        self.headers = {
+            "Content-Length": "4",
+            "Content-Range": "bytes 6-9/10",
+        }
+        self.chunks = [b"7890", b""]
+
+
+class RestartedResponse(FakeResponse):
+    """A whole-body reply, used both for "range ignored" and restart."""
+
+    status = 200
+
+    def __init__(self, body=b"ABCDEFGHIJ"):
+        self.headers = {"Content-Length": str(len(body))}
+        self.chunks = [body, b""]
+
+
+def test_a_short_transfer_resumes_from_the_part_file(tmp_path, monkeypatch):
+    ranges = []
+    responses = [ShortResponse(), RangeAcceptedResponse()]
+
+    def fake_urlopen(request, timeout, **kwargs):
+        ranges.append(request.headers.get("Range"))
+        return responses.pop(0)
+
+    monkeypatch.setattr(auto_model.urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(auto_model, "get_config", lambda: {})
+    model = DummyModel({}, lambda _: None)
+    model.MAX_RETRIES = 2
+    model.RETRY_DELAY = 0
+    dest = tmp_path / "model.onnx"
+    progress = []
+
+    assert model.download_with_retry(
+        "https://example.com/model.onnx",
+        str(dest),
+        lambda done, total: progress.append((done, total)),
+    )
+
+    assert ranges == [None, "bytes=6-"]
+    assert dest.read_bytes() == b"secure7890"
+    assert not (tmp_path / "model.onnx.part").exists()
+    assert progress[-1] == (10, 10)
+
+
+def test_a_server_that_ignores_range_restarts_from_zero(tmp_path, monkeypatch):
+    ranges = []
+    responses = [ShortResponse(), RestartedResponse()]
+
+    def fake_urlopen(request, timeout, **kwargs):
+        ranges.append(request.headers.get("Range"))
+        return responses.pop(0)
+
+    monkeypatch.setattr(auto_model.urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(auto_model, "get_config", lambda: {})
+    model = DummyModel({}, lambda _: None)
+    model.MAX_RETRIES = 2
+    model.RETRY_DELAY = 0
+    dest = tmp_path / "model.onnx"
+
+    assert model.download_with_retry(
+        "https://example.com/model.onnx", str(dest), None
+    )
+
+    assert ranges == [None, "bytes=6-"]
+    assert dest.read_bytes() == b"ABCDEFGHIJ"
+    assert not (tmp_path / "model.onnx.part").exists()
+
+
+def test_http_416_drops_the_part_and_restarts(tmp_path, monkeypatch):
+    from urllib.error import HTTPError
+
+    url = "https://example.com/model.onnx"
+    ranges = []
+    calls = []
+
+    def fake_urlopen(request, timeout, **kwargs):
+        ranges.append(request.headers.get("Range"))
+        calls.append(1)
+        if len(calls) == 1:
+            return ShortResponse()
+        if len(calls) == 2:
+            raise HTTPError(url, 416, "Range Not Satisfiable", {}, None)
+        return RestartedResponse()
+
+    monkeypatch.setattr(auto_model.urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(auto_model, "get_config", lambda: {})
+    model = DummyModel({}, lambda _: None)
+    model.MAX_RETRIES = 3
+    model.RETRY_DELAY = 0
+    dest = tmp_path / "model.onnx"
+
+    assert model.download_with_retry(url, str(dest), None)
+
+    assert ranges == [None, "bytes=6-", None]
+    assert dest.read_bytes() == b"ABCDEFGHIJ"
+
+
+def test_a_part_from_an_earlier_call_is_not_resumed(tmp_path, monkeypatch):
+    part = tmp_path / "model.onnx.part"
+    part.write_bytes(b"stale")
+    ranges = []
+
+    def fake_urlopen(request, timeout, **kwargs):
+        ranges.append(request.headers.get("Range"))
+        return RestartedResponse(b"fresh")
+
+    monkeypatch.setattr(auto_model.urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(auto_model, "get_config", lambda: {})
+    model = DummyModel({}, lambda _: None)
+    dest = tmp_path / "model.onnx"
+
+    assert model.download_with_retry(
+        "https://example.com/model.onnx", str(dest), None
+    )
+
+    assert ranges == [None]
+    assert dest.read_bytes() == b"fresh"
+
+
+def test_download_with_retry_rejects_part_path_symlink(tmp_path, monkeypatch):
     model_directory = tmp_path / "models"
     model_directory.mkdir()
     outside_file = tmp_path / "outside.part"
@@ -86,18 +295,14 @@ def test_download_with_retry_rejects_part_path_symlink(
         "..",
     ],
 )
-def test_load_custom_model_rejects_invalid_name(
-    tmp_path, monkeypatch, name
-):
+def test_load_custom_model_rejects_invalid_name(tmp_path, monkeypatch, name):
     config_file = tmp_path / "model.yaml"
     config_file.write_text(
         f"type: yolov8\nname: {name!r}\ndisplay_name: Test\n",
         encoding="utf-8",
     )
     saved_configs = []
-    monkeypatch.setattr(
-        ModelManager, "load_model_configs", lambda self: None
-    )
+    monkeypatch.setattr(ModelManager, "load_model_configs", lambda self: None)
     monkeypatch.setattr(manager_module, "get_config", lambda: {})
     monkeypatch.setattr(manager_module, "save_config", saved_configs.append)
 
@@ -107,13 +312,13 @@ def test_load_custom_model_rejects_invalid_name(
     assert not saved_configs
 
 
-def test_get_model_abs_path_rejects_path_traversal(
-    tmp_path, monkeypatch
-):
+def test_get_model_abs_path_rejects_path_traversal(tmp_path, monkeypatch):
     outside_file = tmp_path / "outside" / "model.onnx"
     outside_file.parent.mkdir()
     outside_file.write_bytes(b"keep")
-    monkeypatch.setattr(auto_model, "get_work_directory", lambda: str(tmp_path))
+    monkeypatch.setattr(
+        auto_model, "get_work_directory", lambda: str(tmp_path)
+    )
     monkeypatch.setattr(auto_model, "get_config", lambda: {})
     model = DummyModel({}, lambda _: None)
     download_called = False
@@ -141,9 +346,7 @@ def test_prediction_cancel_discards_result(monkeypatch):
     """A stale prediction produced after cancel must not be emitted."""
     from anylabeling.services.auto_labeling.model_manager import ModelManager
 
-    monkeypatch.setattr(
-        ModelManager, "load_model_configs", lambda self: None
-    )
+    monkeypatch.setattr(ModelManager, "load_model_configs", lambda self: None)
     monkeypatch.setattr(manager_module, "get_config", lambda: {})
     manager = ModelManager()
 
@@ -201,9 +404,7 @@ def test_prediction_cancel_discards_result(monkeypatch):
 
 def test_model_load_failed_signal_emitted(monkeypatch):
     """Model-load errors must reach the dedicated failure channel."""
-    monkeypatch.setattr(
-        ModelManager, "load_model_configs", lambda self: None
-    )
+    monkeypatch.setattr(ModelManager, "load_model_configs", lambda self: None)
     monkeypatch.setattr(manager_module, "get_config", lambda: {})
     manager = ModelManager()
     manager.model_configs = [
@@ -266,9 +467,7 @@ def test_remove_custom_model(monkeypatch):
     """remove_custom_model deletes only the matching registry entry."""
     saved = {}
 
-    monkeypatch.setattr(
-        ModelManager, "load_model_configs", lambda self: None
-    )
+    monkeypatch.setattr(ModelManager, "load_model_configs", lambda self: None)
 
     def fake_config():
         return {

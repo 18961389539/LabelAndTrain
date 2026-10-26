@@ -85,9 +85,18 @@ class TestRangeEditorSnapshots(unittest.TestCase):
         self.folder, holder = _make_folder(shapes_by_stem)
         self.addCleanup(holder.cleanup)
         self.widget, widget_holder = build_labeling_widget(self.folder)
+        # The background label scan reads label files; stop it before the
+        # temp folder cleanup, or Windows refuses to delete an open file.
+        # The low-confidence pass makes that worker long enough to overlap.
+        self.addCleanup(self.widget.async_label_checker.stop)
+        self.addCleanup(self.widget.async_exif_scanner.stop_scan)
         self.addCleanup(self.widget.deleteLater)
         self.addCleanup(widget_holder.deleteLater)
         self.widget.file_list_widget.setCurrentRow(0)
+        # Do not let the background scan read a file while the range
+        # operations delete it; the lock is enough to fail the delete.
+        self.widget.async_label_checker.stop()
+        self.widget.async_exif_scanner.stop_scan()
 
     def _read(self, stem):
         path = os.path.join(self.folder, stem + ".json")

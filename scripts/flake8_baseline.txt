@@ -14,7 +14,6 @@ anylabeling/services/auto_labeling/__base__/yolo.py                      C901 1
 anylabeling/services/auto_labeling/engines/build_trt_engine.py           B907 1
 anylabeling/services/auto_labeling/model.py                              B009 1
 anylabeling/services/auto_labeling/model.py                              C901 1
-anylabeling/services/auto_labeling/model_manager.py                      F841 1
 anylabeling/services/auto_labeling/pose/rtmo_onnx.py                     C416 1
 anylabeling/services/auto_labeling/segment_anything_2.py                 C901 2
 anylabeling/services/auto_training/ultralytics/exporter.py               B001 1
@@ -51,12 +50,9 @@ anylabeling/views/labeling/utils/file_search.py                          B903 1
 anylabeling/views/labeling/utils/file_search.py                          C901 2
 anylabeling/views/labeling/utils/qt.py                                   B907 1
 anylabeling/views/labeling/utils/shape.py                                C901 1
-anylabeling/views/labeling/utils/smart_tools.py                          B907 1
-anylabeling/views/labeling/utils/smart_tools.py                          C416 1
 anylabeling/views/labeling/utils/upload.py                               C420 1
 anylabeling/views/labeling/utils/upload.py                               C901 1
 anylabeling/views/labeling/utils/upload.py                               F405 15
-anylabeling/views/labeling/utils/upload.py                               F541 4
 anylabeling/views/labeling/widgets/attributes_controller.py              B023 6
 anylabeling/views/labeling/widgets/attributes_controller.py              C401 1
 anylabeling/views/labeling/widgets/attributes_controller.py              C901 1
@@ -72,7 +68,6 @@ anylabeling/views/labeling/widgets/label_dialog.py                       C414 1
 anylabeling/views/labeling/widgets/label_dialog.py                       C901 1
 anylabeling/views/labeling/widgets/label_dialog.py                       F541 1
 anylabeling/views/labeling/widgets/overview_dialog.py                    C408 1
-anylabeling/views/labeling/widgets/overview_dialog.py                    F541 1
 anylabeling/views/labeling/widgets/searchable_model_dropdown.py          B006 1
 anylabeling/views/labeling/widgets/searchable_model_dropdown.py          C901 1
 anylabeling/views/labeling/widgets/searchable_model_dropdown.py          F405 12

@@ -5,7 +5,7 @@ into widget-first module functions.  Their first parameter is still the
 whole widget, which makes the widget an implicit interface -- this file
 makes it an explicit one: ``CONTRACT_MEMBERS`` is exactly the set of
 attributes and methods those modules touch, collected mechanically
-(every ``widget.X`` in the five ``utils/`` modules) and locked by
+(every ``widget.X`` in the six ``utils/`` modules) and locked by
 ``tests/test_labeling/test_label_widget_contract.py`` from both sides:
 
 * a module that starts touching something new fails the test until the
@@ -14,7 +14,7 @@ attributes and methods those modules touch, collected mechanically
 * a contract entry whose member disappears from the widget fails the
   test -- the interface cannot silently rot.
 
-It also documents the real size of the "god parameter": 132 members.
+It also documents the real size of the "god parameter": 143 members.
 Any future batch that extracts a *controller class* should aim to cut
 this number by owning a slice of it.
 """
@@ -25,6 +25,7 @@ CONTRACT_MEMBERS = frozenset(
         "_annotation_checked",
         "_apply_file_sort",
         "_batch_edit_warning_shown",
+        "_cancel_pending_auto_save",
         "_config",
         "_confirm_destructive_action",
         "_convert_navigator_pos_to_canvas",
@@ -33,7 +34,9 @@ CONTRACT_MEMBERS = frozenset(
         "_current_review_state",
         "_decode_image_data",
         "_delete_via_context",
+        "_file_item_annotation_checked",
         "_file_item_tooltip",
+        "_low_conf_scan_pending",
         "_file_sort_mode",
         "_first_visible_row",
         "_get_rgb_by_label",
@@ -44,6 +47,7 @@ CONTRACT_MEMBERS = frozenset(
         "_smart_tools_guide_signature",
         "_maybe_prompt_missing_labels",
         "_next_visible_row",
+        "_no_selection_slot",
         "_paging_blocked_by_drawing",
         "_position_canvas_adjustment",
         "_project_resume_file",
@@ -53,10 +57,12 @@ CONTRACT_MEMBERS = frozenset(
         "_refresh_label_panel",
         "_refresh_shape_filters",
         "_reset_label_loop",
+        "_save_file",
         "_set_file_item_checked",
         "_set_file_item_review_state",
         "_should_restore_navigator",
         "_show_label_loop_popup",
+        "_show_save_feedback",
         "_sidebar_save_timer",
         "_sync_annotation_checked_state",
         "_sync_empty_canvas_state",
@@ -79,12 +85,15 @@ CONTRACT_MEMBERS = frozenset(
         "canvas_adjustment",
         "central_widget",
         "clear_auto_labeling_marks",
+        "close",
         "copy_file_path",
         "current_item",
         "digit_shortcut_controller",
         "digit_to_label",
         "error_message",
         "file_list_widget",
+        "file_progress_label",
+        "file_filter_combo",
         "file_quality_controller",
         "filename",
         "find_last_gid",
@@ -124,6 +133,7 @@ CONTRACT_MEMBERS = frozenset(
         "open_next_image",
         "other_data",
         "output_dir",
+        "output_file",
         "paint_canvas",
         "recent_files",
         "reset_attribute",
@@ -133,6 +143,8 @@ CONTRACT_MEMBERS = frozenset(
         "scale_fit_window",
         "scroll_area",
         "scroll_bars",
+        "save_file_dialog",
+        "save_labels",
         "set_clean",
         "set_dirty",
         "set_scroll",

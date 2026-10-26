@@ -1,5 +1,6 @@
 import json
 import os
+import tempfile
 import yaml
 from typing import Dict, Any
 
@@ -25,13 +26,58 @@ def save_config(config: Dict[str, Any]) -> bool:
     Returns:
         bool: True if save successful, False otherwise
     """
+    file_path = get_settings_config_path()
+    directory = os.path.dirname(os.path.abspath(file_path)) or "."
+    temporary_file = None
     try:
         ensure_config_dir()
-        with open(get_settings_config_path(), "w", encoding="utf-8") as f:
+        fd, temporary_file = tempfile.mkstemp(
+            prefix=".xal_settings_", suffix=".tmp", dir=directory
+        )
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
             json.dump(config, f, indent=2)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(temporary_file, file_path)
+        temporary_file = None
         return True
     except Exception:
         return False
+    finally:
+        if temporary_file and os.path.exists(temporary_file):
+            try:
+                os.remove(temporary_file)
+            except OSError:
+                pass
+
+
+def save_json_atomic(
+    data: Dict[str, Any],
+    file_path: str,
+    *,
+    indent: int = 2,
+    ensure_ascii: bool = False,
+) -> None:
+    """Write JSON beside the target and replace it in one step."""
+    directory = os.path.dirname(os.path.abspath(file_path)) or "."
+    temporary_file = None
+    try:
+        os.makedirs(directory, exist_ok=True)
+        fd, temporary_file = tempfile.mkstemp(
+            prefix=".xal_json_", suffix=".tmp", dir=directory
+        )
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=indent, ensure_ascii=ensure_ascii)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(temporary_file, file_path)
+        temporary_file = None
+    finally:
+        if temporary_file and os.path.exists(temporary_file):
+            try:
+                os.remove(temporary_file)
+            except OSError:
+                pass
 
 
 def save_yaml_config(config: Dict[str, Any], file_path: str) -> bool:
@@ -45,12 +91,28 @@ def save_yaml_config(config: Dict[str, Any], file_path: str) -> bool:
     Returns:
         bool: True if save successful, False otherwise
     """
+    directory = os.path.dirname(os.path.abspath(file_path)) or "."
+    temporary_file = None
     try:
-        with open(file_path, "w", encoding="utf-8") as f:
+        os.makedirs(directory, exist_ok=True)
+        fd, temporary_file = tempfile.mkstemp(
+            prefix=".xal_yaml_", suffix=".tmp", dir=directory
+        )
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
             yaml.dump(config, f, default_flow_style=False)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(temporary_file, file_path)
+        temporary_file = None
         return True
     except Exception:
         return False
+    finally:
+        if temporary_file and os.path.exists(temporary_file):
+            try:
+                os.remove(temporary_file)
+            except OSError:
+                pass
 
 
 def load_config() -> Dict[str, Any]:

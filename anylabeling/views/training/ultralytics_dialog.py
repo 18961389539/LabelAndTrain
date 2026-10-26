@@ -46,6 +46,7 @@ from anylabeling.views.training.image_preview_dialog import (
     TrainingImagePreviewDialog,
 )
 from anylabeling.views.training.platform_open import open_path
+from anylabeling.views.training import run_maintenance
 from anylabeling.views.training.widgets.ultralytics_widgets import (
     CustomCheckBox,
     CustomComboBox,
@@ -80,7 +81,6 @@ from anylabeling.services.auto_training.ultralytics.config import (
     TASK_TYPES,
     TRAINING_STATUS_COLORS,
     TRAINING_STATUS_TEXTS,
-    get_dataset_path,
     get_default_project_dir,
     get_preset_models,
     get_settings_config_path,
@@ -93,15 +93,10 @@ from anylabeling.services.auto_training.ultralytics.exporter import (
     get_export_validator,
 )
 from anylabeling.services.auto_training.ultralytics.general import (
-    collect_dataset_runs,
     create_yolo_dataset,
-    directory_size,
-    file_sha1,
     format_classes_display,
     load_dataset_manifest,
     parse_string_to_digit_list,
-    plan_dataset_prune,
-    prune_datasets,
 )
 from anylabeling.services.auto_training.ultralytics.style import (
     get_advanced_toggle_btn_style,
@@ -158,7 +153,6 @@ def looks_like_training_run(path: str) -> bool:
 #: How many offending paths a confirmation spells out. Enough to act on (the
 #: first few are usually one bad script or one interrupted session), short
 #: enough that the box stays readable; the full list is on disk either way.
-MAX_LISTED_SKIPS = 5
 
 
 def dataset_skips(report) -> list:
@@ -3002,161 +2996,13 @@ class UltralyticsDialog(QDialog):
                 image_label.setToolTip("")
                 self.image_paths[i] = None
 
-    KEEP_DATASET_BUILDS = 5
-    MIN_CLEANUP_OFFER_BYTES = 100 * 1024 * 1024
-
     def _offer_dataset_cleanup(self):
-        """Ask before dropping old dataset builds the loop left behind.
-
-        Every training copies the images on Windows and never reclaims them, so
-        without this the folder only grows. The build the finished run used is
-        excluded regardless of age.
-        """
-        task_root = os.path.join(
-            get_dataset_path(), (self.selected_task_type or "").lower()
-        )
-        manifest = getattr(self, "_last_dataset_manifest", None) or {}
-        current = None
-        if manifest.get("data_yaml"):
-            current = os.path.dirname(manifest["data_yaml"])
-        candidates = plan_dataset_prune(
-            collect_dataset_runs(task_root), self.KEEP_DATASET_BUILDS, current
-        )
-        if not candidates:
-            return
-        size = sum(directory_size(path) for path in candidates)
-        if size < self.MIN_CLEANUP_OFFER_BYTES:
-            return
-
-        # Name the directories: "5 old builds" is not something anyone can
-        # check before agreeing to delete them.
-        listed = list(candidates[:MAX_LISTED_SKIPS])
-        extra = len(candidates) - len(listed)
-        body = [
-            self.tr(
-                "Training left dataset copies taking %1 across %2 old directories."
-            )
-            .replace("%1", f"{size / (1024 * 1024):.1f} MB")
-            .replace("%2", str(len(candidates))),
-            "",
-        ]
-        body.extend(f"  {os.path.basename(path)}" for path in listed)
-        if extra > 0:
-            body.append(
-                "  " + self.tr("... and %1 more").replace("%1", str(extra))
-            )
-        body.extend(
-            [
-                "",
-                self.tr(
-                    "Delete the old copies beyond this run? The most recent %1 are kept."
-                ).replace("%1", str(self.KEEP_DATASET_BUILDS)),
-            ]
-        )
-
-        answer = QMessageBox.question(
-            self,
-            self.tr("Clean up old dataset copies"),
-            "\n".join(body),
-        )
-        if answer != QMessageBox.StandardButton.Yes:
-            return
-
-        deleted, freed, failed = prune_datasets(
-            task_root, self.KEEP_DATASET_BUILDS, current
-        )
-        self.append_training_log(
-            self.tr("Cleaned %1 dataset copies, freeing %2 MB.")
-            .replace("%1", str(len(deleted)))
-            .replace("%2", f"{freed / (1024 * 1024):.1f}")
-        )
-        if failed:
-            self.append_training_log(
-                self.tr(
-                    "%1 directories could not be deleted (possibly in use)."
-                ).replace("%1", str(len(failed)))
-            )
+        """Delegates to run_maintenance (wiring and tests stay)."""
+        return run_maintenance.offer_dataset_cleanup(self)
 
     def write_run_metadata(self, status="completed"):
-        """Record what this run trained on, beside its weights.
-
-        The dataset is a mutable set of label JSONs that keeps being edited
-        after training, so without this snapshot a completed run cannot be
-        tied back to the annotations and arguments that produced it.
-
-        ``status`` distinguishes a finished run from one the user stopped.
-        A stopped run writes this too: it has a ``results.csv``, a resumable
-        ``last.pt``, and it is the very run someone wants to compare against
-        the full one — leaving it out of the history made "round 2, interrupted
-        vs round 3, finished" unanswerable.
-        """
-        project_path = self.current_project_path
-        if not project_path or not os.path.isdir(project_path):
-            return None
-
-        manifest = getattr(self, "_last_dataset_manifest", None) or {}
-        dataset_dir = os.path.dirname(manifest.get("data_yaml") or "") or None
-        from anylabeling.views.labeling.project import label_dir_for_dataset
-
-        label_dir = label_dir_for_dataset(
-            getattr(self, "output_dir", None),
-            getattr(self, "image_list", None),
-        )
-        manifest_path = (
-            os.path.join(dataset_dir, "manifest.json") if dataset_dir else None
-        )
-        weights = os.path.join(project_path, "weights", "best.pt")
-        metrics = parse_training_metrics(
-            os.path.join(project_path, "results.csv")
-        )
-        started_at = getattr(self, "_training_started_at", None)
-        meta = {
-            "schema": 1,
-            "task": self.selected_task_type,
-            "status": status,
-            "project": os.path.dirname(project_path),
-            "name": os.path.basename(project_path),
-            "started_at": (
-                time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(started_at))
-                if started_at
-                else None
-            ),
-            "finished_at": time.strftime("%Y-%m-%d %H:%M:%S"),
-            "weights": {
-                "path": weights if os.path.isfile(weights) else None,
-                "sha1": file_sha1(weights),
-            },
-            "train_args": dict(getattr(self, "_last_train_args", None) or {}),
-            "dataset": {
-                "dir": dataset_dir,
-                "label_dir": label_dir,
-                "manifest": manifest_path,
-                "manifest_sha1": (
-                    file_sha1(manifest_path) if manifest_path else None
-                ),
-                "seed": manifest.get("seed"),
-                "classes": manifest.get("classes"),
-                "counts": manifest.get("counts"),
-            },
-            "metrics": (
-                None
-                if metrics is None
-                else {
-                    "loss": metrics[0],
-                    "map50": metrics[1],
-                    "epochs": metrics[2],
-                }
-            ),
-        }
-
-        meta_path = os.path.join(project_path, "run_meta.json")
-        try:
-            with open(meta_path, "w", encoding="utf-8") as f:
-                json.dump(meta, f, ensure_ascii=False, indent=2)
-        except OSError as e:  # noqa: BLE001
-            logger.warning(f"Failed to write run metadata: {e}")
-            return None
-        return meta_path
+        """Delegates to run_maintenance (wiring and tests stay)."""
+        return run_maintenance.write_run_metadata(self, status)
 
     def on_training_event(self, event_type, data):
         if event_type == "training_started":
@@ -3926,13 +3772,14 @@ class UltralyticsDialog(QDialog):
                         "%1 label file(s) could not be converted, so they were left out of the dataset:"
                     ).replace("%1", str(count))
                 )
-            for item in details[:MAX_LISTED_SKIPS]:
+            for item in details[: run_maintenance.MAX_LISTED_SKIPS]:
                 lines.append(f"  {item}")
-            if len(details) > MAX_LISTED_SKIPS:
+            if len(details) > run_maintenance.MAX_LISTED_SKIPS:
                 lines.append(
                     "  "
                     + self.tr("... and %1 more").replace(
-                        "%1", str(len(details) - MAX_LISTED_SKIPS)
+                        "%1",
+                        str(len(details) - run_maintenance.MAX_LISTED_SKIPS),
                     )
                 )
         lines.append("")
@@ -4022,6 +3869,10 @@ class UltralyticsDialog(QDialog):
     def _start_training_after_args(self, train_args):
         success, message = self.training_manager.start_training(train_args)
         if not success:
+            # The dataset build that led here has finished; leaving the
+            # status on "preparing" made the dialog claim work that was no
+            # longer happening and hid the retry behind a stale phase.
+            self._leave_preparing_status()
             self.append_training_log(f"Failed to start training: {message}")
             QMessageBox.critical(self, self.tr("Training Error"), message)
 
@@ -4313,7 +4164,7 @@ class UltralyticsDialog(QDialog):
             from anylabeling.views.labeling.utils.active_learning import (
                 read_last_map50,
             )
-            from anylabeling.views.labeling.utils.smart_tools import (
+            from anylabeling.views.labeling.utils.smart_review import (
                 record_training_round,
             )
 
@@ -4438,7 +4289,7 @@ class UltralyticsDialog(QDialog):
                 load_history,
                 suggest_next_step,
             )
-            from anylabeling.views.labeling.utils.smart_tools import (
+            from anylabeling.views.labeling.utils.smart_ui import (
                 label_dir_for,
             )
 
@@ -4473,7 +4324,7 @@ class UltralyticsDialog(QDialog):
             from anylabeling.views.labeling.utils.quality import (
                 file_needs_re_autolabel,
             )
-            from anylabeling.views.labeling.utils.smart_tools import (
+            from anylabeling.views.labeling.utils.smart_review import (
                 watch_relabel_result,
             )
 

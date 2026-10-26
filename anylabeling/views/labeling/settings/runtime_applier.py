@@ -155,13 +155,7 @@ class SettingsRuntimeApplier:
             )
         )
         shortcut_map["shortcuts.show_shortcuts_help"] = (
-            self._ensure_hidden_shortcut_action(
-                "show_shortcuts_help",
-                QCoreApplication.translate(
-                    "LabelingWidget", "Show Shortcuts Help"
-                ),
-                self._widget.show_shortcuts_help,
-            )
+            self._widget.actions.shortcuts_help
         )
         shortcut_map["shortcuts.toggle_sidebar"] = (
             self._ensure_hidden_shortcut_action(

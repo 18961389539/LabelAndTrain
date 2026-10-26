@@ -1,6 +1,7 @@
 """Experiment history dialog: compare what each training round produced."""
 
 import csv
+import io
 import os
 import os.path as osp
 
@@ -11,6 +12,7 @@ from anylabeling.services.auto_training.ultralytics.config import (
 )
 from anylabeling.views.labeling.logger import logger
 from anylabeling.views.labeling.utils.active_learning import load_history
+from anylabeling.views.labeling.utils._io import save_text
 from anylabeling.views.labeling.utils.style import (
     get_dialog_style,
     get_ok_btn_style,
@@ -28,6 +30,15 @@ from anylabeling.views.training.run_history import (
 #: field silently loses its column otherwise (pinned by
 #: ``test_run_history.test_table_width_matches_the_row_layout``).
 COLUMNS = 16
+
+
+def write_history_csv(path, rows):
+    """Write the history table atomically, with a BOM for spreadsheets."""
+    buffer = io.StringIO(newline="")
+    writer = csv.writer(buffer)
+    for row in format_history_rows(rows):
+        writer.writerow(row)
+    save_text(buffer.getvalue(), path, encoding="utf-8-sig", newline="")
 
 
 class RunHistoryDialog(QtWidgets.QDialog):
@@ -185,10 +196,7 @@ class RunHistoryDialog(QtWidgets.QDialog):
         if not path:
             return
         try:
-            with open(path, "w", encoding="utf-8-sig", newline="") as handle:
-                writer = csv.writer(handle)
-                for row in format_history_rows(self.rows):
-                    writer.writerow(row)
+            write_history_csv(path, self.rows)
         except OSError as exc:
             logger.error(f"Failed to export run history: {exc}")
             QtWidgets.QMessageBox.warning(
