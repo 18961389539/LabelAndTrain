@@ -129,13 +129,12 @@ BUDGETS = {
     # 1.0, so the saved picture ignored the adjustment panel's opacity --
     # one line, and the canvas ink test pins the result.
     "anylabeling/views/labeling/widgets/canvas.py": 3381,
-    # Frozen 2026-10-26 at 4406 after the run-maintenance split:
-    # write_run_metadata and _offer_dataset_cleanup moved to
-    # views/training/run_maintenance.py, and the dialog keeps two
-    # delegating stubs. The next candidate is the export/autolabel
-    # cluster (start_export / use_weights_for_autolabel), which owns its
-    # own state and is the largest remaining block.
-    "anylabeling/views/training/ultralytics_dialog.py": 4406,
+    # Lowered 4406 -> 4002 on 2026-10-26: the export/autolabel cluster
+    # (on_export_event / start_export / use_weights_for_autolabel plus the
+    # class, pose and hand-off helpers) moved to
+    # views/training/export_autolabel.py, and the dialog keeps nine
+    # delegating stubs. is_fresh_export moved with it.
+    "anylabeling/views/training/ultralytics_dialog.py": 4002,
 }
 
 

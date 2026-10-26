@@ -164,6 +164,12 @@ def _analyze(method, module_tree):  # noqa: C901 -- binding forms
                     locals_.add(t.id)
         if isinstance(node, ast.ExceptHandler) and node.name:
             locals_.add(node.name)
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                locals_.add((alias.asname or alias.name).split(".")[0])
+        if isinstance(node, ast.ImportFrom):
+            for alias in node.names:
+                locals_.add(alias.asname or alias.name)
         if isinstance(node, ast.withitem) and node.optional_vars:
             for t in ast.walk(node.optional_vars):
                 if isinstance(t, ast.Name):
@@ -412,8 +418,11 @@ def _insert_import(src, import_line):
         anchor = i
     if anchor is None:
         for i, line in enumerate(lines[:200]):
-            if re.match(r"^(import |from )", line):
-                anchor = i
+            if not re.match(r"^(import |from )", line):
+                continue
+            if line.count("(") > line.count(")"):
+                continue  # multi-line import: not a safe anchor
+            anchor = i
     if anchor is None:
         lines.insert(0, import_line + "\n")
     else:

@@ -43,15 +43,18 @@ from anylabeling.services.auto_training.ultralytics.validators import (  # noqa:
     validate_basic_config,
     validate_classes,
 )
+from anylabeling.views.training import export_autolabel  # noqa: E402
 from anylabeling.views.training import run_history  # noqa: E402
 from anylabeling.views.training import (
     ultralytics_dialog as dialog_module,
 )  # noqa: E402
+from anylabeling.views.training.export_autolabel import (  # noqa: E402
+    is_fresh_export,
+)
 from anylabeling.views.training.ultralytics_dialog import (  # noqa: E402
     UltralyticsDialog,
     dataset_skips,
     is_blocking_dataset_skip,
-    is_fresh_export,
     looks_like_training_run,
 )
 
@@ -823,6 +826,7 @@ def _build_dialog(tmp_path, monkeypatch):
     monkeypatch.setattr(
         dialog_module.QtWidgets, "QMessageBox", _StubMessageBox
     )
+    monkeypatch.setattr(export_autolabel, "QMessageBox", _StubMessageBox)
     return parent, dialog
 
 
@@ -1029,7 +1033,7 @@ class TestExportDependencyConsent:
     def test_nothing_missing_means_no_prompt(self, tmp_path, monkeypatch):
         _parent, dialog = _build_dialog(tmp_path, monkeypatch)
         monkeypatch.setattr(
-            dialog_module, "get_export_validator", lambda _: (lambda: [])
+            export_autolabel, "get_export_validator", lambda _: (lambda: [])
         )
 
         assert dialog._confirm_export_dependencies("onnx") is True
@@ -1040,7 +1044,7 @@ class TestExportDependencyConsent:
     ):
         _parent, dialog = _build_dialog(tmp_path, monkeypatch)
         monkeypatch.setattr(
-            dialog_module,
+            export_autolabel,
             "get_export_validator",
             lambda _: (lambda: ["onnx>=1.15.0"]),
         )
@@ -1054,7 +1058,7 @@ class TestExportDependencyConsent:
     def test_accepting_allows_the_install(self, tmp_path, monkeypatch):
         _parent, dialog = _build_dialog(tmp_path, monkeypatch)
         monkeypatch.setattr(
-            dialog_module,
+            export_autolabel,
             "get_export_validator",
             lambda _: (lambda: ["onnx>=1.15.0"]),
         )
