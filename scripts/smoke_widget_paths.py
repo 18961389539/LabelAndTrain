@@ -622,6 +622,27 @@ def run_union_selection(widget, image_path):
     assert len(widget.label_list) == 2
 
 
+def _stop_background_scanners(widget, app):
+    """Stop the workers that can hold the temp folder open at exit.
+
+    The low-confidence pass reads label files after the visible steps have
+    finished; a QThread still running while the interpreter shuts down is
+    how this harness exited 127 on the Windows CI runner.
+    """
+    for attribute, stop_name in (
+        ("async_exif_scanner", "stop_scan"),
+        ("async_label_checker", "stop"),
+    ):
+        scanner = getattr(widget, attribute, None)
+        if scanner is None:
+            continue
+        try:
+            getattr(scanner, stop_name)()
+        except (RuntimeError, AttributeError):
+            pass
+    app.processEvents()
+
+
 def main():
     app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
     tmp = tempfile.mkdtemp(prefix="smoke_widget_paths_")
@@ -864,6 +885,7 @@ def main():
             line += f"  -- {info}"
         print(line, flush=True)
     print(f"{len(RESULTS) - len(failures)}/{len(RESULTS)} passed", flush=True)
+    _stop_background_scanners(widget, app)
     shutil.rmtree(tmp, ignore_errors=True)
     return 1 if failures else 0
 

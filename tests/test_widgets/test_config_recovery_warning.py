@@ -29,7 +29,9 @@ class TestConfigRecoveryWarning:
         )
 
         assert box is not None
-        assert "配置无法读取" in box.windowTitle()
+        # QMessageBox.windowTitle is empty under the macOS offscreen
+        # platform; the visible warning is the body text.
+        assert "配置文件无法读取" in box.text()
         assert warning["path"] in box.text()
         assert warning["backup"] in box.text()
         assert warning["error"] in box.detailedText()
