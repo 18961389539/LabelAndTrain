@@ -129,12 +129,12 @@ BUDGETS = {
     # 1.0, so the saved picture ignored the adjustment panel's opacity --
     # one line, and the canvas ink test pins the result.
     "anylabeling/views/labeling/widgets/canvas.py": 3381,
-    # Lowered 4406 -> 4002 on 2026-10-26: the export/autolabel cluster
-    # (on_export_event / start_export / use_weights_for_autolabel plus the
-    # class, pose and hand-off helpers) moved to
-    # views/training/export_autolabel.py, and the dialog keeps nine
-    # delegating stubs. is_fresh_export moved with it.
-    "anylabeling/views/training/ultralytics_dialog.py": 4002,
+    # Lowered 4406 -> 4002 -> 3335 on 2026-10-26: first the
+    # export/autolabel cluster moved to views/training/export_autolabel.py
+    # (nine delegating stubs, is_fresh_export included), then
+    # init_train_settings moved to views/training/train_settings_form.py as
+    # eleven section builders behind one stub.
+    "anylabeling/views/training/ultralytics_dialog.py": 3335,
 }
 
 

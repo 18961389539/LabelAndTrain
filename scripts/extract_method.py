@@ -400,7 +400,9 @@ def _relative_import_line(src_path, target_path, module_name):
         ) from None
     depth = len(rel.parts) - 1  # directories below the source's package
     if depth == 0:
-        return f"from .{module_name} import {module_name}"
+        # A sibling module, not a submodule: ``from .name import name``
+        # would look for an attribute *inside* the new module.
+        return f"from . import {module_name}"
     path = ".".join(rel.parts[:-1])
     return f"from .{path} import {module_name}"
 
