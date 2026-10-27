@@ -417,7 +417,7 @@ def save_auto_labeling_result(self, image_file, auto_labeling_result):
 
         # Keep the file-list badge in sync: a saved file whose final shapes
         # are empty is a negative sample (background image) for YOLO.
-        marker = getattr(self.app, "mark_file_item_negative_state", None)
+        marker = getattr(self, "mark_file_item_negative_state", None)
         if marker is not None:
             try:
                 marker(image_file, not (data.get("shapes") or []))

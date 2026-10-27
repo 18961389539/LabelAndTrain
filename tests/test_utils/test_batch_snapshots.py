@@ -26,13 +26,16 @@ class _Widget:
         self.output_dir = ""
         self._config = {"store_data": False, "labels": ["scratch"]}
         self.unique_label_list = None
-        self.app = None
+        self.negative_marks = []
 
     def _current_model_identity(self):
         return "run_07"
 
     def _current_model_version(self):
         return "v1"
+
+    def mark_file_item_negative_state(self, image_file, negative):
+        self.negative_marks.append((image_file, negative))
 
 
 def _image(tmp_path, name="part.png"):
@@ -122,6 +125,29 @@ def test_batch_run_snapshots_the_file_it_is_about_to_replace(tmp_path):
     saved = _read(backups[0])
     assert [shape["label"] for shape in saved["shapes"]] == ["凹坑"]
     assert saved["checked"] is True
+
+
+def test_batch_save_updates_the_badge_on_the_widget(tmp_path):
+    """The widget owns mark_file_item_negative_state, not a missing .app."""
+    image_path = _image(tmp_path)
+    _human_label(tmp_path, image_path)
+    widget = _Widget()
+
+    result = AutoLabelingResult([_model_shape()], replace=True)
+    assert batch_module.save_auto_labeling_result(widget, image_path, result)
+
+    assert widget.negative_marks == [(image_path, False)]
+
+
+def test_an_empty_batch_result_marks_a_negative_sample(tmp_path):
+    image_path = _image(tmp_path)
+    label_file = os.path.splitext(image_path)[0] + ".json"
+    widget = _Widget()
+
+    assert batch_module.save_auto_labeling_result(widget, image_path, None)
+
+    assert _read(label_file)["shapes"] == []
+    assert widget.negative_marks == [(image_path, True)]
 
 
 def test_append_mode_snapshots_too(tmp_path):
