@@ -2,7 +2,7 @@
 
 ## 1. Installation and Deployment
 
-This fork (JLLabelingAndTrain) installs one way only: **from this repository's source**. It is not published on PyPI and ships no prebuilt package — the `x-anylabeling-cvhub` wheel and the installers under upstream's GitHub Releases belong to **X-AnyLabeling itself**, and neither contains the features this repository's README describes.
+This fork (JLLabelingAndTrain) can be obtained in two ways: **install from this repository's source**, or use the CI-built portable binaries on this repository's GitHub Releases (Windows/Linux/macOS; see 1.2.3). It is not published on PyPI — the `x-anylabeling-cvhub` wheel and the installers under upstream's GitHub Releases belong to **X-AnyLabeling itself**, and neither contains the features this repository's README describes.
 
 > [!NOTE]
 > **What this build ships** (every item below is reachable in the interface; the links point at this repository's docs):
@@ -110,9 +110,12 @@ source .venv-cu13/bin/activate     # Linux
 
 ### 1.2 Installation
 
-This fork is **not published on PyPI**. Installing `x-anylabeling-cvhub` gets you
-upstream's application, which has none of the features described in this
-repository's README — build from source instead:
+This fork is **not published on PyPI**. You can install from source
+(recommended: `uv pip`; `pip` also works) or use the portable GitHub
+Releases build described in 1.2.3. Use the source steps below when you need
+training, GPU support, or code changes. Installing `x-anylabeling-cvhub`
+gets you upstream's application, which has none of the features described
+in this repository's README.
 
 **Step a.** Clone this fork.
 
@@ -265,11 +268,15 @@ set PYTHONPATH=C:\path\to\X-AnyLabeling
 > jllabelingandtrain --qt-platform xcb
 > ```
 
-#### 1.2.3 Prebuilt Installer Package
+#### 1.2.3 Prebuilt Portable Builds
 
-This fork publishes **no** prebuilt installers. If you need a distributable
-executable, build it following section 3; the artifact comes out as
-`JLLabelingAndTrain-v<version>-CPU` (or `-GPU`, or `-CPU-Train`).
+This fork's [GitHub Releases](https://github.com/18961389539/LabelAndTrain/releases)
+publish CI-built portable packages from each tag: a Windows onefile CPU build,
+a Linux CPU build, and a macOS `.app` zip, with a `SHA256SUMS.txt` covering
+every asset. They are **annotation-only** CPU builds (no torch/ultralytics);
+the `-CPU-Train` training build is not part of the release matrix. Build it
+following section 3 (onedir, bundling CPU torch, Ultralytics and `onnxslim`,
+which also makes the post-training ONNX hand-off work inside the package).
 
 Upstream's [GitHub Releases](https://github.com/CVHub520/X-AnyLabeling/releases)
 are builds of a different program and are not a substitute for this fork.

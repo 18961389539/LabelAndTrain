@@ -2,7 +2,7 @@
 
 ## 1. 安装部署
 
-本分支（JLLabelingAndTrain）只有一种安装方式：**克隆本仓库源码安装**。它没有发布到 PyPI，也没有预编译安装包——`pip` 上的 `x-anylabeling-cvhub` 与上游 GitHub Releases 里的安装包都是**上游 X-AnyLabeling 的产物**，装上后没有本仓库 README 所写的这些功能。
+本分支（JLLabelingAndTrain）有两种获取方式：**克隆本仓库源码安装**，或使用本仓库 GitHub Releases 里由 CI 从 tag 构建的便携二进制（Windows/Linux/macOS，见 1.2.3）。它没有发布到 PyPI——`pip` 上的 `x-anylabeling-cvhub` 与上游 GitHub Releases 里的安装包都是**上游 X-AnyLabeling 的产物**，装上后没有本仓库 README 所写的这些功能。
 
 > [!NOTE]
 > **本构建带的功能**（下面每一项都能在界面里点到，链接指向本仓库文档）：
@@ -110,7 +110,7 @@ source .venv-cu13/bin/activate     # Linux
 
 ### 1.2 安装
 
-本分支未发布到 PyPI，请从源码安装（推荐 `uv pip`，用 `pip` 亦可）。
+本分支未发布到 PyPI；可以从源码安装（推荐 `uv pip`，用 `pip` 亦可），也可以直接使用 1.2.3 里的 GitHub Releases 便携包。需要训练、GPU 或修改代码时请走下面的源码步骤。
 
 **步骤 a.** 克隆本仓库。
 
@@ -251,10 +251,14 @@ set PYTHONPATH=C:\path\to\X-AnyLabeling
 > jllabelingandtrain --qt-platform xcb
 > ```
 
-#### 1.2.3 预编译安装包
+#### 1.2.3 预编译便携包
 
-本分支**不提供**预编译安装包。需要分发的可执行文件请按第 3 节自行打包，产物名为
-`JLLabelingAndTrain-v<版本>-CPU`（或 `-GPU`、`-CPU-Train`）。
+本分支的 [GitHub Releases](https://github.com/18961389539/LabelAndTrain/releases)
+提供由 CI 从 tag 构建的免安装便携包：Windows 单文件 CPU 版、Linux CPU 版与
+macOS `.app` 压缩包，随发布附带覆盖全部资产的 `SHA256SUMS.txt`。这些都是
+**仅标注**的 CPU 构建（不含 torch/ultralytics）；训练包 `-CPU-Train` 不在
+发布矩阵内，需要按第 3 节自行构建（onedir，打包 CPU torch、Ultralytics 与
+`onnxslim`，训练完成后的 ONNX 回灌也在包内可用）。
 
 上游 X-AnyLabeling 的 [GitHub Releases](https://github.com/CVHub520/X-AnyLabeling/releases)
 是另一个程序的构建，不要用它来代替本分支。
