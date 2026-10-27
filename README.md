@@ -298,8 +298,9 @@ Recent, user-visible changes; the full history is in [CHANGELOG.md](./CHANGELOG.
 - Smart tools (11), hover detail nearly everywhere, rebindable shortcuts with an
   F1 cheat sheet, and a Chinese-only interface whose fork-added text is Chinese
   at the source.
-- A CPU-only training build (`win-cpu-train`) that bundles CPU torch and
-  Ultralytics.
+- A CPU-only training build (`win-cpu-train`) that bundles CPU torch,
+  Ultralytics and the ONNX export stack, so training weights can be handed
+  to auto-labeling inside the frozen app.
 
 ## Docs
 
@@ -342,8 +343,9 @@ QT_QPA_PLATFORM=offscreen .venv/Scripts/python.exe -m pytest tests
 Extras: `cpu`, `gpu` (CUDA 12), `gpu-cu11`, `gpu-cu13`, `dev`. Python 3.11+.
 
 Packaging goes through `scripts/build_executable.sh`, one PyInstaller spec per
-target: `win-cpu`, `win-cpu-train` (bundles CPU torch + Ultralytics so training
-works in the frozen app), `win-gpu`, `linux-cpu`, `linux-gpu`, `macos`.
+target: `win-cpu`, `win-cpu-train` (bundles CPU torch + Ultralytics + the ONNX
+export stack so training and the auto-labeling hand-off work in the frozen
+app), `win-gpu`, `linux-cpu`, `linux-gpu`, `macos`.
 
 `.github/workflows/ci.yml` runs the suite on every push to `main` and on pull
 requests. Formatting and lint run through [pre-commit](./CONTRIBUTING.md); lint

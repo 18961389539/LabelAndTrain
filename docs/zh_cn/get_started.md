@@ -280,7 +280,7 @@ set PYTHONPATH=C:\path\to\X-AnyLabeling
 
 - **GPU 编译**：GPU 规格文件会自动收集 ONNX Runtime Provider 库。构建前安装 `gpu-cu11`、`gpu` 或 `gpu-cu13`，即可分别选择 CUDA 11、12 或 13。详细兼容性信息请参考[官方文档](https://onnxruntime.ai/docs/execution-providers/CUDA-ExecutionProvider.html)。
 
-- **CPU 训练版**：`win-cpu-train` 目标会打包 CPU 版 torch + Ultralytics，使打包后的程序内置训练面板可用。构建前请先安装训练依赖（`uv pip install ultralytics --torch-backend=cpu`）。由于 torch 体积较大，该目标采用 onedir 目录结构；普通 `win-cpu` 目标仍为仅标注、体积更小的版本。
+- **CPU 训练版**：`win-cpu-train` 目标会打包 CPU 版 torch + Ultralytics，使打包后的程序内置训练面板可用。构建前请先安装训练依赖（`uv pip install ultralytics onnxslim --torch-backend=cpu`）；`onnxslim` 是训练完成后的 ONNX 导出（用于自动标注回灌）所必需的，Ultralytics 在导出时才导入它，不装的话打包版只能弹出 pip 安装提示。由于 torch 体积较大，该目标采用 onedir 目录结构；普通 `win-cpu` 目标仍为仅标注、体积更小的版本。
 
 - **`win-cpu` 不含训练栈，这是规格文件写死的**：`x-anylabeling-win-cpu.spec` 显式 `excludes` 了 `torch` / `torchvision` / `torchaudio` / `ultralytics` / `ultralytics_platform` / `triton`。早先这里是 `excludes=[]`，只因为构建环境里没装这些包才“碰巧”是小的；一旦同一个 venv 装了训练栈，`win-cpu` 就会把它们一起吸进去（2026-10-17 实测：单文件产物 376 MB，而这个目标历来约 154 MB），于是“CPU 版”这个名字不再等于“仅标注”。排除之后，打包版里的训练面板会明确提示无法导入 ultralytics（优雅失败，不是崩溃），标注、自动标注、复核、智能工具、运行历史与备份照常可用；需要打包版能训练就用 `win-cpu-train`。
 

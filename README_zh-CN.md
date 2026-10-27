@@ -231,7 +231,7 @@ QT_QPA_PLATFORM=offscreen .venv/Scripts/python.exe -m pytest tests
 
 可选依赖组：`cpu`、`gpu`（CUDA 12）、`gpu-cu11`、`gpu-cu13`、`dev`；Python 3.11+。
 
-打包走 `scripts/build_executable.sh`，每个目标一份 PyInstaller spec：`win-cpu`、`win-cpu-train`（打包 CPU 版 torch 与 Ultralytics，冻结后的程序也能训练）、`win-gpu`、`linux-cpu`、`linux-gpu`、`macos`。
+打包走 `scripts/build_executable.sh`，每个目标一份 PyInstaller spec：`win-cpu`、`win-cpu-train`（打包 CPU 版 torch、Ultralytics 与 ONNX 导出栈，冻结后的程序也能训练并回灌自动标注）、`win-gpu`、`linux-cpu`、`linux-gpu`、`macos`。
 
 `.github/workflows/ci.yml` 会在推送到 `main` 与提交 Pull Request 时运行全量测试；格式化与静态检查见[贡献指南](./CONTRIBUTING.md)，其中 lint 采用**基线**门禁：历史遗留告警记录在 `scripts/flake8_baseline.txt`，只有新增告警才会失败。
 

@@ -4,6 +4,9 @@
 # Windows CPU build with training (onedir) — bundles the CPU-only torch +
 # ultralytics so the built-in training panel works in the packaged app.
 #
+# onnxslim is a hidden import on purpose: Ultralytics imports it lazily during
+# ONNX export, which is what feeds the training -> auto-labeling hand-off.
+#
 # Derived from x-anylabeling-win-cpu.spec (labeling-only, onefile). Training
 # pulls in torch (~250MB) + ultralytics; a onefile would re-extract that on
 # every launch, so this build uses the onedir layout instead. GPU users should
@@ -200,6 +203,10 @@ a = Analysis(
         'anylabeling.services.auto_training.ultralytics.general',
         'ultralytics',
         'ultralytics.utils.downloads',
+        # Ultralytics imports onnxslim lazily inside its ONNX exporter, so
+        # static analysis misses it; without it the packaged
+        # Use-for-Auto-labeling path can only ask for a pip install.
+        'onnxslim',
     ],
     hookspath=[],
     runtime_hooks=[_p('packaging', 'pyinstaller', 'runtime_hooks', 'ort_dll_bootstrap.py')],
