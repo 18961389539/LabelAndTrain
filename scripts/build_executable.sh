@@ -48,7 +48,9 @@ build_with_spec() {
 
     echo "Building ${label} version..."
     export X_ANYLABELING_DEVICE="${device}"
-    pyinstaller --noconfirm "${spec_path}"
+    # A stale workpath once dropped cv2/config.py from the onedir train build,
+    # which turned into a startup ImportError; rebuild from a clean cache.
+    pyinstaller --noconfirm --clean "${spec_path}"
 }
 
 package_macos_release_zip() {
