@@ -94,6 +94,21 @@ file_lifecycle（48 个独占成员）是最大的单块，但其中 `_set_file_
 这批成员自然划过去。剩余的 `filename`/`image_data`/`label_file`/
 `recent_files` 等就是会话状态本体。
 
+### 阶段二补记：canvas 渲染切片（2026-10-27）
+
+`canvas.py` **3381 → 2704** 行。新增的 `widgets/canvas_render.py`（755 行）
+承载 `CanvasRenderState` 与 `CanvasRenderMixin`：8 个 `show_*` 开关、4 个
+十字线参数、3 个属性颜色、遮罩/形状透明度、加载与对比视图状态，以及 16 个
+`_paint_*` / `paintEvent` / `render_visualization` 方法。状态字段通过描述符
+保持原来的 `canvas.show_labels` 等属性名，actions、设置运行时、测试和绘制
+调用点不变。16 个方法按原文搬移；逐方法对拍字节码，除一处 f-string 按
+B907 改为 `!r` 外完全一致。体量预算冻结 3381 → 2704；flake8 基线
+214 → 213（B907 随迁移消除）。
+
+交互状态（`mode`/`current`/`selected_shapes`/移动与旋转暂态/悬浮高亮）与
+鼠标、键盘事件仍在 `Canvas` 与既有 mixin 中，仍是下一批 canvas 控制器化
+的候选。
+
 ## 度量与纪律
 
 - 每阶段完成后 `CONTRACT_MEMBERS` 必须收缩，契约测试强制。

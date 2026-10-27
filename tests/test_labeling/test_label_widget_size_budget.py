@@ -128,7 +128,13 @@ BUDGETS = {
     # canvas behind 另存可视化图 now copies shape_opacity. It defaulted to
     # 1.0, so the saved picture ignored the adjustment panel's opacity --
     # one line, and the canvas ink test pins the result.
-    "anylabeling/views/labeling/widgets/canvas.py": 3381,
+    #
+    # Lowered 3381 -> 2704 on 2026-10-27: the render flags/colors/loading/
+    # compare state moved to CanvasRenderState and the 16 paint methods to
+    # CanvasRenderMixin (widgets/canvas_render.py, 755 lines). Canvas
+    # inherits the mixin and keeps the historical attribute names through
+    # descriptors, so actions, settings and paint callers are unchanged.
+    "anylabeling/views/labeling/widgets/canvas.py": 2704,
     # Lowered 4406 -> 4002 -> 3335 on 2026-10-26: first the
     # export/autolabel cluster moved to views/training/export_autolabel.py
     # (nine delegating stubs, is_fresh_export included), then

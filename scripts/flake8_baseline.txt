@@ -60,7 +60,6 @@ anylabeling/views/labeling/widgets/attributes_controller.py              F841 1
 anylabeling/views/labeling/widgets/auto_labeling/auto_labeling.py        B907 2
 anylabeling/views/labeling/widgets/auto_labeling/auto_labeling.py        F841 3
 anylabeling/views/labeling/widgets/auto_labeling/custom_model_config.py  C901 1
-anylabeling/views/labeling/widgets/canvas.py                             B907 1
 anylabeling/views/labeling/widgets/filter_label_widget.py                B006 2
 anylabeling/views/labeling/widgets/label_dialog.py                       B907 1
 anylabeling/views/labeling/widgets/label_dialog.py                       C408 1
