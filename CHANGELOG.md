@@ -3,6 +3,26 @@
 Fork entries are listed first; everything below the upstream marker is
 X-AnyLabeling's own history, kept for provenance.
 
+## `v1.0.0-beta.8` (Oct 27, 2026)
+
+### 🐛 Bug Fixes
+
+- **Batch auto-labeling no longer marks every saved file as failed on a missing `.app` attribute.** `save_auto_labeling_result` read `self.app.mark_file_item_negative_state`, but its `self` is the `LabelingWidget`, which has no `app` member: the label file was written and then the exception turned the result into a failure, so the training→auto-label feedback run listed every touched image under 失败图片 while an empty `unlabeled.json` sat on disk. The badge now comes from the widget itself (`self.mark_file_item_negative_state`), and two tests pin the positive and empty-result markers; the old test stub defined `app = None`, which is why the unit suite never saw it. Found by walking the packaged training → ONNX → auto-label hand-off.
+
+### 🛠 Improvements
+
+- **The training dialog is no longer a 4559-line class: the export and settings halves are now their own modules.** The export/autolabel workflow (`on_export_event`, `start_export`, `use_weights_for_autolabel`, the class and pose resolvers, dependency consent and the model hand-off) moved to `views/training/export_autolabel.py`, leaving nine delegating stubs and dropping the dialog 4406 → 4002. The Config tab's Train Settings tree — presets, the basic row and seven collapsible advanced sections, eleven builders in all — then moved to `views/training/train_settings_form.py` behind one stub, dropping the dialog 4002 → 3335. The built widget tree and every `config_widgets` key are unchanged, and the moved strings keep the `UltralyticsDialog` translation context, so the catalog did not need regeneration. The dialog's size budget tightened 4559 → 3335; `label_widget.py` (6663) and `canvas.py` (3381) are unchanged. Suite 1687 passed / 1 skipped / 61 subtests, smoke 17/17, acceptance 17/17, black 208 files, flake8 214 findings with no regression.
+
+- **The packaged training build can now export its weights for auto-labeling.** `win-cpu-train` bundles `onnxslim` as a hidden import: Ultralytics imports it lazily inside its ONNX exporter, so PyInstaller's static analysis missed it and the packaged 「用于自动标注」 path could only offer a pip install — which a frozen build cannot run. With it bundled, a trained `best.pt` exports to `best.onnx` and loads into the auto-labeling panel inside the package. The build guide and both READMEs now name `onnxslim` in the `win-cpu-train` install command.
+
+- **Both Windows artifacts were rebuilt from the current tree and walked on the clean build.** The one-file CPU package passed a 16-check UIA walkthrough (folder/title, paging, 显示标签 On → Off → On, 统计总览 `defect` ×2, Ctrl+0 with four pages and search, theme dark then auto in the rc, YOLO HBB export with 3 images / 2 shapes / 1 missing label and a manifest, empty run history, the CPU pack's 「缺少 ultralytics」 refusal, project manager and a rename through 项目属性, F1's 69-row shortcut sheet, F9 navigator, and 关闭项目), then a native close with no crash log, a 0-byte `faulthandler.log` and no ERROR lines. The onedir CPU-Train package loaded the extracted settings form (20 epochs / imgsz 64 / batch 1 / workers 0 / local weights), trained 20 epochs (24 valid, 20 train / 5 val / 1 background, completed, `best.pt` present), exported `best.onnx` and loaded it into auto-labeling; the feedback batch finished without the 失败图片 dialog, and at the user-adjustable 0.01 threshold the model wrote two `defect` boxes with `source=model` and the weights digest. The same native-close control passed for the train package. This walk found the `.app` batch bug fixed above.
+
+### 🔗 CI / Tooling
+
+- **The packaging script now rebuilds from a clean PyInstaller cache.** An incremental onedir train build silently omitted `cv2/config.py`; the package started to an `OpenCV loader: missing configuration file` dialog. `build_executable.sh` now passes `--clean`, so a target cannot inherit a stale data-file list. The released artifacts above were built with that flag.
+
+- **One checksum file now covers every release asset.** beta.7 shipped a `SHA256SUMS.txt` listing only its three macOS files: each matrix build wrote its own file and `download-artifact` with `merge-multiple` kept the last one. The build jobs now only collect artifacts, and the publish job hashes the merged set once (excluding the macOS zip's own `.sha256`). The fix landed after the beta.7 tag, so beta.8 is the first release carrying a complete checksum file.
+
 ## `v1.0.0-beta.7` (Oct 26, 2026)
 
 ### 🐛 Bug Fixes
