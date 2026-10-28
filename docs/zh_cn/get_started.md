@@ -254,11 +254,12 @@ set PYTHONPATH=C:\path\to\X-AnyLabeling
 #### 1.2.3 预编译便携包
 
 本分支的 [GitHub Releases](https://github.com/18961389539/LabelAndTrain/releases)
-提供由 CI 从 tag 构建的免安装便携包：Windows 单文件 CPU 版、Linux CPU 版与
-macOS `.app` 压缩包，随发布附带覆盖全部资产的 `SHA256SUMS.txt`。这些都是
-**仅标注**的 CPU 构建（不含 torch/ultralytics）；训练包 `-CPU-Train` 不在
-发布矩阵内，需要按第 3 节自行构建（onedir，打包 CPU torch、Ultralytics 与
-`onnxslim`，训练完成后的 ONNX 回灌也在包内可用）。
+提供由 CI 从 tag 构建的免安装便携包：Windows 单文件 CPU 版、Windows
+`-CPU-Train-win64.zip` 训练包（onedir，内置 CPU torch、Ultralytics 与
+`onnxslim`，训练完成后的 ONNX 回灌也在包内可用）、Linux CPU 版与 macOS
+`.app` 压缩包，随发布附带覆盖全部资产的 `SHA256SUMS.txt`。其中 `win-cpu`、
+Linux 与 macOS 包是**仅标注**构建（不含 torch/ultralytics）；需要免安装训练时
+下载 Windows `-CPU-Train-win64.zip`，解压后运行目录内的可执行文件。
 
 上游 X-AnyLabeling 的 [GitHub Releases](https://github.com/CVHub520/X-AnyLabeling/releases)
 是另一个程序的构建，不要用它来代替本分支。
@@ -284,7 +285,7 @@ macOS `.app` 压缩包，随发布附带覆盖全部资产的 `SHA256SUMS.txt`�
 
 - **GPU 编译**：GPU 规格文件会自动收集 ONNX Runtime Provider 库。构建前安装 `gpu-cu11`、`gpu` 或 `gpu-cu13`，即可分别选择 CUDA 11、12 或 13。详细兼容性信息请参考[官方文档](https://onnxruntime.ai/docs/execution-providers/CUDA-ExecutionProvider.html)。
 
-- **CPU 训练版**：`win-cpu-train` 目标会打包 CPU 版 torch + Ultralytics，使打包后的程序内置训练面板可用。构建前请先安装训练依赖（`uv pip install ultralytics onnxslim --torch-backend=cpu`）；`onnxslim` 是训练完成后的 ONNX 导出（用于自动标注回灌）所必需的，Ultralytics 在导出时才导入它，不装的话打包版只能弹出 pip 安装提示。由于 torch 体积较大，该目标采用 onedir 目录结构；普通 `win-cpu` 目标仍为仅标注、体积更小的版本。
+- **CPU 训练版**：`win-cpu-train` 目标会打包 CPU 版 torch + Ultralytics，使打包后的程序内置训练面板可用。构建前安装训练依赖组：`uv pip install -e ".[cpu,cpu-train]" --torch-backend=cpu`。`onnxslim` 是训练完成后的 ONNX 导出（用于自动标注回灌）所必需的，Ultralytics 在导出时才导入它，不装的话打包版只能弹出 pip 安装提示。由于 torch 体积较大，该目标采用 onedir 目录结构，正式发布时由构建脚本压成 `-CPU-Train-win64.zip`；普通 `win-cpu` 目标仍为仅标注、体积更小的版本。
 
 - **`win-cpu` 不含训练栈，这是规格文件写死的**：`x-anylabeling-win-cpu.spec` 显式 `excludes` 了 `torch` / `torchvision` / `torchaudio` / `ultralytics` / `ultralytics_platform` / `triton`。早先这里是 `excludes=[]`，只因为构建环境里没装这些包才“碰巧”是小的；一旦同一个 venv 装了训练栈，`win-cpu` 就会把它们一起吸进去（2026-10-17 实测：单文件产物 376 MB，而这个目标历来约 154 MB），于是“CPU 版”这个名字不再等于“仅标注”。排除之后，打包版里的训练面板会明确提示无法导入 ultralytics（优雅失败，不是崩溃），标注、自动标注、复核、智能工具、运行历史与备份照常可用；需要打包版能训练就用 `win-cpu-train`。
 

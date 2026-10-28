@@ -40,6 +40,19 @@ class TestCanvasShapeSelection(unittest.TestCase):
         for shape in shapes:
             shape.selected = True
 
+    def test_interaction_state_is_isolated_per_canvas(self):
+        other = Canvas(parent=None)
+        self.addCleanup(other.close)
+        shape = self.make_rectangle("object", 10, 10, 20, 20)
+
+        self.canvas.current = shape
+        self.canvas.selected_shapes.append(shape)
+
+        self.assertIs(self.canvas.interaction_state.current, shape)
+        self.assertIsNone(other.current)
+        self.assertEqual(other.selected_shapes, [])
+        self.assertIsNot(self.canvas.line, other.line)
+
     @staticmethod
     def make_rectangle(label, left, top, right, bottom):
         shape = Shape(label=label, shape_type="rectangle")

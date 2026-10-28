@@ -17,7 +17,7 @@ import os
 import re
 import sys
 
-from PyInstaller.utils.hooks import collect_data_files
+from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
 sys.setrecursionlimit(10000)  # required on Windows
 
@@ -180,6 +180,10 @@ torchvision_binaries = _collect_torchvision_binaries()
 msvc_runtime_binaries = _collect_msvc_runtime_dlls()
 matplotlib_datas = collect_data_files('matplotlib')
 lucide_datas = collect_data_files('lucide')
+# add_integration_callbacks imports these by module path at trainer startup.
+# Static analysis cannot see the imports, and an enabled integration whose
+# file is absent fails the whole run with ModuleNotFoundError.
+ultralytics_callbacks = collect_submodules('ultralytics.utils.callbacks')
 
 a = Analysis(
     [_p('anylabeling', 'app.py')],
@@ -203,6 +207,7 @@ a = Analysis(
         'anylabeling.services.auto_training.ultralytics.general',
         'ultralytics',
         'ultralytics.utils.downloads',
+        *ultralytics_callbacks,
         # Ultralytics imports onnxslim lazily inside its ONNX exporter, so
         # static analysis misses it; without it the packaged
         # Use-for-Auto-labeling path can only ask for a pip install.

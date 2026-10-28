@@ -272,11 +272,12 @@ set PYTHONPATH=C:\path\to\X-AnyLabeling
 
 This fork's [GitHub Releases](https://github.com/18961389539/LabelAndTrain/releases)
 publish CI-built portable packages from each tag: a Windows onefile CPU build,
-a Linux CPU build, and a macOS `.app` zip, with a `SHA256SUMS.txt` covering
-every asset. They are **annotation-only** CPU builds (no torch/ultralytics);
-the `-CPU-Train` training build is not part of the release matrix. Build it
-following section 3 (onedir, bundling CPU torch, Ultralytics and `onnxslim`,
-which also makes the post-training ONNX hand-off work inside the package).
+a Windows `-CPU-Train-win64.zip` onedir build with CPU torch, Ultralytics and
+`onnxslim` (training and the post-training ONNX hand-off work inside the
+package), a Linux CPU build, and a macOS `.app` zip, with a `SHA256SUMS.txt`
+covering every asset. The Windows onefile, Linux and macOS builds are
+**annotation-only** (no torch/ultralytics); use the CPU-Train zip when you need
+to train without installing the source environment.
 
 Upstream's [GitHub Releases](https://github.com/CVHub520/X-AnyLabeling/releases)
 are builds of a different program and are not a substitute for this fork.
@@ -302,7 +303,7 @@ To facilitate users running `X-AnyLabeling` on different platforms, this tool pr
 
 - **GPU Compilation**: The GPU specifications automatically collect the ONNX Runtime provider libraries. Install `gpu-cu11`, `gpu`, or `gpu-cu13` before building to select CUDA 11, 12, or 13. For detailed compatibility information, refer to the [official documentation](https://onnxruntime.ai/docs/execution-providers/CUDA-ExecutionProvider.html).
 
-- **CPU Training Build**: The `win-cpu-train` target bundles the CPU-only torch + Ultralytics so the built-in training panel works in the packaged app. Install the training dependencies first (`uv pip install ultralytics onnxslim --torch-backend=cpu`); `onnxslim` is required for the post-training ONNX export that feeds auto-labeling, and Ultralytics imports it only at export time, so without it the packaged app can only offer a pip install prompt. It uses an onedir layout because torch is too large for a onefile. The plain `win-cpu` target stays labeling-only and much smaller.
+- **CPU Training Build**: The `win-cpu-train` target bundles the CPU-only torch + Ultralytics so the built-in training panel works in the packaged app. Install the training dependency group first: `uv pip install -e ".[cpu,cpu-train]" --torch-backend=cpu`. `onnxslim` is required for the post-training ONNX export that feeds auto-labeling, and Ultralytics imports it only at export time, so without it the packaged app can only offer a pip install prompt. It uses an onedir layout because torch is too large for a onefile; official releases package it as `-CPU-Train-win64.zip`. The plain `win-cpu` target stays labeling-only and much smaller.
 
 ### 3.2 Build Commands
 

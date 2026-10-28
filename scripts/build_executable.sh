@@ -53,6 +53,22 @@ build_with_spec() {
     pyinstaller --noconfirm --clean "${spec_path}"
 }
 
+package_windows_onedir_zip() {
+    local target_dir zip_path
+
+    target_dir=$(ls -dt "${DIST_DIR}"/JLLabelingAndTrain-v*-CPU-Train \
+        2>/dev/null | head -1 || true)
+    [ -n "${target_dir}" ] || fail "No CPU-Train onedir found in ${DIST_DIR}."
+
+    zip_path="${target_dir}-win64.zip"
+    rm -f "${zip_path}"
+    echo "Packaging Windows CPU-Train onedir..."
+    powershell.exe -NoProfile -NonInteractive -Command \
+        "Compress-Archive -LiteralPath '$(cygpath -w "${target_dir}")' -DestinationPath '$(cygpath -w "${zip_path}")' -CompressionLevel Optimal"
+    [ -f "${zip_path}" ] || fail "Could not create ${zip_path}."
+    echo "Created release zip: ${zip_path}"
+}
+
 package_macos_release_zip() {
     local apps app_path latest_app app_name exe_name exe_path arch_info arch zip_name zip_path sha_path
 
@@ -116,6 +132,7 @@ case "${system}" in
         ;;
     win-cpu-train)
         build_with_spec "Windows CPU (training)" "CPU" "${SPEC_DIR}/x-anylabeling-win-cpu-train.spec"
+        package_windows_onedir_zip
         ;;
     win-gpu)
         build_with_spec "Windows GPU" "GPU" "${SPEC_DIR}/x-anylabeling-win-gpu.spec"

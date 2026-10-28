@@ -1,8 +1,9 @@
 # Release pipeline: a pushed `v*` tag is the single trigger.
 #
 # Chain: verify (tag == app_info version == newest CHANGELOG entry, cheap and
-# first) -> tests gate the builds -> PyInstaller builds for the three OSes the
-# README claims -> one GitHub Release carrying every artifact plus SHA256SUMS.
+# first) -> tests gate the builds -> PyInstaller builds four targets across the
+# three OSes the README claims -> one GitHub Release carrying every artifact
+# plus SHA256SUMS.
 #
 # The build and notes steps reuse scripts/build_executable.sh and
 # scripts/generate_release_notes.py, which already know how to validate the
@@ -81,6 +82,9 @@ jobs:
           - os: windows-latest
             target: win-cpu
             lock: requirements-lock-win.txt
+          - os: windows-latest
+            target: win-cpu-train
+            lock: requirements-lock-win-train.txt
           - os: ubuntu-latest
             target: linux-cpu
             lock: requirements-lock-linux.txt

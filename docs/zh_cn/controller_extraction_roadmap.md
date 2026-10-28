@@ -109,6 +109,17 @@ B907 改为 `!r` 外完全一致。体量预算冻结 3381 → 2704；flake8 基
 鼠标、键盘事件仍在 `Canvas` 与既有 mixin 中，仍是下一批 canvas 控制器化
 的候选。
 
+### 阶段二补记：canvas 交互切片（2026-10-27）
+
+`canvas.py` **2704 → 795** 行。新增的 `widgets/canvas_interaction.py`（2033
+行）承载 `CanvasInteractionState` 与 `CanvasInteractionMixin`：37 个绘制、
+选择、悬浮、拖动和键盘暂态字段，以及 62 个鼠标、滚轮、键盘、选择、群组和
+几何交互方法。描述符保持 `canvas.selected_shapes` 等历史属性名，外部调用方
+无需改道。58 个不含翻译调用的方法逐方法字节码一致；其余 4 个方法只把
+`self.tr` 改为显式 `QCoreApplication.translate("Canvas", ...)`，保持运行时
+与目录提取上下文一致。Canvas 仍持有文档、历史、视口、自动标注和笔刷状态，
+交互切片不接管这些职责。
+
 ## 度量与纪律
 
 - 每阶段完成后 `CONTRACT_MEMBERS` 必须收缩，契约测试强制。

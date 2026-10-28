@@ -276,9 +276,10 @@ Everything above works without a GPU — it is just slower per epoch:
   unless you already changed those fields, so a first pass can tell you whether
   the data is right within a reasonable time.
 - Ultralytics forces dataloader workers to 0 on CPU; leave `Workers` alone.
-- `win-cpu-train` packaging (`scripts/build_executable.sh win-cpu-train`,
+- The released `-CPU-Train-win64.zip` (built by
+  `scripts/build_executable.sh win-cpu-train`, spec
   `packaging/pyinstaller/specs/x-anylabeling-win-cpu-train.spec`) bundles CPU
-  torch and Ultralytics for machines that have no CUDA at all.
+  torch, Ultralytics and `onnxslim` for machines that have no CUDA at all.
 
 ## Troubleshooting
 

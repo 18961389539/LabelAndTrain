@@ -3,6 +3,22 @@
 Fork entries are listed first; everything below the upstream marker is
 X-AnyLabeling's own history, kept for provenance.
 
+## Unreleased
+
+### Bug Fixes
+
+- **Loading training weights into auto-labeling no longer leaves Auto Run disabled.** The hand-off called `show()` on the panel directly, while the parent's Auto Run action was only enabled by the toolbar's toggle path; declining the immediate feedback prompt therefore left the batch action greyed out until the panel was hidden and reopened. Panel show/hide events now synchronize that action, so the one-click batch path is available immediately. A panel-level regression test covers both directions.
+
+- **The packaged CPU training build no longer stops at trainer startup on a missing Ultralytics callback.** Ultralytics 8.4.190 loads integration callbacks by module path; `clearml` was not collected by static analysis, so the first real training run in the clean release build ended with `ModuleNotFoundError` while the source environment worked. The CPU-Train spec now collects every `ultralytics.utils.callbacks` submodule, and a release-matrix test pins the collection so a future lazy import cannot silently break training again.
+
+### Improvements
+
+- **Canvas interaction now has its own controller module.** `canvas_interaction.py` owns 37 transient drawing/selection/hover/drag/keyboard fields and 62 input, selection, group and geometry methods; descriptors keep the historical `Canvas` attributes unchanged. `canvas.py` drops 2704 → 795 lines and keeps document, history, viewport, auto-labeling and brush responsibilities. The moved methods are bytecode-identical except four translation call sites that now name the existing `Canvas` context explicitly. Suite 1688 passed / 1 skipped / 61 subtests, smoke 17/17, acceptance 17/17; a clean CPU package also drew and saved a second rectangle, moved it 5 px with the arrow key, and closed natively without a crash log.
+
+### Release
+
+- **Windows CPU-Train now ships in every tagged GitHub Release.** The release matrix gains a fourth target that installs a separately locked CPU training environment, builds the onedir CPU-Train spec and packages it as `JLLabelingAndTrain-v<version>-CPU-Train-win64.zip` before the existing checksum and publish steps. The new `cpu-train` dependency group declares torch, torchvision, Ultralytics and `onnxslim`; `requirements-lock-win-train.txt` pins all 125 packages and carries the PyTorch CPU index explicitly. Release notes, both get-started guides, both READMEs and the training guide now describe the published asset instead of a source-only target. Clean-environment acceptance built and extracted the 401,556,542-byte ZIP from that lock, completed a real 20-epoch CPU run (train 22 / val 5, mAP50 0.32839), exported a 12.6 MB ONNX, loaded it into auto-labeling and wrote three model boxes across the three unlabeled images (one produced an empty result), with dataset/run hashes intact and no crash log. Suite 1694 passed / 1 skipped / 61 subtests, smoke 17/17, acceptance 17/17.
+
 ## `v1.0.0-beta.8` (Oct 27, 2026)
 
 ### 🐛 Bug Fixes

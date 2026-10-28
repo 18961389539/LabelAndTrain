@@ -68,7 +68,8 @@ that catalog; text this fork adds is written in Chinese directly.
 
 ## Quick start
 
-Installation is source-only — see [Installation & Quickstart](./docs/en/get_started.md).
+Run a prebuilt release package or install from source — see
+[Installation & Quickstart](./docs/en/get_started.md).
 
 1. **Open a folder** (`Ctrl+U`; `Ctrl+I` opens a single image). Images are read
    from the folder, and each label JSON lives beside its image under the same
@@ -298,9 +299,9 @@ Recent, user-visible changes; the full history is in [CHANGELOG.md](./CHANGELOG.
 - Smart tools (11), hover detail nearly everywhere, rebindable shortcuts with an
   F1 cheat sheet, and a Chinese-only interface whose fork-added text is Chinese
   at the source.
-- A CPU-only training build (`win-cpu-train`) that bundles CPU torch,
-  Ultralytics and the ONNX export stack, so training weights can be handed
-  to auto-labeling inside the frozen app.
+- A released Windows CPU training build (`-CPU-Train-win64.zip`) that bundles
+  CPU torch, Ultralytics and the ONNX export stack, so training weights can be
+  handed to auto-labeling inside the frozen app.
 
 ## Docs
 
@@ -340,7 +341,8 @@ uv pip install -e ".[cpu]" pytest
 QT_QPA_PLATFORM=offscreen .venv/Scripts/python.exe -m pytest tests
 ```
 
-Extras: `cpu`, `gpu` (CUDA 12), `gpu-cu11`, `gpu-cu13`, `dev`. Python 3.11+.
+Extras: `cpu`, `cpu-train`, `gpu` (CUDA 12), `gpu-cu11`, `gpu-cu13`, `dev`.
+Python 3.11+.
 
 Packaging goes through `scripts/build_executable.sh`, one PyInstaller spec per
 target: `win-cpu`, `win-cpu-train` (bundles CPU torch + Ultralytics + the ONNX

@@ -272,6 +272,32 @@ class TestAutoLabelingLayout(unittest.TestCase):
         widget.model_manager.prediction_finished.emit()
         self.assertTrue(widget.button_segment_everything.isEnabled())
 
+    def test_panel_visibility_syncs_the_parent_auto_run_action(self):
+        config.current_config_file = (
+            "anylabeling/configs/jllabeling_config.yaml"
+        )
+        action = type("Action", (), {"enabled": False})()
+        action.setEnabled = lambda value: setattr(action, "enabled", value)
+        parent = type(
+            "Parent",
+            (),
+            {
+                "_config": get_config(),
+                "new_shapes_from_auto_labeling": lambda _self, _result: None,
+                "actions": type("Actions", (), {"run_all_images": action})(),
+            },
+        )()
+        widget = AutoLabelingWidget(parent)
+        self._widgets.append(widget)
+
+        widget.show()
+        self.app.processEvents()
+        self.assertTrue(action.enabled)
+
+        widget.hide()
+        self.app.processEvents()
+        self.assertFalse(action.enabled)
+
     def test_more_panel_places_conf_iou_labels_before_spinboxes(self):
         """Regression: labels must not appear after the 0.25/0.45 spinboxes.
 

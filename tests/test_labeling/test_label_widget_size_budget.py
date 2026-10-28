@@ -134,7 +134,10 @@ BUDGETS = {
     # CanvasRenderMixin (widgets/canvas_render.py, 755 lines). Canvas
     # inherits the mixin and keeps the historical attribute names through
     # descriptors, so actions, settings and paint callers are unchanged.
-    "anylabeling/views/labeling/widgets/canvas.py": 2704,
+    # Lowered 2704 -> 795 later that day: 37 interaction fields and 62 event,
+    # selection, hover, pan and keyboard methods moved to canvas_interaction.
+    # Descriptors preserve the historical Canvas attribute surface.
+    "anylabeling/views/labeling/widgets/canvas.py": 795,
     # Lowered 4406 -> 4002 -> 3335 on 2026-10-26: first the
     # export/autolabel cluster moved to views/training/export_autolabel.py
     # (nine delegating stubs, is_fresh_export included), then

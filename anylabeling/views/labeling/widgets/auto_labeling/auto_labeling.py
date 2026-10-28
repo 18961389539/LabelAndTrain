@@ -1921,7 +1921,18 @@ class AutoLabelingWidget(QWidget):
 
     def showEvent(self, event):
         super().showEvent(event)
+        self._sync_parent_run_action(True)
         self._queue_model_selection_scroll_area_height_update()
+
+    def hideEvent(self, event):
+        super().hideEvent(event)
+        self._sync_parent_run_action(False)
+
+    def _sync_parent_run_action(self, enabled):
+        actions = getattr(getattr(self, "parent", None), "actions", None)
+        action = getattr(actions, "run_all_images", None)
+        if action is not None:
+            action.setEnabled(enabled)
 
     def _queue_model_selection_scroll_area_height_update(self):
         QTimer.singleShot(0, self._update_model_selection_scroll_area_height)

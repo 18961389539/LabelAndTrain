@@ -200,7 +200,7 @@
 
 - 表单会把 AMP 关掉，并在你未修改相关字段时填入 CPU 预置档（50 轮 / 416 / 批大小 8），让第一轮能在可接受的时间内告诉你数据是否有问题。
 - Ultralytics 在 CPU 上会强制把数据加载进程设为 0，`进程数` 保持默认即可。
-- `win-cpu-train` 打包（`scripts/build_executable.sh win-cpu-train`，spec 为 `packaging/pyinstaller/specs/x-anylabeling-win-cpu-train.spec`）内置 CPU 版 torch 与 Ultralytics，适合完全没有 CUDA 的机器。
+- 正式发布的 `-CPU-Train-win64.zip`（由 `scripts/build_executable.sh win-cpu-train` 构建，spec 为 `packaging/pyinstaller/specs/x-anylabeling-win-cpu-train.spec`）内置 CPU 版 torch、Ultralytics 与 `onnxslim`，适合完全没有 CUDA 的机器。
 
 ## 常见问题
 

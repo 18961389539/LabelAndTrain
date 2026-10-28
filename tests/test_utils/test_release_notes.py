@@ -83,6 +83,7 @@ class TestReleaseNotes(unittest.TestCase):
             )
         self.assertNotIn("pypi.org", notes)
         self.assertNotIn("pan.baidu.com", notes)
+        self.assertIn("-CPU-Train-win64.zip", notes)
         # Attribution to upstream stays, because the GPL requires it.
         self.assertIn("CVHub520/X-AnyLabeling", notes)
         self.assertIn(f"compare/v0.0.1...{tag}", notes)

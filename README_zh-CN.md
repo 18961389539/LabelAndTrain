@@ -53,7 +53,7 @@
 
 ## 快速开始
 
-只能源码安装，见[安装文档](./docs/zh_cn/get_started.md)。
+可下载预编译发布包，或从源码安装，见[安装文档](./docs/zh_cn/get_started.md)。
 
 1. **打开目录**（`Ctrl+U`；`Ctrl+I` 打开单张图片）：图片从目录读取，每张图的标签 JSON 与图片同名同目录。
 2. **标注，或让模型先标**：在右侧面板选一个自动标注模型（SAM2 需要点几下提示，YOLO 直接跑），或用 `一键推理` 对当前打开目录批量推理。
@@ -229,9 +229,9 @@ uv pip install -e ".[cpu]" pytest
 QT_QPA_PLATFORM=offscreen .venv/Scripts/python.exe -m pytest tests
 ```
 
-可选依赖组：`cpu`、`gpu`（CUDA 12）、`gpu-cu11`、`gpu-cu13`、`dev`；Python 3.11+。
+可选依赖组：`cpu`、`cpu-train`、`gpu`（CUDA 12）、`gpu-cu11`、`gpu-cu13`、`dev`；Python 3.11+。
 
-打包走 `scripts/build_executable.sh`，每个目标一份 PyInstaller spec：`win-cpu`、`win-cpu-train`（打包 CPU 版 torch、Ultralytics 与 ONNX 导出栈，冻结后的程序也能训练并回灌自动标注）、`win-gpu`、`linux-cpu`、`linux-gpu`、`macos`。
+打包走 `scripts/build_executable.sh`，每个目标一份 PyInstaller spec：`win-cpu`、`win-cpu-train`（打包 CPU 版 torch、Ultralytics 与 ONNX 导出栈，冻结后的程序也能训练并回灌自动标注；正式发布为 `-CPU-Train-win64.zip`）、`win-gpu`、`linux-cpu`、`linux-gpu`、`macos`。
 
 `.github/workflows/ci.yml` 会在推送到 `main` 与提交 Pull Request 时运行全量测试；格式化与静态检查见[贡献指南](./CONTRIBUTING.md)，其中 lint 采用**基线**门禁：历史遗留告警记录在 `scripts/flake8_baseline.txt`，只有新增告警才会失败。
 

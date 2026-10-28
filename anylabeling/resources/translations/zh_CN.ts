@@ -321,84 +321,84 @@ Only the registry entry is removed. The config/weight files on disk are kept:
     <context>
         <name>Canvas</name>
         <message>
-            <location filename="..\..\views\labeling\widgets\canvas.py" line="251" />
+            <location filename="..\..\views\labeling\widgets\canvas.py" line="166" />
             <source>Loading...</source>
             <translation>加载中...</translation>
         </message>
         <message>
-            <location filename="..\..\views\labeling\widgets\canvas.py" line="529" />
+            <location filename="..\..\views\labeling\widgets\canvas_interaction.py" line="223" />
             <source>Auto Labeling</source>
             <translation>自动标注</translation>
         </message>
         <message>
-            <location filename="..\..\views\labeling\widgets\canvas.py" line="531" />
+            <location filename="..\..\views\labeling\widgets\canvas_interaction.py" line="225" />
             <source>Drawing</source>
             <translation>绘制</translation>
         </message>
         <message>
-            <location filename="..\..\views\labeling\widgets\canvas.py" line="533" />
+            <location filename="..\..\views\labeling\widgets\canvas_interaction.py" line="227" />
             <source>Editing</source>
             <translation>编辑</translation>
         </message>
         <message>
-            <location filename="..\..\views\labeling\widgets\canvas.py" line="535" />
+            <location filename="..\..\views\labeling\widgets\canvas_interaction.py" line="229" />
             <source>Unknown</source>
             <translation>未知</translation>
         </message>
         <message>
-            <location filename="..\..\views\labeling\widgets\canvas.py" line="599" />
+            <location filename="..\..\views\labeling\widgets\canvas_interaction.py" line="293" />
             <source>Click &amp; drag to erase points of shape '%s'</source>
             <translation>点击并拖动以擦除对象 '%s' 的顶点</translation>
         </message>
         <message>
-            <location filename="..\..\views\labeling\widgets\canvas.py" line="1151" />
+            <location filename="..\..\views\labeling\widgets\canvas_interaction.py" line="844" />
             <source>Click &amp; drag to adjust cuboid depth of shape '%s'</source>
             <translation>点击并拖动以调整对象：'%s' 的长方体深度</translation>
         </message>
         <message>
-            <location filename="..\..\views\labeling\widgets\canvas.py" line="1158" />
+            <location filename="..\..\views\labeling\widgets\canvas_interaction.py" line="852" />
             <source>Click &amp; drag to adjust rear edge of cuboid shape '%s'</source>
             <translation>点击并拖动以调整长方体对象：'%s' 的后边缘</translation>
         </message>
         <message>
-            <location filename="..\..\views\labeling\widgets\canvas.py" line="1235" />
-            <location filename="..\..\views\labeling\widgets\canvas.py" line="1165" />
+            <location filename="..\..\views\labeling\widgets\canvas_interaction.py" line="936" />
+            <location filename="..\..\views\labeling\widgets\canvas_interaction.py" line="860" />
             <source>Click &amp; drag to move point of shape '%s'</source>
             <translation>点击并拖动以移动对象顶点：'%s'</translation>
         </message>
         <message>
-            <location filename="..\..\views\labeling\widgets\canvas.py" line="1294" />
-            <location filename="..\..\views\labeling\widgets\canvas.py" line="1183" />
+            <location filename="..\..\views\labeling\widgets\canvas_interaction.py" line="1006" />
+            <location filename="..\..\views\labeling\widgets\canvas_interaction.py" line="881" />
             <source>Click &amp; drag to move shape '%s'</source>
             <translation>点击并拖动以移动对象：'%s'</translation>
         </message>
         <message>
-            <location filename="..\..\views\labeling\widgets\canvas.py" line="1203" />
+            <location filename="..\..\views\labeling\widgets\canvas_interaction.py" line="903" />
             <source>Click &amp; drag to adjust cuboid %s face of shape '%s'</source>
             <translation>点击并拖动以调整长方体 %s 面（对象：'%s'）</translation>
         </message>
         <message>
-            <location filename="..\..\views\labeling\widgets\canvas.py" line="1256" />
+            <location filename="..\..\views\labeling\widgets\canvas_interaction.py" line="959" />
             <source>Click to create point of shape '%s'</source>
             <translation>点击以创建对象“%s”的顶点</translation>
         </message>
         <message>
-            <location filename="..\..\views\labeling\widgets\canvas.py" line="1286" />
+            <location filename="..\..\views\labeling\widgets\canvas_interaction.py" line="992" />
             <source>Locked shape '%s'</source>
             <translation>对象“%s”已锁定</translation>
         </message>
         <message>
-            <location filename="..\..\views\labeling\widgets\canvas.py" line="1979" />
+            <location filename="..\..\views\labeling\widgets\canvas_interaction.py" line="1669" />
             <source>Group %s · %d shapes</source>
             <translation>群组 %s · %d 个对象</translation>
         </message>
         <message>
-            <location filename="..\..\views\labeling\widgets\canvas.py" line="1981" />
+            <location filename="..\..\views\labeling\widgets\canvas_interaction.py" line="1674" />
             <source>Locked %s</source>
             <translation>已锁定：%s</translation>
         </message>
         <message>
-            <location filename="..\..\views\labeling\widgets\canvas.py" line="1983" />
+            <location filename="..\..\views\labeling\widgets\canvas_interaction.py" line="1678" />
             <source>Click &amp; drag to move %s</source>
             <translation>单击并拖拽以移动 %s</translation>
         </message>
