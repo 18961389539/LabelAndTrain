@@ -197,6 +197,11 @@ def partition_images(
     label_digests = {}
     unreadable_labels = []
     unchecked_files = []
+    # Pure-YOLO datasets have no JSON at all. Detect/Segment can use their
+    # txt as-is; Pose keypoints and Classify flags have no txt equivalent.
+    yolo_labels = None
+    if task_type in ("Detect", "Segment"):
+        from anylabeling.views.labeling.utils import yolo_labels
 
     for image_file in image_list:
         label_dir, filename = os.path.split(image_file)
@@ -207,6 +212,29 @@ def partition_images(
         )
 
         if not os.path.exists(label_file):
+            yolo_txt = None
+            if yolo_labels is not None:
+                yolo_txt = yolo_labels.find_yolo_txt(image_file, output_dir)
+            if yolo_txt:
+                try:
+                    lines = yolo_labels.read_lines(yolo_txt)
+                except OSError:
+                    unreadable_labels.append(yolo_txt)
+                    continue
+                if not lines:
+                    # An empty txt is a real negative sample, same as a
+                    # JSON with zero shapes.
+                    background_images.append(image_file)
+                    continue
+                # A txt carries no review verdict. Treating it as checked
+                # keeps the checked-only filter from emptying a dataset it
+                # cannot judge.
+                valid_images.append((image_file, yolo_txt))
+                with open(yolo_txt, "rb") as handle:
+                    label_digests[yolo_txt] = hashlib.sha1(
+                        handle.read()
+                    ).hexdigest()
+                continue
             if only_checked_files:
                 unchecked_files.append(image_file)
                 continue
@@ -247,6 +275,45 @@ def partition_images(
         "unreadable_labels": unreadable_labels,
         "unchecked_files": unchecked_files,
     }
+
+
+def _read_yolo_label_text(label_file, mode, converter):
+    """Text of an existing YOLO txt plus its line count.
+
+    The file is already in the layout the trainer wants, so it is copied
+    verbatim. A detect-only file in a segment run, or a class id outside
+    ``data.yaml``'s names, would otherwise surface as a confusing failure
+    deep inside Ultralytics; it is rejected here with a reportable reason.
+    """
+    from anylabeling.views.labeling.utils import yolo_labels
+
+    lines = yolo_labels.read_lines(label_file)
+    expected = "segment" if mode == "seg" else "detect"
+    formats = set()
+    max_class_id = -1
+    for line in lines:
+        parts = line.replace("\t", " ").split()
+        count = len(parts)
+        if count == 5:
+            formats.add("detect")
+        elif count >= 7 and (count - 1) % 2 == 0:
+            formats.add("segment")
+        else:
+            raise ValueError(f"unsupported YOLO line with {count} values")
+        class_id = int(float(parts[0]))
+        max_class_id = max(max_class_id, class_id)
+    if formats and expected not in formats:
+        raise ValueError(
+            f"this task needs {expected} labels, the file has "
+            f"{', '.join(sorted(formats))}"
+        )
+    class_count = len(getattr(converter, "classes", None) or [])
+    if max_class_id >= class_count:
+        raise ValueError(
+            f"class id {max_class_id} is outside data.yaml's "
+            f"{class_count} names"
+        )
+    return "".join(f"{line}\n" for line in lines), len(lines)
 
 
 def _discard_partial_dataset(report):
@@ -387,13 +454,25 @@ def _build_yolo_dataset(
                     labels_dir, os.path.splitext(filename)[0] + ".txt"
                 )
                 try:
-                    is_empty = converter.custom_to_yolo(
-                        label_file,
-                        dst_label_path,
-                        mode,
-                        skip_empty_files=skip_empty,
-                        stats=conversion_stats,
-                    )
+                    if label_file.lower().endswith(".txt"):
+                        # Already YOLO: copy the lines instead of converting
+                        # JSON that does not exist.
+                        text, line_count = _read_yolo_label_text(
+                            label_file, mode, converter
+                        )
+                        is_empty = line_count == 0
+                        with open(
+                            dst_label_path, "w", encoding="utf-8"
+                        ) as handle:
+                            handle.write(text)
+                    else:
+                        is_empty = converter.custom_to_yolo(
+                            label_file,
+                            dst_label_path,
+                            mode,
+                            skip_empty_files=skip_empty,
+                            stats=conversion_stats,
+                        )
                 except Exception as exc:  # noqa: BLE001
                     # One unreadable label file used to take the whole build
                     # down with it (a KeyError on a missing imageWidth did

@@ -1323,13 +1323,11 @@ class LabelingWidget(LabelDialog):
         self._pending_inherited_shapes = bool(from_inherited)
 
         if self._config["auto_save"] and not self._pending_inherited_shapes:
-            # Resolve the target now: the pending write belongs to the
-            # image being edited, even if the flush runs later.
-            label_file = osp.splitext(self.image_path)[0] + ".json"
-            if self.output_dir:
-                label_file_without_path = osp.basename(label_file)
-                label_file = self.output_dir + "/" + label_file_without_path
-            self._auto_save_path = label_file
+            # The pending write belongs to the image being edited. A
+            # pure-YOLO dataset writes back to its txt, never a JSON.
+            self._auto_save_path = getattr(
+                self, "_yolo_label_txt", None
+            ) or self._label_path_for_image(self.image_path)
             self.dirty = True
             self.actions.save.setEnabled(True)
             self._schedule_auto_save()
@@ -4008,6 +4006,8 @@ class LabelingWidget(LabelDialog):
     def get_label_file(self):
         if self.label_file:
             return self.label_file.filename
+        if getattr(self, "_yolo_label_txt", None):
+            return self._yolo_label_txt
         base = self.image_path if self.image_path else self.filename
         if base.lower().endswith(".json"):
             return base

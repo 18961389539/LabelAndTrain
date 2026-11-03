@@ -59,6 +59,7 @@ import re
 from PyQt6.QtCore import QCoreApplication, Qt, pyqtSlot
 from PyQt6 import QtCore, QtGui, QtWidgets
 from ..label_file import LabelFile, LabelFileError
+from ..shape import Shape
 from .. import utils
 from ..schema import REVIEW_NOTE_FIELD, REVIEW_REJECTED
 import os.path as osp
@@ -68,6 +69,7 @@ import time
 from ..filelist import items as filelist_items
 from ..logger import logger
 from . import file_list_ops
+from . import yolo_labels
 from .style import get_rework_banner_style
 
 #: Files whose broken ICC profile the user has already been told about.
@@ -218,6 +220,157 @@ def move_file_to_delete_folder(src_path, folder_hint=None):
     return dest
 
 
+def _create_label_row(widget, filename, label_file):
+    """Build one file-list row, letting a YOLO txt light its dot."""
+    item = widget._create_file_list_item(
+        filename, label_file, read_checked=False
+    )
+    if not (
+        QtCore.QFile.exists(label_file) and LabelFile.is_label_file(label_file)
+    ):
+        _mark_yolo_annotation(widget, filename, item)
+    return item
+
+
+def _mark_yolo_annotation(widget, filename, item):
+    """Light the row's annotation dot from the image's YOLO txt.
+
+    The file list used to treat "no JSON" as "not annotated", which made a
+    fully labelled YOLO dataset look untouched. Only the txt's existence
+    and emptiness are read here: the full parse happens when the image is
+    opened, so a folder of thousands stays cheap.
+    """
+    try:
+        txt_path = yolo_labels.find_yolo_txt(filename, widget.output_dir)
+    except OSError:
+        return False
+    if not txt_path:
+        return False
+    filelist_items.set_file_item_annotated(
+        widget, item, True, negative=not yolo_labels.has_objects(txt_path)
+    )
+    return True
+
+
+def _prepare_yolo_label(widget, filename):
+    """Remember the YOLO txt that stands in for a missing JSON.
+
+    Called only from the no-JSON branch: a JSON always wins, and a stale
+    txt from the previous image must not leak into this one.
+    """
+    widget._yolo_label_txt = None
+    widget._yolo_label_mode = None
+    widget._yolo_label_classes = None
+    widget._yolo_label_classes_file = None
+    try:
+        txt_path = yolo_labels.find_yolo_txt(filename, widget.output_dir)
+    except OSError as exc:
+        logger.warning(
+            f"Failed to look for a YOLO label for {filename}: {exc}"
+        )
+        return
+    if not txt_path:
+        return
+    fallback = getattr(widget, "_yolo_class_names", None)
+    names, classes_file = yolo_labels.class_names_for(
+        txt_path,
+        fallback() if callable(fallback) else None,
+    )
+    widget._yolo_label_txt = txt_path
+    widget._yolo_label_classes = names
+    widget._yolo_label_classes_file = classes_file
+
+
+def _load_yolo_shapes(widget):
+    """Render the txt resolved by ``_prepare_yolo_label``, if any."""
+    txt_path = getattr(widget, "_yolo_label_txt", None)
+    if not txt_path or widget.label_file:
+        return
+    image = getattr(widget, "image", None)
+    if image is None or image.isNull():
+        return
+    try:
+        result = yolo_labels.load_shapes(
+            txt_path,
+            image.width(),
+            image.height(),
+            getattr(widget, "_yolo_label_classes", None),
+        )
+    except OSError as exc:
+        logger.warning(f"Failed to read YOLO label {txt_path}: {exc}")
+        widget.status(
+            QCoreApplication.translate(
+                "LabelingWidget", "无法读取 YOLO 标注：%s"
+            )
+            % osp.basename(txt_path),
+            5000,
+        )
+        return
+    widget._yolo_label_mode = result["mode"]
+    shapes = [Shape().load_from_dict(shape) for shape in result["shapes"]]
+    widget.load_shapes(shapes, update_last_label=False)
+    items = widget.file_list_widget.findItems(
+        widget.image_path, Qt.MatchFlag.MatchExactly
+    )
+    if len(items) == 1:
+        filelist_items.set_file_item_annotated(
+            widget, items[0], True, negative=not shapes
+        )
+    if result["skipped"]:
+        widget.status(
+            QCoreApplication.translate(
+                "LabelingWidget", "YOLO 标注中有 %d 行无法解析，已跳过"
+            )
+            % result["skipped"],
+            5000,
+        )
+
+
+def _save_yolo_labels(widget, filename):
+    """Write the open image's annotations back to its YOLO txt."""
+    shapes = [
+        item.shape().to_dict()
+        for item in widget.label_list
+        if item.shape().label
+        not in [
+            AutoLabelingMode.OBJECT,
+            AutoLabelingMode.ADD,
+            AutoLabelingMode.REMOVE,
+        ]
+    ]
+    try:
+        names = yolo_labels.save_shapes(
+            filename,
+            shapes,
+            widget.image.width(),
+            widget.image.height(),
+            getattr(widget, "_yolo_label_classes", None),
+            getattr(widget, "_yolo_label_mode", None) or "detect",
+            classes_file=getattr(widget, "_yolo_label_classes_file", None),
+        )
+    except (OSError, ValueError) as exc:
+        widget.error_message(
+            QCoreApplication.translate(
+                "LabelingWidget", "Error saving label data"
+            ),
+            QCoreApplication.translate("LabelingWidget", "<b>%s</b>") % exc,
+        )
+        return False
+    widget._yolo_label_classes = names
+    items = widget.file_list_widget.findItems(
+        widget.image_path, Qt.MatchFlag.MatchExactly
+    )
+    if len(items) == 1:
+        filelist_items.set_file_item_annotated(
+            widget, items[0], True, negative=not shapes
+        )
+        widget._set_file_item_checked(items[0], widget._annotation_checked())
+        file_list_ops._note_save_quality(widget, shapes, items[0])
+    else:
+        file_list_ops._note_save_quality(widget, shapes)
+    return True
+
+
 def load_file(widget, filename=None):  # noqa: C901
     """Load the specified file, or the last opened file if None."""
 
@@ -265,6 +418,13 @@ def load_file(widget, filename=None):  # noqa: C901
             % filename,
         )
         return False
+
+    # A JSON always wins, so the txt the previous image was read from must
+    # not survive into this one (reset_state does not know about it).
+    widget._yolo_label_txt = None
+    widget._yolo_label_mode = None
+    widget._yolo_label_classes = None
+    widget._yolo_label_classes_file = None
 
     # assumes same name, but json extension
     label_file = osp.splitext(filename)[0] + ".json"
@@ -332,6 +492,10 @@ def load_file(widget, filename=None):  # noqa: C901
             widget.image_path = filename
         widget.label_file = None
         widget.other_data = {CHECKED_FIELD: False}
+        # A dataset labelled elsewhere is usually pure YOLO: no JSON beside
+        # the image, only <stem>.txt. Reading it here keeps the annotator
+        # from opening a folder that looks empty although it is labelled.
+        _prepare_yolo_label(widget, filename)
 
     # Decode large images off the UI thread so opening a big frame never
     # hard-freezes the whole window into a "Not Responding" state.
@@ -394,6 +558,7 @@ def load_file(widget, filename=None):  # noqa: C901
         if widget.label_file.flags is not None:
             flags.update(widget.label_file.flags)
     widget.load_flags(flags)
+    _load_yolo_shapes(widget)
 
     # load shapes
     if widget._config["keep_prev"] and widget.no_shape():
@@ -645,9 +810,7 @@ def import_image_folder(widget, dirpath, pattern=None, load=True):
                 label_file_without_path = osp.basename(label_file)
                 label_file = widget.output_dir + "/" + label_file_without_path
             label_files.append(label_file)
-            item = widget._create_file_list_item(
-                filename, label_file, read_checked=False
-            )
+            item = _create_label_row(widget, filename, label_file)
             widget.file_list_widget.addItem(item)
             widget.fn_to_index[filename] = widget.file_list_widget.count() - 1
     finally:
@@ -821,6 +984,12 @@ def delete_image_file(widget):
 
 
 def save_labels(widget, filename):
+    if (
+        getattr(widget, "_yolo_label_txt", None)
+        and filename
+        and str(filename).lower().endswith(".txt")
+    ):
+        return _save_yolo_labels(widget, filename)
     label_file = LabelFile()
     # Get current shapes
     # Excluding auto labeling special shapes
@@ -868,9 +1037,17 @@ def save_labels(widget, filename):
             flags=flags,
         )
         write_sidecar = getattr(widget, "_write_yolo_sidecar", None)
-        if write_sidecar is not None:
+        # A file opened from a YOLO txt already has one: the sidecar writer
+        # only emits detect boxes and would overwrite segment polygons.
+        if write_sidecar is not None and not getattr(
+            widget, "_yolo_label_txt", None
+        ):
             write_sidecar(filename, shapes)
         widget.label_file = label_file
+        # An explicit Save-As to JSON converts this image to the app's
+        # format; the next save must target that file, not the old txt.
+        widget._yolo_label_txt = None
+        widget._yolo_label_mode = None
         items = widget.file_list_widget.findItems(
             widget.image_path, Qt.MatchFlag.MatchExactly
         )
@@ -906,6 +1083,10 @@ def save_labels(widget, filename):
 def save_file(widget):
     """Save the open image; returns False when nothing was written."""
     assert not widget.image.isNull(), "cannot save empty image"
+    if getattr(widget, "_yolo_label_txt", None):
+        # Pure-YOLO dataset: editing writes the same txt back instead of
+        # growing a JSON the dataset never had.
+        return widget._save_file(widget._yolo_label_txt)
     if widget.label_file:
         # DL20180323 - overwrite when in directory
         return widget._save_file(widget.label_file.filename)
