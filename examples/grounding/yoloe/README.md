@@ -1,8 +1,8 @@
-# YOLOE: Universal Object Detection in X-AnyLabeling
+# YOLOE: Universal Object Detection in JLLabelingAndTrain
 
 ## Overview
 
-YOLOE (You Only Look Once, Extended) brings state-of-the-art "anything" detection capabilities to X-AnyLabeling. Based on the research paper [YOLOE](https://arxiv.org/abs/2503.07465), this model enables real-time detection and segmentation of any object you can describe or indicate visually, eliminating traditional category constraints.
+YOLOE (You Only Look Once, Extended) brings state-of-the-art "anything" detection capabilities to JLLabelingAndTrain. Based on the research paper [YOLOE](https://arxiv.org/abs/2503.07465), this model enables real-time detection and segmentation of any object you can describe or indicate visually, eliminating traditional category constraints.
 
 <img src=".data/visualization.png" width="100%" />
 
@@ -29,14 +29,14 @@ pip install -r requirements.txt
 
 > **Note:** For complete YOLOE documentation, visit the [official repository](https://github.com/THU-MIG/yoloe/tree/main).
 
-### X-AnyLabeling Integration
+### JLLabelingAndTrain Integration
 
-Install X-AnyLabeling in the same environment:
+Install JLLabelingAndTrain in the same environment:
 
 ```bash
 cd ..
 git clone https://github.com/CVHub520/X-AnyLabeling.git
-cd X-AnyLabeling
+cd JLLabelingAndTrain
 pip install -r requirements.txt
 ```
 
@@ -45,7 +45,7 @@ pip install -r requirements.txt
 Launch the application:
 
 ```bash
-python anylabeling/app.py
+python jllabeling/app.py
 ```
 
 ## Detection Modes
@@ -122,7 +122,7 @@ animal
 furniture
 ```
 
-**Default Behavior:** When no `classes` field is specified, X-AnyLabeling uses a comprehensive vocabulary from [here](../../../anylabeling/services/auto_labeling/configs/ram/ram_tag_list.txt).
+**Default Behavior:** When no `classes` field is specified, JLLabelingAndTrain uses a comprehensive vocabulary from [here](../../../jllabeling/services/auto_labeling/configs/ram/ram_tag_list.txt).
 
 ## Batch Processing
 

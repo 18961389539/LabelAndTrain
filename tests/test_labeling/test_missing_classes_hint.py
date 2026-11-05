@@ -12,8 +12,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from anylabeling.views.labeling import project_settings
-from anylabeling.views.labeling.utils import missing_classes_hint
+from jllabeling.views.labeling import project_settings
+from jllabeling.views.labeling.utils import missing_classes_hint
 
 #: Kept alive: a QApplication without a reference is garbage-collected at
 #: interpreter exit and takes the process down with it (exit 127).
@@ -255,7 +255,7 @@ def test_a_failed_mute_is_reported_rather_than_silently_lost(
 
 
 def test_import_button_reaches_the_classes_file_import(tmp_path, monkeypatch):
-    from anylabeling.views.labeling.utils import upload
+    from jllabeling.views.labeling.utils import upload
 
     calls = []
     monkeypatch.setattr(

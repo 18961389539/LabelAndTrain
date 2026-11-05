@@ -13,10 +13,10 @@ from unittest import mock
 
 import pytest
 
-from anylabeling.services.auto_labeling.types import AutoLabelingResult
-from anylabeling.views.labeling.shape import Shape
-from anylabeling.views.labeling.utils import batch as batch_module
-from anylabeling.views.labeling.utils import session_snapshot
+from jllabeling.services.auto_labeling.types import AutoLabelingResult
+from jllabeling.views.labeling.shape import Shape
+from jllabeling.views.labeling.utils import batch as batch_module
+from jllabeling.views.labeling.utils import session_snapshot
 
 
 class _Widget:
@@ -212,7 +212,7 @@ def test_classification_predictions_snapshot_before_rewriting(tmp_path):
 
 
 def test_class_rename_snapshots_every_file_it_rewrites(tmp_path):
-    from anylabeling.views.labeling.utils import yolo_detect
+    from jllabeling.views.labeling.utils import yolo_detect
 
     label_dir = tmp_path / "labels"
     label_dir.mkdir()
@@ -250,7 +250,7 @@ def test_class_rename_snapshots_every_file_it_rewrites(tmp_path):
 
 
 def test_template_prelabels_snapshot_their_target(tmp_path):
-    from anylabeling.views.labeling.utils import smart_prelabel
+    from jllabeling.views.labeling.utils import smart_prelabel
 
     image = _image(tmp_path)
     label_file = _human_label(tmp_path, image)
@@ -279,7 +279,7 @@ def test_template_prelabels_snapshot_their_target(tmp_path):
 
 
 def test_template_prelabels_count_a_failed_write(tmp_path):
-    from anylabeling.views.labeling.utils import smart_prelabel
+    from jllabeling.views.labeling.utils import smart_prelabel
 
     image = _image(tmp_path)
     label_file = _human_label(tmp_path, image)
@@ -323,7 +323,7 @@ class _Parent:
 
 
 def test_missing_scan_write_snapshots_its_file(tmp_path):
-    from anylabeling.views.labeling.utils import smart_missing
+    from jllabeling.views.labeling.utils import smart_missing
 
     image = _image(tmp_path)
     label_file = _human_label(tmp_path, image)
@@ -349,7 +349,7 @@ def test_missing_scan_write_snapshots_its_file(tmp_path):
 
 
 def test_missing_scan_counts_a_failed_write(tmp_path):
-    from anylabeling.views.labeling.utils import smart_missing
+    from jllabeling.views.labeling.utils import smart_missing
 
     image = _image(tmp_path)
     label_file = _human_label(tmp_path, image)

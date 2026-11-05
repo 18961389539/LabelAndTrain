@@ -32,9 +32,9 @@ imported into the source module the way ``attributes_controller`` is.
 Usage
 -----
     python scripts/extract_method.py \\
-        --file anylabeling/views/labeling/label_widget.py \\
+        --file jllabeling/views/labeling/label_widget.py \\
         --method toggle_shapes_visibility \\
-        --target anylabeling/views/labeling/utils/panel_visibility.py \\
+        --target jllabeling/views/labeling/utils/panel_visibility.py \\
         --dry-run          # report + diff, writes nothing
     python scripts/extract_method.py ... --apply   # write both files
 

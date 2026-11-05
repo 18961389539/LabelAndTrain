@@ -9,7 +9,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pytest
 
-from anylabeling.views.common import device_manager as dm_module
+from jllabeling.views.common import device_manager as dm_module
 
 
 @pytest.fixture()
@@ -105,14 +105,14 @@ def test_a_junk_device_string_raises(dm):
 
 def test_environment_wins_and_accepts_an_index(dm, monkeypatch):
     _fake_gpu(dm, 2)
-    monkeypatch.setenv("X_ANYLABELING_DEVICE", "gpu:1")
+    monkeypatch.setenv("JLLABELING_DEVICE", "gpu:1")
     assert dm.get_device() == "GPU:1"
 
 
 def test_config_is_read_through_get_config(dm, monkeypatch):
     _fake_gpu(dm, 2)
-    monkeypatch.delenv("X_ANYLABELING_DEVICE", raising=False)
-    import anylabeling.config as app_config
+    monkeypatch.delenv("JLLABELING_DEVICE", raising=False)
+    import jllabeling.config as app_config
 
     monkeypatch.setattr(
         app_config, "get_config", lambda *a, **k: {"device": "cuda:1"}
@@ -122,7 +122,7 @@ def test_config_is_read_through_get_config(dm, monkeypatch):
 
 def test_manual_choice_beats_everything(dm, monkeypatch):
     _fake_gpu(dm, 2)
-    monkeypatch.setenv("X_ANYLABELING_DEVICE", "cpu")
+    monkeypatch.setenv("JLLABELING_DEVICE", "cpu")
     dm.set_device("gpu:1")
     assert dm.get_device() == "GPU:1"
 

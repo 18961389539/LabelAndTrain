@@ -18,11 +18,11 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 import pytest  # noqa: E402
 from PyQt6 import QtWidgets  # noqa: E402
 
-from anylabeling.views.labeling.utils import session_snapshot  # noqa: E402
-from anylabeling.views.labeling.utils.shape import (  # noqa: E402
+from jllabeling.views.labeling.utils import session_snapshot  # noqa: E402
+from jllabeling.views.labeling.utils.shape import (  # noqa: E402
     CONVERSION_TARGETS,
 )
-from anylabeling.views.labeling.widgets.shape_converter_dialog import (  # noqa: E402
+from jllabeling.views.labeling.widgets.shape_converter_dialog import (  # noqa: E402
     ShapeConverterDialog,
 )
 

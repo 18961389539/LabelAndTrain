@@ -47,7 +47,7 @@
 
 分支新增的是标注之外的那条闭环：每张图的复核状态、每个对象的来源记录、阈值校准、主动学习样本排序、Ultralytics 训练面板，以及一键把刚训好的权重回灌为自动标注模型 —— 并能报告上一轮模型留在数据里的结果。
 
-命令只有 `jllabelingandtrain`，没有 `xanylabeling` 别名，文档里的命令同样如此。仍然带 "anylabeling" 字样的，都是改名会丢数据或丢掉上游可合并性的那几处：`~/.xanylabelingrc`、`<work_dir>/xanylabeling_data/`（权重、数据集、训练产物）、`xanylabeling_logs/`、Qt 设置域，以及 Python 包名 `anylabeling` 本身。
+命令只有 `jllabelingandtrain`，没有 `xanylabeling` 别名，文档里的命令同样如此。用户目录里的文件与目录也都以 `jllabeling` 命名：`~/.jllabelingrc`、`<work_dir>/jllabeling_data/`（权重、数据集、训练产物）、`jllabeling_logs/` 和 Qt 设置域；首次启动会把旧版 `xanylabeling` 命名的这些位置自动迁移过去。Python 包名也已改为 `jllabeling`，代码里保留 "anylabeling" 字样的只剩迁移表和许可要求的上游署名。
 
 界面只有一种语言：简体中文（`zh_CN` 是唯一的翻译目录且总是加载）。上游的英文源文本靠该目录译成中文，而本分支新增的文案直接以中文写入。
 
@@ -158,7 +158,7 @@
 - 只有「已检查」图片进入数据集，空标注图片作为背景负样本保留；数据集按固定种子在每次训练前重建。
 - 「用于自动标注」覆盖检测、分割、姿态（需与训练一致的 pose 配置）与分类；分类返回可确认的建议而非对象。
 - 14 种导出格式（ONNX、TorchScript、OpenVINO、TensorRT、CoreML、TF SavedModel / Lite / Edge TPU / TF.js、PaddlePaddle、MNN、NCNN、IMX500、RKNN）。
-- 训练产物位于 `<work_dir>/xanylabeling_data/trainer/ultralytics/runs/<task>/`；训练结束会提示清理历史数据集副本。
+- 训练产物位于 `<work_dir>/jllabeling_data/trainer/ultralytics/runs/<task>/`；训练结束会提示清理历史数据集副本。
 - 「训练 → 实验历史」列出所有写出 `run_meta.json` 的运行（按完成时间倒序、标注所属轮次），可导出 CSV；自定义 Project 路径下的运行不在扫描范围内，对话框会说明所扫描的目录。
 
 完整走查 —— 数据要求、每一项设置、续训规则、CPU 训练、报错处置与产物位置 —— 见[训练指南](./examples/training/ultralytics/README_zh-CN.md)（[English](./examples/training/ultralytics/README.md)）。
@@ -167,9 +167,9 @@
 
 ```
 <work_dir>/                          默认是用户主目录，--work-dir 可覆盖
-├── .xanylabelingrc                  应用设置
-├── xanylabeling_logs/               轮转的应用日志
-└── xanylabeling_data/
+├── .jllabelingrc                  应用设置
+├── jllabeling_logs/               轮转的应用日志
+└── jllabeling_data/
     ├── models/                      自动标注模型权重下载目录
     └── trainer/ultralytics/
         ├── weights/                 训练用预训练权重下载目录
@@ -270,7 +270,7 @@ QT_QPA_PLATFORM=offscreen .venv/Scripts/python.exe -m pytest tests
 如果您在研究中使用了这个软件，请按照以下方式引用它：
 
 ```
-@misc{X-AnyLabeling,
+@misc{JLLabelingAndTrain,
   year = {2023},
   author = {Wei Wang},
   publisher = {Github},

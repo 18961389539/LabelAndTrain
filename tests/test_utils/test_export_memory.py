@@ -8,7 +8,7 @@ import os
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from anylabeling.views.labeling import project_model
+from jllabeling.views.labeling import project_model
 
 
 def _project(tmp_path):

@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 import pytest
 
-from anylabeling.services.auto_labeling.__base__.sam2 import (
+from jllabeling.services.auto_labeling.__base__.sam2 import (
     AutomaticMaskGeneration,
 )
 

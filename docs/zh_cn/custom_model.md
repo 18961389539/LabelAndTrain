@@ -1,6 +1,6 @@
 # 模型加载
 
-X-AnyLabeling 内置了多种通用模型，完整列表参见[模型列表](./model_zoo.md)。
+JLLabelingAndTrain 内置了多种通用模型，完整列表参见[模型列表](./model_zoo.md)。
 
 > [!TIP]
 > 如需部署远程推理服务或支持多人协作，请参考 [X-AnyLabeling-Server](https://github.com/CVHub520/X-AnyLabeling-Server)。
@@ -9,7 +9,7 @@ X-AnyLabeling 内置了多种通用模型，完整列表参见[模型列表](./m
 
 使用 AI 辅助标注前，需要先加载模型。点击左侧工具栏中的 AI 按钮，或按 `Ctrl+A` 打开模型面板。
 
-从模型下拉列表中选择模型后，应用会检查 `~/xanylabeling_data/models/${model_name}` 中是否已有模型文件；存在时直接加载，否则自动下载到该目录。使用 `--work-dir` 时，数据目录位于指定工作目录下。
+从模型下拉列表中选择模型后，应用会检查 `~/jllabeling_data/models/${model_name}` 中是否已有模型文件；存在时直接加载，否则自动下载到该目录。使用 `--work-dir` 时，数据目录位于指定工作目录下。
 
 内置模型通常从配置文件指定的 URL 下载，部分模型也可切换至 ModelScope 下载源。请确保当前网络可以访问对应地址。
 
@@ -27,13 +27,13 @@ X-AnyLabeling 内置了多种通用模型，完整列表参见[模型列表](./m
 
 ## 加载已适配的用户自定义模型
 
-> **已适配模型**是指 X-AnyLabeling 已实现推理代码的模型。使用这类模型时，只需准备模型文件和配置文件。适配模型参见[模型列表](./model_zoo.md)。
+> **已适配模型**是指 JLLabelingAndTrain 已实现推理代码的模型。使用这类模型时，只需准备模型文件和配置文件。适配模型参见[模型列表](./model_zoo.md)。
 
 本教程中，我们以 [YOLOv5s](https://github.com/ultralytics/yolov5) 模型为例，详细介绍如何加载自定义模型。
 
 **a. 模型转换**
 
-假设已经在本地训练好模型，可先将 PyTorch 权重导出为 X-AnyLabeling 默认使用的 ONNX 格式：
+假设已经在本地训练好模型，可先将 PyTorch 权重导出为 JLLabelingAndTrain 默认使用的 ONNX 格式：
 
 ```bash
 python export.py --weights yolov5s.pt --include onnx
@@ -51,7 +51,7 @@ python export.py --weights yolov5s.pt --include onnx
 
 准备好 ONNX 文件后，在[模型列表](./model_zoo.md)中找到并复制对应模型的配置文件。
 
-以 [yolov5s.yaml](https://github.com/CVHub520/X-AnyLabeling/blob/main/anylabeling/configs/auto_labeling/yolov5s.yaml) 为例，其内容如下：
+以 [yolov5s.yaml](https://github.com/CVHub520/X-AnyLabeling/blob/main/jllabeling/configs/auto_labeling/yolov5s.yaml) 为例，其内容如下：
 
 ```YAML
 type: yolov5
@@ -83,7 +83,7 @@ classes:
 
 需要注意的是，以上字段并非所有模型都适用，具体可参考对应模型的定义。
 
-例如，我们可以看下 [YOLO](../../anylabeling/services/auto_labeling/__base__/yolo.py) 模型的实现，其额外提供了以下可选配置项：
+例如，我们可以看下 [YOLO](../../jllabeling/services/auto_labeling/__base__/yolo.py) 模型的实现，其额外提供了以下可选配置项：
 
 | 字段 | 描述 |
 |------|------|
@@ -137,13 +137,13 @@ anchors:
 | `dnn` | 使用 OpenCV DNN 推理 (`*.onnx`) | 内置 |
 | `trt` | 使用 NVIDIA TensorRT 推理 (`*.engine`) | 需额外安装 TensorRT 运行时依赖 |
 
-> TensorRT 不属于 X-AnyLabeling 的默认依赖，仅在希望以 TensorRT 后端加速 NVIDIA GPU 推理时才需要安装。如未安装相关依赖，软件其他功能不会受到影响。
+> TensorRT 不属于 JLLabelingAndTrain 的默认依赖，仅在希望以 TensorRT 后端加速 NVIDIA GPU 推理时才需要安装。如未安装相关依赖，软件其他功能不会受到影响。
 
 使用 TensorRT 推理时，还需要额外完成以下准备：
 
 - **环境准备**
 
-请先确认本机已正确安装 NVIDIA 驱动和 CUDA，然后在 X-AnyLabeling 所在的 Python 环境中安装 TensorRT 运行时依赖：
+请先确认本机已正确安装 NVIDIA 驱动和 CUDA，然后在 JLLabelingAndTrain 所在的 Python 环境中安装 TensorRT 运行时依赖：
 
 ```bash
 uv pip install tensorrt cuda-python
@@ -156,11 +156,11 @@ uv pip install tensorrt cuda-python
 
 以 `YOLO26` 模型为例，可参考官方手册 [Ultralytics YOLO26](https://docs.ultralytics.com/modes/export/#how-do-i-export-a-yolo26-model-to-onnx-format) 导出 TensorRT 后端模型文件。
 
-导出的 `.engine` 文件会自带一段 Ultralytics 写入的 JSON 元数据头，X-AnyLabeling 已自动兼容，无需手工剥离。
+导出的 `.engine` 文件会自带一段 Ultralytics 写入的 JSON 元数据头，JLLabelingAndTrain 已自动兼容，无需手工剥离。
 
 - **配置模型**
 
-参考 [yolo26s_trt.yaml](https://github.com/CVHub520/X-AnyLabeling/blob/main/anylabeling/configs/auto_labeling/yolo26s_trt.yaml) 配置，将 `model_path` 指向 `.engine` 文件，并显式指定 `engine: trt`：
+参考 [yolo26s_trt.yaml](https://github.com/CVHub520/X-AnyLabeling/blob/main/jllabeling/configs/auto_labeling/yolo26s_trt.yaml) 配置，将 `model_path` 指向 `.engine` 文件，并显式指定 `engine: trt`：
 
 ```YAML
 type: yolo26
@@ -181,7 +181,7 @@ engine: trt
 
 ## 加载未适配的用户自定义模型
 
-> **未适配模型**指还未在 X-AnyLabeling 中适配过的模型，需要用户自行参考以下实施步骤进行集成。
+> **未适配模型**指还未在 JLLabelingAndTrain 中适配过的模型，需要用户自行参考以下实施步骤进行集成。
 
 这里以多类别语义分割模型 `U-Net` 为例，可遵循以下实施步骤：
 
@@ -189,11 +189,11 @@ engine: trt
 
 导出 `ONNX` 模型，确保输出节点的维度为 `[1, C, H, W]`，其中 `C` 为总的类别数（包含背景类）。
 
-> ONNX 并非唯一可用格式：本构建的 YOLO 适配器按 `engine` 支持默认的 onnxruntime、`dnn`（OpenCV DNN）与 `trt`（TensorRT）。但**视频目标追踪不在本构建里**（SAM2/SAM3 video 属于上游）；上面链接里的[安装指南](../../examples/interactive_video_object_segmentation/sam2/README.md)、[配置文件](https://github.com/CVHub520/X-AnyLabeling/blob/main/anylabeling/configs/auto_labeling/sam2_hiera_base_video.yaml)与[推理实现](https://github.com/CVHub520/X-AnyLabeling/blob/main/anylabeling/services/auto_labeling/segment_anything_2_video.py)都只是上游的样子，照抄到本仓库不会有对应功能。
+> ONNX 并非唯一可用格式：本构建的 YOLO 适配器按 `engine` 支持默认的 onnxruntime、`dnn`（OpenCV DNN）与 `trt`（TensorRT）。但**视频目标追踪不在本构建里**（SAM2/SAM3 video 属于上游）；上面链接里的[安装指南](../../examples/interactive_video_object_segmentation/sam2/README.md)、[配置文件](https://github.com/CVHub520/X-AnyLabeling/blob/main/jllabeling/configs/auto_labeling/sam2_hiera_base_video.yaml)与[推理实现](https://github.com/CVHub520/X-AnyLabeling/blob/main/jllabeling/services/auto_labeling/segment_anything_2_video.py)都只是上游的样子，照抄到本仓库不会有对应功能。
 
 **b. 定义配置文件**
 
-首先，在[配置文件目录](../../anylabeling/configs/auto_labeling)下新增 `unet.yaml`：
+首先，在[配置文件目录](../../jllabeling/configs/auto_labeling)下新增 `unet.yaml`：
 
 ```YAML
 type: unet
@@ -220,7 +220,7 @@ classes:
 
 **c. 添加配置文件**
 
-其次，将上述配置文件添加到[模型管理文件](../../anylabeling/configs/models.yaml)中：
+其次，将上述配置文件添加到[模型管理文件](../../jllabeling/configs/models.yaml)中：
 
 ```yaml
 ...
@@ -233,13 +233,13 @@ classes:
 
 **d. 配置 UI 组件**
 
-根据模型需要，将模型类型添加到 [auto_labeling/__init__.py](../../anylabeling/services/auto_labeling/__init__.py) 中对应的 UI 控件列表。
+根据模型需要，将模型类型添加到 [auto_labeling/__init__.py](../../jllabeling/services/auto_labeling/__init__.py) 中对应的 UI 控件列表。
 
 **e. 定义推理服务**
 
-在定义推理服务的过程中，继承 [Model](../../anylabeling/services/auto_labeling/model.py) 基类是关键步骤之一，它允许你实现特定于模型的前向推理逻辑。
+在定义推理服务的过程中，继承 [Model](../../jllabeling/services/auto_labeling/model.py) 基类是关键步骤之一，它允许你实现特定于模型的前向推理逻辑。
 
-具体地，你可以在[模型推理服务目录](../../anylabeling/services/auto_labeling/)下新建一个 `unet.py` 文件，参考示例如下：
+具体地，你可以在[模型推理服务目录](../../jllabeling/services/auto_labeling/)下新建一个 `unet.py` 文件，参考示例如下：
 
 ```python
 import logging
@@ -250,9 +250,9 @@ import numpy as np
 from PyQt6 import QtCore
 from PyQt6.QtCore import QCoreApplication
 
-from anylabeling.app_info import __preferred_device__
-from anylabeling.views.labeling.shape import Shape
-from anylabeling.views.labeling.utils.opencv import qt_img_to_rgb_cv_img
+from jllabeling.app_info import __preferred_device__
+from jllabeling.views.labeling.shape import Shape
+from jllabeling.views.labeling.utils.opencv import qt_img_to_rgb_cv_img
 from .model import Model
 from .types import AutoLabelingResult
 from .engines.build_onnx_engine import OnnxBaseModel
@@ -362,7 +362,7 @@ class UNet(Model):
 
 - 元数据 `Meta` 类中：
     - `required_config_names`：用于指定模型配置文件中必须包含的配置项，确保模型推理服务能够正确初始化。
-    - `widgets`：指定模型推理服务中需要显示的控件，如按钮、下拉框等，具体可参考此 [文件](../../anylabeling/services/auto_labeling/__init__.py) 中的定义。
+    - `widgets`：指定模型推理服务中需要显示的控件，如按钮、下拉框等，具体可参考此 [文件](../../jllabeling/services/auto_labeling/__init__.py) 中的定义。
     - `output_modes`：指定模型推理服务中输出的形状类型，支持多边形、矩形和旋转框等。
     - `default_output_mode`：指定模型推理服务中默认的输出形状类型。
 - `predict_shapes` 和 `unload` 均属于抽象方法，分别用于定义模型推理过程和模型资源释放逻辑，因此一定需要实现。
@@ -370,11 +370,11 @@ class UNet(Model):
 
 **f. 添加至模型管理**
 
-完成上述步骤后，将模型类型（如 `unet`）添加到 [auto_labeling/__init__.py](../../anylabeling/services/auto_labeling/__init__.py) 的 `_CUSTOM_MODELS` 列表，并根据需要加入相应的 UI 控件列表。
+完成上述步骤后，将模型类型（如 `unet`）添加到 [auto_labeling/__init__.py](../../jllabeling/services/auto_labeling/__init__.py) 的 `_CUSTOM_MODELS` 列表，并根据需要加入相应的 UI 控件列表。
 
 > **提示**: 如果你不知道如何实现对应的控件，可打开搜索面板，输入相应关键字，查看所有可用控件的实现逻辑。
 
-最后，移步至 [模型管理类文件](../../anylabeling/services/auto_labeling/model_manager.py) 中，在 `_load_model` 方法中按照如下方式初始化你的实例：
+最后，移步至 [模型管理类文件](../../jllabeling/services/auto_labeling/model_manager.py) 中，在 `_load_model` 方法中按照如下方式初始化你的实例：
 
 
 ```python
@@ -428,7 +428,7 @@ class ModelManager(QObject):
 
 # 模型导出
 
-> 本章节将向您展示一些将自定义模型转换为 ONNX 模型的具体示例，以便您快速集成到 X-AnyLabeling 中。
+> 本章节将向您展示一些将自定义模型转换为 ONNX 模型的具体示例，以便您快速集成到 JLLabelingAndTrain 中。
 
 更多模型导出示例请参考 [`tools/onnx_exporter`](../../tools/onnx_exporter/) 目录。
 

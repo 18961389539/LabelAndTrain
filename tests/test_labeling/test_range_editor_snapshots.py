@@ -69,7 +69,7 @@ class TestRangeEditorSnapshots(unittest.TestCase):
         self.app = QtWidgets.QApplication.instance()
         if self.app is None:
             self.app = QtWidgets.QApplication([])
-        from anylabeling.views.labeling.label_widget import LabelingWidget
+        from jllabeling.views.labeling.label_widget import LabelingWidget
 
         patcher = mock.patch.object(
             LabelingWidget, "load_file", lambda self, *a, **k: False
@@ -114,7 +114,7 @@ class TestRangeEditorSnapshots(unittest.TestCase):
         self.fail(f"no snapshot of {name} under {root}")
 
     def test_modify_group_id_snapshots_before_dropping_a_group(self):
-        from anylabeling.views.labeling.widgets.label_dialog import (
+        from jllabeling.views.labeling.widgets.label_dialog import (
             GroupIDModifyDialog,
         )
 
@@ -146,7 +146,7 @@ class TestRangeEditorSnapshots(unittest.TestCase):
         rewriting the file with the shapes reversed is a silent change to
         every frame in the range.
         """
-        from anylabeling.views.labeling.widgets.label_dialog import (
+        from jllabeling.views.labeling.widgets.label_dialog import (
             GroupIDModifyDialog,
         )
 
@@ -181,8 +181,8 @@ class TestRangeEditorSnapshots(unittest.TestCase):
         )
 
     def test_add_to_range_snapshots_the_file_it_extends(self):
-        from anylabeling.views.labeling.shape import Shape
-        from anylabeling.views.labeling.widgets.shape_dialog import (
+        from jllabeling.views.labeling.shape import Shape
+        from jllabeling.views.labeling.widgets.shape_dialog import (
             ShapeModifyDialog,
         )
 
@@ -212,8 +212,8 @@ class TestRangeEditorSnapshots(unittest.TestCase):
         )
 
     def test_remove_from_range_snapshots_the_shapes_it_takes_away(self):
-        from anylabeling.views.labeling.shape import Shape
-        from anylabeling.views.labeling.widgets.shape_dialog import (
+        from jllabeling.views.labeling.shape import Shape
+        from jllabeling.views.labeling.widgets.shape_dialog import (
             ShapeModifyDialog,
         )
 
@@ -238,9 +238,9 @@ class TestRangeEditorSnapshots(unittest.TestCase):
         The move message promises the picture can be found again; that is only
         true for the annotation if it survives in .label_backups/ too.
         """
-        from anylabeling.views.labeling.label_widget import LabelingWidget
-        from anylabeling.views.labeling.utils import missing_classes_hint
-        from anylabeling.views.labeling.widgets.shape_dialog import (
+        from jllabeling.views.labeling.label_widget import LabelingWidget
+        from jllabeling.views.labeling.utils import missing_classes_hint
+        from jllabeling.views.labeling.widgets.shape_dialog import (
             ShapeModifyDialog,
         )
 

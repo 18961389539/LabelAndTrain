@@ -1,7 +1,7 @@
 # PaddleOCR 文档解析与智能文字识别
 
 > **归档页面：上游功能。** 本构建为 YOLO-only，不包含该面板。此页面描述的是上游
-> X-AnyLabeling，而非 JLLabelingAndTrain。参见 [README](../../README_zh-CN.md)
+> X-AnyLabeling，而非 X-AnyLabeling。参见 [README](../../README_zh-CN.md)
 > 的「Fork 范围」一节。
 
 
@@ -39,7 +39,7 @@ X-AnyLabeling 客户端默认支持 PaddleOCR 官方 API 调用形式，无需�
 配置会保存在本地：
 
 ```text
-${workspace}/xanylabeling_data/paddleocr/api_settings.json
+${workspace}/jllabeling_data/paddleocr/api_settings.json
 ```
 
 默认情况下，`${workspace}` 为用户主目录 `~`；如果启动 X-AnyLabeling 时传入了 `--work-dir`，则以该目录为准。
@@ -162,7 +162,7 @@ PaddleOCR 面板由三部分组成：
 PaddleOCR 面板会把导入文件和解析结果保存在本地工作目录中：
 
 ```text
-${workspace}/xanylabeling_data/paddleocr/
+${workspace}/jllabeling_data/paddleocr/
 ├── api_settings.json
 ├── ui_state.json
 ├── files/

@@ -36,14 +36,14 @@ from PyQt6.QtWidgets import (  # noqa: E402
     QWidget,
 )
 
-import anylabeling.resources.resources  # noqa: E402,F401 - registers the :/ resources
-from anylabeling.services.auto_training.ultralytics.config import (  # noqa: E402
+import jllabeling.resources.resources  # noqa: E402,F401 - registers the :/ resources
+from jllabeling.services.auto_training.ultralytics.config import (  # noqa: E402
     DEFAULT_TRAINING_CONFIG,
 )
-from anylabeling.views.training import (
+from jllabeling.views.training import (
     ultralytics_dialog as dialog_module,
 )  # noqa: E402
-from anylabeling.views.training.ultralytics_dialog import (  # noqa: E402
+from jllabeling.views.training.ultralytics_dialog import (  # noqa: E402
     CPU_PARAM_PRESET,
     TRAIN_PARAM_PRESETS,
     UltralyticsDialog,

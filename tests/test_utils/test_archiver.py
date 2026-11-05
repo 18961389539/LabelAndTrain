@@ -3,7 +3,7 @@ import os.path as osp
 import tempfile
 import unittest
 
-from anylabeling.views.labeling.utils.archiver import (
+from jllabeling.views.labeling.utils.archiver import (
     ARCHIVE_DIRNAME,
     archive_duplicates_plan,
     finalize_moves,
@@ -18,7 +18,9 @@ class TestArchiveDuplicatesPlan(unittest.TestCase):
         for name in ("a", "b", "c"):
             with open(osp.join(base, f"{name}.jpg"), "wb") as f:
                 f.write(b"x")
-            with open(osp.join(base, f"{name}.json"), "w", encoding="utf-8") as f:
+            with open(
+                osp.join(base, f"{name}.json"), "w", encoding="utf-8"
+            ) as f:
                 f.write("{}")
         return base
 
@@ -32,10 +34,13 @@ class TestArchiveDuplicatesPlan(unittest.TestCase):
             plan = archive_duplicates_plan(groups, base)
             sources = [src for src, _ in plan]
             # "b" is the duplicate; "a" and "c" stay in place.
-            self.assertEqual(sources, [osp.join(base, "b.jpg"),
-                                       osp.join(base, "b.json")])
+            self.assertEqual(
+                sources, [osp.join(base, "b.jpg"), osp.join(base, "b.json")]
+            )
             for _, dst in plan:
-                self.assertTrue(dst.startswith(osp.join(base, ARCHIVE_DIRNAME)))
+                self.assertTrue(
+                    dst.startswith(osp.join(base, ARCHIVE_DIRNAME))
+                )
 
     def test_missing_files_are_filtered_out(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -49,7 +54,7 @@ class TestArchiveDuplicatesPlan(unittest.TestCase):
 
     def test_empty_input(self):
         self.assertEqual(archive_duplicates_plan([], "/tmp"), [])
-        self.assertEqual(archive_duplicates_plan([[ "x.jpg" ]], None), [])
+        self.assertEqual(archive_duplicates_plan([["x.jpg"]], None), [])
 
     def test_no_duplicate_names_collide(self):
         with tempfile.TemporaryDirectory() as tmp:

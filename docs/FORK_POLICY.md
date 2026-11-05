@@ -15,33 +15,33 @@
 
 ```bash
 git fetch upstream develop          # 或上游默认分支
-git diff upstream/develop -- anylabeling/views/labeling/widgets/canvas.py
+git diff upstream/develop -- jllabeling/views/labeling/widgets/canvas.py
 ```
 
 ## 目录领地划分
 
 ### 自有领地（upstream 改动不跟进，以本仓库为准）
 
-- `anylabeling/views/labeling/filelist/` — 文件列表/审查流（自建包）
-- `anylabeling/views/labeling/settings/` — schema 化设置体系（自建）
-- `anylabeling/views/labeling/project*.py` — 项目注册/切换/每项目设置
-- `anylabeling/views/labeling/shortcuts/` — 活绑定快捷键
-- `anylabeling/views/training/` + `anylabeling/services/auto_training/` — 训练工作流
+- `jllabeling/views/labeling/filelist/` — 文件列表/审查流（自建包）
+- `jllabeling/views/labeling/settings/` — schema 化设置体系（自建）
+- `jllabeling/views/labeling/project*.py` — 项目注册/切换/每项目设置
+- `jllabeling/views/labeling/shortcuts/` — 活绑定快捷键
+- `jllabeling/views/training/` + `jllabeling/services/auto_training/` — 训练工作流
 - `tests/`、`docs/FORK_POLICY.md`、`CHANGELOG.md`
 - 根构建/打包配置（pyproject、packaging、scripts）
 
 ### 跟随上游（尽量保持小 diff，方便对照搬运）
 
-- `anylabeling/views/labeling/widgets/canvas*.py` — 画布核心
-- `anylabeling/views/labeling/shape.py`、`label_file.py` — 数据原语
-- `anylabeling/services/auto_labeling/` — 模型 zoo（保持与上游同名文件可对照）
-- `anylabeling/config.py`、`app.py` — 启动骨架
+- `jllabeling/views/labeling/widgets/canvas*.py` — 画布核心
+- `jllabeling/views/labeling/shape.py`、`label_file.py` — 数据原语
+- `jllabeling/services/auto_labeling/` — 模型 zoo（保持与上游同名文件可对照）
+- `jllabeling/config.py`、`app.py` — 启动骨架
 
 ### 缓冲区（上游大改时逐案裁决）
 
-- `anylabeling/views/labeling/label_widget.py` — 本仓库持续瘦身中；
+- `jllabeling/views/labeling/label_widget.py` — 本仓库持续瘦身中；
   上游同名文件已严重漂移，搬运时只摘单个修复，不做整文件覆盖。
-- `anylabeling/views/labeling/utils/`（style/theme/shape 等双轨模块）—
+- `jllabeling/views/labeling/utils/`（style/theme/shape 等双轨模块）—
   合并去重完成前，该目录暂列缓冲区。
 
 ## 冲突裁决规则

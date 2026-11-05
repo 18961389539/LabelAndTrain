@@ -19,8 +19,8 @@ sys.path.insert(
 
 from PyQt6.QtCore import QPointF  # noqa: E402
 
-from anylabeling.views.labeling.shape import Shape  # noqa: E402
-from anylabeling.views.labeling.widgets import canvas_geometry  # noqa: E402
+from jllabeling.views.labeling.shape import Shape  # noqa: E402
+from jllabeling.views.labeling.widgets import canvas_geometry  # noqa: E402
 
 IMG_W, IMG_H = 100, 80
 

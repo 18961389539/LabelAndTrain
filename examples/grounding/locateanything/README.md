@@ -1,4 +1,4 @@
-# LocateAnything: Open-Vocabulary Grounding in X-AnyLabeling
+# LocateAnything: Open-Vocabulary Grounding in JLLabelingAndTrain
 
 ## Overview
 
@@ -89,7 +89,7 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 
 ## Usage
 
-Launch X-AnyLabeling, press `Ctrl+A` or click the `AI` button in the left menu bar to open the auto-labeling panel. In the model dropdown list, select `Remote-Server`, then choose `LocateAnything`.
+Launch JLLabelingAndTrain, press `Ctrl+A` or click the `AI` button in the left menu bar to open the auto-labeling panel. In the model dropdown list, select `Remote-Server`, then choose `LocateAnything`.
 
 ### Detection
 

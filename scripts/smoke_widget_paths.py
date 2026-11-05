@@ -49,7 +49,7 @@ sys.path.insert(0, REPO)
 from PyQt6 import QtCore, QtGui, QtWidgets  # noqa: E402
 
 TEMPLATE_CONFIG = os.path.join(
-    REPO, "anylabeling", "configs", "jllabeling_config.yaml"
+    REPO, "jllabeling", "configs", "jllabeling_config.yaml"
 )
 
 RESULTS = []
@@ -110,8 +110,8 @@ def make_images(tmp):
 
 
 def build_widget(config_path, filename=None):
-    from anylabeling import config as app_config
-    from anylabeling.views.labeling.label_widget import LabelingWidget
+    from jllabeling import config as app_config
+    from jllabeling.views.labeling.label_widget import LabelingWidget
 
     app_config.current_config_file = config_path
     LabelingWidget.menu = lambda self, title: QtWidgets.QMenu(title)
@@ -189,8 +189,8 @@ def check_export_output(out_dir, classes, messages):
 
 
 def run_yolo_export(widget, app, tmp):
-    from anylabeling.views.labeling.label_converter import LabelConverter
-    from anylabeling.views.labeling.utils import export as export_mod
+    from jllabeling.views.labeling.label_converter import LabelConverter
+    from jllabeling.views.labeling.utils import export as export_mod
 
     # A folder of its own: two images without a label file are the point (they
     # exercise the "no label file" count without blocking), and the default
@@ -253,11 +253,11 @@ def run_auto_label_seam(widget, app, tmp):
     """
     from PyQt6 import QtCore
 
-    from anylabeling.services.auto_labeling.types import AutoLabelingResult
-    from anylabeling.views.labeling import provenance
-    from anylabeling.views.labeling.label_converter import LabelConverter
-    from anylabeling.views.labeling.shape import Shape
-    from anylabeling.views.labeling.utils import export as export_mod
+    from jllabeling.services.auto_labeling.types import AutoLabelingResult
+    from jllabeling.views.labeling import provenance
+    from jllabeling.views.labeling.label_converter import LabelConverter
+    from jllabeling.views.labeling.shape import Shape
+    from jllabeling.views.labeling.utils import export as export_mod
 
     source_dir = os.path.join(tmp, "loop_src")
     out_dir = os.path.join(tmp, "loop_out")
@@ -330,8 +330,8 @@ def run_auto_label_seam(widget, app, tmp):
 
         # The row's UserRole is its checked flag, not its path (see step 4a),
         # so the row is found through the widget's own filename index.
-        from anylabeling.views.labeling.filelist.roles import FILE_REVIEW_ROLE
-        from anylabeling.views.labeling.schema import REVIEW_CONFIRMED
+        from jllabeling.views.labeling.filelist.roles import FILE_REVIEW_ROLE
+        from jllabeling.views.labeling.schema import REVIEW_CONFIRMED
 
         index = widget.fn_to_index[clean]
         item = widget.file_list_widget.item(index)
@@ -387,8 +387,8 @@ def run_auto_label_seam(widget, app, tmp):
 
 def run_project_identity(widget, app, tmp):
     """Step 8: opening a folder makes it the project, name and all."""
-    from anylabeling.views.labeling import project_model, project_registry
-    from anylabeling.views.labeling.utils import project_view
+    from jllabeling.views.labeling import project_model, project_registry
+    from jllabeling.views.labeling.utils import project_view
 
     # A folder nothing has written to yet, so the fallback is the thing
     # under test: the name has to come from the folder itself.
@@ -416,7 +416,7 @@ def run_project_identity(widget, app, tmp):
 
 def run_project_resume(widget, app, tmp, target):
     """Step 9: leave a project on a frame, come back to that frame."""
-    from anylabeling.views.labeling import project_settings
+    from jllabeling.views.labeling import project_settings
 
     widget.import_image_folder(tmp)
     app.processEvents()
@@ -440,7 +440,7 @@ def run_project_resume(widget, app, tmp, target):
 
 def run_close_project(widget, app, tmp):
     """Step 10: closing a project leaves a genuinely empty canvas."""
-    from anylabeling.views.labeling.utils import project_view
+    from jllabeling.views.labeling.utils import project_view
 
     widget.import_image_folder(tmp)
     app.processEvents()
@@ -457,9 +457,9 @@ def run_close_project(widget, app, tmp):
 
 def run_project_task(widget, app, tmp):
     """Step 11: the task kind, project -> dialog -> project."""
-    from anylabeling.views.labeling import project_model
-    from anylabeling.views.training import ultralytics_dialog as dialog_mod
-    from anylabeling.views.training.ultralytics_dialog import (
+    from jllabeling.views.labeling import project_model
+    from jllabeling.views.training import ultralytics_dialog as dialog_mod
+    from jllabeling.views.training.ultralytics_dialog import (
         UltralyticsDialog,
     )
 
@@ -517,7 +517,7 @@ def run_image_flags(widget, tmp, config_path):
     """The real dialog-free tail: config write, flag dock, dirty state."""
     from unittest import mock
 
-    from anylabeling.views.labeling.utils import upload as upload_module
+    from jllabeling.views.labeling.utils import upload as upload_module
 
     flags_path = os.path.join(tmp, "flags.txt")
     with open(flags_path, "w", encoding="utf-8") as handle:
@@ -548,8 +548,8 @@ def run_image_flags(widget, tmp, config_path):
 @step("14. uploaded class list persists to config and project record")
 def run_uploaded_classes(widget, folder, config_path):
     """The real save path, not a stubbed one: config file + project record."""
-    from anylabeling.views.labeling import project_model
-    from anylabeling.views.labeling.utils import upload
+    from jllabeling.views.labeling import project_model
+    from jllabeling.views.labeling.utils import upload
 
     widget.import_image_folder(folder)
     upload.apply_uploaded_labels(widget, ["smoke_a", "smoke_b"])
@@ -567,7 +567,7 @@ def run_uploaded_classes(widget, folder, config_path):
 @step("13. union selection -- disjoint refused, connected merged")
 def run_union_selection(widget, image_path):
     """A disjoint merge is refused; a connected one replaces both shapes."""
-    from anylabeling.views.labeling.shape import Shape
+    from jllabeling.views.labeling.shape import Shape
 
     widget.load_file(image_path)
 
@@ -649,7 +649,7 @@ def main():
     images = make_images(tmp)
     # NEVER point the app at the factory template: the widget writes back
     # (digit-shortcut auto-assign, recent dirs) and this script once
-    # polluted anylabeling/configs/jllabeling_config.yaml that way.
+    # polluted jllabeling/configs/jllabeling_config.yaml that way.
     # Work on a copy inside the temp dir.
     config_copy = os.path.join(tmp, "smoke_config.yaml")
     shutil.copy(TEMPLATE_CONFIG, config_copy)
@@ -658,7 +658,7 @@ def main():
     # run recorded its throwaway folders in the *real* recent-project
     # list. Found in the wild: a registry holding nine smoke paths, the
     # oldest from 2026-09-29 -- the leak predates the project batches.
-    from anylabeling.config import set_work_directory
+    from jllabeling.config import set_work_directory
 
     set_work_directory(tmp)
     widget = build_widget(config_copy)
@@ -741,8 +741,8 @@ def main():
         app.processEvents()
         # review state lives in the UserRole + FILE_REVIEW_ROLE, not checkState
         assert item.data(QtCore.Qt.ItemDataRole.UserRole) is True
-        from anylabeling.views.labeling.schema import REVIEW_CONFIRMED
-        from anylabeling.views.labeling.filelist.roles import FILE_REVIEW_ROLE
+        from jllabeling.views.labeling.schema import REVIEW_CONFIRMED
+        from jllabeling.views.labeling.filelist.roles import FILE_REVIEW_ROLE
 
         assert item.data(FILE_REVIEW_ROLE) == REVIEW_CONFIRMED
 

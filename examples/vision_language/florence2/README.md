@@ -4,7 +4,7 @@
 
 [Florence-2](https://arxiv.org/abs/2311.06242) is a novel vision foundation model with a unified, prompt-based representation for a variety of computer vision and vision-language tasks, developed by Microsoft.
 
-Here, we will show you how to use Florence-2 on X-AnyLabeling to perform various vision tasks.
+Here, we will show you how to use Florence-2 on JLLabelingAndTrain to perform various vision tasks.
 
 Let's get started!
 
@@ -18,8 +18,8 @@ Before you begin, make sure you have the following prerequisites installed:
 **Step 1:** Create a new Conda environment with Python version `3.10` or higher, and activate it:
 
 ```bash
-conda create -n x-anylabeling-transformers python=3.10 -y
-conda activate x-anylabeling-transformers
+conda create -n jllabeling-transformers python=3.10 -y
+conda activate jllabeling-transformers
 ```
 
 **Step 2:** Install required dependencies.
@@ -32,7 +32,7 @@ Then, install the `transformers` package via:
 pip install transformers
 ```
 
-Return to the installation guide ([简体中文](../../../docs/zh_cn/get_started.md) | [English](../../../docs/en/get_started.md)) to install the remaining X-AnyLabeling dependencies:
+Return to the installation guide ([简体中文](../../../docs/zh_cn/get_started.md) | [English](../../../docs/en/get_started.md)) to install the remaining JLLabelingAndTrain dependencies:
 
 
 ## Getting Started
@@ -57,7 +57,7 @@ The model will be automatically downloaded and cached in the `transformers` pack
 
 If you have an unstable network connection, you can:
 1. Manually download the model files
-2. Update the `model_path` parameter in the [configuration file](../../../anylabeling/configs/auto_labeling/florence2_large_ft.yaml)
+2. Update the `model_path` parameter in the [configuration file](../../../jllabeling/configs/auto_labeling/florence2_large_ft.yaml)
 
 
 ### Image-level Captioning Tasks

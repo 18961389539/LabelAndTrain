@@ -13,8 +13,8 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pytest
 
-from anylabeling.views.labeling import project_dashboard
-from anylabeling.views.labeling.utils.async_label_check import (
+from jllabeling.views.labeling import project_dashboard
+from jllabeling.views.labeling.utils.async_label_check import (
     label_file_review_info,
 )
 
@@ -225,7 +225,7 @@ def test_overview_group_lines(overview, expected):
     pytest.importorskip("PyQt6")
     from PyQt6 import QtWidgets
 
-    from anylabeling.views.labeling.widgets.project_dialog import (
+    from jllabeling.views.labeling.widgets.project_dialog import (
         build_overview_group,
     )
 
@@ -248,7 +248,7 @@ _QAPP = None
 
 
 def test_fmt_map50():
-    from anylabeling.views.labeling.widgets.project_dialog import _fmt_map50
+    from jllabeling.views.labeling.widgets.project_dialog import _fmt_map50
 
     assert _fmt_map50(0.734) == "73.4%"
     assert _fmt_map50(None) is None

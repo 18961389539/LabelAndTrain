@@ -12,7 +12,7 @@ import zipfile
 
 import pytest
 
-from anylabeling.views.labeling import project_bundle, project_model
+from jllabeling.views.labeling import project_bundle, project_model
 
 
 def _make_project(root, *, task="Segment", labels=("划痕", "凹坑")):

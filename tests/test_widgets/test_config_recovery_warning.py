@@ -7,7 +7,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PyQt6 import QtWidgets
 
-from anylabeling.app import _show_config_recovery_warning
+from jllabeling.app import _show_config_recovery_warning
 
 
 class TestConfigRecoveryWarning:
@@ -19,8 +19,8 @@ class TestConfigRecoveryWarning:
     def test_the_dialog_names_the_file_and_its_backup(self, monkeypatch):
         monkeypatch.setattr(QtWidgets.QMessageBox, "exec", lambda self: 0)
         warning = {
-            "path": r"C:\data\.xanylabelingrc",
-            "backup": r"C:\data\.xanylabelingrc.invalid-20261023",
+            "path": r"C:\data\.jllabelingrc",
+            "backup": r"C:\data\.jllabelingrc.invalid-20261023",
             "error": "ParserError: while parsing a flow sequence",
         }
 

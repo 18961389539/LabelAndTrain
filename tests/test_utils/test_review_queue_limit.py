@@ -12,12 +12,12 @@ import tempfile
 import unittest
 
 try:
-    from anylabeling.views.labeling.utils.data_audit import (
+    from jllabeling.views.labeling.utils.data_audit import (
         DISPLAY_LIMIT,
         audit_dataset,
         format_category_title,
     )
-    from anylabeling.views.labeling.utils.smart_review import run_review_jump
+    from jllabeling.views.labeling.utils.smart_review import run_review_jump
 
     _AUDIT_AVAILABLE = True
 except Exception:

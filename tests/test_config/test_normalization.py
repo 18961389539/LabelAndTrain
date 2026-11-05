@@ -4,8 +4,7 @@ import sys
 import types
 from pathlib import Path
 
-
-MODULE_PATH = Path(__file__).resolve().parents[2] / "anylabeling/config.py"
+MODULE_PATH = Path(__file__).resolve().parents[2] / "jllabeling/config.py"
 INSERTED_MODULES = []
 
 
@@ -14,15 +13,16 @@ def _inject_module(name, module):
         sys.modules[name] = module
         INSERTED_MODULES.append(name)
 
-fake_anylabeling = types.ModuleType("anylabeling")
-fake_anylabeling_configs = types.ModuleType("anylabeling.configs")
-fake_anylabeling.configs = fake_anylabeling_configs
-_inject_module("anylabeling", fake_anylabeling)
-_inject_module("anylabeling.configs", fake_anylabeling_configs)
 
-fake_views = types.ModuleType("anylabeling.views")
-fake_labeling = types.ModuleType("anylabeling.views.labeling")
-fake_logger_module = types.ModuleType("anylabeling.views.labeling.logger")
+fake_jllabeling = types.ModuleType("jllabeling")
+fake_jllabeling_configs = types.ModuleType("jllabeling.configs")
+fake_jllabeling.configs = fake_jllabeling_configs
+_inject_module("jllabeling", fake_jllabeling)
+_inject_module("jllabeling.configs", fake_jllabeling_configs)
+
+fake_views = types.ModuleType("jllabeling.views")
+fake_labeling = types.ModuleType("jllabeling.views.labeling")
+fake_logger_module = types.ModuleType("jllabeling.views.labeling.logger")
 
 
 class _DummyLogger:
@@ -34,9 +34,9 @@ class _DummyLogger:
 
 
 fake_logger_module.logger = _DummyLogger()
-_inject_module("anylabeling.views", fake_views)
-_inject_module("anylabeling.views.labeling", fake_labeling)
-_inject_module("anylabeling.views.labeling.logger", fake_logger_module)
+_inject_module("jllabeling.views", fake_views)
+_inject_module("jllabeling.views.labeling", fake_labeling)
+_inject_module("jllabeling.views.labeling.logger", fake_logger_module)
 
 SPEC = importlib.util.spec_from_file_location("config_module", MODULE_PATH)
 CONFIG_MODULE = importlib.util.module_from_spec(SPEC)

@@ -18,7 +18,7 @@ import unittest
 REPO_ROOT = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..")
 )
-PACKAGE = os.path.join(REPO_ROOT, "anylabeling")
+PACKAGE = os.path.join(REPO_ROOT, "jllabeling")
 
 # The setters Qt shows to the user. Anything in this list must hand over either
 # a tr() call or a variable, never a bare Chinese literal.
@@ -40,11 +40,11 @@ CJK = re.compile(r"[\u4e00-\u9fff]")
 # (file, reason). Keep this list short and never add to it because a test is
 # annoying: a new entry means shipping text that no locale can ever replace.
 EXEMPT = {
-    "anylabeling/views/labeling/widgets/auto_labeling/auto_labeling.py": (
+    "jllabeling/views/labeling/widgets/auto_labeling/auto_labeling.py": (
         "The captions there are written straight in Chinese on purpose: the "
         "panel labels must not depend on the embedded catalog."
     ),
-    "anylabeling/app.py": (
+    "jllabeling/app.py": (
         "Startup and crash dialogs may be raised before the translator is "
         "installed, from module scope where no QObject can translate."
     ),

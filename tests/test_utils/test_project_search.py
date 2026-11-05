@@ -9,7 +9,7 @@ import os
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from anylabeling.views.labeling.utils import project_search
+from jllabeling.views.labeling.utils import project_search
 
 
 def _label(root, image, shapes, review_state=None):

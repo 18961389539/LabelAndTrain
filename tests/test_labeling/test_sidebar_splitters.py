@@ -16,7 +16,7 @@ try:
     import yaml
     from PyQt6 import QtTest, QtWidgets
 
-    from anylabeling.views.labeling.utils import panel_visibility
+    from jllabeling.views.labeling.utils import panel_visibility
 
     PYQT_AVAILABLE = True
 except Exception:
@@ -26,14 +26,14 @@ REPO_ROOT = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..")
 )
 TEMPLATE_CONFIG = os.path.join(
-    REPO_ROOT, "anylabeling", "configs", "jllabeling_config.yaml"
+    REPO_ROOT, "jllabeling", "configs", "jllabeling_config.yaml"
 )
 
 
 def build_labeling_widget(config_path=None):
     """Construct the real widget headlessly against a config file."""
-    from anylabeling import config as app_config
-    from anylabeling.views.labeling.label_widget import LabelingWidget
+    from jllabeling import config as app_config
+    from jllabeling.views.labeling.label_widget import LabelingWidget
 
     app_config.current_config_file = config_path or TEMPLATE_CONFIG
     LabelingWidget.menu = lambda self, title: QtWidgets.QMenu(title)
@@ -269,8 +269,8 @@ class TestSectionVisibilityMemory(unittest.TestCase):
         rewrites back when the work directory has no rc, which would hide
         the very value this test is about.
         """
-        from anylabeling import config as app_config
-        from anylabeling.views.labeling.label_widget import LabelingWidget
+        from jllabeling import config as app_config
+        from jllabeling.views.labeling.label_widget import LabelingWidget
 
         # The build reaches for get_config() in a few places of its own
         # (the auto-labeling model manager); point those at the template

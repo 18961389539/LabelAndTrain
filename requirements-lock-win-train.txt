@@ -47,6 +47,8 @@ cycler==0.12.1
     # via matplotlib
 darkdetect==0.8.0
     # via jl-labeling-and-train (pyproject.toml)
+dill==0.4.1
+    # via jl-labeling-and-train (pyproject.toml)
 docutils==0.23
     # via readme-renderer
 filelock==4.2.4

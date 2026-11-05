@@ -12,7 +12,7 @@
 
 [Rex-Omni](https://arxiv.org/abs/2510.12798) is a 3B-parameter Multimodal Large Language Model (MLLM) that redefines object detection and a wide range of other visual perception tasks as a simple next-token prediction problem.
 
-Here, we will show you how to use Rex-Omni on X-AnyLabeling to perform various vision tasks.
+Here, we will show you how to use Rex-Omni on JLLabelingAndTrain to perform various vision tasks.
 
 Let's get started!
 
@@ -34,7 +34,7 @@ You can tweak the settings in [rexomni.yaml](https://github.com/CVHub520/X-AnyLa
 
 ## Getting Started
 
-Rex-Omni supports multiple vision tasks. Select the desired task from the task dropdown in the X-AnyLabeling interface.
+Rex-Omni supports multiple vision tasks. Select the desired task from the task dropdown in the JLLabelingAndTrain interface.
 
 ### Object Detection
 
@@ -120,4 +120,4 @@ The **Visual Prompting** task finds similar objects based on visual examples (re
 5. Use "Clear" to remove all prompts or "Finish Object" to complete the current annotation
 
 > [!TIP]
-> All tasks except **Visual Prompting** support batch processing. You can run inference on the entire dataset of the current task with a single click using the batch processing feature in X-AnyLabeling.
+> All tasks except **Visual Prompting** support batch processing. You can run inference on the entire dataset of the current task with a single click using the batch processing feature in JLLabelingAndTrain.

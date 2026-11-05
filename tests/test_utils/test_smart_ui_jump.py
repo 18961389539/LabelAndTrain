@@ -5,7 +5,7 @@ from types import SimpleNamespace
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from anylabeling.views.labeling.utils import smart_ui
+from jllabeling.views.labeling.utils import smart_ui
 
 
 def _parent(allowed, calls):

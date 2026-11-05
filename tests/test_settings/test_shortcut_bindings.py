@@ -22,10 +22,10 @@ import re
 import unittest
 
 try:
-    from anylabeling.views.labeling.settings.schema import (
+    from jllabeling.views.labeling.settings.schema import (
         load_template_config,
     )
-    from anylabeling.views.labeling.utils.shortcuts_help import (
+    from jllabeling.views.labeling.utils.shortcuts_help import (
         NO_KEY_TEXT,
         UNBOUND_ACTIONS,
         UNBOUND_GROUP_TITLE,
@@ -38,10 +38,10 @@ except Exception:  # pragma: no cover - import guard, mirrors test_schema
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
-LABEL_WIDGET = ROOT / "anylabeling/views/labeling/label_widget.py"
-DIALOG = ROOT / "anylabeling/views/labeling/settings/dialog.py"
-APPLIER = ROOT / "anylabeling/views/labeling/settings/runtime_applier.py"
-PACKAGE = ROOT / "anylabeling"
+LABEL_WIDGET = ROOT / "jllabeling/views/labeling/label_widget.py"
+DIALOG = ROOT / "jllabeling/views/labeling/settings/dialog.py"
+APPLIER = ROOT / "jllabeling/views/labeling/settings/runtime_applier.py"
+PACKAGE = ROOT / "jllabeling"
 
 #: Actions that deliberately carry no keyboard entry.
 #:

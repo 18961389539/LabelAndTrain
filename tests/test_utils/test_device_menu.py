@@ -12,8 +12,8 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 import pytest
 from PyQt6 import QtWidgets
 
-from anylabeling.views.common import device_manager as dm_module
-from anylabeling.views.labeling.utils import device_menu
+from jllabeling.views.common import device_manager as dm_module
+from jllabeling.views.labeling.utils import device_menu
 
 _QAPP = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
 
@@ -33,8 +33,8 @@ class _Widget:
 def dm(monkeypatch):
     manager = dm_module.DeviceManager()
     manager.refresh_devices()
-    monkeypatch.delenv("X_ANYLABELING_DEVICE", raising=False)
-    import anylabeling.config as app_config
+    monkeypatch.delenv("JLLABELING_DEVICE", raising=False)
+    import jllabeling.config as app_config
 
     # 绝不读用户的真实 rc：设备从测试自己的 config 来。
     monkeypatch.setattr(

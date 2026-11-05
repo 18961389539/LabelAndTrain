@@ -15,9 +15,9 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 try:
     from PyQt6 import QtWidgets
 
-    from anylabeling import config
-    from anylabeling.views.labeling import project_settings
-    from anylabeling.views.labeling.widgets.auto_labeling.auto_labeling import (  # noqa: E501
+    from jllabeling import config
+    from jllabeling.views.labeling import project_settings
+    from jllabeling.views.labeling.widgets.auto_labeling.auto_labeling import (  # noqa: E501
         AutoLabelingWidget,
         _dataset_dir_for,
     )
@@ -31,7 +31,7 @@ REPO_ROOT = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 )
 TEMPLATE_CONFIG = os.path.join(
-    REPO_ROOT, "anylabeling", "configs", "jllabeling_config.yaml"
+    REPO_ROOT, "jllabeling", "configs", "jllabeling_config.yaml"
 )
 
 

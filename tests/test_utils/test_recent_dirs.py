@@ -3,7 +3,7 @@ import os.path as osp
 import tempfile
 import unittest
 
-from anylabeling.views.labeling.utils.recent_dirs import (
+from jllabeling.views.labeling.utils.recent_dirs import (
     DEFAULT_MAX_ITEMS,
     drop_recent_dir,
     push_recent_dir,

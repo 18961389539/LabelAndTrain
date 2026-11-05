@@ -4,7 +4,7 @@ import unittest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 try:
-    from anylabeling.services.auto_labeling.model_manager import (
+    from jllabeling.services.auto_labeling.model_manager import (
         ModelManager,
         pick_eviction_index,
     )

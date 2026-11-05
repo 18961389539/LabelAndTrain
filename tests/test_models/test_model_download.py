@@ -2,10 +2,10 @@ import ssl
 
 import pytest
 
-from anylabeling.services.auto_labeling import model as auto_model
-from anylabeling.services.auto_labeling import model_manager as manager_module
-from anylabeling.services.auto_labeling.model import Model
-from anylabeling.services.auto_labeling.model_manager import ModelManager
+from jllabeling.services.auto_labeling import model as auto_model
+from jllabeling.services.auto_labeling import model_manager as manager_module
+from jllabeling.services.auto_labeling.model import Model
+from jllabeling.services.auto_labeling.model_manager import ModelManager
 
 
 class DummyModel(Model):
@@ -344,7 +344,7 @@ def test_get_model_abs_path_rejects_path_traversal(tmp_path, monkeypatch):
 
 def test_prediction_cancel_discards_result(monkeypatch):
     """A stale prediction produced after cancel must not be emitted."""
-    from anylabeling.services.auto_labeling.model_manager import ModelManager
+    from jllabeling.services.auto_labeling.model_manager import ModelManager
 
     monkeypatch.setattr(ModelManager, "load_model_configs", lambda self: None)
     monkeypatch.setattr(manager_module, "get_config", lambda: {})
@@ -422,7 +422,7 @@ def test_model_load_failed_signal_emitted(monkeypatch):
     # class so construction fails and the except block reports through the
     # dedicated failure signal.
     monkeypatch.setattr(
-        "anylabeling.services.auto_labeling.yolov8.YOLOv8", Boom
+        "jllabeling.services.auto_labeling.yolov8.YOLOv8", Boom
     )
     manager._load_model(0)
 
@@ -432,14 +432,14 @@ def test_model_load_failed_signal_emitted(monkeypatch):
 
 def test_model_is_local_ignores_part_residue(tmp_path, monkeypatch):
     """A *.part file (interrupted download) must not mark a model local."""
-    from anylabeling.views.labeling.widgets.searchable_model_dropdown import (
+    from jllabeling.views.labeling.widgets.searchable_model_dropdown import (
         _model_is_local,
     )
 
-    models_root = tmp_path / "xanylabeling_data" / "models"
+    models_root = tmp_path / "jllabeling_data" / "models"
     models_root.mkdir(parents=True)
     monkeypatch.setattr(
-        "anylabeling.views.labeling.widgets.searchable_model_dropdown."
+        "jllabeling.views.labeling.widgets.searchable_model_dropdown."
         "get_work_directory",
         lambda: str(tmp_path),
     )

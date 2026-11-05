@@ -14,7 +14,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PyQt6 import QtWidgets
 
-from anylabeling.views.labeling.label_widget import LabelingWidget
+from jllabeling.views.labeling.label_widget import LabelingWidget
 
 SAVE = QtWidgets.QMessageBox.StandardButton.Save
 DISCARD = QtWidgets.QMessageBox.StandardButton.Discard

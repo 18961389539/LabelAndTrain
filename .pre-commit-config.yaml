@@ -44,7 +44,7 @@ repos:
         # Emitted by pyside6-rcc.  The codespell comment below claims black
         # skips it too; it did not, so any commit touching it reformatted the
         # resource blob and rcc wrote it straight back.
-        exclude: ^anylabeling/resources/resources\.py$
+        exclude: ^jllabeling/resources/resources\.py$
 
 -   repo: local
     hooks:
@@ -81,4 +81,4 @@ repos:
         # Emitted by pyside6-rcc: a wall of binary resource data that trips
         # 141 spell checks on fragments such as "\x00\x0eRetry".  black and
         # flake8 skip it for the same reason.
-        exclude: ^anylabeling/resources/resources\.py$
+        exclude: ^jllabeling/resources/resources\.py$

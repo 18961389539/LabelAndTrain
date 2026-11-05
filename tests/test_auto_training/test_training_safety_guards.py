@@ -29,29 +29,29 @@ import yaml
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from anylabeling.services.auto_training.ultralytics import (  # noqa: E402
+from jllabeling.services.auto_training.ultralytics import (  # noqa: E402
     general,
     validators,
 )
-from anylabeling.services.auto_training.ultralytics.general import (  # noqa: E402
+from jllabeling.services.auto_training.ultralytics.general import (  # noqa: E402
     create_yolo_dataset,
     partition_images,
 )
-from anylabeling.services.auto_training.ultralytics.validators import (  # noqa: E402
+from jllabeling.services.auto_training.ultralytics.validators import (  # noqa: E402
     is_inside_directory,
     is_single_path_component,
     validate_basic_config,
     validate_classes,
 )
-from anylabeling.views.training import export_autolabel  # noqa: E402
-from anylabeling.views.training import run_history  # noqa: E402
-from anylabeling.views.training import (
+from jllabeling.views.training import export_autolabel  # noqa: E402
+from jllabeling.views.training import run_history  # noqa: E402
+from jllabeling.views.training import (
     ultralytics_dialog as dialog_module,
 )  # noqa: E402
-from anylabeling.views.training.export_autolabel import (  # noqa: E402
+from jllabeling.views.training.export_autolabel import (  # noqa: E402
     is_fresh_export,
 )
-from anylabeling.views.training.ultralytics_dialog import (  # noqa: E402
+from jllabeling.views.training.ultralytics_dialog import (  # noqa: E402
     UltralyticsDialog,
     dataset_skips,
     is_blocking_dataset_skip,
@@ -792,8 +792,8 @@ def _build_dialog(tmp_path, monkeypatch):
     """
     from PyQt6.QtWidgets import QWidget
 
-    import anylabeling.resources.resources  # noqa: F401
-    from anylabeling.views.training.ultralytics_dialog import UltralyticsDialog
+    import jllabeling.resources.resources  # noqa: F401
+    from jllabeling.views.training.ultralytics_dialog import UltralyticsDialog
 
     _ensure_app()
     # The dialog reads its config through module-level names; the autouse

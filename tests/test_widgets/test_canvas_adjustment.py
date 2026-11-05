@@ -6,9 +6,9 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 try:
     from PyQt6 import QtTest, QtWidgets
 
-    from anylabeling.resources import resources  # noqa: F401
-    from anylabeling.views.labeling.utils.theme import get_theme, init_theme
-    from anylabeling.views.labeling.widgets.canvas_adjustment import (
+    from jllabeling.resources import resources  # noqa: F401
+    from jllabeling.views.labeling.utils.theme import get_theme, init_theme
+    from jllabeling.views.labeling.widgets.canvas_adjustment import (
         CanvasAdjustmentWidget,
     )
 
@@ -129,9 +129,7 @@ class TestCanvasAdjustmentTheming(unittest.TestCase):
     def test_stylesheet_uses_theme_primary_for_slider(self):
         light_widget = self._rebuild_in("light")
         try:
-            self.assertIn(
-                get_theme()["primary"], light_widget.styleSheet()
-            )
+            self.assertIn(get_theme()["primary"], light_widget.styleSheet())
         finally:
             light_widget.close()
 

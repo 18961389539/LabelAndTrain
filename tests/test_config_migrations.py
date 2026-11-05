@@ -2,7 +2,7 @@
 
 import unittest
 
-from anylabeling.config import _apply_config_migrations
+from jllabeling.config import _apply_config_migrations
 
 
 class TestConfigMigrations(unittest.TestCase):

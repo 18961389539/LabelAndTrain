@@ -8,9 +8,9 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 try:
     from PyQt6 import QtWidgets
 
-    from anylabeling import config as app_config
-    from anylabeling.config import get_config
-    from anylabeling.views.labeling.widgets.auto_labeling.auto_labeling import (  # noqa: E501
+    from jllabeling import config as app_config
+    from jllabeling.config import get_config
+    from jllabeling.views.labeling.widgets.auto_labeling.auto_labeling import (  # noqa: E501
         AutoLabelingWidget,
     )
 
@@ -31,7 +31,7 @@ class TestMorePanelState(unittest.TestCase):
         if self.app is None:
             self.app = QtWidgets.QApplication([])
         app_config.current_config_file = (
-            "anylabeling/configs/jllabeling_config.yaml"
+            "jllabeling/configs/jllabeling_config.yaml"
         )
         self._widgets = []
 
@@ -72,7 +72,7 @@ class TestMorePanelState(unittest.TestCase):
     def test_toggle_persists_to_config(self):
         widget, parent = self.make_widget(False)
         with patch(
-            "anylabeling.views.labeling.widgets.auto_labeling."
+            "jllabeling.views.labeling.widgets.auto_labeling."
             "auto_labeling.save_config"
         ) as save:
             widget._more_button.click()
@@ -84,7 +84,7 @@ class TestMorePanelState(unittest.TestCase):
     def test_toggle_back_to_collapsed(self):
         widget, parent = self.make_widget(True)
         with patch(
-            "anylabeling.views.labeling.widgets.auto_labeling."
+            "jllabeling.views.labeling.widgets.auto_labeling."
             "auto_labeling.save_config"
         ):
             widget._more_button.click()

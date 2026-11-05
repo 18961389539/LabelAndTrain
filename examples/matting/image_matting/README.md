@@ -17,7 +17,7 @@
 
 ## Usage
 
-1. Import images (`Ctrl+I`) or a video (`Ctrl+O`) into X-AnyLabeling.
+1. Import images (`Ctrl+I`) or a video (`Ctrl+O`) into JLLabelingAndTrain.
 2. Select and load the desired model version (`RMBG v1.4`, `RMBG v2.0`, or `RMBG v2.0 Quantized`).
 3. Click `Run (i)` to process the current image. After checking the result, press `Ctrl+B` to process all images.
 

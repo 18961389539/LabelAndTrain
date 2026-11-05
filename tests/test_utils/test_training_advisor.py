@@ -1,12 +1,11 @@
 import unittest
 
-from anylabeling.views.labeling.utils.training_advisor import (
+from jllabeling.views.labeling.utils.training_advisor import (
     MIN_SAMPLES_PER_CLASS,
     history_summary,
     preflight_checks,
     recommend_training_config,
 )
-
 
 HEALTHY = {
     "total_images": 500,
@@ -30,8 +29,12 @@ class TestPreflightChecks(unittest.TestCase):
 
     def test_more_than_half_unlabeled_warns(self):
         checks = preflight_checks(
-            {"total_images": 100, "labeled_images": 30, "missing_json": 70,
-             "class_counts": {"cat": 50}}
+            {
+                "total_images": 100,
+                "labeled_images": 30,
+                "missing_json": 70,
+                "class_counts": {"cat": 50},
+            }
         )
         self.assertTrue(any("超过一半" in c["message"] for c in checks))
 
@@ -62,7 +65,12 @@ class TestHistorySummary(unittest.TestCase):
 
     def test_rounds_summary(self):
         summary = history_summary(
-            {"rounds": [{"round": 1, "map50": 0.5}, {"round": 2, "map50": 0.62}]}
+            {
+                "rounds": [
+                    {"round": 1, "map50": 0.5},
+                    {"round": 2, "map50": 0.62},
+                ]
+            }
         )
         self.assertEqual(summary["iterations"], 2)
         self.assertEqual(summary["last_map50"], 0.62)
@@ -84,7 +92,8 @@ class TestHistorySummary(unittest.TestCase):
 
     def test_feeds_recommend_config_history_mentions_iteration(self):
         advice = recommend_training_config(
-            HEALTHY, history=history_summary({"rounds": [{"round": 1}, {"round": 2}]})
+            HEALTHY,
+            history=history_summary({"rounds": [{"round": 1}, {"round": 2}]}),
         )
         self.assertIn("第 2 轮", advice["text"])
 

@@ -32,7 +32,7 @@ sys.path.insert(0, REPO)
 from PyQt6 import QtGui, QtWidgets  # noqa: E402
 
 TEMPLATE = os.path.join(
-    REPO, "anylabeling", "configs", "jllabeling_config.yaml"
+    REPO, "jllabeling", "configs", "jllabeling_config.yaml"
 )
 
 
@@ -61,8 +61,8 @@ def read_baseline_shortcuts(ref):
 
 def build_widget():
     """The real widget, offscreen, on a copy of the template it may write."""
-    from anylabeling import config as app_config
-    from anylabeling.views.labeling.label_widget import LabelingWidget
+    from jllabeling import config as app_config
+    from jllabeling.views.labeling.label_widget import LabelingWidget
 
     tmp = tempfile.mkdtemp(prefix="shortcut_press_list_")
     config_copy = os.path.join(tmp, "config.yaml")
@@ -137,7 +137,7 @@ def section_new_keys(lines, mapped, template, baseline, f1_names):
 
 def section_f1_sheet(lines, mapped, template, unbound_names):
     """Every F1 row, checked against the live QAction while it is printed."""
-    from anylabeling.views.labeling.utils.shortcuts_help import SHORTCUT_GROUPS
+    from jllabeling.views.labeling.utils.shortcuts_help import SHORTCUT_GROUPS
 
     mismatches = []
     for group_title, entries in SHORTCUT_GROUPS:
@@ -197,7 +197,7 @@ def section_digits(lines, widget):
 
 def section_unbound(lines, mapped):
     """The declared-keyless actions, re-checked against their QActions."""
-    from anylabeling.views.labeling.utils.shortcuts_help import UNBOUND_ACTIONS
+    from jllabeling.views.labeling.utils.shortcuts_help import UNBOUND_ACTIONS
 
     mismatches = []
     lines.append("## 四、有意无默认键的动作（按了没反应是预期）")
@@ -268,7 +268,7 @@ def main():
         read_baseline_shortcuts(args.baseline) if args.baseline else template
     )
 
-    from anylabeling.views.labeling.utils.shortcuts_help import UNBOUND_ACTIONS
+    from jllabeling.views.labeling.utils.shortcuts_help import UNBOUND_ACTIONS
 
     f1_names = {
         name: description
@@ -314,7 +314,7 @@ def main():
 
 
 def _shortcut_groups():
-    from anylabeling.views.labeling.utils.shortcuts_help import SHORTCUT_GROUPS
+    from jllabeling.views.labeling.utils.shortcuts_help import SHORTCUT_GROUPS
 
     return SHORTCUT_GROUPS
 

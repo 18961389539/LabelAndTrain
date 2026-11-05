@@ -38,7 +38,7 @@
 
 | 字段 | 说明 |
 | :--- | :--- |
-| `项目` / `名称` | 运行目录为 `<项目>/<名称>`；项目默认 `<work_dir>/xanylabeling_data/trainer/ultralytics/runs/<task>`。 |
+| `项目` / `名称` | 运行目录为 `<项目>/<名称>`；项目默认 `<work_dir>/jllabeling_data/trainer/ultralytics/runs/<task>`。 |
 | `模型` | 预训练权重。下拉按当前任务给出常用权重（`yolov8n.pt`、`yolo11s-seg.pt` …）；**填裸文件名即可，首次使用自动下载**，进度显示在训练日志里而不是界面假死；`浏览` 可选择本地 `.pt`。 |
 | `数据` | 类别表 YAML。检测/分割/姿态只读取其中的 `names`：面板会按当前目录自动生成（放在训练器 `data/` 目录下，以目录名命名），每次进入配置页刷新，`从标注生成` 可手动刷新；你自己选的 YAML 永不被覆盖。**分类任务可以留空**（数据集由图像 flag 构建），也可以指向预组织好的 `train/ val/ 类别/` 目录。 |
 | `姿态配置` | 仅姿态任务：标签转换所用的关键点定义。 |
@@ -166,7 +166,7 @@
 ## 产物
 
 ```
-<work_dir>/xanylabeling_data/trainer/ultralytics/
+<work_dir>/jllabeling_data/trainer/ultralytics/
 ├── weights/                       预训练权重下载缓存
 ├── data/                          自动生成的类别表 YAML
 ├── datasets/<task>/<name>_<stamp>/    每次训练一份构建
@@ -200,7 +200,7 @@
 
 - 表单会把 AMP 关掉，并在你未修改相关字段时填入 CPU 预置档（50 轮 / 416 / 批大小 8），让第一轮能在可接受的时间内告诉你数据是否有问题。
 - Ultralytics 在 CPU 上会强制把数据加载进程设为 0，`进程数` 保持默认即可。
-- 正式发布的 `-CPU-Train-win64.zip`（由 `scripts/build_executable.sh win-cpu-train` 构建，spec 为 `packaging/pyinstaller/specs/x-anylabeling-win-cpu-train.spec`）内置 CPU 版 torch、Ultralytics 与 `onnxslim`，适合完全没有 CUDA 的机器。
+- 正式发布的 `-CPU-Train-win64.zip`（由 `scripts/build_executable.sh win-cpu-train` 构建，spec 为 `packaging/pyinstaller/specs/jllabeling-win-cpu-train.spec`）内置 CPU 版 torch、Ultralytics 与 `onnxslim`，适合完全没有 CUDA 的机器。
 
 ## 常见问题
 

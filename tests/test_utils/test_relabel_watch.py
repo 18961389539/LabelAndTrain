@@ -6,7 +6,7 @@ from unittest import mock
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from anylabeling.views.labeling.utils import smart_review
+from jllabeling.views.labeling.utils import smart_review
 
 
 def _parent(directory):

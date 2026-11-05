@@ -217,7 +217,7 @@ jllabelingandtrain convert <task>  # 查看特定转换任务的详细帮助和�
 
 **可选步骤**：刷新翻译与资源文件
 
-本构建只带一份翻译目录（`anylabeling/resources/translations/zh_CN.ts`），因此界面语言实际只有简体中文。
+本构建只带一份翻译目录（`jllabeling/resources/translations/zh_CN.ts`），因此界面语言实际只有简体中文。
 如果修改了界面文案或要维护翻译，下面的命令会处理**已存在**的全部目录，并且需要 Qt 的 `lrelease` 与 `rcc`（PyQt6 的 pip 包不含这两个工具）：
 
 ```bash
@@ -233,16 +233,16 @@ python scripts/compile_languages.py
 
 ```bash
 # Linux 或 macOS
-export PYTHONPATH=/path/to/X-AnyLabeling
+export PYTHONPATH=/path/to/JLLabelingAndTrain
 
 # Windows
-set PYTHONPATH=C:\path\to\X-AnyLabeling
+set PYTHONPATH=C:\path\to\JLLabelingAndTrain
 ```
 
 > [!CAUTION]
 > **避免依赖冲突**：为避免与第三方包冲突，请先执行以下命令卸载旧版本：
 > ```bash
-> pip uninstall anylabeling -y
+> pip uninstall jllabeling -y
 > ```
 
 > [!NOTE]
@@ -267,7 +267,7 @@ Linux 与 macOS 包是**仅标注**构建（不含 torch/ultralytics）；需要
 
 ## 2. 使用方法
 
-有关如何使用 X-AnyLabeling 的详细说明，请参考相应的[用户手册](./user_guide.md)。
+有关如何使用 JLLabelingAndTrain 的详细说明，请参考相应的[用户手册](./user_guide.md)。
 
 ## 3. 打包编译
 
@@ -277,7 +277,7 @@ Linux 与 macOS 包是**仅标注**构建（不含 torch/ultralytics）；需要
 <details>
 <summary>展开/收起</summary>
 
-为了方便用户在不同平台上运行 `X-AnyLabeling`，该工具提供了打包和编译的说明以及相关注意事项。执行对应打包命令前，请先安装目标运行环境的依赖选项。
+为了方便用户在不同平台上运行 `JLLabelingAndTrain`，该工具提供了打包和编译的说明以及相关注意事项。执行对应打包命令前，请先安装目标运行环境的依赖选项。
 
 ### 3.1 注意事项
 
@@ -287,7 +287,7 @@ Linux 与 macOS 包是**仅标注**构建（不含 torch/ultralytics）；需要
 
 - **CPU 训练版**：`win-cpu-train` 目标会打包 CPU 版 torch + Ultralytics，使打包后的程序内置训练面板可用。构建前安装训练依赖组：`uv pip install -e ".[cpu,cpu-train]" --torch-backend=cpu`。`onnxslim` 是训练完成后的 ONNX 导出（用于自动标注回灌）所必需的，Ultralytics 在导出时才导入它，不装的话打包版只能弹出 pip 安装提示。由于 torch 体积较大，该目标采用 onedir 目录结构，正式发布时由构建脚本压成 `-CPU-Train-win64.zip`；普通 `win-cpu` 目标仍为仅标注、体积更小的版本。
 
-- **`win-cpu` 不含训练栈，这是规格文件写死的**：`x-anylabeling-win-cpu.spec` 显式 `excludes` 了 `torch` / `torchvision` / `torchaudio` / `ultralytics` / `ultralytics_platform` / `triton`。早先这里是 `excludes=[]`，只因为构建环境里没装这些包才“碰巧”是小的；一旦同一个 venv 装了训练栈，`win-cpu` 就会把它们一起吸进去（2026-10-17 实测：单文件产物 376 MB，而这个目标历来约 154 MB），于是“CPU 版”这个名字不再等于“仅标注”。排除之后，打包版里的训练面板会明确提示无法导入 ultralytics（优雅失败，不是崩溃），标注、自动标注、复核、智能工具、运行历史与备份照常可用；需要打包版能训练就用 `win-cpu-train`。
+- **`win-cpu` 不含训练栈，这是规格文件写死的**：`jllabeling-win-cpu.spec` 显式 `excludes` 了 `torch` / `torchvision` / `torchaudio` / `ultralytics` / `ultralytics_platform` / `triton`。早先这里是 `excludes=[]`，只因为构建环境里没装这些包才“碰巧”是小的；一旦同一个 venv 装了训练栈，`win-cpu` 就会把它们一起吸进去（2026-10-17 实测：单文件产物 376 MB，而这个目标历来约 154 MB），于是“CPU 版”这个名字不再等于“仅标注”。排除之后，打包版里的训练面板会明确提示无法导入 ultralytics（优雅失败，不是崩溃），标注、自动标注、复核、智能工具、运行历史与备份照常可用；需要打包版能训练就用 `win-cpu-train`。
 
 ### 3.2 编译命令
 
@@ -314,9 +314,9 @@ bash scripts/build_executable.sh macos
 > [!TIP]
 > 如果在 Windows 上执行上述命令时遇到权限问题，在确保完成上述准备步骤后，可以直接执行以下命令：
 > ```bash
-> pyinstaller --noconfirm packaging/pyinstaller/specs/x-anylabeling-win-cpu.spec
-> pyinstaller --noconfirm packaging/pyinstaller/specs/x-anylabeling-win-cpu-train.spec
-> pyinstaller --noconfirm packaging/pyinstaller/specs/x-anylabeling-win-gpu.spec
+> pyinstaller --noconfirm packaging/pyinstaller/specs/jllabeling-win-cpu.spec
+> pyinstaller --noconfirm packaging/pyinstaller/specs/jllabeling-win-cpu-train.spec
+> pyinstaller --noconfirm packaging/pyinstaller/specs/jllabeling-win-gpu.spec
 > ```
 
 </details>

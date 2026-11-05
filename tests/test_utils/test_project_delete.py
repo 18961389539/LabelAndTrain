@@ -10,8 +10,8 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pytest
 
-from anylabeling.views.labeling import project_model, project_registry
-from anylabeling.views.labeling.utils import recycle_bin
+from jllabeling.views.labeling import project_model, project_registry
+from jllabeling.views.labeling.utils import recycle_bin
 
 # --- 回收站通道 -------------------------------------------------------------
 
@@ -96,7 +96,7 @@ def no_modal_boxes(monkeypatch):
 
 
 def _open_switcher(widget):
-    from anylabeling.views.labeling.widgets.project_switcher import (
+    from jllabeling.views.labeling.widgets.project_switcher import (
         ProjectSwitcherDialog,
     )
 
@@ -159,7 +159,7 @@ def test_double_confirmed_delete_forgets_and_reloads(
         lambda *a, **k: QtWidgets.QMessageBox.StandardButton.Yes,
     )
     monkeypatch.setattr(
-        "anylabeling.views.labeling.utils.recycle_bin." "send_to_recycle_bin",
+        "jllabeling.views.labeling.utils.recycle_bin." "send_to_recycle_bin",
         lambda _p, **k: True,
     )
     dialog._delete_selected()
@@ -181,7 +181,7 @@ def test_failed_recycle_keeps_the_registry_entry(
         lambda *a, **k: QtWidgets.QMessageBox.StandardButton.Yes,
     )
     monkeypatch.setattr(
-        "anylabeling.views.labeling.utils.recycle_bin." "send_to_recycle_bin",
+        "jllabeling.views.labeling.utils.recycle_bin." "send_to_recycle_bin",
         lambda _p, **k: False,
     )
     dialog._delete_selected()
@@ -206,7 +206,7 @@ def test_deleting_the_open_project_closes_it_first(
         lambda *a, **k: QtWidgets.QMessageBox.StandardButton.Yes,
     )
     monkeypatch.setattr(
-        "anylabeling.views.labeling.utils.recycle_bin." "send_to_recycle_bin",
+        "jllabeling.views.labeling.utils.recycle_bin." "send_to_recycle_bin",
         lambda _p, **k: True,
     )
     dialog._delete_selected()

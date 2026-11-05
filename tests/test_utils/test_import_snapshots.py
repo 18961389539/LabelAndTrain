@@ -13,9 +13,9 @@ import os
 
 import pytest
 
-from anylabeling.views.labeling import label_converter as lc
-from anylabeling.views.labeling.label_converter import LabelConverter
-from anylabeling.views.labeling.utils import session_snapshot
+from jllabeling.views.labeling import label_converter as lc
+from jllabeling.views.labeling.label_converter import LabelConverter
+from jllabeling.views.labeling.utils import session_snapshot
 
 
 def _coco_document(bbox):

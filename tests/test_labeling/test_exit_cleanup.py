@@ -5,11 +5,11 @@ from types import SimpleNamespace
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from anylabeling.views.labeling import label_widget  # noqa: E402
-from anylabeling.views.labeling.label_widget import (  # noqa: E402
+from jllabeling.views.labeling import label_widget  # noqa: E402
+from jllabeling.views.labeling.label_widget import (  # noqa: E402
     LabelingWidget,
 )
-from anylabeling.views.labeling.utils import exit_cleanup  # noqa: E402
+from jllabeling.views.labeling.utils import exit_cleanup  # noqa: E402
 
 
 class _Event:

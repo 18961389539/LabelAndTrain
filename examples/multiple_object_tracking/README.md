@@ -8,7 +8,7 @@ Multi-Object Tracking (MOT) technology is used to simultaneously identify and tr
 
 ## Usage
 
-X-AnyLabeling is enhanced with a versatile tracking system capable of handling multiple tasks:
+JLLabelingAndTrain is enhanced with a versatile tracking system capable of handling multiple tasks:
 - **Object Detection**
 - **Oriented Bounding Boxes Object Detection**
 - **Instance Segmentation**
@@ -25,15 +25,15 @@ Built-in tracking model configurations:
 
 | Task | Tracker | Model config |
 | :--- | :--- | :--- |
-| Object Detection | BoT-SORT | [yolov5s_det_botsort](../../anylabeling/configs/auto_labeling/yolov5s_det_botsort.yaml), [yolov8s_det_botsort](../../anylabeling/configs/auto_labeling/yolov8s_det_botsort.yaml), [yolo11s_det_botsort](../../anylabeling/configs/auto_labeling/yolo11s_det_botsort.yaml) |
-| Object Detection | TrackTrack | [yolo26s_det_tracktrack](../../anylabeling/configs/auto_labeling/yolo26s_det_tracktrack.yaml) |
-| Oriented Bounding Box Detection | BoT-SORT | [yolov8n_obb_botsort](../../anylabeling/configs/auto_labeling/yolov8n_obb_botsort.yaml), [yolo11s_obb_botsort](../../anylabeling/configs/auto_labeling/yolo11s_obb_botsort.yaml) |
-| Oriented Bounding Box Detection | TrackTrack | [yolo26s_obb_tracktrack](../../anylabeling/configs/auto_labeling/yolo26s_obb_tracktrack.yaml) |
-| Instance Segmentation | ByteTrack | [yolov8m_seg_bytetrack](../../anylabeling/configs/auto_labeling/yolov8m_seg_bytetrack.yaml) |
-| Instance Segmentation | BoT-SORT | [yolo11s_seg_botsort](../../anylabeling/configs/auto_labeling/yolo11s_seg_botsort.yaml) |
-| Instance Segmentation | TrackTrack | [yolo26s_seg_tracktrack](../../anylabeling/configs/auto_labeling/yolo26s_seg_tracktrack.yaml) |
-| Pose Estimation | BoT-SORT | [yolov8x_pose_p6_botsort](../../anylabeling/configs/auto_labeling/yolov8x_pose_p6_botsort.yaml), [yolo11s_pose_botsort](../../anylabeling/configs/auto_labeling/yolo11s_pose_botsort.yaml) |
-| Pose Estimation | TrackTrack | [yolo26s_pose_tracktrack](../../anylabeling/configs/auto_labeling/yolo26s_pose_tracktrack.yaml) |
+| Object Detection | BoT-SORT | [yolov5s_det_botsort](../../jllabeling/configs/auto_labeling/yolov5s_det_botsort.yaml), [yolov8s_det_botsort](../../jllabeling/configs/auto_labeling/yolov8s_det_botsort.yaml), [yolo11s_det_botsort](../../jllabeling/configs/auto_labeling/yolo11s_det_botsort.yaml) |
+| Object Detection | TrackTrack | [yolo26s_det_tracktrack](../../jllabeling/configs/auto_labeling/yolo26s_det_tracktrack.yaml) |
+| Oriented Bounding Box Detection | BoT-SORT | [yolov8n_obb_botsort](../../jllabeling/configs/auto_labeling/yolov8n_obb_botsort.yaml), [yolo11s_obb_botsort](../../jllabeling/configs/auto_labeling/yolo11s_obb_botsort.yaml) |
+| Oriented Bounding Box Detection | TrackTrack | [yolo26s_obb_tracktrack](../../jllabeling/configs/auto_labeling/yolo26s_obb_tracktrack.yaml) |
+| Instance Segmentation | ByteTrack | [yolov8m_seg_bytetrack](../../jllabeling/configs/auto_labeling/yolov8m_seg_bytetrack.yaml) |
+| Instance Segmentation | BoT-SORT | [yolo11s_seg_botsort](../../jllabeling/configs/auto_labeling/yolo11s_seg_botsort.yaml) |
+| Instance Segmentation | TrackTrack | [yolo26s_seg_tracktrack](../../jllabeling/configs/auto_labeling/yolo26s_seg_tracktrack.yaml) |
+| Pose Estimation | BoT-SORT | [yolov8x_pose_p6_botsort](../../jllabeling/configs/auto_labeling/yolov8x_pose_p6_botsort.yaml), [yolo11s_pose_botsort](../../jllabeling/configs/auto_labeling/yolo11s_pose_botsort.yaml) |
+| Pose Estimation | TrackTrack | [yolo26s_pose_tracktrack](../../jllabeling/configs/auto_labeling/yolo26s_pose_tracktrack.yaml) |
 
 In this process, the `group_id` field represents the `track_id` of the current target box. During actual tracking, the first few frames may not have a `group_id` if the object confidence score is below the tracking threshold.
 

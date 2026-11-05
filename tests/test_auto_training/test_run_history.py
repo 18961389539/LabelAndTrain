@@ -5,7 +5,7 @@ import os
 
 import pytest
 
-from anylabeling.views.training import run_history as rh
+from jllabeling.views.training import run_history as rh
 
 
 def _make_run(root, task, name, meta=None, with_results=False):
@@ -169,7 +169,7 @@ class TestRunHistoryDialog:
         os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
         from PyQt6 import QtCore, QtWidgets
 
-        import anylabeling.resources.resources  # noqa: F401
+        import jllabeling.resources.resources  # noqa: F401
 
         cls._app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(
             []
@@ -189,7 +189,7 @@ class TestRunHistoryDialog:
         os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
         from PyQt6 import QtWidgets
 
-        from anylabeling.views.training.run_history_dialog import (
+        from jllabeling.views.training.run_history_dialog import (
             RunHistoryDialog,
         )
 
@@ -233,7 +233,7 @@ class TestRunHistoryDialog:
                     handle,
                 )
 
-        import anylabeling.views.training.run_history_dialog as module
+        import jllabeling.views.training.run_history_dialog as module
 
         original = module.get_default_project_dir
         module.get_default_project_dir = lambda: root
@@ -249,7 +249,7 @@ class TestRunHistoryDialog:
     def test_table_width_matches_the_row_layout(self):
         # The table is built with a fixed column count while the header comes
         # from the row formatter, so a new field silently loses its column.
-        from anylabeling.views.training.run_history_dialog import COLUMNS
+        from jllabeling.views.training.run_history_dialog import COLUMNS
 
         assert COLUMNS == len(rh.format_history_rows([])[0])
 

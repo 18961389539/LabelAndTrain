@@ -8,7 +8,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 try:
     from PyQt6 import QtWidgets
 
-    from anylabeling.views.labeling.label_widget import LabelingWidget
+    from jllabeling.views.labeling.label_widget import LabelingWidget
 
     PYQT_AVAILABLE = True
 except Exception:

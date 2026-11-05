@@ -14,9 +14,9 @@ from unittest import mock
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from anylabeling.views.labeling.shortcuts import digit_controller
+from jllabeling.views.labeling.shortcuts import digit_controller
 
-from anylabeling.views.labeling.shortcuts.digit_controller import (
+from jllabeling.views.labeling.shortcuts.digit_controller import (
     DIGIT_SLOTS,
     DigitShortcutController,
 )

@@ -12,12 +12,12 @@ types the name. Three surfaces are pinned here:
   backticked occurrence is treated as a mention of the name, which is how these
   notes can explain that the alias is gone.
 
-Deliberately *not* covered: ``~/.xanylabelingrc``, ``xanylabeling_data``,
-``xanylabeling_logs`` (on-disk locations whose rename needs a migration
-decision), ``X-AnyLabeling`` and ``x-anylabeling-cvhub`` (GPL attribution and
-upstream's own identifiers), the Python package ``anylabeling`` itself, and the
-``X_ANYLABELING_ROOT`` build-time variable shared by the specs and the script
-that exports it.
+Deliberately *not* covered: ``X-AnyLabeling`` and ``x-anylabeling-cvhub``
+(GPL attribution and upstream's own identifiers) and the Python package
+``jllabeling`` itself. The on-disk names this fork used to inherit
+(``.xanylabelingrc``, ``xanylabeling_data``, ``xanylabeling_logs``) are
+fork-named now; they may survive only in ``jllabeling/config.py`` as
+migration sources.
 """
 
 import os
@@ -34,7 +34,7 @@ SKIP_DIRS = {".git", "__pycache__", ".venv", "build", "dist"}
 # A generated file: rewriting it means re-running rcc, which this checkout
 # cannot do (no Qt resource compiler installed).
 SKIP_PATHS = {
-    "anylabeling/resources/resources.py",
+    "jllabeling/resources/resources.py",
     # This file has to spell the forbidden token to assert on it.
     "tests/test_utils/test_fork_naming.py",
 }
@@ -81,6 +81,34 @@ class TestForkNaming(unittest.TestCase):
             f"tells anyone to run xanylabeling is wrong: {offenders}",
         )
 
+    def test_legacy_path_names_only_live_in_the_migration_table(self):
+        legacy = re.compile(
+            r"(?:\.xanylabelingrc|xanylabeling_data|xanylabeling_logs)"
+        )
+        # The changelog and dated reviews are historical records: rewriting
+        # the names in them would falsify what happened at the time.
+        historical = ("CHANGELOG.md", "reviews/")
+        offenders = {}
+        for path in _tracked_text_files():
+            if path == "jllabeling/config.py" or path.startswith(historical):
+                continue
+            with open(
+                os.path.join(REPO_ROOT, path), "r", encoding="utf-8"
+            ) as handle:
+                numbers = [
+                    number
+                    for number, line in enumerate(handle, 1)
+                    if legacy.search(line)
+                ]
+            if numbers:
+                offenders[path] = numbers
+        self.assertEqual(
+            offenders,
+            {},
+            "upstream on-disk names are migration sources only; new writes "
+            f"must use the jllabeling names: {offenders}",
+        )
+
     def test_exactly_one_console_script(self):
         pyproject = os.path.join(REPO_ROOT, "pyproject.toml")
         with open(pyproject, "r", encoding="utf-8") as handle:
@@ -91,14 +119,14 @@ class TestForkNaming(unittest.TestCase):
 
     def test_packaged_default_config_is_the_fork_named_file(self):
         config = os.path.join(
-            REPO_ROOT, "anylabeling", "configs", "jllabeling_config.yaml"
+            REPO_ROOT, "jllabeling", "configs", "jllabeling_config.yaml"
         )
         self.assertTrue(os.path.isfile(config))
         self.assertFalse(
             os.path.exists(
                 os.path.join(
                     REPO_ROOT,
-                    "anylabeling",
+                    "jllabeling",
                     "configs",
                     "xanylabeling_config.yaml",
                 )

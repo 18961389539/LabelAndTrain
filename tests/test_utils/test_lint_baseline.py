@@ -30,9 +30,9 @@ checker = _load_checker()
 
 
 REPORT = """\
-anylabeling/app.py:12:5: F841 local variable 'x' is assigned to but never used
-anylabeling/app.py:40:1: C901 'main' is too complex (19)
-anylabeling\\views\\labeling\\widgets\\canvas.py:7:1: B007 Loop control variable 'i' not used
+jllabeling/app.py:12:5: F841 local variable 'x' is assigned to but never used
+jllabeling/app.py:40:1: C901 'main' is too complex (19)
+jllabeling\\views\\labeling\\widgets\\canvas.py:7:1: B007 Loop control variable 'i' not used
 """
 
 
@@ -40,7 +40,7 @@ def test_paths_are_normalized_across_platforms():
     """A baseline written on Windows must gate a Linux runner."""
     counts = checker.count_findings(REPORT)
 
-    assert ("anylabeling/views/labeling/widgets/canvas.py", "B007") in counts
+    assert ("jllabeling/views/labeling/widgets/canvas.py", "B007") in counts
     assert not any("\\" in path for path, _code in counts)
 
 
@@ -54,21 +54,19 @@ def test_line_numbers_are_not_part_of_the_key():
 def test_repeated_codes_are_counted_not_listed():
     counts = checker.count_findings(REPORT + REPORT)
 
-    assert counts[("anylabeling/app.py", "F841")] == 2
+    assert counts[("jllabeling/app.py", "F841")] == 2
 
 
 def test_noise_lines_are_skipped():
     counts = checker.count_findings(
-        "not a flake8 line\n\nanylabeling/app.py:1:1: E999 boom\n"
+        "not a flake8 line\n\njllabeling/app.py:1:1: E999 boom\n"
     )
 
-    assert counts == {("anylabeling/app.py", "E999"): 1}
+    assert counts == {("jllabeling/app.py", "E999"): 1}
 
 
 def test_a_brand_new_finding_is_a_regression():
-    regressions, improvements = checker.compare(
-        {("a.py", "F401"): 1}, {}
-    )
+    regressions, improvements = checker.compare({("a.py", "F401"): 1}, {})
 
     assert regressions == [("a.py", "F401", 0, 1)]
     assert improvements == []
@@ -107,7 +105,7 @@ def test_matching_counts_are_neither():
 
 def test_the_baseline_round_trips_through_its_file_format(tmp_path):
     original = {
-        ("anylabeling/views/labeling/label_widget.py", "F841"): 2,
+        ("jllabeling/views/labeling/label_widget.py", "F841"): 2,
         ("tests/test_utils/test_style.py", "W292"): 1,
     }
     path = tmp_path / "baseline.txt"
@@ -125,7 +123,7 @@ def test_aligned_padding_is_not_swallowed_into_the_path(tmp_path):
     loaded = checker.load_baseline(str(path))
 
     assert loaded == original
-    assert ("a/very/much/longer/path.py " not in {p for p, _c in loaded})
+    assert "a/very/much/longer/path.py " not in {p for p, _c in loaded}
 
 
 def test_a_malformed_baseline_line_fails_loudly(tmp_path):

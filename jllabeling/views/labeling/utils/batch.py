@@ -1,0 +1,763 @@
+import base64
+import json
+import os.path as osp
+from PIL import Image
+
+from PyQt6 import QtWidgets
+from PyQt6.QtCore import QCoreApplication, Qt, QThread, QTimer, pyqtSignal
+from PyQt6.QtWidgets import (
+    QVBoxLayout,
+    QHBoxLayout,
+    QProgressDialog,
+    QDialog,
+    QLabel,
+    QLineEdit,
+    QDialogButtonBox,
+    QApplication,
+    QCheckBox,
+    QListWidget,
+    QPushButton,
+)
+
+from jllabeling.app_info import __version__
+from jllabeling.views.labeling.utils.theme import get_theme
+from jllabeling.services.auto_labeling import (
+    _BATCH_PROCESSING_AUTO_GRID_MODELS,
+    _BATCH_PROCESSING_INVALID_MODELS,
+)
+from jllabeling.views.labeling.logger import logger
+from jllabeling.views.labeling.provenance import stamp_model_shapes
+from jllabeling.views.labeling.shape import Shape
+from jllabeling.views.labeling.utils._io import io_open
+from jllabeling.views.labeling.utils.session_snapshot import (
+    snapshot_before_label_write,
+)
+from jllabeling.views.labeling.utils.yolo_detect import (
+    merge_class_names,
+    write_yolo_detect_sidecar,
+)
+from jllabeling.views.labeling.utils.qt import new_icon_path
+from jllabeling.views.labeling.utils.style import (
+    get_cancel_btn_style,
+    get_msg_box_style,
+    get_ok_btn_style,
+)
+from jllabeling.views.labeling.widgets.popup import Popup
+
+__all__ = ["run_all_images"]
+
+
+def _batch_progress_text(done, total):
+    """The batch progress label, in the app's Chinese UI copy."""
+    return (
+        QCoreApplication.translate("LabelingWidget", "进度：%1/%2")
+        .replace("%1", str(done))
+        .replace("%2", str(total))
+    )
+
+
+class BatchRunOptionsDialog(QDialog):
+    def __init__(self, parent, current_position, total_count):
+        super().__init__(parent)
+        self.setWindowTitle(self.tr("批量自动标注"))
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(12)
+        if current_position < total_count:
+            summary = self.tr(
+                "将从当前图（#%d）处理到最后（#%d）。\n"
+                "当前图之前的图片不会处理。"
+            ) % (current_position, total_count)
+        else:
+            summary = self.tr("将只处理当前这一张图。")
+        layout.addWidget(QLabel(summary))
+        self.skip_existing = QCheckBox(self.tr("跳过已有标注的图片"))
+        self.skip_existing.setChecked(True)
+        self.skip_existing.setToolTip(
+            self.tr("已有 JSON 标注的图片直接跳过，避免覆盖人工结果")
+        )
+        layout.addWidget(self.skip_existing)
+        hint = QLabel(
+            self.tr(
+                "处理过程中可点「暂停」随时停下。失败的图片结束后可点回去检查。"
+            )
+        )
+        hint.setWordWrap(True)
+        layout.addWidget(hint)
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok
+            | QDialogButtonBox.StandardButton.Cancel
+        )
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+    def should_skip_existing(self):
+        return self.skip_existing.isChecked()
+
+
+class FailedImagesDialog(QDialog):
+    def __init__(self, parent, failed_files):
+        super().__init__(parent)
+        self.setWindowTitle(self.tr("失败图片"))
+        self.resize(480, 360)
+        layout = QVBoxLayout(self)
+        layout.addWidget(
+            QLabel(self.tr("以下图片自动标注失败，双击或点打开可跳转："))
+        )
+        self.list_widget = QListWidget()
+        for path in failed_files:
+            self.list_widget.addItem(path)
+        self.list_widget.itemDoubleClicked.connect(self.accept)
+        layout.addWidget(self.list_widget)
+        buttons = QHBoxLayout()
+        open_btn = QPushButton(self.tr("打开选中图片"))
+        open_btn.setStyleSheet(get_ok_btn_style())
+        open_btn.clicked.connect(self.accept)
+        close_btn = QPushButton(self.tr("关闭"))
+        close_btn.setStyleSheet(get_cancel_btn_style())
+        close_btn.clicked.connect(self.reject)
+        buttons.addStretch()
+        buttons.addWidget(open_btn)
+        buttons.addWidget(close_btn)
+        layout.addLayout(buttons)
+
+    def selected_path(self):
+        item = self.list_widget.currentItem()
+        if item is None:
+            return None
+        return item.text()
+
+
+def get_image_size(image_path):
+    with Image.open(image_path) as img:
+        return img.size
+
+
+def image_has_annotations(image_file, output_dir=None):
+    label_file = osp.splitext(image_file)[0] + ".json"
+    if output_dir:
+        label_file = osp.join(output_dir, osp.basename(label_file))
+    if not osp.exists(label_file):
+        return False
+    try:
+        with io_open(label_file, "r") as f:
+            data = json.load(f)
+        return bool(data.get("shapes"))
+    except Exception:
+        return False
+
+
+def finish_processing(
+    self, progress_dialog, succeeded=0, failed=0, failed_files=None
+):
+    if not getattr(self, "_batch_processing_active", False):
+        progress_dialog.close()
+        return
+
+    try:
+        target_file = self.image_list[self.current_index]
+        self.import_image_folder(osp.dirname(target_file), load=False)
+        target_index = self.fn_to_index[str(target_file)]
+        signals_blocked = self.file_list_widget.blockSignals(True)
+        try:
+            self.file_list_widget.setCurrentRow(target_index)
+        finally:
+            self.file_list_widget.blockSignals(signals_blocked)
+        self.load_file(target_file)
+        QApplication.processEvents()
+    finally:
+        self._batch_failed_files = list(failed_files or [])
+        _reset_batch_processing_state(self)
+        progress_dialog.close()
+
+    if succeeded == 0 and failed == 0:
+        # Legacy callers without stats: keep the historical message.
+        message = QCoreApplication.translate(
+            "LabelingWidget", "Processing completed successfully!"
+        )
+    else:
+        total = succeeded + failed
+        if failed > 0:
+            message = QCoreApplication.translate(
+                "LabelingWidget",
+                "Processing finished: %d succeeded, %d failed "
+                "(of %d total).",
+            ) % (succeeded, failed, total)
+        else:
+            message = (
+                QCoreApplication.translate(
+                    "LabelingWidget",
+                    "Processing completed successfully! "
+                    "(%d images processed)",
+                )
+                % total
+            )
+
+    popup = Popup(
+        message,
+        self,
+        icon=(
+            new_icon_path("error", "svg")
+            if failed > 0
+            else new_icon_path("copy-green", "svg")
+        ),
+    )
+    popup.show_popup(self, position="center")
+    failed_files = getattr(self, "_batch_failed_files", None) or []
+    if failed_files:
+        dialog = FailedImagesDialog(self, failed_files)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            path = dialog.selected_path()
+            if path:
+                _jump_to_batch_image(self, path)
+
+
+def cancel_operation(self):
+    self.cancel_processing = True
+
+
+def _jump_to_batch_image(self, image_file):
+    if image_file not in getattr(self, "fn_to_index", {}):
+        return
+    index = self.fn_to_index[str(image_file)]
+    signals_blocked = self.file_list_widget.blockSignals(True)
+    try:
+        self.file_list_widget.setCurrentRow(index)
+    finally:
+        self.file_list_widget.blockSignals(signals_blocked)
+    self.load_file(image_file)
+
+
+def _start_batch_processing(self):
+    self._batch_processing_active = True
+    show_progress_dialog_and_process(self)
+
+
+def _reset_batch_processing_state(self):
+    self._batch_processing_active = False
+    self._batch_skip_if = None
+    for attribute in (
+        "image_index",
+        "current_index",
+    ):
+        if hasattr(self, attribute):
+            delattr(self, attribute)
+
+
+def save_classification_predictions(self, image_file, predictions):
+    """Record whole-image class suggestions for one image.
+
+    Kept apart from the shape path on purpose: a suggestion is not an
+    annotation, so it must neither replace nor extend ``shapes``, and the YOLO
+    sidecar has nothing to write from it.
+    """
+    label_file = osp.splitext(image_file)[0] + ".json"
+    if self.output_dir:
+        label_file = osp.join(self.output_dir, osp.basename(label_file))
+
+    cleaned = [
+        item
+        for item in predictions or []
+        if isinstance(item, dict) and item.get("label")
+    ]
+
+    if osp.isfile(label_file):
+        try:
+            with io_open(label_file, "r") as handle:
+                data = json.load(handle)
+        except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+            logger.warning(f"Classification pass: unreadable {label_file}")
+            return False
+        if not isinstance(data, dict):
+            return False
+    else:
+        config = getattr(self, "_config", None) or {}
+        image_data = None
+        if config.get("store_data"):
+            try:
+                with open(image_file, "rb") as handle:
+                    image_data = base64.b64encode(handle.read()).decode(
+                        "utf-8"
+                    )
+            except OSError:
+                image_data = None
+        image_width, image_height = get_image_size(image_file)
+        data = {
+            "version": __version__,
+            "flags": {},
+            "shapes": [],
+            "imagePath": osp.basename(image_file),
+            "imageData": image_data,
+            "imageHeight": image_height,
+            "imageWidth": image_width,
+            "description": "",
+        }
+
+    if cleaned:
+        data["predictions"] = {
+            "model": cleaned[0].get("model"),
+            "created_at": cleaned[0].get("created_at"),
+            "classes": cleaned,
+        }
+    else:
+        data.pop("predictions", None)
+
+    snapshot_before_label_write(label_file)
+    with io_open(label_file, "w") as handle:
+        json.dump(data, handle, ensure_ascii=False, indent=2)
+    return True
+
+
+def save_auto_labeling_result(self, image_file, auto_labeling_result):
+    try:
+        label_file = osp.splitext(image_file)[0] + ".json"
+        if self.output_dir:
+            label_file = osp.join(self.output_dir, osp.basename(label_file))
+
+        predictions = (
+            getattr(auto_labeling_result, "predictions", None)
+            if auto_labeling_result is not None
+            else None
+        )
+        if predictions is not None:
+            # A classifier produced a whole-image suggestion, not shapes.
+            return save_classification_predictions(
+                self, image_file, predictions
+            )
+
+        if auto_labeling_result is None:
+            new_shapes = []
+            new_description = ""
+            replace = True
+        else:
+            new_shapes = [
+                shape.to_dict() for shape in auto_labeling_result.shapes
+            ]
+            stamp_model_shapes(
+                new_shapes,
+                self._current_model_identity(),
+                self._current_model_version(),
+            )
+            new_description = auto_labeling_result.description
+            replace = auto_labeling_result.replace
+        if osp.exists(label_file):
+            with io_open(label_file, "r") as f:
+                data = json.load(f)
+
+            if replace:
+                if not new_shapes and (data.get("shapes") or []):
+                    # YOLO-consistent guard (mirrors the single-image path):
+                    # an empty prediction never erases existing ground truth.
+                    logger.info(
+                        f"Batch auto labeling found no objects on "
+                        f"{image_file}; keeping existing annotations "
+                        f"(empty results never erase ground truth)."
+                    )
+                else:
+                    data["shapes"] = new_shapes
+                    data["description"] = new_description
+            else:
+                data["shapes"].extend(new_shapes)
+                if "description" in data:
+                    data["description"] += new_description
+                else:
+                    data["description"] = new_description
+        else:
+            if self._config["store_data"]:
+                with open(image_file, "rb") as f:
+                    image_data = f.read()
+                image_data = base64.b64encode(image_data).decode("utf-8")
+            else:
+                image_data = None
+
+            image_path = osp.basename(image_file)
+            image_width, image_height = get_image_size(image_file)
+
+            data = {
+                "version": __version__,
+                "flags": {},
+                "shapes": new_shapes,
+                "imagePath": image_path,
+                "imageData": image_data,
+                "imageHeight": image_height,
+                "imageWidth": image_width,
+                "description": new_description,
+            }
+
+        # A batch run rewrites the label file of every image it touches, and
+        # with 保留已有标注 off that means the model's shapes replace whatever
+        # a person drew -- hundreds of files, no undo. The pre-run state goes
+        # into the same .label_backups/ runs the single-image save uses.
+        snapshot_before_label_write(label_file)
+        with io_open(label_file, "w") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+
+        try:
+            extra_names = []
+            unique_list = getattr(self, "unique_label_list", None)
+            if unique_list is not None:
+                for row in range(unique_list.count()):
+                    item = unique_list.item(row)
+                    if item is None:
+                        continue
+                    extra_names.append(item.data(Qt.ItemDataRole.UserRole))
+            config = getattr(self, "_config", None) or {}
+            write_yolo_detect_sidecar(
+                label_file,
+                data.get("shapes") or [],
+                data.get("imageWidth") or 0,
+                data.get("imageHeight") or 0,
+                extra_class_names=merge_class_names(
+                    extra_names, config.get("labels") or []
+                ),
+            )
+        except Exception as e:  # noqa: BLE001
+            logger.error(f"Failed to write YOLO txt for '{label_file}': {e}")
+
+        # Keep the file-list badge in sync: a saved file whose final shapes
+        # are empty is a negative sample (background image) for YOLO.
+        marker = getattr(self, "mark_file_item_negative_state", None)
+        if marker is not None:
+            try:
+                marker(image_file, not (data.get("shapes") or []))
+            except Exception:  # noqa: BLE001
+                pass
+
+        return True
+
+    except Exception as e:
+        logger.error(
+            f"Failed to save auto labeling result for image file '{image_file}': {str(e)}"
+        )
+        return False
+
+
+class BatchProcessingThread(QThread):
+    progress_updated = pyqtSignal(int, str)
+    processing_finished = pyqtSignal(
+        int, int, list
+    )  # succeeded, failed, failed_files
+    error_occurred = pyqtSignal(str)
+
+    def __init__(
+        self,
+        app,
+        image_list,
+        image_index,
+        model_type,
+        skip_existing=False,
+        skip_if=None,
+    ):
+        super().__init__()
+        self.app = app
+        self.image_list = image_list
+        self.image_index = image_index
+        self.model_type = model_type
+        self.skip_existing = skip_existing
+        self.skip_if = skip_if
+        self._succeeded = 0
+        self._failed = 0
+        self._failed_files = []
+
+    def run(self):
+        total_images = len(self.image_list)
+        try:
+            while (
+                self.image_index < total_images
+                and not self.app.cancel_processing
+            ):
+                image_file = self.image_list[self.image_index]
+                image_index = self.image_index
+
+                should_skip = False
+                if self.skip_if is not None:
+                    try:
+                        should_skip = bool(self.skip_if(image_file))
+                    except Exception as exc:  # noqa: BLE001
+                        logger.warning(
+                            f"Batch skip_if failed for {image_file}: {exc}"
+                        )
+                if not should_skip and self.skip_existing:
+                    should_skip = image_has_annotations(
+                        image_file, getattr(self.app, "output_dir", None)
+                    )
+                if should_skip:
+                    self.image_index += 1
+                    self.progress_updated.emit(
+                        self.image_index,
+                        _batch_progress_text(self.image_index, total_images),
+                    )
+                    continue
+
+                result = (
+                    self.app.auto_labeling_widget.model_manager.predict_shapes(
+                        self.app.image, image_file, batch=True
+                    )
+                )
+
+                try:
+                    saved = save_auto_labeling_result(
+                        self.app, image_file, result
+                    )
+                except Exception as e:  # noqa: BLE001
+                    logger.error(
+                        f"Failed to save result for {image_file}: {e}"
+                    )
+                    saved = False
+
+                if saved:
+                    self._succeeded += 1
+                else:
+                    self._failed += 1
+                    self._failed_files.append(image_file)
+                    logger.warning(
+                        f"Batch: image {image_index + 1}/{total_images} "
+                        f"produced no result or failed to save: {image_file}"
+                    )
+
+                self.image_index += 1
+                self.progress_updated.emit(
+                    self.image_index,
+                    _batch_progress_text(self.image_index, total_images),
+                )
+
+            self.app.image_index = self.image_index
+            self.processing_finished.emit(
+                self._succeeded, self._failed, self._failed_files
+            )
+        except Exception as e:
+            self.app.image_index = self.image_index
+            self.error_occurred.emit(str(e))
+
+
+def process_next_image(self, progress_dialog, batch=True):
+    """Process images in batch mode.
+
+    Args:
+        progress_dialog: Progress dialog widget for displaying progress.
+        batch: If True, results are saved directly without updating canvas.
+               If False, results trigger UI updates and canvas refresh.
+               Defaults to True for batch processing mode.
+    """
+    model_type = self.auto_labeling_widget.model_manager.loaded_model_config[
+        "type"
+    ]
+    model = self.auto_labeling_widget.model_manager.loaded_model_config[
+        "model"
+    ]
+    total_images = len(self.image_list)
+    self._progress_dialog = progress_dialog
+
+    self._batch_thread = BatchProcessingThread(
+        self,
+        self.image_list,
+        self.image_index,
+        model_type,
+        skip_existing=getattr(self, "_batch_skip_existing", False),
+        skip_if=getattr(self, "_batch_skip_if", None),
+    )
+
+    def _on_progress(value, label):
+        progress_dialog.setValue(value)
+        progress_dialog.setLabelText(label)
+
+    def _on_error(msg):
+        _reset_batch_processing_state(self)
+        progress_dialog.close()
+        logger.error(f"Error occurred while processing images: {msg}")
+        popup = Popup(
+            QCoreApplication.translate(
+                "LabelingWidget", "Error occurred while processing images!"
+            ),
+            self,
+            icon=new_icon_path("error", "svg"),
+        )
+        popup.show_popup(self, position="center")
+
+    self._batch_thread.progress_updated.connect(_on_progress)
+    self._batch_thread.processing_finished.connect(
+        lambda succeeded, failed, failed_files: finish_processing(
+            self, progress_dialog, succeeded, failed, failed_files
+        )
+    )
+    self._batch_thread.error_occurred.connect(_on_error)
+    self._batch_thread.start()
+    return
+
+
+def show_progress_dialog_and_process(self):
+    self.cancel_processing = False
+
+    progress_dialog = QProgressDialog(
+        QCoreApplication.translate("LabelingWidget", "Processing..."),
+        QCoreApplication.translate("LabelingWidget", "暂停"),
+        0,
+        len(self.image_list),
+        self,
+    )
+    progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
+    progress_dialog.setWindowTitle(
+        QCoreApplication.translate("LabelingWidget", "Batch Processing")
+    )
+    progress_dialog.setMinimumWidth(400)
+    progress_dialog.setMinimumHeight(150)
+    progress_dialog.setAutoClose(False)
+    progress_dialog.setAutoReset(False)
+
+    initial_progress = min(self.image_index, len(self.image_list))
+    progress_dialog.setValue(initial_progress)
+    progress_dialog.setLabelText(
+        _batch_progress_text(initial_progress, len(self.image_list))
+    )
+    progress_bar = progress_dialog.findChild(QtWidgets.QProgressBar)
+
+    if progress_bar:
+        model_type = (
+            self.auto_labeling_widget.model_manager.loaded_model_config.get(
+                "type", ""
+            )
+        )
+
+        def update_progress(value):
+            progress_dialog.setLabelText(
+                _batch_progress_text(value, len(self.image_list))
+            )
+
+        progress_bar.valueChanged.connect(update_progress)
+
+    t = get_theme()
+    progress_dialog.setStyleSheet(f"""
+        QProgressDialog {{
+            background-color: {t["background"]};
+            border-radius: {t["radius_card"]};
+            min-width: 280px;
+            min-height: 120px;
+            padding: 20px;
+        }}
+        QProgressBar {{
+            border: none;
+            border-radius: {t["radius_sm"]};
+            background-color: {t["surface"]};
+            text-align: center;
+            color: {t["text"]};
+            font-size: 13px;
+            min-height: 20px;
+            max-height: 20px;
+            margin: 16px 0;
+        }}
+        QProgressBar::chunk {{
+            background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                stop:0 {t["primary"]},
+                stop:0.5 {t["highlight"]},
+                stop:1 {t["primary"]});
+            border-radius: {t["radius_sm"]};
+        }}
+        QLabel {{
+            color: {t["text"]};
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }}
+        QPushButton {{
+            background-color: {t["surface"]};
+            border: 1px solid {t["border"]};
+            border-radius: {t["radius_md"]};
+            font-weight: 500;
+            font-size: 13px;
+            color: {t["primary"]};
+            min-width: 82px;
+            height: 36px;
+            padding: 0 16px;
+            margin-top: 16px;
+        }}
+        QPushButton:hover {{
+            background-color: {t["background_hover"]};
+        }}
+        QPushButton:pressed {{
+            background-color: {t["surface"]};
+        }}
+    """)
+    progress_dialog.canceled.connect(lambda: cancel_operation(self))
+    progress_dialog.show()
+
+    QTimer.singleShot(200, lambda: process_next_image(self, progress_dialog))
+
+
+def run_all_images(
+    self, *, prompt=True, from_start=False, skip_existing=None, skip_if=None
+):
+    if getattr(self, "_batch_processing_active", False):
+        logger.warning("Batch processing is already running.")
+        return
+
+    if len(self.image_list) < 1:
+        return
+
+    if self.auto_labeling_widget.model_manager.loaded_model_config is None:
+        self.auto_labeling_widget.model_manager.new_model_status.emit(
+            QCoreApplication.translate(
+                "LabelingWidget",
+                "Model is not loaded. Choose a mode to continue.",
+            )
+        )
+        return
+
+    if (
+        self.auto_labeling_widget.model_manager.loaded_model_config["type"]
+        in _BATCH_PROCESSING_INVALID_MODELS
+    ):
+        logger.warning(
+            f"The model `{self.auto_labeling_widget.model_manager.loaded_model_config['type']}`"
+            f" is not supported for this action."
+            f" Please choose a valid model to execute."
+        )
+        self.auto_labeling_widget.model_manager.new_model_status.emit(
+            QCoreApplication.translate(
+                "LabelingWidget",
+                "Invalid model type, please choose a valid model_type to run.",
+            )
+        )
+        return
+
+    if prompt:
+        # Start from the currently opened image to the end of the list.
+        current_position = (
+            self.fn_to_index[str(self.filename)] + 1
+            if self.filename and str(self.filename) in self.fn_to_index
+            else 1
+        )
+        total_count = len(self.image_list)
+        options = BatchRunOptionsDialog(self, current_position, total_count)
+        if options.exec() != QDialog.DialogCode.Accepted:
+            return
+        self._batch_skip_existing = options.should_skip_existing()
+        self._batch_skip_if = None
+    else:
+        self._batch_skip_existing = (
+            bool(skip_existing) if skip_existing is not None else False
+        )
+        self._batch_skip_if = skip_if
+
+    logger.info("Start running all images...")
+
+    if from_start or not (
+        self.filename and str(self.filename) in self.fn_to_index
+    ):
+        self.current_index = 0
+        self.image_index = 0
+    else:
+        self.current_index = self.fn_to_index[str(self.filename)]
+        self.image_index = self.current_index
+
+    model_type = self.auto_labeling_widget.model_manager.loaded_model_config[
+        "type"
+    ]
+
+    if model_type in _BATCH_PROCESSING_AUTO_GRID_MODELS:
+        self.auto_labeling_widget.model_manager.set_auto_labeling_marks(
+            [{"type": "auto_grid"}]
+        )
+        _start_batch_processing(self)
+    else:
+        _start_batch_processing(self)

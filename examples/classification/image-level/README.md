@@ -2,7 +2,7 @@
 
 ## Introduction
 
-Image classification assigns labels to an entire image. X-AnyLabeling supports multiclass and multilabel classification.
+Image classification assigns labels to an entire image. JLLabelingAndTrain supports multiclass and multilabel classification.
 
 <img src=".data/classification.png" width="100%" />
 
@@ -31,7 +31,7 @@ Google
 **Step 1: Run the Application**
 
 ```bash
-python anylabeling/app.py
+python jllabeling/app.py
 ```
 
 **Step 2: Upload the Configuration File**
@@ -46,7 +46,7 @@ Click on `Upload -> Upload Image Flags File` in the top menu bar and select the 
 > This option is suitable for a quick startup.
 
 ```bash
-python anylabeling/app.py --flags Apple,Meta,Google
+python jllabeling/app.py --flags Apple,Meta,Google
 ```
 
 > [!CAUTION]
@@ -55,7 +55,7 @@ python anylabeling/app.py --flags Apple,Meta,Google
 **Option 2: Using a Configuration File**
 
 ```bash
-python anylabeling/app.py --flags flags.txt
+python jllabeling/app.py --flags flags.txt
 ```
 
 > [!NOTE]

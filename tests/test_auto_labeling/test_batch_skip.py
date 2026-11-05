@@ -5,7 +5,7 @@ import unittest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 try:
-    from anylabeling.views.labeling.utils.batch import (
+    from jllabeling.views.labeling.utils.batch import (
         BatchProcessingThread,
         image_has_annotations,
     )
@@ -45,7 +45,7 @@ class TestImageHasAnnotations(unittest.TestCase):
 @unittest.skipUnless(PYQT_AVAILABLE, "PyQt6 is required")
 class TestBatchProgressText(unittest.TestCase):
     def test_the_progress_label_is_chinese(self):
-        from anylabeling.views.labeling.utils.batch import (
+        from jllabeling.views.labeling.utils.batch import (
             _batch_progress_text,
         )
 

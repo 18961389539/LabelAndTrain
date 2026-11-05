@@ -37,9 +37,9 @@ import sys
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BASELINE_PATH = os.path.join(REPO_ROOT, "scripts", "flake8_baseline.txt")
 
-#: Everything this fork owns.  ``anylabeling/resources/resources.py`` is
+#: Everything this fork owns.  ``jllabeling/resources/resources.py`` is
 #: generated and excluded by flake8's own config.
-DEFAULT_TARGETS = ("anylabeling", "tests", "scripts", "tools")
+DEFAULT_TARGETS = ("jllabeling", "tests", "scripts", "tools")
 
 _HEADER = """\
 # flake8 findings this fork has inherited but not yet cleaned up.

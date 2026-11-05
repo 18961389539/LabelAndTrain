@@ -4,7 +4,7 @@ Depth-estimation models estimate the relative distance from the camera for every
 
 ## Depth Estimation Model
 
-X-AnyLabeling includes [Depth Anything V1](../../../anylabeling/configs/auto_labeling/depth_anything_vit_b.yaml) and [Depth Anything V2](../../../anylabeling/configs/auto_labeling/depth_anything_v2_vit_b.yaml).
+JLLabelingAndTrain includes [Depth Anything V1](../../../jllabeling/configs/auto_labeling/depth_anything_vit_b.yaml) and [Depth Anything V2](../../../jllabeling/configs/auto_labeling/depth_anything_v2_vit_b.yaml).
 
 - **[Depth Anything V1](https://arxiv.org/abs/2401.10891)** is a highly practical solution for robust monocular depth estimation by training on a combination of 1.5M labeled images and 62M+ unlabeled images.
 - **[Depth Anything V2](https://arxiv.org/abs/2406.09414)** significantly outperforms its predecessor, V1, in terms of fine-grained detail and robustness. In comparison to SD-based models, V2 boasts faster inference speed, a reduced number of parameters, and enhanced depth accuracy.
@@ -14,7 +14,7 @@ X-AnyLabeling includes [Depth Anything V1](../../../anylabeling/configs/auto_lab
 
 ## Usage
 
-1. Import images (`Ctrl+I`) or a video (`Ctrl+O`) into X-AnyLabeling.
+1. Import images (`Ctrl+I`) or a video (`Ctrl+O`) into JLLabelingAndTrain.
 2. Select and load the Depth-Anything related model, or choose from other available depth estimation models.
 3. Click `Run (i)` to process the current image. After checking the result, press `Ctrl+B` to run the model on all images.
 

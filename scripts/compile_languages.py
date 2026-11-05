@@ -65,7 +65,7 @@ def compile_resources(output: str, qrc: str) -> None:
     )
 
 
-TRANSLATIONS_DIR = "anylabeling/resources/translations"
+TRANSLATIONS_DIR = "jllabeling/resources/translations"
 
 
 def existing_catalogs():
@@ -93,6 +93,6 @@ for language in catalogs:
     )
 
 compile_resources(
-    output="anylabeling/resources/resources.py",
-    qrc="anylabeling/resources/resources.qrc",
+    output="jllabeling/resources/resources.py",
+    qrc="jllabeling/resources/resources.qrc",
 )

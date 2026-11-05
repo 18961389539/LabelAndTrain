@@ -49,7 +49,7 @@ sys.path.insert(0, REPO)
 from PyQt6 import QtCore, QtGui, QtWidgets  # noqa: E402
 
 TEMPLATE_CONFIG = os.path.join(
-    REPO, "anylabeling", "configs", "jllabeling_config.yaml"
+    REPO, "jllabeling", "configs", "jllabeling_config.yaml"
 )
 SHOT_DIR = os.path.join(REPO, "reviews", "acceptance_shots")
 RESULTS = []
@@ -241,18 +241,18 @@ def make_images(tmp, count=3):
 
 def build_context(app):
     """A real MainWindow plus a scratch dataset for each step to use."""
-    from anylabeling import config as app_config
-    from anylabeling.views.labeling import (
+    from jllabeling import config as app_config
+    from jllabeling.views.labeling import (
         project_model,
         project_registry,
         project_settings,
     )
-    from anylabeling.views.labeling.utils import missing_classes_hint
-    from anylabeling.views.labeling.utils import project_view
-    from anylabeling.views.labeling.widgets.project_dialog import (
+    from jllabeling.views.labeling.utils import missing_classes_hint
+    from jllabeling.views.labeling.utils import project_view
+    from jllabeling.views.labeling.widgets.project_dialog import (
         ProjectPropertiesDialog,
     )
-    from anylabeling.views.mainwindow import MainWindow
+    from jllabeling.views.mainwindow import MainWindow
 
     tmp = tempfile.mkdtemp(prefix="accept_project_work_")
     app_config.set_work_directory(tmp)
@@ -457,8 +457,8 @@ def s6_switch_between_projects(ctx):
 @step("7. 训练窗口预选项目任务，并写回项目")
 def s7_task_reaches_trainer(ctx):
     widget, app = ctx.widget, ctx.app
-    from anylabeling.views.training import ultralytics_dialog as dialog_mod
-    from anylabeling.views.training.ultralytics_dialog import (
+    from jllabeling.views.training import ultralytics_dialog as dialog_mod
+    from jllabeling.views.training.ultralytics_dialog import (
         UltralyticsDialog,
     )
 
@@ -584,7 +584,7 @@ def s9_write_failure_is_visible(ctx):
 
 @step("10. 项目管理器：标注进度列占位后回填")
 def s10_switcher_progress_column(ctx):
-    from anylabeling.views.labeling.widgets.project_switcher import (
+    from jllabeling.views.labeling.widgets.project_switcher import (
         ProjectSwitcherDialog,
     )
 
@@ -612,7 +612,7 @@ def s10_switcher_progress_column(ctx):
 
 @step("11. 项目内搜索：对话框打开、条件与空态文案")
 def s11_project_search_dialog(ctx):
-    from anylabeling.views.labeling.widgets.project_search_dialog import (
+    from jllabeling.views.labeling.widgets.project_search_dialog import (
         ProjectSearchDialog,
     )
 
@@ -769,12 +769,12 @@ def s16_class_filter_entry(ctx):
     its sources are English (``Filter Classes`` / ``Select All``), and 14
     offscreen steps assert the wiring without ever resolving a string.
     """
-    from anylabeling.services.auto_labeling.__base__.yolo import YOLO
-    from anylabeling.views.labeling import project_settings
-    from anylabeling.views.labeling.widgets.auto_labeling.auto_labeling import (
+    from jllabeling.services.auto_labeling.__base__.yolo import YOLO
+    from jllabeling.views.labeling import project_settings
+    from jllabeling.views.labeling.widgets.auto_labeling.auto_labeling import (
         _dataset_dir_for,
     )
-    from anylabeling.views.labeling.widgets.classes_filter_dialog import (
+    from jllabeling.views.labeling.widgets.classes_filter_dialog import (
         ClassesFilterDialog,
     )
 
@@ -878,13 +878,13 @@ def s17_no_untranslated_english(ctx):
     widgets was ruled out of scope for this fork, so the number is what a
     future batch starts from -- and it cannot be claimed to be unknown.
     """
-    from anylabeling.views.labeling.widgets.project_switcher import (
+    from jllabeling.views.labeling.widgets.project_switcher import (
         ProjectSwitcherDialog,
     )
-    from anylabeling.views.labeling.widgets.overview_dialog import (
+    from jllabeling.views.labeling.widgets.overview_dialog import (
         OverviewDialog,
     )
-    from anylabeling.views.labeling.widgets.shape_converter_dialog import (
+    from jllabeling.views.labeling.widgets.shape_converter_dialog import (
         ShapeConverterDialog,
     )
 
@@ -986,7 +986,7 @@ def main():
     # Startup does this before the window exists, and without it every
     # string whose source is English renders English -- which is most of
     # the File menu, and the one reused action inside the project menu.
-    from anylabeling.resources import resources  # noqa: F401
+    from jllabeling.resources import resources  # noqa: F401
 
     translator = QtCore.QTranslator()
     assert translator.load(

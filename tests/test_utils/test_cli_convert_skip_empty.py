@@ -14,7 +14,7 @@ import unittest
 import cv2
 import numpy as np
 
-from anylabeling.views.common.converter import run_conversion
+from jllabeling.views.common.converter import run_conversion
 
 
 class TestCliSkipEmptyFiles(unittest.TestCase):

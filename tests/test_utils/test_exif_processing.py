@@ -13,7 +13,7 @@ import PIL.Image
 import pytest
 from PyQt6 import QtWidgets
 
-from anylabeling.views.labeling.utils.async_exif import ExifProcessingDialog
+from jllabeling.views.labeling.utils.async_exif import ExifProcessingDialog
 
 ORIENTATION = 0x0112
 MAKE = 0x010F
@@ -114,7 +114,7 @@ class TestExifProcessing:
         nested = _oriented_jpeg(tmp_path / "sub" / "photo.jpg")
         _process([flat, nested])
 
-        from anylabeling.views.labeling.utils.qt import scan_all_images
+        from jllabeling.views.labeling.utils.qt import scan_all_images
 
         assert sorted(scan_all_images(str(tmp_path))) == sorted([flat, nested])
 

@@ -4,12 +4,12 @@ It used to start maximized unconditionally -- the geometry save was a
 commented-out line -- so a window sized for a second monitor came back
 filling the primary one on every launch.
 
-``app.py`` builds ``QSettings("anylabeling", "anylabeling")``, which on
-Windows is a registry key: the tests used to write there and snapshot/restore
-the machine's real values by hand, so a case that failed midway left a trace
-behind.  They run against a file-backed settings object in a temp directory
-now, and the only production change is that the settings factory is reached
-through the module (``QtCore.QSettings``), which is what makes it patchable.
+``app.py`` reaches the window settings through
+``utils/qt.py:app_settings``, which builds ``QSettings`` in this fork's own
+domain; on Windows that is a registry key. The tests used to write there and
+snapshot/restore the machine's real values by hand, so a case that failed
+midway left a trace behind. They run against a file-backed settings object in
+a temp directory now, by patching the factory module (``utils.qt.QtCore``).
 """
 
 import os
@@ -22,7 +22,8 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 try:
     from PyQt6 import QtCore, QtWidgets
 
-    from anylabeling import app as app_module
+    from jllabeling import app as app_module
+    from jllabeling.views.labeling.utils import qt as qt_module
 
     PYQT_AVAILABLE = True
 except Exception:
@@ -43,7 +44,7 @@ class TestWindowPlacement(unittest.TestCase):
             os.path.join(self._tmp.name, "window.ini"),
             QtCore.QSettings.Format.IniFormat,
         )
-        patcher = mock.patch.object(app_module, "QtCore")
+        patcher = mock.patch.object(qt_module, "QtCore")
         fake_qtcore = patcher.start()
         fake_qtcore.QSettings.return_value = self.settings
         self.addCleanup(patcher.stop)
@@ -89,9 +90,13 @@ class TestWindowPlacement(unittest.TestCase):
         reopened.close()
 
     def test_nothing_is_written_to_the_machine(self):
-        """The point of the temp file: the real key must stay untouched."""
-        real = QtCore.QSettings("anylabeling", "anylabeling")
-        before = real.value("window/geometry")
+        """The point of the temp file: the real keys must stay untouched."""
+        real_legacy = QtCore.QSettings("jllabeling", "jllabeling")
+        real_current = QtCore.QSettings("jllabeling", "jllabeling")
+        before = (
+            real_legacy.value("window/geometry"),
+            real_current.value("window/geometry"),
+        )
 
         window = QtWidgets.QMainWindow()
         window.resize(800, 600)
@@ -100,8 +105,13 @@ class TestWindowPlacement(unittest.TestCase):
         app_module.save_window_placement(window)
         window.close()
 
-        after = QtCore.QSettings("anylabeling", "anylabeling").value(
-            "window/geometry"
+        after = (
+            QtCore.QSettings("jllabeling", "jllabeling").value(
+                "window/geometry"
+            ),
+            QtCore.QSettings("jllabeling", "jllabeling").value(
+                "window/geometry"
+            ),
         )
         self.assertEqual(before, after)
 

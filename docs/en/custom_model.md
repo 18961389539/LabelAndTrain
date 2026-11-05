@@ -1,6 +1,6 @@
 # Model Loading
 
-X-AnyLabeling includes a variety of built-in models. See the [Model Zoo](./model_zoo.md) for the complete list.
+JLLabelingAndTrain includes a variety of built-in models. See the [Model Zoo](./model_zoo.md) for the complete list.
 
 > [!TIP]
 > If you need to deploy a model inference service via a remote server with multi-user collaboration support, please refer to [X-AnyLabeling-Server](https://github.com/CVHub520/X-AnyLabeling-Server).
@@ -9,7 +9,7 @@ X-AnyLabeling includes a variety of built-in models. See the [Model Zoo](./model
 
 Before enabling the AI-assisted labeling feature, you need to load a model. This can be done via the `AI` icon button in the left sidebar or by using the shortcut `Ctrl+A`.
 
-When you select a model, the application checks `~/xanylabeling_data/models/${model_name}` for its files. Existing files are loaded directly; otherwise, they are downloaded automatically. When `--work-dir` is set, the data directory is created under that working directory instead.
+When you select a model, the application checks `~/jllabeling_data/models/${model_name}` for its files. Existing files are loaded directly; otherwise, they are downloaded automatically. When `--work-dir` is set, the data directory is created under that working directory instead.
 
 Built-in models are downloaded from the URLs in their configuration files. Some models can also use ModelScope as the download source, so ensure the selected source is accessible from your network.
 
@@ -27,13 +27,13 @@ For details, see [Model Download Source](./user_guide.md#77-model-download-sourc
 
 ## Loading Adapted User Custom Models
 
-> **Adapted models** already have an inference implementation in X-AnyLabeling. You only need the model and configuration files. See the [Model Zoo](./model_zoo.md) for supported adapters.
+> **Adapted models** already have an inference implementation in JLLabelingAndTrain. You only need the model and configuration files. See the [Model Zoo](./model_zoo.md) for supported adapters.
 
 In this tutorial, we will use the [YOLOv5s](https://github.com/ultralytics/yolov5) model as an example to detail how to load a custom adapted model.
 
 **a. Model Conversion**
 
-Suppose you have trained a model locally. First, you can convert the `PyTorch` trained model to X-AnyLabeling's default `ONNX` file format (optional). Specifically, execute:
+Suppose you have trained a model locally. First, you can convert the `PyTorch` trained model to JLLabelingAndTrain's default `ONNX` file format (optional). Specifically, execute:
 
 ```bash
 python export.py --weights yolov5s.pt --include onnx
@@ -51,7 +51,7 @@ Additionally, it is highly recommended to import the exported `*.onnx` file usin
 
 After preparing the ONNX file, find and copy the corresponding configuration from the [Model Zoo](./model_zoo.md).
 
-Taking [yolov5s.yaml](https://github.com/CVHub520/X-AnyLabeling/blob/main/anylabeling/configs/auto_labeling/yolov5s.yaml) as an example, let's look at its content:
+Taking [yolov5s.yaml](https://github.com/CVHub520/X-AnyLabeling/blob/main/jllabeling/configs/auto_labeling/yolov5s.yaml) as an example, let's look at its content:
 
 ```YAML
 type: yolov5
@@ -83,7 +83,7 @@ classes:
 
 Note that not all fields apply to every model. Refer to the definition of the specific model.
 
-For example, looking at the implementation of the [YOLO](../../anylabeling/services/auto_labeling/__base__/yolo.py) base model, it offers additional optional configuration items:
+For example, looking at the implementation of the [YOLO](../../jllabeling/services/auto_labeling/__base__/yolo.py) base model, it offers additional optional configuration items:
 
 | Field           | Description                   |
 |-----------------|-------------------------------|
@@ -137,13 +137,13 @@ For YOLO series models, you can also switch inference backends through the `engi
 | `dnn` | Use OpenCV DNN inference (`*.onnx`) | Built-in |
 | `trt` | Use NVIDIA TensorRT inference (`*.engine`) | Requires additional TensorRT runtime dependencies |
 
-> TensorRT is not included in X-AnyLabeling's default dependencies. Install it only when you want to accelerate NVIDIA GPU inference through the TensorRT backend. If these dependencies are not installed, other features of the application are not affected.
+> TensorRT is not included in JLLabelingAndTrain's default dependencies. Install it only when you want to accelerate NVIDIA GPU inference through the TensorRT backend. If these dependencies are not installed, other features of the application are not affected.
 
 To use TensorRT inference, complete the following additional steps:
 
 - **Prepare the environment**
 
-Make sure the NVIDIA driver and CUDA are installed correctly, then install the TensorRT runtime dependencies in the Python environment used by X-AnyLabeling:
+Make sure the NVIDIA driver and CUDA are installed correctly, then install the TensorRT runtime dependencies in the Python environment used by JLLabelingAndTrain:
 
 ```bash
 uv pip install tensorrt cuda-python
@@ -156,11 +156,11 @@ uv pip install tensorrt cuda-python
 
 Taking `YOLO26` as an example, you can refer to the official [Ultralytics YOLO26](https://docs.ultralytics.com/modes/export/#how-do-i-export-a-yolo26-model-to-onnx-format) guide to export a TensorRT backend model file.
 
-The exported `.engine` file may include a JSON metadata header written by Ultralytics. X-AnyLabeling handles this automatically, so you do not need to remove it manually.
+The exported `.engine` file may include a JSON metadata header written by Ultralytics. JLLabelingAndTrain handles this automatically, so you do not need to remove it manually.
 
 - **Configure the model**
 
-Refer to [yolo26s_trt.yaml](https://github.com/CVHub520/X-AnyLabeling/blob/main/anylabeling/configs/auto_labeling/yolo26s_trt.yaml), point `model_path` to the `.engine` file, and explicitly set `engine: trt`:
+Refer to [yolo26s_trt.yaml](https://github.com/CVHub520/X-AnyLabeling/blob/main/jllabeling/configs/auto_labeling/yolo26s_trt.yaml), point `model_path` to the `.engine` file, and explicitly set `engine: trt`:
 
 ```YAML
 type: yolo26
@@ -180,7 +180,7 @@ Finally, in the model dropdown list in the top menu bar of the interface, find t
 
 ## Loading Unadapted User Custom Models
 
-> **Unadapted Models** refer to models that have not yet been integrated into X-AnyLabeling. Users need to follow the implementation steps below for integration.
+> **Unadapted Models** refer to models that have not yet been integrated into JLLabelingAndTrain. Users need to follow the implementation steps below for integration.
 
 Here, we use a multi-class semantic segmentation model, `U-Net`, as an example. Follow these implementation steps:
 
@@ -188,11 +188,11 @@ Here, we use a multi-class semantic segmentation model, `U-Net`, as an example. 
 
 Export the `ONNX` model, ensuring the output node dimension is `[1, C, H, W]`, where `C` is the total number of classes (including the background class).
 
-> ONNX is not the only format: this build's YOLO adapter supports onnxruntime (default), `dnn` (OpenCV DNN) and `trt` (TensorRT) through `engine`. Video object tracking is **not part of this build** (SAM2/SAM3 video belongs to upstream), so the [installation guide](../../examples/interactive_video_object_segmentation/sam2/README.md), [configuration](https://github.com/CVHub520/X-AnyLabeling/blob/main/anylabeling/configs/auto_labeling/sam2_hiera_base_video.yaml) and [implementation](https://github.com/CVHub520/X-AnyLabeling/blob/main/anylabeling/services/auto_labeling/segment_anything_2_video.py) above show what upstream looks like and have no counterpart here.
+> ONNX is not the only format: this build's YOLO adapter supports onnxruntime (default), `dnn` (OpenCV DNN) and `trt` (TensorRT) through `engine`. Video object tracking is **not part of this build** (SAM2/SAM3 video belongs to upstream), so the [installation guide](../../examples/interactive_video_object_segmentation/sam2/README.md), [configuration](https://github.com/CVHub520/X-AnyLabeling/blob/main/jllabeling/configs/auto_labeling/sam2_hiera_base_video.yaml) and [implementation](https://github.com/CVHub520/X-AnyLabeling/blob/main/jllabeling/services/auto_labeling/segment_anything_2_video.py) above show what upstream looks like and have no counterpart here.
 
 **b. Define Configuration File**
 
-First, create a new configuration file, e.g., `unet.yaml`, in the [configuration directory](../../anylabeling/configs/auto_labeling):
+First, create a new configuration file, e.g., `unet.yaml`, in the [configuration directory](../../jllabeling/configs/auto_labeling):
 
 ```YAML
 type: unet
@@ -219,7 +219,7 @@ These three fields are mandatory. Add other fields as needed, such as provider, 
 
 **c. Add Configuration File**
 
-Next, add the above configuration file to the [model management file](../../anylabeling/configs/models.yaml):
+Next, add the above configuration file to the [model management file](../../jllabeling/configs/models.yaml):
 
 ```yaml
 ...
@@ -231,13 +231,13 @@ Next, add the above configuration file to the [model management file](../../anyl
 
 **d. Configure UI Components**
 
-This step can add UI components as needed. Simply add the `model_type` to the corresponding list in the [file](../../anylabeling/services/auto_labeling/__init__.py).
+This step can add UI components as needed. Simply add the `model_type` to the corresponding list in the [file](../../jllabeling/services/auto_labeling/__init__.py).
 
 **e. Define Inference Service**
 
-A key step in defining the inference service is inheriting the [Model](../../anylabeling/services/auto_labeling/model.py) base class, which allows you to implement model-specific forward inference logic.
+A key step in defining the inference service is inheriting the [Model](../../jllabeling/services/auto_labeling/model.py) base class, which allows you to implement model-specific forward inference logic.
 
-Specifically, create a new file `unet.py` in the [model inference service directory](../../anylabeling/services/auto_labeling/). Here's an example:
+Specifically, create a new file `unet.py` in the [model inference service directory](../../jllabeling/services/auto_labeling/). Here's an example:
 
 ```python
 import logging
@@ -248,9 +248,9 @@ import numpy as np
 from PyQt6 import QtCore
 from PyQt6.QtCore import QCoreApplication
 
-from anylabeling.app_info import __preferred_device__
-from anylabeling.views.labeling.shape import Shape
-from anylabeling.views.labeling.utils.opencv import qt_img_to_rgb_cv_img
+from jllabeling.app_info import __preferred_device__
+from jllabeling.views.labeling.shape import Shape
+from jllabeling.views.labeling.utils.opencv import qt_img_to_rgb_cv_img
 from .model import Model
 from .types import AutoLabelingResult
 from .engines.build_onnx_engine import OnnxBaseModel
@@ -361,18 +361,18 @@ Here:
 
 -   In the `Meta` class:
     -   `required_config_names`: Specifies mandatory fields in the model config file for proper initialization.
-    -   `widgets`: Specifies controls (buttons, dropdowns, etc.) to display for this service. See [this file](../../anylabeling/services/auto_labeling/__init__.py) for definitions.
+    -   `widgets`: Specifies controls (buttons, dropdowns, etc.) to display for this service. See [this file](../../jllabeling/services/auto_labeling/__init__.py) for definitions.
     -   `output_modes`: Specifies the output shape types supported (e.g., polygon, rectangle, rotated box).
     -   `default_output_mode`: Specifies the default output shape type.
 -   `predict_shapes` and `unload` are abstract methods that **must** be implemented. They define the inference process and resource release logic, respectively.
 
 **f. Add to Model Management**
 
-After the above steps, open the [model configuration file](../../anylabeling/services/auto_labeling/__init__.py). Add the corresponding model type field (e.g., `unet`) to the `_CUSTOM_MODELS` list and, if necessary, add the model name to relevant configuration sections.
+After the above steps, open the [model configuration file](../../jllabeling/services/auto_labeling/__init__.py). Add the corresponding model type field (e.g., `unet`) to the `_CUSTOM_MODELS` list and, if necessary, add the model name to relevant configuration sections.
 
 > **Tip**: If you don't know how to implement specific widgets, use the search panel, enter relevant keywords, and examine the implementation logic of available widgets.
 
-Finally, go to the [Model Manager class file](../../anylabeling/services/auto_labeling/model_manager.py). In the `_load_model` method, initialize your instance as follows:
+Finally, go to the [Model Manager class file](../../jllabeling/services/auto_labeling/model_manager.py). In the `_load_model` method, initialize your instance as follows:
 
 ```python
 ...
@@ -424,7 +424,7 @@ class ModelManager(QObject):
 
 # Model Export
 
-> This section provides specific examples of converting custom models to the ONNX format for quick integration into X-AnyLabeling.
+> This section provides specific examples of converting custom models to the ONNX format for quick integration into JLLabelingAndTrain.
 
 For more model export examples, see the [`tools/onnx_exporter`](../../tools/onnx_exporter/) directory.
 

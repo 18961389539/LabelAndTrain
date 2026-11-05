@@ -1,7 +1,7 @@
 # Overview
 
 > **Archived: an upstream feature.** This build is YOLO-only and ships no such
-> panel; the page describes upstream X-AnyLabeling, not JLLabelingAndTrain.
+> panel; the page describes upstream X-AnyLabeling, not X-AnyLabeling.
 > See "Fork scope" in the [README](../../README.md).
 
 
@@ -20,7 +20,7 @@ To open the VQA tool, ensure that the main window’s image directory is loaded.
 On startup, the system automatically loads the default configuration from the following path. You may modify it as needed:
 
 ```bash
-~/xanylabeling_data/vqa/components.json
+~/jllabeling_data/vqa/components.json
 ```
 
 # Tutorial

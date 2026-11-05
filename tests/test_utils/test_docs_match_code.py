@@ -32,13 +32,13 @@ _WORDS = {
 
 
 def _loadable_type_count():
-    from anylabeling.services.auto_labeling import _CUSTOM_MODELS
+    from jllabeling.services.auto_labeling import _CUSTOM_MODELS
 
     return len(_CUSTOM_MODELS)
 
 
 def _builtin_config_count():
-    path = REPO / "anylabeling" / "configs" / "models.yaml"
+    path = REPO / "jllabeling" / "configs" / "models.yaml"
     return len(yaml.safe_load(io.open(path, encoding="utf-8").read()))
 
 

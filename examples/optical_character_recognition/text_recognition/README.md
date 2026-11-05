@@ -9,7 +9,7 @@
 
 ![](.data/annotated_ocr_recognition.gif)
 
-Currently, X-AnyLabeling supports both manual and automatic annotation of the PP-OCR dataset.
+Currently, JLLabelingAndTrain supports both manual and automatic annotation of the PP-OCR dataset.
 
 1. Manual Annotation Modes
 

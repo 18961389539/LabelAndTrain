@@ -18,7 +18,7 @@ sys.path.insert(
 
 from PyQt6.QtCore import Qt  # noqa: E402
 
-from anylabeling.views.labeling.widgets.view_state import (  # noqa: E402
+from jllabeling.views.labeling.widgets.view_state import (  # noqa: E402
     ViewStateStore,
 )
 

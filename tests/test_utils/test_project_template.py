@@ -12,7 +12,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pytest
 
-from anylabeling.views.labeling import project_model
+from jllabeling.views.labeling import project_model
 
 
 def _make_project(
@@ -139,7 +139,7 @@ _QAPP = None
 @pytest.mark.parametrize("pick", [0, 1])
 def test_dialog_template_combo(pick, tmp_path):
     pytest.importorskip("PyQt6")
-    from anylabeling.views.labeling.widgets.project_dialog import (
+    from jllabeling.views.labeling.widgets.project_dialog import (
         ProjectPropertiesDialog,
     )
 
@@ -184,7 +184,7 @@ def test_dialog_template_combo(pick, tmp_path):
 
 def test_dialog_without_templates_has_no_combo():
     pytest.importorskip("PyQt6")
-    from anylabeling.views.labeling.widgets.project_dialog import (
+    from jllabeling.views.labeling.widgets.project_dialog import (
         ProjectPropertiesDialog,
     )
 
@@ -198,8 +198,8 @@ def test_dialog_without_templates_has_no_combo():
 
 def test_template_choices_exclude_recordless_and_self(tmp_path, monkeypatch):
     """候选只含真正有清单的项目，目标本身不在列表里。"""
-    from anylabeling.views.labeling import project_registry
-    from anylabeling.views.labeling.utils import project_view
+    from jllabeling.views.labeling import project_registry
+    from jllabeling.views.labeling.utils import project_view
 
     real = tmp_path / "real"
     real.mkdir()

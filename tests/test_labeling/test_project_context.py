@@ -9,7 +9,7 @@ shape, vanished folders, and the task/name readers.
 import os
 import unittest
 
-from anylabeling.views.labeling import project_context
+from jllabeling.views.labeling import project_context
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 

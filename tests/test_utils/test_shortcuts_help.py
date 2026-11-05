@@ -1,6 +1,6 @@
 import unittest
 
-from anylabeling.views.labeling.utils.shortcuts_help import (
+from jllabeling.views.labeling.utils.shortcuts_help import (
     SHORTCUT_GROUPS,
     build_shortcut_rows,
     filter_shortcut_rows,
@@ -69,7 +69,7 @@ class TestBuildShortcutRows(unittest.TestCase):
         self.assertTrue(any("点" in text for text in ctrl_z), ctrl_z)
 
     def test_nothing_is_hidden_from_the_cheat_sheet(self):
-        from anylabeling.views.labeling.utils import shortcuts_help
+        from jllabeling.views.labeling.utils import shortcuts_help
 
         self.assertEqual(shortcuts_help._HIDDEN_KEYS, frozenset())
 
@@ -114,7 +114,7 @@ class TestAdvertisedShortcuts(unittest.TestCase):
     keys that were advertised for years without a QAction)."""
 
     def setUp(self):
-        from anylabeling.views.labeling.settings.schema import (
+        from jllabeling.views.labeling.settings.schema import (
             SHORTCUT_DUPLICATE_WHITELIST,
             load_template_config,
         )
@@ -158,7 +158,7 @@ class TestAdvertisedShortcuts(unittest.TestCase):
         )
 
     def test_every_supported_shape_is_advertised(self):
-        from anylabeling.views.labeling.shape import Shape
+        from jllabeling.views.labeling.shape import Shape
 
         advertised = {
             key

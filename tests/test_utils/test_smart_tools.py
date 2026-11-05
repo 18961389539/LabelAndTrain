@@ -6,7 +6,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 try:
     from PyQt6 import QtWidgets
 
-    from anylabeling.views.labeling.utils.smart_ui import (
+    from jllabeling.views.labeling.utils.smart_ui import (
         RESULT_CATEGORY_ROLE,
         RESULT_PATH_ROLE,
         _ResultDialog,
@@ -73,8 +73,8 @@ class TestApplyStaleDeletions(unittest.TestCase):
     def setUp(self):
         import tempfile
 
-        from anylabeling.views.labeling.utils import label_backup
-        from anylabeling.views.labeling.utils import smart_stale as smart_tools
+        from jllabeling.views.labeling.utils import label_backup
+        from jllabeling.views.labeling.utils import smart_stale as smart_tools
 
         self.smart_tools = smart_tools
         self.label_backup = label_backup
@@ -230,8 +230,8 @@ class TestStaleAuditDialog(unittest.TestCase):
         os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
         from PyQt6 import QtWidgets
 
-        from anylabeling.views.labeling.utils import label_backup
-        from anylabeling.views.labeling.utils import smart_stale as smart_tools
+        from jllabeling.views.labeling.utils import label_backup
+        from jllabeling.views.labeling.utils import smart_stale as smart_tools
 
         self.smart_tools = smart_tools
         self.label_backup = label_backup
@@ -379,8 +379,8 @@ class TestStaleDeleteBackup(unittest.TestCase):
         import os
         import tempfile
 
-        from anylabeling.views.labeling.utils import label_backup
-        from anylabeling.views.labeling.utils import smart_stale as smart_tools
+        from jllabeling.views.labeling.utils import label_backup
+        from jllabeling.views.labeling.utils import smart_stale as smart_tools
 
         self.json = json
         self.os = os
@@ -568,9 +568,9 @@ class TestBackupRestore(unittest.TestCase):
         import json
         import tempfile
 
-        from anylabeling.views.labeling.utils import label_backup
-        from anylabeling.views.labeling.utils import smart_backup
-        from anylabeling.views.labeling.utils import smart_stale
+        from jllabeling.views.labeling.utils import label_backup
+        from jllabeling.views.labeling.utils import smart_backup
+        from jllabeling.views.labeling.utils import smart_stale
 
         self.json = json
         self.smart_stale = smart_stale
@@ -650,7 +650,7 @@ class TestBackupRestore(unittest.TestCase):
         import os
         from unittest import mock
 
-        from anylabeling.views.labeling.utils import _io
+        from jllabeling.views.labeling.utils import _io
 
         self._delete()
         runs = self.label_backup.list_label_backups(self.tmp.name)

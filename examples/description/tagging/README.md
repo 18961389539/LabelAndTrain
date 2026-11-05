@@ -4,7 +4,7 @@ Tagging assigns descriptive labels to an entire image or to selected shapes.
 
 ## Tagging Model
 
-X-AnyLabeling includes [RAM](../../../anylabeling/configs/auto_labeling/ram_swin_large_14m.yaml) and [RAM++](../../../anylabeling/configs/auto_labeling/ram_plus_swin_large_14m.yaml) for image- or shape-level tagging. Tagging models can also be combined with detection and segmentation models, as in [GroundingSAM](../../../anylabeling/configs/auto_labeling/groundingdino_swinb_attn_fuse_sam_hq_vit_l_quant.yaml).
+JLLabelingAndTrain includes [RAM](../../../jllabeling/configs/auto_labeling/ram_swin_large_14m.yaml) and [RAM++](../../../jllabeling/configs/auto_labeling/ram_plus_swin_large_14m.yaml) for image- or shape-level tagging. Tagging models can also be combined with detection and segmentation models, as in [GroundingSAM](../../../jllabeling/configs/auto_labeling/groundingdino_swinb_attn_fuse_sam_hq_vit_l_quant.yaml).
 
 <img src=".data/ram_grounded_sam.jpg" width="100%" />
 

@@ -11,8 +11,8 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pytest
 
-from anylabeling.views.labeling import project_dashboard, project_model
-from anylabeling.views.labeling.widgets import project_dialog
+from jllabeling.views.labeling import project_dashboard, project_model
+from jllabeling.views.labeling.widgets import project_dialog
 
 
 @pytest.fixture()
@@ -133,14 +133,14 @@ def _widget_for(root):
 
 
 def test_open_project_folder_opens_the_root(project, monkeypatch):
-    from anylabeling.views.labeling.utils import project_view
+    from jllabeling.views.labeling.utils import project_view
 
     opened = []
     monkeypatch.setattr(
         project_view, "current_root", lambda widget: project, raising=False
     )
     monkeypatch.setattr(
-        "anylabeling.views.labeling.widgets.project_switcher._open_in_file_manager",
+        "jllabeling.views.labeling.widgets.project_switcher._open_in_file_manager",
         lambda path: opened.append(path),
     )
     project_view.open_project_folder(_widget_for(project))
@@ -148,7 +148,7 @@ def test_open_project_folder_opens_the_root(project, monkeypatch):
 
 
 def test_open_project_folder_without_a_project_says_so(monkeypatch):
-    from anylabeling.views.labeling.utils import project_view
+    from jllabeling.views.labeling.utils import project_view
 
     seen = {}
 

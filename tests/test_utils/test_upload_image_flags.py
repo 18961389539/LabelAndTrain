@@ -6,8 +6,8 @@ from unittest import mock
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from anylabeling.views.labeling.utils import upload as upload_module
-from anylabeling.views.labeling.utils.upload import upload_image_flags_file
+from jllabeling.views.labeling.utils import upload as upload_module
+from jllabeling.views.labeling.utils.upload import upload_image_flags_file
 
 
 def _run(tmp_path, content, monkeypatch):

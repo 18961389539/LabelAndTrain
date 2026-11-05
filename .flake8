@@ -28,5 +28,5 @@ exclude =
     dist,
     wheels_dist,
     .venv,
-    anylabeling/resources/resources.py,
+    jllabeling/resources/resources.py,
     *_ui.py

@@ -13,7 +13,7 @@ if command -v cygpath >/dev/null 2>&1; then
 fi
 SPEC_DIR="${ROOT_DIR}/packaging/pyinstaller/specs"
 DIST_DIR="${ROOT_DIR}/dist"
-export X_ANYLABELING_ROOT="${ROOT_DIR}"
+export JLLABELING_ROOT="${ROOT_DIR}"
 
 usage() {
     cat <<EOF
@@ -47,7 +47,7 @@ build_with_spec() {
     require_file "${spec_path}"
 
     echo "Building ${label} version..."
-    export X_ANYLABELING_DEVICE="${device}"
+    export JLLABELING_DEVICE="${device}"
     # A stale workpath once dropped cv2/config.py from the onedir train build,
     # which turned into a startup ImportError; rebuild from a clean cache.
     pyinstaller --noconfirm --clean "${spec_path}"
@@ -128,23 +128,23 @@ package_macos_release_zip() {
 
 case "${system}" in
     win-cpu)
-        build_with_spec "Windows CPU" "CPU" "${SPEC_DIR}/x-anylabeling-win-cpu.spec"
+        build_with_spec "Windows CPU" "CPU" "${SPEC_DIR}/jllabeling-win-cpu.spec"
         ;;
     win-cpu-train)
-        build_with_spec "Windows CPU (training)" "CPU" "${SPEC_DIR}/x-anylabeling-win-cpu-train.spec"
+        build_with_spec "Windows CPU (training)" "CPU" "${SPEC_DIR}/jllabeling-win-cpu-train.spec"
         package_windows_onedir_zip
         ;;
     win-gpu)
-        build_with_spec "Windows GPU" "GPU" "${SPEC_DIR}/x-anylabeling-win-gpu.spec"
+        build_with_spec "Windows GPU" "GPU" "${SPEC_DIR}/jllabeling-win-gpu.spec"
         ;;
     linux-cpu)
-        build_with_spec "Linux CPU" "CPU" "${SPEC_DIR}/x-anylabeling-linux-cpu.spec"
+        build_with_spec "Linux CPU" "CPU" "${SPEC_DIR}/jllabeling-linux-cpu.spec"
         ;;
     linux-gpu)
-        build_with_spec "Linux GPU" "GPU" "${SPEC_DIR}/x-anylabeling-linux-gpu.spec"
+        build_with_spec "Linux GPU" "GPU" "${SPEC_DIR}/jllabeling-linux-gpu.spec"
         ;;
     macos)
-        build_with_spec "macOS" "CPU" "${SPEC_DIR}/x-anylabeling-macos.spec"
+        build_with_spec "macOS" "CPU" "${SPEC_DIR}/jllabeling-macos.spec"
         package_macos_release_zip
         ;;
     -h|--help|help)

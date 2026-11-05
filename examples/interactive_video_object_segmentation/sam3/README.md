@@ -20,7 +20,7 @@ You can tweak the settings in [segment_anything_3_video.yaml](https://github.com
 
 ## Usage
 
-Launch the X-AnyLabeling client, press `Ctrl+A` or click the `AI` button in the left menu bar to open the auto-labeling panel. In the model dropdown list, select `Remote-Server`, then choose `Segment Anything 3 Video`.
+Launch the JLLabelingAndTrain client, press `Ctrl+A` or click the `AI` button in the left menu bar to open the auto-labeling panel. In the model dropdown list, select `Remote-Server`, then choose `Segment Anything 3 Video`.
 
 ### Text Prompting
 

@@ -1,0 +1,262 @@
+# -*- mode: python -*-
+# vim: ft=python
+#
+# Windows CPU build with training (onedir) — bundles the CPU-only torch +
+# ultralytics so the built-in training panel works in the packaged app.
+#
+# onnxslim is a hidden import on purpose: Ultralytics imports it lazily during
+# ONNX export, which is what feeds the training -> auto-labeling hand-off.
+#
+# Derived from jllabeling-win-cpu.spec (labeling-only, onefile). Training
+# pulls in torch (~250MB) + ultralytics; a onefile would re-extract that on
+# every launch, so this build uses the onedir layout instead. GPU users should
+# use jllabeling-win-gpu.spec, which bundles the CUDA torch build.
+
+import importlib.util
+import os
+import re
+import sys
+
+from PyInstaller.utils.hooks import collect_data_files, collect_submodules
+
+sys.setrecursionlimit(10000)  # required on Windows
+
+def _resolve_root_dir():
+    env_root = os.environ.get('JLLABELING_ROOT')
+    if env_root:
+        return os.path.abspath(env_root)
+
+    spec_path = globals().get('SPEC')
+    if isinstance(spec_path, str) and spec_path:
+        return os.path.abspath(os.path.join(os.path.dirname(spec_path), '..', '..', '..'))
+
+    return os.path.abspath(os.getcwd())
+
+ROOT_DIR = _resolve_root_dir()
+
+def _p(*parts):
+    return os.path.join(ROOT_DIR, *parts)
+
+def _load_version():
+    app_info_path = _p('jllabeling', 'app_info.py')
+    with open(app_info_path, 'r', encoding='utf-8') as f:
+        content = f.read()
+    match = re.search(r'^__version__\s*=\s*["\']([^"\']+)["\']', content, re.MULTILINE)
+    if not match:
+        raise RuntimeError(f"Failed to read __version__ from: {app_info_path}")
+    return match.group(1)
+
+__version__ = _load_version()
+
+MSVC_RUNTIME_DLLS = {
+    'msvcp140.dll',
+    'msvcp140_1.dll',
+    'msvcp140_2.dll',
+    'msvcp140_atomic_wait.dll',
+    'vcruntime140.dll',
+    'vcruntime140_1.dll',
+    'concrt140.dll',
+    'vcomp140.dll',
+}
+
+def _entry_dll_names(entry):
+    names = []
+    if isinstance(entry, (tuple, list)):
+        for value in entry[:2]:
+            if isinstance(value, str):
+                names.append(os.path.basename(value).lower())
+    return names
+
+def _collect_onnxruntime_dlls():
+    ort_spec = importlib.util.find_spec('onnxruntime')
+    if ort_spec is None or ort_spec.origin is None:
+        return []
+
+    ort_capi = os.path.join(os.path.dirname(ort_spec.origin), 'capi')
+    if not os.path.isdir(ort_capi):
+        return []
+
+    ort_dlls = [
+        os.path.join(ort_capi, filename)
+        for filename in os.listdir(ort_capi)
+        if filename.lower().endswith('.dll')
+    ]
+    root_copy_names = (
+        'onnxruntime_providers_shared.dll',
+        'onnxruntime.dll',
+    )
+    root_copy_dlls = [
+        os.path.join(ort_capi, name)
+        for name in root_copy_names
+        if os.path.isfile(os.path.join(ort_capi, name))
+    ]
+    return (
+        [(dll, 'onnxruntime/capi') for dll in ort_dlls]
+        + [(dll, '.') for dll in root_copy_dlls]
+    )
+
+def _collect_torchvision_binaries():
+    """torchvision's native extensions must be bundled by hand.
+
+    This torchvision build ships stable-ABI extensions named
+    ``_C_stable.pyd`` / ``image_stable.pyd`` and loads them at runtime with
+    ``torch.ops.load_library`` (see ``torchvision/extension.py``), which
+    PyInstaller cannot see statically. ``collect_dynamic_libs`` does not match
+    ``.pyd`` either, so scan the package directory ourselves. The image codec
+    DLLs (jpeg8, libpng16, libwebp, ...) must land in the same directory
+    because ``_get_extension_path`` registers it via ``os.add_dll_directory``.
+    """
+    tv_spec = importlib.util.find_spec('torchvision')
+    if tv_spec is None or tv_spec.origin is None:
+        return []
+
+    tv_dir = os.path.dirname(tv_spec.origin)
+    return [
+        (os.path.join(tv_dir, name), 'torchvision')
+        for name in sorted(os.listdir(tv_dir))
+        if name.lower().endswith(('.pyd', '.dll'))
+    ]
+
+def _collect_msvc_runtime_dlls():
+    system_root = os.environ.get('SystemRoot') or os.environ.get('WINDIR')
+    candidate_dirs = []
+    if system_root:
+        candidate_dirs.append(os.path.join(system_root, 'System32'))
+    candidate_dirs.append(os.path.dirname(sys.executable))
+    candidate_dirs.append(sys.base_prefix)
+    candidate_dirs.extend(os.environ.get('PATH', '').split(os.pathsep))
+
+    search_dirs = []
+    seen_dirs = set()
+    for directory in candidate_dirs:
+        if not directory or not os.path.isdir(directory):
+            continue
+        normalized = os.path.normcase(os.path.abspath(directory))
+        if normalized in seen_dirs:
+            continue
+        seen_dirs.add(normalized)
+        search_dirs.append(directory)
+
+    binaries = []
+    collected = []
+    for dll_name in sorted(MSVC_RUNTIME_DLLS):
+        for directory in search_dirs:
+            dll_path = os.path.join(directory, dll_name)
+            if os.path.isfile(dll_path):
+                binaries.append((dll_path, '.'))
+                collected.append(dll_name)
+                break
+    if collected:
+        print(
+            "PyInstaller spec: bundled MSVC runtime DLLs:",
+            ", ".join(sorted(set(collected))),
+        )
+    return binaries
+
+def _to_binary_toc_entries(binaries):
+    toc_entries = []
+    for src_path, _ in binaries:
+        toc_entries.append((os.path.basename(src_path), src_path, 'BINARY'))
+    return toc_entries
+
+def _strip_msvc_runtime_binaries(binaries):
+    kept = []
+    removed = []
+    for entry in binaries:
+        names = _entry_dll_names(entry)
+        if any(name in MSVC_RUNTIME_DLLS for name in names):
+            removed.extend(name for name in names if name in MSVC_RUNTIME_DLLS)
+            continue
+        kept.append(entry)
+    if removed:
+        print(
+            "PyInstaller spec: excluded bundled MSVC runtime DLLs:",
+            ", ".join(sorted(set(removed))),
+        )
+    return kept
+
+onnxruntime_binaries = _collect_onnxruntime_dlls()
+torchvision_binaries = _collect_torchvision_binaries()
+msvc_runtime_binaries = _collect_msvc_runtime_dlls()
+matplotlib_datas = collect_data_files('matplotlib')
+lucide_datas = collect_data_files('lucide')
+# add_integration_callbacks imports these by module path at trainer startup.
+# Static analysis cannot see the imports, and an enabled integration whose
+# file is absent fails the whole run with ModuleNotFoundError.
+ultralytics_callbacks = collect_submodules('ultralytics.utils.callbacks')
+
+a = Analysis(
+    [_p('jllabeling', 'app.py')],
+    pathex=[_p('jllabeling')],
+    binaries=onnxruntime_binaries + torchvision_binaries,
+    datas=[
+        (_p('jllabeling', 'configs', 'auto_labeling', '*.yaml'), 'jllabeling/configs/auto_labeling'),
+        (_p('jllabeling', 'configs', '*.yaml'), 'jllabeling/configs'),
+        (_p('jllabeling', 'views', 'labeling', 'widgets', 'auto_labeling', 'auto_labeling.ui'), 'jllabeling/views/labeling/widgets/auto_labeling'),
+        (_p('jllabeling', 'services', 'auto_labeling', 'configs', 'clip', '*'), 'jllabeling/services/auto_labeling/configs/clip'),
+    ] + matplotlib_datas + lucide_datas,
+    hiddenimports=[
+        'lucide',
+        'matplotlib',
+        'matplotlib.backends.backend_agg',
+        'matplotlib.font_manager',
+        'matplotlib.mathtext',
+        # Training is entered via a string __import__ in app.py; make sure the
+        # worker entrypoint and its heavy deps are always analysed.
+        'jllabeling.services.auto_training.ultralytics.trainer',
+        'jllabeling.services.auto_training.ultralytics.general',
+        'ultralytics',
+        'ultralytics.utils.downloads',
+        *ultralytics_callbacks,
+        # ModelScope-mirrored ultralytics weights (e.g. yolo11n-seg.pt) are
+        # dill-pickled, so torch.load imports dill while unpickling. Nothing
+        # imports it statically; without this entry the packaged training
+        # panel dies with "No module named 'dill'".
+        'dill',
+        # Ultralytics imports onnxslim lazily inside its ONNX exporter, so
+        # static analysis misses it; without it the packaged
+        # Use-for-Auto-labeling path can only ask for a pip install.
+        'onnxslim',
+    ],
+    hookspath=[],
+    runtime_hooks=[_p('packaging', 'pyinstaller', 'runtime_hooks', 'ort_dll_bootstrap.py')],
+    excludes=[
+        # WebEngine / PDF are not used and save ~500MB.
+        'PyQt6.QtWebEngineWidgets', 'PyQt6.QtWebEngineCore',
+        'PyQt6.QtWebEngineQuick', 'PyQt6.QtWebChannel',
+        'PyQt6.QtPdf', 'PyQt6.QtPdfWidgets', 'PyQt6.QtWebSockets',
+        # A foreign Qt binding must never sneak in.
+        'PySide6', 'PySide6.scripts',
+        # CPU-only build: CUDA runtime, torchaudio and triton are not shipped.
+        'torchaudio', 'triton',
+        'nvidia', 'nvidia.cublas', 'nvidia.cuda_cupti', 'nvidia.cuda_nvrtc',
+        'nvidia.cuda_runtime', 'nvidia.cudnn', 'nvidia.cufft',
+        'nvidia.curand', 'nvidia.cusolver', 'nvidia.cusparse',
+        'nvidia.nccl', 'nvidia.nvjitlink', 'nvidia.nvtx',
+    ],
+)
+a.binaries = _strip_msvc_runtime_binaries(a.binaries)
+if msvc_runtime_binaries:
+    a.binaries += _to_binary_toc_entries(msvc_runtime_binaries)
+pyz = PYZ(a.pure, a.zipped_data)
+
+exe = EXE(
+    pyz,
+    a.scripts,
+    [],
+    exclude_binaries=True,
+    name=f'JLLabelingAndTrain-v{__version__}-CPU-Train',
+    debug=False,
+    strip=False,
+    upx=False,
+    console=False,
+    icon=_p('jllabeling', 'resources', 'images', 'icon.ico'),
+)
+
+coll = COLLECT(
+    exe,
+    a.binaries,
+    a.zipfiles,
+    a.datas,
+    name=f'JLLabelingAndTrain-v{__version__}-CPU-Train',
+)

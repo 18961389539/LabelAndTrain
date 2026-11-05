@@ -3,7 +3,7 @@ import unittest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from anylabeling.views.labeling.provenance import (  # noqa: E402
+from jllabeling.views.labeling.provenance import (  # noqa: E402
     SOURCE_HUMAN,
     SOURCE_MODEL,
     SOURCE_UNKNOWN,
@@ -28,7 +28,7 @@ class TestStamping(unittest.TestCase):
             self.assertEqual(shape["model"], "run_07")
 
     def test_stamps_shape_objects(self):
-        from anylabeling.views.labeling.shape import Shape
+        from jllabeling.views.labeling.shape import Shape
 
         shape = Shape(label="cat")
         stamp_model_shapes([shape], "run_07")
@@ -82,7 +82,7 @@ class TestStaleness(unittest.TestCase):
 
 class TestShapeRoundTrip(unittest.TestCase):
     def test_source_and_model_survive_to_dict_load(self):
-        from anylabeling.views.labeling.shape import Shape
+        from jllabeling.views.labeling.shape import Shape
 
         shape = Shape(label="cat", shape_type="rectangle")
         stamp_model_shapes([shape], "run_07")
@@ -95,7 +95,7 @@ class TestShapeRoundTrip(unittest.TestCase):
         self.assertEqual(model_of(restored), "run_07")
 
     def test_human_shape_does_not_write_an_empty_model_key(self):
-        from anylabeling.views.labeling.shape import Shape
+        from jllabeling.views.labeling.shape import Shape
 
         shape = Shape(label="cat", shape_type="rectangle")
         payload = shape.to_dict()
@@ -103,7 +103,7 @@ class TestShapeRoundTrip(unittest.TestCase):
         self.assertNotIn("model", payload)
 
     def test_legacy_payload_loads_as_unknown_not_human(self):
-        from anylabeling.views.labeling.shape import Shape
+        from jllabeling.views.labeling.shape import Shape
 
         restored = Shape().load_from_dict(
             {
@@ -132,7 +132,7 @@ class TestModelVersion(unittest.TestCase):
     def test_digest_tracks_content_and_survives_reopen(self):
         import tempfile
 
-        from anylabeling.views.labeling.provenance import weight_digest
+        from jllabeling.views.labeling.provenance import weight_digest
 
         with tempfile.TemporaryDirectory() as tmp:
             path = self._weights(tmp)
@@ -151,7 +151,7 @@ class TestModelVersion(unittest.TestCase):
         # layer at the end and leave both the leading bytes and the size equal.
         import tempfile
 
-        from anylabeling.views.labeling.provenance import weight_digest
+        from jllabeling.views.labeling.provenance import weight_digest
 
         with tempfile.TemporaryDirectory() as tmp:
             head = b"x" * (1024 * 1024)
@@ -162,7 +162,7 @@ class TestModelVersion(unittest.TestCase):
     def test_resolve_model_path_handles_urls_and_yaml_relative_paths(self):
         import tempfile
 
-        from anylabeling.views.labeling.provenance import resolve_model_path
+        from jllabeling.views.labeling.provenance import resolve_model_path
 
         self.assertIsNone(resolve_model_path(None))
         self.assertIsNone(
@@ -232,7 +232,7 @@ class TestModelVersion(unittest.TestCase):
         self.assertEqual([index for index, _ in found], [0])
 
     def test_round_trip_keeps_the_version(self):
-        from anylabeling.views.labeling.shape import Shape
+        from jllabeling.views.labeling.shape import Shape
 
         shape = Shape(label="cat")
         stamp_model_shapes([shape], "run_07", "a1b2c3d4e5f6")

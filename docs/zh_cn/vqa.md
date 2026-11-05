@@ -1,7 +1,7 @@
 # 概述
 
 > **归档页面：上游功能。** 本构建为 YOLO-only，不包含该面板。此页面描述的是上游
-> X-AnyLabeling，而非 JLLabelingAndTrain。参见 [README](../../README_zh-CN.md)
+> X-AnyLabeling，而非 X-AnyLabeling。参见 [README](../../README_zh-CN.md)
 > 的「Fork 范围」一节。
 
 
@@ -20,7 +20,7 @@ X-AnyLabeling 的视觉问答工具用于标注多模态图像问答数据集。
 每次启动时，系统会自动从下述路径加载默认配置，用户可按需修改：
 
 ```bash
-~/xanylabeling_data/vqa/components.json
+~/jllabeling_data/vqa/components.json
 ```
 
 # 教程

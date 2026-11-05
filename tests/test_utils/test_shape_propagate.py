@@ -4,7 +4,7 @@ import os.path as osp
 import tempfile
 import unittest
 
-from anylabeling.views.labeling.utils.shape_propagate import (
+from jllabeling.views.labeling.utils.shape_propagate import (
     bbox_signature,
     load_shapes_from_file,
     plan_template_propagation,
@@ -18,7 +18,9 @@ class TestLoadShapesFromFile(unittest.TestCase):
 
     def test_missing_file_degrades_gracefully(self):
         self.assertEqual(load_shapes_from_file(None), (0, 0, []))
-        self.assertEqual(load_shapes_from_file("/no/such/file.json"), (0, 0, []))
+        self.assertEqual(
+            load_shapes_from_file("/no/such/file.json"), (0, 0, [])
+        )
 
     def test_corrupt_file_degrades_gracefully(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -35,7 +37,9 @@ class TestLoadShapesFromFile(unittest.TestCase):
                     {
                         "imageWidth": 200,
                         "imageHeight": 100,
-                        "shapes": [{"label": "cat", "points": [[0, 0], [10, 10]]}],
+                        "shapes": [
+                            {"label": "cat", "points": [[0, 0], [10, 10]]}
+                        ],
                     },
                     f,
                 )
@@ -48,8 +52,11 @@ class TestLoadShapesFromFile(unittest.TestCase):
 class TestScaleShape(unittest.TestCase):
 
     def test_scales_and_clamps_coordinates(self):
-        shape = {"label": "cat", "shape_type": "rectangle",
-                 "points": [[0, 0], [100, 50]]}
+        shape = {
+            "label": "cat",
+            "shape_type": "rectangle",
+            "points": [[0, 0], [100, 50]],
+        }
         scaled = scale_shape(shape, 200, 100, 50, 100)
         self.assertEqual(scaled["points"], [[0.0, 0.0], [25.0, 50.0]])
         self.assertEqual(scaled["shape_type"], "rectangle")
@@ -95,7 +102,10 @@ class TestPropagateLabels(unittest.TestCase):
     def test_prev_size_overrides_stored_size(self):
         with tempfile.TemporaryDirectory() as tmp:
             prev = self._write(
-                tmp, "prev.json", 100, 100,
+                tmp,
+                "prev.json",
+                100,
+                100,
                 [{"label": "cat", "points": [[0, 0], [10, 10]]}],
             )
             planned = propagate_labels(prev, (50, 50), 100, 100, [])
@@ -132,7 +142,10 @@ class TestPropagateLabels(unittest.TestCase):
     def test_empty_target_returns_nothing(self):
         with tempfile.TemporaryDirectory() as tmp:
             prev = self._write(
-                tmp, "prev.json", 100, 100,
+                tmp,
+                "prev.json",
+                100,
+                100,
                 [{"label": "cat", "points": [[0, 0], [10, 10]]}],
             )
             self.assertEqual(propagate_labels(prev, None, 0, 100, []), [])
@@ -142,7 +155,9 @@ class TestBboxSignature(unittest.TestCase):
 
     def test_normalized_rounded_signature(self):
         shape = {"label": "cat", "points": [[0, 0], [50, 50]]}
-        self.assertEqual(bbox_signature(shape, 100, 100), ("cat", (0.0, 0.0, 0.5, 0.5)))
+        self.assertEqual(
+            bbox_signature(shape, 100, 100), ("cat", (0.0, 0.0, 0.5, 0.5))
+        )
 
 
 def _scene(path, offset):
@@ -194,27 +209,47 @@ class TestPlanTemplatePropagation(unittest.TestCase):
     def test_matching_template_produces_scaled_prelabels(self):
         with tempfile.TemporaryDirectory() as tmp:
             template = _scene(osp.join(tmp, "template.png"), 0)
-            _label(tmp, "template.json", [{"label": "cat", "points": [[0, 0], [16, 16]]}])
+            _label(
+                tmp,
+                "template.json",
+                [{"label": "cat", "points": [[0, 0], [16, 16]]}],
+            )
             target = _scene(osp.join(tmp, "shot.png"), 0)
             plan = plan_template_propagation(tmp, [target], [template])
             self.assertEqual(len(plan), 1)
             self.assertEqual(plan[0]["template"], template)
             self.assertEqual(plan[0]["distance"], 0)
-            self.assertEqual(plan[0]["shapes"][0]["points"], [[0.0, 0.0], [16.0, 16.0]])
+            self.assertEqual(
+                plan[0]["shapes"][0]["points"], [[0.0, 0.0], [16.0, 16.0]]
+            )
 
     def test_no_match_skips_target(self):
         with tempfile.TemporaryDirectory() as tmp:
             template = _scene(osp.join(tmp, "template.png"), 0)
-            _label(tmp, "template.json", [{"label": "cat", "points": [[0, 0], [16, 16]]}])
+            _label(
+                tmp,
+                "template.json",
+                [{"label": "cat", "points": [[0, 0], [16, 16]]}],
+            )
             target = _solid(osp.join(tmp, "shot.png"))
-            self.assertEqual(plan_template_propagation(tmp, [target], [template]), [])
+            self.assertEqual(
+                plan_template_propagation(tmp, [target], [template]), []
+            )
 
     def test_existing_duplicate_shapes_are_skipped(self):
         with tempfile.TemporaryDirectory() as tmp:
             template = _scene(osp.join(tmp, "template.png"), 0)
-            _label(tmp, "template.json", [{"label": "cat", "points": [[0, 0], [16, 16]]}])
+            _label(
+                tmp,
+                "template.json",
+                [{"label": "cat", "points": [[0, 0], [16, 16]]}],
+            )
             target = _scene(osp.join(tmp, "shot.png"), 0)
-            _label(tmp, "shot.json", [{"label": "cat", "points": [[0, 0], [16, 16]]}])
+            _label(
+                tmp,
+                "shot.json",
+                [{"label": "cat", "points": [[0, 0], [16, 16]]}],
+            )
             plan = plan_template_propagation(tmp, [target], [template])
             self.assertEqual(plan, [])
 

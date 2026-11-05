@@ -9,8 +9,8 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pytest
 
-from anylabeling.views.labeling import project, project_registry
-from anylabeling.views.labeling import project_settings
+from jllabeling.views.labeling import project, project_registry
+from jllabeling.views.labeling import project_settings
 
 PROJECT_FILE = os.path.join(
     project.PROJECT_DIR_NAME, project.PROJECT_FILE_NAME
@@ -227,7 +227,7 @@ def test_registry_write_is_atomic(registry_file):
     """注册表改写走临时文件+替换：一次瞬时锁不会丢数据也不会落半截。"""
     from unittest import mock
 
-    from anylabeling.views.labeling.utils import _io
+    from jllabeling.views.labeling.utils import _io
 
     root = str(registry_file.parent)
     assert project_registry.record_project(root) is True
@@ -257,7 +257,7 @@ def test_registry_write_failure_keeps_the_previous_file(registry_file):
     """替换彻底失败时返回 False，且磁盘上仍是旧的完整内容。"""
     from unittest import mock
 
-    from anylabeling.views.labeling.utils import _io
+    from jllabeling.views.labeling.utils import _io
 
     def always_locked(src, dst):
         raise _fake_lock_error(dst)
@@ -278,7 +278,7 @@ def test_registry_write_failure_keeps_the_previous_file(registry_file):
 
 
 def test_run_history_rows_carry_the_dataset_name(tmp_path):
-    from anylabeling.views.training import run_history
+    from jllabeling.views.training import run_history
 
     run_dir = tmp_path / "detect" / "exp1"
     (run_dir / "weights").mkdir(parents=True)
@@ -301,7 +301,7 @@ def test_run_history_rows_carry_the_dataset_name(tmp_path):
 
 
 def test_run_history_rows_without_label_dir_stay_blank(tmp_path):
-    from anylabeling.views.training import run_history
+    from jllabeling.views.training import run_history
 
     run_dir = tmp_path / "detect" / "exp1"
     run_dir.mkdir(parents=True)
@@ -329,7 +329,7 @@ def _write_run_meta(runs_root, task, name, label_dir, finished_at):
 
 
 def test_project_training_stats_match_by_closest_anchor(tmp_path):
-    from anylabeling.views.training import run_history
+    from jllabeling.views.training import run_history
 
     runs = tmp_path / "runs"
     _write_run_meta(
@@ -358,7 +358,7 @@ def test_project_training_stats_match_by_closest_anchor(tmp_path):
 
 
 def test_project_training_stats_respect_prefix_boundaries(tmp_path):
-    from anylabeling.views.training import run_history
+    from jllabeling.views.training import run_history
 
     runs = tmp_path / "runs"
     _write_run_meta(
@@ -385,7 +385,7 @@ def test_project_training_stats_respect_prefix_boundaries(tmp_path):
 
 
 def test_project_training_stats_without_runs_root_is_all_zero(tmp_path):
-    from anylabeling.views.training import run_history
+    from jllabeling.views.training import run_history
 
     projects = [{"root": str(tmp_path / "ds"), "label_dir": None}]
     stats = run_history.project_training_stats(projects, "")
@@ -600,10 +600,10 @@ def test_startup_show_project_manager_defaults_on():
 
     import yaml
 
-    import anylabeling.configs as anylabeling_configs
+    import jllabeling.configs as jllabeling_configs
 
     with pkg_resources.open_text(
-        anylabeling_configs, "jllabeling_config.yaml"
+        jllabeling_configs, "jllabeling_config.yaml"
     ) as handle:
         template = yaml.safe_load(handle)
     assert template["startup_show_project_manager"] is True
@@ -613,7 +613,7 @@ def test_startup_show_project_manager_defaults_on():
 
 
 def _train_dialog_stub(dataset_dir):
-    from anylabeling.views.training.ultralytics_dialog import UltralyticsDialog
+    from jllabeling.views.training.ultralytics_dialog import UltralyticsDialog
 
     stub = SimpleNamespace(image_list=[osp.join(dataset_dir, "a.jpg")])
     stub.save_prefs = UltralyticsDialog._save_project_train_prefs.__get__(stub)
@@ -669,7 +669,7 @@ def test_train_prefs_whitelist_round_trip(tmp_path):
 
 
 def test_train_prefs_without_a_dataset_dir_is_a_no_op():
-    from anylabeling.views.training.ultralytics_dialog import UltralyticsDialog
+    from jllabeling.views.training.ultralytics_dialog import UltralyticsDialog
 
     stub = SimpleNamespace(image_list=[])
     assert UltralyticsDialog._project_train_prefs.__get__(stub)() == {}

@@ -2,8 +2,8 @@
 
 import json
 
-from anylabeling.views.labeling.label_converter import LabelConverter
-from anylabeling.views.labeling.utils.upload import import_voc_labels
+from jllabeling.views.labeling.label_converter import LabelConverter
+from jllabeling.views.labeling.utils.upload import import_voc_labels
 
 VALID = """<annotation>
   <size><width>20</width><height>20</height></size>

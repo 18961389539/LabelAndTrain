@@ -5,8 +5,8 @@ import os
 import unittest
 from unittest import mock
 
-from anylabeling.views.labeling.utils import _io
-from anylabeling.views.labeling.utils._io import (
+from jllabeling.views.labeling.utils import _io
+from jllabeling.views.labeling.utils._io import (
     safe_replace,
     save_json,
     save_text,

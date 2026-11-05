@@ -7,14 +7,14 @@ import numpy as np
 import pytest
 from PyQt6 import QtGui
 
-from anylabeling.services.auto_labeling.types import AutoLabelingResult
+from jllabeling.services.auto_labeling.types import AutoLabelingResult
 
 onnx = pytest.importorskip("onnx")
 ort = pytest.importorskip("onnxruntime")
 
 from onnx import TensorProto, helper, numpy_helper  # noqa: E402
 
-from anylabeling.services.auto_labeling.yolov8_cls import (  # noqa: E402
+from jllabeling.services.auto_labeling.yolov8_cls import (  # noqa: E402
     YOLOv8Cls,
     softmax,
 )
@@ -26,14 +26,14 @@ REPO_ROOT = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..")
 )
 TEMPLATE_CONFIG = os.path.join(
-    REPO_ROOT, "anylabeling", "configs", "jllabeling_config.yaml"
+    REPO_ROOT, "jllabeling", "configs", "jllabeling_config.yaml"
 )
 
 
 @pytest.fixture(autouse=True)
 def app_config_file():
     """Model.__init__ reads the app config; it resolves to None otherwise."""
-    from anylabeling import config as app_config
+    from jllabeling import config as app_config
 
     previous = app_config.current_config_file
     app_config.current_config_file = TEMPLATE_CONFIG
@@ -189,7 +189,7 @@ def test_blob_is_channel_first_and_expected_size(model_dir):
 
 
 def test_batch_writer_stores_predictions_without_touching_shapes(tmp_path):
-    from anylabeling.views.labeling.utils.batch import (
+    from jllabeling.views.labeling.utils.batch import (
         save_classification_predictions,
     )
 
@@ -226,7 +226,7 @@ def test_batch_writer_stores_predictions_without_touching_shapes(tmp_path):
 
 
 def test_batch_writer_creates_a_label_file_for_new_images(tmp_path):
-    from anylabeling.views.labeling.utils.batch import (
+    from jllabeling.views.labeling.utils.batch import (
         save_classification_predictions,
     )
 
@@ -253,7 +253,7 @@ def test_batch_writer_creates_a_label_file_for_new_images(tmp_path):
 
 
 def test_predictions_survive_a_label_file_round_trip(tmp_path):
-    from anylabeling.views.labeling import label_file
+    from jllabeling.views.labeling import label_file
 
     path = tmp_path / "a.json"
     # LabelFile.load validates dimensions, so the image must really exist.
@@ -295,7 +295,7 @@ def test_predictions_survive_a_label_file_round_trip(tmp_path):
 
 
 def test_reader_accepts_both_recorded_shapes():
-    from anylabeling.views.labeling.label_widget import LabelingWidget
+    from jllabeling.views.labeling.label_widget import LabelingWidget
 
     def widget_with(other_data):
         fake = type("W", (), {"other_data": other_data})()

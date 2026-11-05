@@ -6,7 +6,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 try:
     from PyQt6 import QtGui, QtWidgets
 
-    from anylabeling.views.labeling.settings.runtime_applier import (
+    from jllabeling.views.labeling.settings.runtime_applier import (
         SettingsRuntimeApplier,
     )
 
@@ -23,11 +23,11 @@ class TestSettingsRuntimeApplier(unittest.TestCase):
         if self.app is None:
             self.app = QtWidgets.QApplication([])
         self.original_font = QtGui.QFont(self.app.font())
-        self.app._xanylabeling_default_font = QtGui.QFont(self.original_font)
+        self.app._jllabeling_default_font = QtGui.QFont(self.original_font)
 
     def tearDown(self):
         self.app.setFont(self.original_font)
-        self.app._xanylabeling_default_font = QtGui.QFont(self.original_font)
+        self.app._jllabeling_default_font = QtGui.QFont(self.original_font)
 
     def test_font_family_applies_and_restores_without_restart(self):
         families = QtGui.QFontDatabase.families()

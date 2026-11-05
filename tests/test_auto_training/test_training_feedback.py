@@ -17,10 +17,10 @@ from types import SimpleNamespace
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from anylabeling.views.training.image_preview_dialog import (  # noqa: E402
+from jllabeling.views.training.image_preview_dialog import (  # noqa: E402
     step_index,
 )
-from anylabeling.views.training.ultralytics_dialog import (  # noqa: E402
+from jllabeling.views.training.ultralytics_dialog import (  # noqa: E402
     UltralyticsDialog,
 )
 

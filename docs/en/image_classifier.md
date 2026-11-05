@@ -1,7 +1,7 @@
 # Overview
 
 > **Archived: an upstream feature.** This build is YOLO-only and ships no such
-> panel; the page describes upstream X-AnyLabeling, not JLLabelingAndTrain.
+> panel; the page describes upstream X-AnyLabeling, not X-AnyLabeling.
 > See "Fork scope" in the [README](../../README.md).
 
 

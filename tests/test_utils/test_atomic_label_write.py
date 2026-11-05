@@ -11,7 +11,7 @@ import inspect
 
 import pytest
 
-from anylabeling.views.labeling.label_converter import (
+from jllabeling.views.labeling.label_converter import (
     LabelConverter,
     _atomic_text_writer,
 )

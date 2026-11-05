@@ -6,7 +6,7 @@ from unittest import mock
 
 import yaml
 
-from anylabeling.views.labeling.label_converter import LabelConverter
+from jllabeling.views.labeling.label_converter import LabelConverter
 
 
 class TestLabelConverterPoseConfig(unittest.TestCase):
@@ -325,7 +325,7 @@ class TestLabelConverterVocValidation(unittest.TestCase):
         )
 
         with mock.patch(
-            "anylabeling.views.labeling.label_converter.logger.warning"
+            "jllabeling.views.labeling.label_converter.logger.warning"
         ) as warning:
             data = self._convert(objects)
 
@@ -344,7 +344,7 @@ class TestLabelConverterVocValidation(unittest.TestCase):
         )
 
         with mock.patch(
-            "anylabeling.views.labeling.label_converter.logger.warning"
+            "jllabeling.views.labeling.label_converter.logger.warning"
         ) as warning:
             data = self._convert(objects)
 

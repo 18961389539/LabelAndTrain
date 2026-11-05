@@ -34,6 +34,8 @@ class TestReleaseMatrix(unittest.TestCase):
             "torchvision==",
             "ultralytics==",
             "onnxslim==",
+            # dill-pickled ModelScope weights: the frozen trainer needs it.
+            "dill==",
         ):
             self.assertIn(package, text)
         self.assertIn("--index-url https://pypi.org/simple", text)
@@ -50,7 +52,8 @@ class TestReleaseMatrix(unittest.TestCase):
             for entry in extras["cpu-train"]
         }
         self.assertEqual(
-            names, {"torch", "torchvision", "ultralytics", "onnxslim"}
+            names,
+            {"torch", "torchvision", "ultralytics", "onnxslim", "dill"},
         )
 
     def test_build_script_packages_the_onedir_asset(self):
@@ -58,11 +61,11 @@ class TestReleaseMatrix(unittest.TestCase):
         self.assertIn("package_windows_onedir_zip", script)
         self.assertIn("Compress-Archive", script)
         self.assertIn('"${target_dir}-win64.zip"', script)
-        self.assertIn("x-anylabeling-win-cpu-train.spec", script)
+        self.assertIn("jllabeling-win-cpu-train.spec", script)
 
     def test_training_spec_collects_lazy_ultralytics_callbacks(self):
         spec = _read(
-            "packaging/pyinstaller/specs/" "x-anylabeling-win-cpu-train.spec"
+            "packaging/pyinstaller/specs/" "jllabeling-win-cpu-train.spec"
         )
         self.assertIn(
             "collect_submodules('ultralytics.utils.callbacks')", spec

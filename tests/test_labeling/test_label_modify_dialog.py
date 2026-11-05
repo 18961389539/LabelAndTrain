@@ -24,7 +24,7 @@ except Exception:
     PYQT_AVAILABLE = False
 
 SNAPSHOT_TARGET = (
-    "anylabeling.views.labeling.utils.session_snapshot."
+    "jllabeling.views.labeling.utils.session_snapshot."
     "snapshot_before_label_write"
 )
 
@@ -66,7 +66,7 @@ class TestLabelModifyDialogSafety(unittest.TestCase):
         self.app = QtWidgets.QApplication.instance()
         if self.app is None:
             self.app = QtWidgets.QApplication([])
-        from anylabeling.views.labeling.label_widget import LabelingWidget
+        from jllabeling.views.labeling.label_widget import LabelingWidget
 
         patcher = mock.patch.object(
             LabelingWidget, "load_file", lambda self, *a, **k: False
@@ -80,7 +80,7 @@ class TestLabelModifyDialogSafety(unittest.TestCase):
         self.addCleanup(widget_holder.deleteLater)
         self.widget.file_list_widget.setCurrentRow(1)
 
-        from anylabeling.views.labeling.widgets.label_dialog import (
+        from jllabeling.views.labeling.widgets.label_dialog import (
             LabelModifyDialog,
         )
 

@@ -4,12 +4,13 @@ import tempfile
 import unittest
 from pathlib import Path
 
-
 MODULE_PATH = (
     Path(__file__).resolve().parents[2]
-    / "anylabeling/views/labeling/utils/file_search.py"
+    / "jllabeling/views/labeling/utils/file_search.py"
 )
-SPEC = importlib.util.spec_from_file_location("file_search_module", MODULE_PATH)
+SPEC = importlib.util.spec_from_file_location(
+    "file_search_module", MODULE_PATH
+)
 FILE_SEARCH_MODULE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(FILE_SEARCH_MODULE)
 

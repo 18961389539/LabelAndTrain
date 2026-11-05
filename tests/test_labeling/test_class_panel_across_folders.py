@@ -10,8 +10,8 @@ only fires when the panel is empty.  The panel now falls back to
 
 from types import SimpleNamespace
 
-from anylabeling.views.labeling import project_settings
-from anylabeling.views.labeling.label_widget import LabelingWidget
+from jllabeling.views.labeling import project_settings
+from jllabeling.views.labeling.label_widget import LabelingWidget
 
 
 class _Panel:

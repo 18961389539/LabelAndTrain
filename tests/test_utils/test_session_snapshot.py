@@ -16,9 +16,9 @@ import unittest
 from types import SimpleNamespace
 from unittest import mock
 
-from anylabeling.views.labeling.utils import file_lifecycle
-from anylabeling.views.labeling.utils import session_snapshot
-from anylabeling.views.labeling.utils import label_backup
+from jllabeling.views.labeling.utils import file_lifecycle
+from jllabeling.views.labeling.utils import session_snapshot
+from jllabeling.views.labeling.utils import label_backup
 
 
 class SessionSnapshotTestCase(unittest.TestCase):

@@ -15,19 +15,19 @@ This example uses the remote-server workflow. Before using GECO2 in X-AnyLabelin
 2. Enable `geco2` in `configs/models.yaml`.
 3. Prepare the GECO2 model weights required by the server.
 4. Start the server.
-5. In X-AnyLabeling, configure the remote server endpoint in your user configuration and select `Remote-Server` from the auto-labeling panel.
+5. In JLLabelingAndTrain, configure the remote server endpoint in your user configuration and select `Remote-Server` from the auto-labeling panel.
 
 > [!TIP]
 > You can refer to the [X-AnyLabeling-Server](https://github.com/CVHub520/X-AnyLabeling-Server) repository for the latest setup instructions, model configuration examples, and weight download links.
 
 ## Usage
 
-Launch the X-AnyLabeling client, press `Ctrl+A` or click the `AI` button in the left menu bar to open the auto-labeling panel. In the model dropdown list, select `Remote-Server`, then choose `GECO2`.
+Launch the JLLabelingAndTrain client, press `Ctrl+A` or click the `AI` button in the left menu bar to open the auto-labeling panel. In the model dropdown list, select `Remote-Server`, then choose `GECO2`.
 
 <video src="https://github.com/user-attachments/assets/da8b0c7b-f35a-487a-bcbc-cdb20583ff34" width="100%" controls>
 </video>
 
-1. Load an image into X-AnyLabeling.
+1. Load an image into JLLabelingAndTrain.
 2. Choose the rectangle prompt tool in the auto-labeling panel.
 3. Draw one or more exemplar boxes around the target objects you want to count.
 4. Click `Run Rect` to send the image and exemplar prompts to the remote server.

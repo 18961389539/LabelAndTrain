@@ -63,7 +63,7 @@ class _WidgetCase(unittest.TestCase):
         self.app = QtWidgets.QApplication.instance()
         if self.app is None:
             self.app = QtWidgets.QApplication([])
-        from anylabeling.views.labeling.label_widget import LabelingWidget
+        from jllabeling.views.labeling.label_widget import LabelingWidget
 
         patcher = mock.patch.object(
             LabelingWidget, "load_file", lambda self, *a, **k: False
@@ -157,8 +157,8 @@ class TestObjectRowTooltips(_WidgetCase):
     def _shape(
         self, label="cat", score=None, source=None, model=None, version=None
     ):
-        from anylabeling.views.labeling.provenance import stamp_model_shapes
-        from anylabeling.views.labeling.shape import Shape
+        from jllabeling.views.labeling.provenance import stamp_model_shapes
+        from jllabeling.views.labeling.shape import Shape
 
         shape = Shape(label=label, shape_type="rectangle")
         shape.points = [
@@ -224,7 +224,7 @@ class TestObjectRowTooltips(_WidgetCase):
         self.assertIn("已锁定", tip)
 
     def test_tooltip_follows_edits_without_being_rebuilt(self):
-        from anylabeling.views.labeling.provenance import stamp_model_shapes
+        from jllabeling.views.labeling.provenance import stamp_model_shapes
 
         shape = self._shape(source="model", model="run_07")
         tooltip = self._tooltip_of(shape)

@@ -25,13 +25,13 @@ try:
     from PyQt6 import QtWidgets
     from PyQt6.QtCore import Qt
 
-    from anylabeling import config
-    from anylabeling.services.auto_labeling.__base__.yolo import YOLO
-    from anylabeling.views.labeling import project_settings
-    from anylabeling.views.labeling.widgets.classes_filter_dialog import (
+    from jllabeling import config
+    from jllabeling.services.auto_labeling.__base__.yolo import YOLO
+    from jllabeling.views.labeling import project_settings
+    from jllabeling.views.labeling.widgets.classes_filter_dialog import (
         ClassesFilterDialog,
     )
-    from anylabeling.views.labeling.widgets.auto_labeling.auto_labeling import (  # noqa: E501
+    from jllabeling.views.labeling.widgets.auto_labeling.auto_labeling import (  # noqa: E501
         AutoLabelingWidget,
     )
 
@@ -43,9 +43,9 @@ REPO_ROOT = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 )
 TEMPLATE_CONFIG = os.path.join(
-    REPO_ROOT, "anylabeling", "configs", "jllabeling_config.yaml"
+    REPO_ROOT, "jllabeling", "configs", "jllabeling_config.yaml"
 )
-MODULE = "anylabeling.views.labeling.widgets.auto_labeling.auto_labeling"
+MODULE = "jllabeling.views.labeling.widgets.auto_labeling.auto_labeling"
 
 
 class _YoloLikeModel:

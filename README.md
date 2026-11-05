@@ -56,11 +56,13 @@ weights back into auto labeling — then reports what the previous round's model
 left behind.
 
 The command is `jllabelingandtrain`, and nothing else: there is no
-`xanylabeling` alias, and the docs say so. The names that still read
-"anylabeling" are the ones where a rename would cost you data or mergeability —
-`~/.xanylabelingrc`, `<work_dir>/xanylabeling_data/` (weights, datasets,
-training runs), `xanylabeling_logs/`, the Qt settings domain, and the Python
-package `anylabeling` itself.
+`xanylabeling` alias, and the docs say so. Everything this fork writes to the
+work directory is named after it — `~/.jllabelingrc`,
+`<work_dir>/jllabeling_data/` (weights, datasets, training runs),
+`jllabeling_logs/`, and the Qt settings domain — and the first launch moves
+old `xanylabeling`-named locations there automatically. The Python package is
+`jllabeling` as well, so nothing in the tree reads "anylabeling" except the
+migration table and the upstream attribution the licence requires.
 
 The interface ships one language: Simplified Chinese (`zh_CN` is the only
 catalog and it is always loaded). Upstream text is English source translated by
@@ -249,7 +251,7 @@ annotate → review (confirmed / rejected) → train on checked files
   rather than shapes.
 - 14 export formats (ONNX, TorchScript, OpenVINO, TensorRT, CoreML, TF
   SavedModel / Lite / Edge TPU / TF.js, PaddlePaddle, MNN, NCNN, IMX500, RKNN).
-- Runs live under `<work_dir>/xanylabeling_data/trainer/ultralytics/runs/<task>/`;
+- Runs live under `<work_dir>/jllabeling_data/trainer/ultralytics/runs/<task>/`;
   after a run the app offers to reclaim old dataset copies.
 - `Training → 实验历史` (run history) tables every run that wrote `run_meta.json`,
   newest first, with the iteration round that produced it, and exports to CSV.
@@ -265,9 +267,9 @@ training, error remedies and where the outputs land — is in the
 
 ```
 <work_dir>/                          ~ by default; --work-dir overrides it
-├── .xanylabelingrc                  application settings
-├── xanylabeling_logs/               rotating application log
-└── xanylabeling_data/
+├── .jllabelingrc                  application settings
+├── jllabeling_logs/               rotating application log
+└── jllabeling_data/
     ├── models/                      downloaded auto-labeling weights
     └── trainer/ultralytics/
         ├── weights/                 downloaded pretrained .pt for training
@@ -392,7 +394,7 @@ no cost).
 ## Citing
 
 ```
-@misc{X-AnyLabeling,
+@misc{JLLabelingAndTrain,
   year = {2023},
   author = {Wei Wang},
   publisher = {Github},

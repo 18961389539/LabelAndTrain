@@ -1,6 +1,6 @@
 # 用户手册
 
-本手册介绍 X-AnyLabeling 的文件管理、对象编辑、标签转换、界面工具、用户配置和标注任务。
+本手册介绍 JLLabelingAndTrain 的文件管理、对象编辑、标签转换、界面工具、用户配置和标注任务。
 
 ## 0. 目录
 
@@ -74,13 +74,13 @@
 
 ## 1. 文件
 
-本章节将详细介绍如何在 X-AnyLabeling 上进行数据的导入、删除、切换以及保存，确保标注流程高效且数据安全可控。
+本章节将详细介绍如何在 JLLabelingAndTrain 上进行数据的导入、删除、切换以及保存，确保标注流程高效且数据安全可控。
 
 ### 1.1 导入数据
 
 在打开 GUI 界面后，用户可在上方菜单栏中的 `文件` 下拉框中选择对应的任务类型进行导入，也可直接通过快捷键进行操作。
 
-X-AnyLabeling 目前提供三种数据导入方式：
+JLLabelingAndTrain 目前提供三种数据导入方式：
 
 - **图片文件目录**（Ctrl+U）：支持多级目录嵌套的多个文件同时导入。
 - **单个图片文件**（Ctrl+I）：支持导入 `*.jpg`、`*.png`、`*.bmp`、`*.webp`、`*.tif` 等多种格式。
@@ -88,14 +88,14 @@ X-AnyLabeling 目前提供三种数据导入方式：
 
 ### 1.2 删除数据
 
-X-AnyLabeling 提供数据删除功能，具体操作如下：
+JLLabelingAndTrain 提供数据删除功能，具体操作如下：
 
 - **删除标签文件**（Ctrl+Delete）：删除当前标注文件结果，此操作不可撤回，请谨慎操作。
 - **删除图像文件**（Ctrl+Shift+Delete）：删除当前图片文件，删除后的文件会同步移至当前图片目录下的 `_delete_` 文件夹中。
 
 ### 1.3 切换图片
 
-在 X-AnyLabeling 中，按 `A` 和 `D` 可快速切换到上一张或下一张图片。
+在 JLLabelingAndTrain 中，按 `A` 和 `D` 可快速切换到上一张或下一张图片。
 
 除了常规的切换图片操作外，还支持以下几种方式：
 
@@ -125,13 +125,13 @@ X-AnyLabeling 提供数据删除功能，具体操作如下：
 
 ### 1.4 保存标签数据
 
-X-AnyLabeling 默认开启自动保存功能，用户在初次启动界面时，可点击菜单栏中的 `文件` 下拉框查看 `自动保存` 选项是否被勾选。
+JLLabelingAndTrain 默认开启自动保存功能，用户在初次启动界面时，可点击菜单栏中的 `文件` 下拉框查看 `自动保存` 选项是否被勾选。
 
 标签文件默认保存在当前图片目录下，文件格式为 `*.json`，模板如下：
 
 ```jsonc
 {
-  "version": "${version}", // X-AnyLabeling 版本号
+  "version": "${version}", // JLLabelingAndTrain 版本号
   "flags": {},             // 图片级标志 (如果存在)
   "shapes": [              // 标注的对象列表
     {
@@ -187,11 +187,11 @@ X-AnyLabeling 默认开启自动保存功能，用户在初次启动界面时，
 
 ## 2. 编辑
 
-本章节将指导您如何在 X-AnyLabeling 中创建、编辑和管理不同类型的标注对象及其标签信息，涵盖从基本操作到高级功能的全面指南。
+本章节将指导您如何在 JLLabelingAndTrain 中创建、编辑和管理不同类型的标注对象及其标签信息，涵盖从基本操作到高级功能的全面指南。
 
 ### 2.1 创建对象
 
-在 X-AnyLabeling 中，我们将每个目标框称为一个单独的**对象**，其通常包含如下基本属性：
+在 JLLabelingAndTrain 中，我们将每个目标框称为一个单独的**对象**，其通常包含如下基本属性：
 
 
 | 字段            | 类型  | 描述                                                   |
@@ -209,9 +209,9 @@ X-AnyLabeling 默认开启自动保存功能，用户在初次启动界面时，
 | `cuboid3d`    | 字典  | 仅 `cuboid` 使用的 3D 元数据，包含 `version`、`mode`、`vertices2d_order`、`depth_vector`、`source`，用于记录前后面映射和深度向量。 |
 
 
-特殊字段的定义参见 [Shape](../../anylabeling/views/labeling/shape.py) 类。
+特殊字段的定义参见 [Shape](../../jllabeling/views/labeling/shape.py) 类。
 
-当前，X-AnyLabeling 支持创建以下对象：
+当前，JLLabelingAndTrain 支持创建以下对象：
 
 | 对象类型 | 快捷键 | 绘制方式 |
 | --- | --- | --- |
@@ -229,7 +229,7 @@ X-AnyLabeling 默认开启自动保存功能，用户在初次启动界面时，
 
 ### 2.2 编辑对象
 
-当前，X-AnyLabeling 中定义了两种对象操作模式，即 **绘制模式** 和 **编辑模式**。
+当前，JLLabelingAndTrain 中定义了两种对象操作模式，即 **绘制模式** 和 **编辑模式**。
 
 - **绘制模式**：在绘制状态下，可进行对象的快速创建；
 - **编辑模式**：在编辑状态下，可进行对象的编辑（Ctrl+E）、撤销（Ctrl+Z）、复制（Ctrl+C）、粘贴（Ctrl+V）、删除（Delete）、移动、缩放、旋转等操作。
@@ -250,7 +250,7 @@ X-AnyLabeling 默认开启自动保存功能，用户在初次启动界面时，
 在放大画布并出现滚动条时，绘制对象过程中可按住 `Space` 并使用鼠标左键拖拽，临时平移画布，而无需退出绘制模式。
 
 > [!TIP]
-> X-AnyLabeling 提供两个便捷的对象浏览功能：
+> JLLabelingAndTrain 提供两个便捷的对象浏览功能：
 >
 > - **遍历放大对象**（Ctrl+Shift+N）：依次放大显示画布中的每个对象，便于逐一检查标注质量。
 > - **遍历选中对象**（Ctrl+Shift+C）：依次选中画布中的每个对象，便于快速编辑或管理标注。
@@ -272,7 +272,7 @@ X-AnyLabeling 默认开启自动保存功能，用户在初次启动界面时，
 
 ### 2.4 编辑图片
 
-当前，X-AnyLabeling 支持对当前图片进行 `Caption` 描述。具体操作是打开编辑模式，点击图片空白处，在右侧的 `Description` 区域填充图片描述。
+当前，JLLabelingAndTrain 支持对当前图片进行 `Caption` 描述。具体操作是打开编辑模式，点击图片空白处，在右侧的 `Description` 区域填充图片描述。
 
 ### 2.5 搜索图片
 
@@ -326,7 +326,7 @@ X-AnyLabeling 默认开启自动保存功能，用户在初次启动界面时，
 
 ### 3.1 画布可视化
 
-当前，X-AnyLabeling 支持以下对画布的操作：
+当前，JLLabelingAndTrain 支持以下对画布的操作：
 
 - **放大**（Ctrl++）
 - **缩小**（Ctrl+-）
@@ -336,7 +336,7 @@ X-AnyLabeling 默认开启自动保存功能，用户在初次启动界面时，
 
 ### 3.2 图片可视化
 
-X-AnyLabeling 支持调整当前图片的显示效果和标注对象的可见性。具体操作如下：
+JLLabelingAndTrain 支持调整当前图片的显示效果和标注对象的可见性。具体操作如下：
 
 - 在界面上方菜单栏中的 `视图` 下拉选项中选择 `亮度对比度` 选项，调整合适的亮度和对比度，以获得更好的视觉效果。
 - 如果想将此更改应用到全局，请勾选 `视图` 下拉选项中的 `保持当前亮度` 和 `保持当前对比度` 选项。
@@ -394,7 +394,7 @@ X-AnyLabeling 支持调整当前图片的显示效果和标注对象的可见性
 
 ## 4. 标签导入导出
 
-现阶段，`X-AnyLabeling` 提供了多种主流标签文件的导入/导出功能，下面简单介绍使用步骤。
+现阶段，`JLLabelingAndTrain` 提供了多种主流标签文件的导入/导出功能，下面简单介绍使用步骤。
 
 > [!TIP]
 > 也可以使用 CLI 批量转换标签格式，适合处理大型数据集。详情参见[命令行界面文档](./cli.md#3-标签格式转换命令)。
@@ -410,7 +410,7 @@ X-AnyLabeling 支持调整当前图片的显示效果和标注对象的可见性
 
 ### 4.1 YOLO标签
 
-X-AnyLabeling 支持导入和导出 YOLO 目标检测、实例分割、旋转框检测及关键点检测标签（`*.txt`）。
+JLLabelingAndTrain 支持导入和导出 YOLO 目标检测、实例分割、旋转框检测及关键点检测标签（`*.txt`）。
 
 在导入/导出 YOLO 标注文件之前，需要准备一份标签配置文件，具体如下：
 
@@ -443,7 +443,7 @@ X-AnyLabeling 支持导入和导出 YOLO 目标检测、实例分割、旋转框
 
 ### 4.2 VOC标签
 
-X-AnyLabeling 支持导入和导出检测及分割任务的 Pascal VOC 标签文件（`*.xml`）。
+JLLabelingAndTrain 支持导入和导出检测及分割任务的 Pascal VOC 标签文件（`*.xml`）。
 
 **导入任务**：
 
@@ -462,7 +462,7 @@ X-AnyLabeling 支持导入和导出检测及分割任务的 Pascal VOC 标签文
 
 ### 4.3 COCO标签
 
-X-AnyLabeling 支持导入和导出目标检测、实例分割及关键点检测任务的 COCO 标签文件（`*.json`）。
+JLLabelingAndTrain 支持导入和导出目标检测、实例分割及关键点检测任务的 COCO 标签文件（`*.json`）。
 
 在导入/导出 COCO 标注文件之前，需要准备一份标签配置文件，具体如下：
 
@@ -490,7 +490,7 @@ X-AnyLabeling 支持导入和导出目标检测、实例分割及关键点检测
 
 ### 4.4 DOTA标签
 
-X-AnyLabeling 支持导入和导出 DOTA 标签文件（`*.txt`），每行格式如下：
+JLLabelingAndTrain 支持导入和导出 DOTA 标签文件（`*.txt`），每行格式如下：
 
 > x1 y1 x2 y2 x3 y3 x4 y4 class_name difficult
 
@@ -511,7 +511,7 @@ X-AnyLabeling 支持导入和导出 DOTA 标签文件（`*.txt`），每行格�
 
 ### 4.5 MASK标签
 
-X-AnyLabeling 支持导入和导出语义分割掩码（`*.png`）。
+JLLabelingAndTrain 支持导入和导出语义分割掩码（`*.png`）。
 
 在导入/导出掩码标注文件之前，需要准备好配置文件，具体如下：
 
@@ -535,7 +535,7 @@ X-AnyLabeling 支持导入和导出语义分割掩码（`*.png`）。
 
 ### 4.6 MOT标签
 
-X-AnyLabeling 支持一键导入/导出多目标跟踪任务相关的标签文件。
+JLLabelingAndTrain 支持一键导入/导出多目标跟踪任务相关的标签文件。
 
 在导入/导出标注文件之前，需要准备好标签配置文件，具体可参考 [classes.txt](../../assets/classes.txt)，其中每一行代表一个类别，编号由上往下依次递增。
 
@@ -591,7 +591,7 @@ imext = .jpg          # 图片文件扩展名
 
 ---
 
-此外，针对 [MOTS](https://motchallenge.net/data/MOTS/) 数据集格式，X-AnyLabeling 支持通过 CLI 导出。请提供包含 XLABEL JSON 文件的目录、输出目录以及 `classes.txt` 文件：
+此外，针对 [MOTS](https://motchallenge.net/data/MOTS/) 数据集格式，JLLabelingAndTrain 支持通过 CLI 导出。请提供包含 XLABEL JSON 文件的目录、输出目录以及 `classes.txt` 文件：
 
 ```bash
 jllabelingandtrain convert --task xlabel2mots --labels /path/to/xlabel/labels --output /path/to/output --classes classes.txt
@@ -602,7 +602,7 @@ jllabelingandtrain convert --task xlabel2mots --labels /path/to/xlabel/labels --
 
 ### 4.7 PPOCR标签
 
-X-AnyLabeling 支持一键导入/导出以下两种 PPOCR 任务的标签：
+JLLabelingAndTrain 支持一键导入/导出以下两种 PPOCR 任务的标签：
 
 - 文本检测与识别：定位出输入图像中的文字区域，并识别出图像中的具体文字内容。
 - 关键信息提取：从图像中提取所需信息，包括语义实体识别和关系抽取两个子任务。
@@ -635,7 +635,7 @@ X-AnyLabeling 支持一键导入/导出以下两种 PPOCR 任务的标签：
 
 ### 4.8 ODVG标签
 
-X-AnyLabeling 支持一键导入/导出 Grounding 任务相关的标签文件。
+JLLabelingAndTrain 支持一键导入/导出 Grounding 任务相关的标签文件。
 
 在导入/导出 ODVG 标注文件之前，需要准备好一份标签配置文件，具体可参考 [classes.txt](../../assets/classes.txt)，其中每一行代表一个类别，编号从上至下依次递增。
 
@@ -656,7 +656,7 @@ X-AnyLabeling 支持一键导入/导出 Grounding 任务相关的标签文件。
 
 ### 4.9 VLM-R1-OVD标签
 
-X-AnyLabeling 支持一键导入/导出 VLM-R1-OVD 标签文件。
+JLLabelingAndTrain 支持一键导入/导出 VLM-R1-OVD 标签文件。
 
 **导入任务**：
 
@@ -691,7 +691,7 @@ X-AnyLabeling 支持一键导入基于 [MM-Grounding-DINO](https://github.com/op
 
 ### 5.1 数据统计
 
-`X-AnyLabeling` 具备数据统计功能，允许用户轻松获取当前任务的统计概况。只需在顶部菜单栏选择 **工具** 下拉选项中的 **数据总览** 按钮，即可查看当前数据状态。其支持以下功能：
+`JLLabelingAndTrain` 具备数据统计功能，允许用户轻松获取当前任务的统计概况。只需在顶部菜单栏选择 **工具** 下拉选项中的 **数据总览** 按钮，即可查看当前数据状态。其支持以下功能：
 
 - 数据导出功能
   - 支持导出 CSV 格式的统计报告
@@ -731,7 +731,7 @@ X-AnyLabeling 支持一键导入基于 [MM-Grounding-DINO](https://github.com/op
 
 ### 5.3 标签管理器
 
-当前，`X-AnyLabeling` 提供对标签对象的全局管理功能。用户可以通过以下操作进行管理：
+当前，`JLLabelingAndTrain` 提供对标签对象的全局管理功能。用户可以通过以下操作进行管理：
 
 - **删除标签**：移除不需要的标签。
 - **替换标签名称**：更新标签名称以适应新的分类标准。
@@ -755,7 +755,7 @@ X-AnyLabeling 支持一键导入基于 [MM-Grounding-DINO](https://github.com/op
 
 ### 5.4 对象类型转换器
 
-X-AnyLabeling 提供统一的 **Shape Converter（对象转换器）**。
+JLLabelingAndTrain 提供统一的 **Shape Converter（对象转换器）**。
 可在界面上方菜单栏的 **工具（Tools）-> Shape Converter** 打开转换窗口，在窗口中选择源对象类型与目标对象类型后执行批量转换。
 
 当前支持的转换关系如下：
@@ -794,7 +794,7 @@ X-AnyLabeling 提供统一的 **Shape Converter（对象转换器）**。
 
 **使用快捷键**：在标注界面中，直接按下已配置的数字键（0-9），系统会自动切换到对应的绘制模式，并预设标签名称。绘制完成后，标注将自动使用预设的标签名称。
 
-**离线配置**：除图形界面外，也可以在用户目录下的 `.xanylabelingrc` 中配置：
+**离线配置**：除图形界面外，也可以在用户目录下的 `.jllabelingrc` 中配置：
 
 ```yaml
 digit_shortcuts:
@@ -804,7 +804,7 @@ digit_shortcuts:
   # 更多配置...
 ```
 
-通过图形界面配置的数字快捷键会自动保存到 `.xanylabelingrc`，并在下次启动时加载。手动修改配置文件后，需要重启应用才能生效。
+通过图形界面配置的数字快捷键会自动保存到 `.jllabelingrc`，并在下次启动时加载。手动修改配置文件后，需要重启应用才能生效。
 
 ### 5.6 群组编号管理器
 
@@ -841,16 +841,16 @@ digit_shortcuts:
 
 ## 7. 用户配置
 
-`X-AnyLabeling` 的用户配置文件默认存放在当前用户目录下的 `.xanylabelingrc` 文件中。您可以通过以下路径找到该文件：
+`JLLabelingAndTrain` 的用户配置文件默认存放在当前用户目录下的 `.jllabelingrc` 文件中。您可以通过以下路径找到该文件：
 
-- **Linux**: `~/.xanylabelingrc`
-- **Windows**: `C:\Users\<用户名>\.xanylabelingrc`
+- **Linux**: `~/.jllabelingrc`
+- **Windows**: `C:\Users\<用户名>\.jllabelingrc`
 
-现在大多数常用选项都可以直接在 `Settings`（`Ctrl+0`）中修改，而配置文件仍适用于手动编辑和高级自定义。若手动修改配置文件，建议关闭 X-AnyLabeling 后编辑，并在修改后重新启动软件使其生效。
+现在大多数常用选项都可以直接在 `Settings`（`Ctrl+0`）中修改，而配置文件仍适用于手动编辑和高级自定义。若手动修改配置文件，建议关闭 JLLabelingAndTrain 后编辑，并在修改后重新启动软件使其生效。
 
 ### 7.1 快捷键设置
 
-当前 X-AnyLabeling 默认的快捷键配置如下，用户可以根据自身需求进行修改，确保避免快捷键冲突。也支持在 GUI 中直接修改：按 `Ctrl+0` 打开 Settings 后，在右侧 `Shortcuts` 面板内编辑：
+当前 JLLabelingAndTrain 默认的快捷键配置如下，用户可以根据自身需求进行修改，确保避免快捷键冲突。也支持在 GUI 中直接修改：按 `Ctrl+0` 打开 Settings 后，在右侧 `Shortcuts` 面板内编辑：
 
 
 | 快捷键                   | 功能                              |
@@ -933,7 +933,7 @@ digit_shortcuts:
 
 ### 7.2 修改自定义标签颜色
 
-可以通过标签管理器或配置文件修改标签颜色。手动编辑 `.xanylabelingrc` 时，将 `shape_color` 设为 `manual`，并在 `label_colors` 中以 RGB 值配置每个标签：
+可以通过标签管理器或配置文件修改标签颜色。手动编辑 `.jllabelingrc` 时，将 `shape_color` 设为 `manual`，并在 `label_colors` 中以 RGB 值配置每个标签：
 
 ```YAML
 ...
@@ -952,7 +952,7 @@ label_colors:
 
 ### 7.3 加载预定义标签
 
-为了兼顾标签管理的灵活性与用户在不同场景下的使用需求，X-AnyLabeling 在支持通过软件启动命令加载标签的基础上，还提供了另外两种便捷方式，用于加载预定义标签。
+为了兼顾标签管理的灵活性与用户在不同场景下的使用需求，JLLabelingAndTrain 在支持通过软件启动命令加载标签的基础上，还提供了另外两种便捷方式，用于加载预定义标签。
 
 **方式一：通过配置文件设置（永久生效）**
 
@@ -1011,7 +1011,7 @@ cat
 
 ### 7.6 对象属性自定义
 
-可先在 `Settings > Shape` 中调整常用外观选项。如需更细粒度的控制，可编辑 `.xanylabelingrc` 中的 `shape` 字段，例如边框、填充和顶点颜色：
+可先在 `Settings > Shape` 中调整常用外观选项。如需更细粒度的控制，可编辑 `.jllabelingrc` 中的 `shape` 字段，例如边框、填充和顶点颜色：
 
 ```YAML
 ...
@@ -1031,21 +1031,21 @@ shape:
 
 ### 7.7 模型下载源配置
 
-X-AnyLabeling 支持从不同的模型中心下载预训练模型。用户可以通过设置环境变量、在 `Settings`（`Ctrl+0`）中修改 `General > Behavior > Model Hub`、修改配置文件 `.xanylabelingrc` 或根据软件语言来指定模型下载源。下载源的优先级顺序如下：
+JLLabelingAndTrain 支持从不同的模型中心下载预训练模型。用户可以通过设置环境变量、在 `Settings`（`Ctrl+0`）中修改 `General > Behavior > Model Hub`、修改配置文件 `.jllabelingrc` 或根据软件语言来指定模型下载源。下载源的优先级顺序如下：
 
-1. **环境变量（最高优先级）**：设置环境变量 `XANYLABELING_MODEL_HUB`。
-  - 例如，在 Linux/macOS 使用 `export XANYLABELING_MODEL_HUB=modelscope`。
-  - 在 Windows 使用 `set XANYLABELING_MODEL_HUB=modelscope`。
+1. **环境变量（最高优先级）**：设置环境变量 `JLLABELING_MODEL_HUB`。
+  - 例如，在 Linux/macOS 使用 `export JLLABELING_MODEL_HUB=modelscope`。
+  - 在 Windows 使用 `set JLLABELING_MODEL_HUB=modelscope`。
   - 如果此环境变量设置为 `modelscope`，将强制使用 ModelScope，覆盖配置文件的设置。如果设置为其他值或为空，则会考虑配置文件。
-2. **配置文件（中等优先级）**：通过 `Settings`（`Ctrl+0`）修改 `General > Behavior > Model Hub`，或打开用户目录下的配置文件 `.xanylabelingrc`。
+2. **配置文件（中等优先级）**：通过 `Settings`（`Ctrl+0`）修改 `General > Behavior > Model Hub`，或打开用户目录下的配置文件 `.jllabelingrc`。
   - 找到 `model_hub` 字段。
   - 可选值为 `github` (默认) 或 `modelscope`。
-  - 如果环境变量 `XANYLABELING_MODEL_HUB` 未设置或为空，则此配置生效。设置为 `model_hub: modelscope` 将优先从 ModelScope 下载模型。
+  - 如果环境变量 `JLLABELING_MODEL_HUB` 未设置或为空，则此配置生效。设置为 `model_hub: modelscope` 将优先从 ModelScope 下载模型。
 3. **语言设置（最低优先级）**：仅当环境变量未设置，且配置文件中的 `model_hub` 为空或不存在时，中文界面（`language: zh_CN`）才会默认使用 ModelScope；其他语言使用配置中的原始下载 URL。
 
 ### 7.8 主题设置
 
-X-AnyLabeling 支持三种主题模式，可在菜单栏一级 **Theme** 菜单中切换：
+JLLabelingAndTrain 支持三种主题模式，可在菜单栏一级 **Theme** 菜单中切换：
 
 
 | 选项               | 说明                           |
@@ -1057,7 +1057,7 @@ X-AnyLabeling 支持三种主题模式，可在菜单栏一级 **Theme** 菜单�
 
 切换后会弹出确认对话框，点击 **OK** 保存设置。应用不会自动重启，随后会提示重启后生效；点击 **Cancel** 则放弃本次切换。
 
-也可直接修改用户配置文件 `~/.xanylabelingrc` 中的 `theme` 字段：
+也可直接修改用户配置文件 `~/.jllabelingrc` 中的 `theme` 字段：
 
 ```yaml
 theme: auto  # 可选: auto, light, dark

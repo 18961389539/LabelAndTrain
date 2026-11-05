@@ -20,7 +20,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 try:
     from PyQt6 import QtCore, QtWidgets
 
-    import anylabeling.resources.resources  # noqa: F401
+    import jllabeling.resources.resources  # noqa: F401
 
     PYQT_AVAILABLE = True
 except Exception:
@@ -31,10 +31,10 @@ REPO_ROOT = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 )
 TS_PATH = os.path.join(
-    REPO_ROOT, "anylabeling", "resources", "translations", "zh_CN.ts"
+    REPO_ROOT, "jllabeling", "resources", "translations", "zh_CN.ts"
 )
 RESOURCE_QM = ":/languages/translations/zh_CN.qm"
-APP_DIR = os.path.join(REPO_ROOT, "anylabeling")
+APP_DIR = os.path.join(REPO_ROOT, "jllabeling")
 
 #: Han ideographs. Enough to tell a Chinese source from an English one; CJK
 #: punctuation and kana are not needed here, and treating them as "not Chinese"

@@ -5,14 +5,18 @@ import os
 
 import pytest
 
-from anylabeling.views.labeling import project
+from jllabeling.views.labeling import project
 
-PROJECT_FILE = os.path.join(project.PROJECT_DIR_NAME, project.PROJECT_FILE_NAME)
+PROJECT_FILE = os.path.join(
+    project.PROJECT_DIR_NAME, project.PROJECT_FILE_NAME
+)
 
 
 def test_reading_creates_nothing(tmp_path):
     assert project.load_project(str(tmp_path)) == {}
-    assert not os.path.exists(os.path.join(str(tmp_path), project.PROJECT_DIR_NAME))
+    assert not os.path.exists(
+        os.path.join(str(tmp_path), project.PROJECT_DIR_NAME)
+    )
 
 
 def test_split_seed_is_pinned_after_first_use(tmp_path):
@@ -29,7 +33,9 @@ def test_split_seed_is_pinned_after_first_use(tmp_path):
 def test_save_preserves_unrelated_keys(tmp_path):
     project.save_project(str(tmp_path), {"split_seed": 42, "note": "keep"})
     data = json.loads(
-        open(os.path.join(str(tmp_path), PROJECT_FILE), encoding="utf-8").read()
+        open(
+            os.path.join(str(tmp_path), PROJECT_FILE), encoding="utf-8"
+        ).read()
     )
     assert data["note"] == "keep"
     assert data["schema"] == project.SCHEMA
@@ -83,7 +89,7 @@ def test_unwritable_location_reports_failure(tmp_path):
 
 
 def test_split_seed_survives_a_save_failure(tmp_path, monkeypatch):
-    from anylabeling.views.labeling import project as project_module
+    from jllabeling.views.labeling import project as project_module
 
     def _fail(_data, _path):
         raise OSError("read-only media")
@@ -104,7 +110,7 @@ class _FakeDialog:
         self.image_list = image_list
 
     def bind(self):
-        from anylabeling.views.training.ultralytics_dialog import (
+        from jllabeling.views.training.ultralytics_dialog import (
             UltralyticsDialog,
         )
 

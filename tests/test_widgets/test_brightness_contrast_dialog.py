@@ -9,7 +9,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 try:
     from PyQt6 import QtGui, QtWidgets
 
-    from anylabeling.views.labeling.widgets.brightness_contrast_dialog import (
+    from jllabeling.views.labeling.widgets.brightness_contrast_dialog import (
         BrightnessContrastDialog,
     )
 

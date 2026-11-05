@@ -6,8 +6,8 @@ from unittest.mock import Mock
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 try:
-    from anylabeling.views.labeling.label_widget import LabelingWidget
-    from anylabeling.views.labeling.widgets.mode_controller import (
+    from jllabeling.views.labeling.label_widget import LabelingWidget
+    from jllabeling.views.labeling.widgets.mode_controller import (
         ModeController,
     )
 

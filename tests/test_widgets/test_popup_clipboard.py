@@ -16,9 +16,9 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 try:
     from PyQt6 import QtWidgets
 
-    from anylabeling.views.labeling.label_widget import LabelingWidget
-    from anylabeling.views.labeling.widgets import popup as popup_module
-    from anylabeling.views.labeling.widgets.popup import (
+    from jllabeling.views.labeling.label_widget import LabelingWidget
+    from jllabeling.views.labeling.widgets import popup as popup_module
+    from jllabeling.views.labeling.widgets.popup import (
         Popup,
         copy_text_to_system_clipboard,
     )
@@ -28,12 +28,10 @@ except Exception:
     PYQT_AVAILABLE = False
 
 
-POPUP = "anylabeling.views.labeling.widgets.popup"
+POPUP = "jllabeling.views.labeling.widgets.popup"
 
 
-@unittest.skipUnless(
-    PYQT_AVAILABLE, "PyQt6 is required for clipboard tests"
-)
+@unittest.skipUnless(PYQT_AVAILABLE, "PyQt6 is required for clipboard tests")
 class TestClipboardResult(unittest.TestCase):
 
     @classmethod
@@ -48,9 +46,7 @@ class TestClipboardResult(unittest.TestCase):
     def test_qt_clipboard_success_returns_true(self):
         clipboard = Mock()
         clipboard.text.return_value = "hello"
-        with patch.object(
-            popup_module, "QApplication"
-        ) as qapp:
+        with patch.object(popup_module, "QApplication") as qapp:
             qapp.clipboard.return_value = clipboard
             self.assertTrue(copy_text_to_system_clipboard("hello"))
         clipboard.setText.assert_called_once_with("hello")
@@ -58,15 +54,14 @@ class TestClipboardResult(unittest.TestCase):
     def test_qt_clipboard_mismatch_falls_back_and_logs(self):
         clipboard = Mock()
         clipboard.text.return_value = "something else"
-        with patch.object(
-            popup_module, "_copy_via_command", return_value=True
-        ) as helper, patch.object(
-            popup_module, "is_wsl", return_value=False
-        ), patch.object(
-            popup_module, "QApplication"
-        ) as qapp, patch.object(
-            popup_module, "logger"
-        ) as logger:
+        with (
+            patch.object(
+                popup_module, "_copy_via_command", return_value=True
+            ) as helper,
+            patch.object(popup_module, "is_wsl", return_value=False),
+            patch.object(popup_module, "QApplication") as qapp,
+            patch.object(popup_module, "logger") as logger,
+        ):
             qapp.clipboard.return_value = clipboard
             self.assertTrue(copy_text_to_system_clipboard("hello"))
         helper.assert_called()
@@ -75,48 +70,47 @@ class TestClipboardResult(unittest.TestCase):
     def test_qt_clipboard_exception_falls_back_instead_of_passing(self):
         clipboard = Mock()
         clipboard.setText.side_effect = RuntimeError("clipboard gone")
-        with patch.object(
-            popup_module, "_copy_via_command", return_value=True
-        ) as helper, patch.object(
-            popup_module, "is_wsl", return_value=False
-        ), patch.object(
-            popup_module, "QApplication"
-        ) as qapp, patch.object(
-            popup_module, "logger"
-        ) as logger:
+        with (
+            patch.object(
+                popup_module, "_copy_via_command", return_value=True
+            ) as helper,
+            patch.object(popup_module, "is_wsl", return_value=False),
+            patch.object(popup_module, "QApplication") as qapp,
+            patch.object(popup_module, "logger") as logger,
+        ):
             qapp.clipboard.return_value = clipboard
             self.assertTrue(copy_text_to_system_clipboard("hello"))
         helper.assert_called()
         self.assertTrue(logger.warning.called)
 
     def test_every_backend_failing_returns_false(self):
-        with patch.object(
-            popup_module, "QApplication"
-        ) as qapp, patch.object(
-            popup_module, "_copy_via_command", return_value=False
-        ), patch.object(
-            popup_module, "is_wsl", return_value=False
+        with (
+            patch.object(popup_module, "QApplication") as qapp,
+            patch.object(
+                popup_module, "_copy_via_command", return_value=False
+            ),
+            patch.object(popup_module, "is_wsl", return_value=False),
         ):
             qapp.clipboard.return_value = None
             self.assertFalse(copy_text_to_system_clipboard("hello"))
 
     def test_helper_process_failure_is_logged(self):
-        with patch.object(
-            popup_module.shutil, "which", return_value="/usr/bin/clip"
-        ), patch.object(
-            popup_module.subprocess,
-            "run",
-            return_value=SimpleNamespace(returncode=1),
-        ), patch.object(popup_module, "logger") as logger:
-            self.assertFalse(
-                popup_module._copy_via_command(["clip"], "hello")
-            )
+        with (
+            patch.object(
+                popup_module.shutil, "which", return_value="/usr/bin/clip"
+            ),
+            patch.object(
+                popup_module.subprocess,
+                "run",
+                return_value=SimpleNamespace(returncode=1),
+            ),
+            patch.object(popup_module, "logger") as logger,
+        ):
+            self.assertFalse(popup_module._copy_via_command(["clip"], "hello"))
         self.assertTrue(logger.warning.called)
 
 
-@unittest.skipUnless(
-    PYQT_AVAILABLE, "PyQt6 is required for popup tests"
-)
+@unittest.skipUnless(PYQT_AVAILABLE, "PyQt6 is required for popup tests")
 class TestShowPopupResult(unittest.TestCase):
 
     @classmethod
@@ -161,13 +155,16 @@ class TestCopyFilePathFeedback(unittest.TestCase):
 
     def _call(self, copy_result):
         widget = SimpleNamespace(tr=lambda text: text)
-        with patch(
-            "anylabeling.views.labeling.label_widget.Popup"
-        ) as popup_class, patch(
-            "anylabeling.views.labeling.label_widget"
-            ".copy_text_to_system_clipboard",
-            return_value=copy_result,
-        ) as copy_mock:
+        with (
+            patch(
+                "jllabeling.views.labeling.label_widget.Popup"
+            ) as popup_class,
+            patch(
+                "jllabeling.views.labeling.label_widget"
+                ".copy_text_to_system_clipboard",
+                return_value=copy_result,
+            ) as copy_mock,
+        ):
             LabelingWidget.copy_file_path(widget, "/tmp/a.jpg")
         message = popup_class.call_args[0][0]
         return message, popup_class, copy_mock

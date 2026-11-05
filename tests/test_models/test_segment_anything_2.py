@@ -4,14 +4,14 @@ from unittest.mock import Mock, patch
 import numpy as np
 import yaml
 
-from anylabeling.services.auto_labeling.__base__.sam2 import (
+from jllabeling.services.auto_labeling.__base__.sam2 import (
     AutomaticMaskGeneration,
     SAM2ImageEncoder,
     SAM2ImageDecoder,
     SegmentAnything2ONNX,
     iter_point_batches,
 )
-from anylabeling.services.auto_labeling.segment_anything_2 import (
+from jllabeling.services.auto_labeling.segment_anything_2 import (
     SegmentAnything2,
 )
 
@@ -19,7 +19,7 @@ from anylabeling.services.auto_labeling.segment_anything_2 import (
 def test_sam2_amg_defaults_are_configured():
     config_dir = (
         Path(__file__).resolve().parents[2]
-        / "anylabeling/configs/auto_labeling"
+        / "jllabeling/configs/auto_labeling"
     )
     config_files = sorted(config_dir.glob("sam2_hiera_*.yaml"))
     assert config_files, "no sam2_hiera_*.yaml configs found"
@@ -157,7 +157,7 @@ def test_amg_shapes_receive_incrementing_object_labels():
     model.output_mode = "polygon"
     model.epsilon = 0.001
 
-    module_path = "anylabeling.services.auto_labeling.segment_anything_2"
+    module_path = "jllabeling.services.auto_labeling.segment_anything_2"
     with (
         patch(
             f"{module_path}.qt_img_to_rgb_cv_img",

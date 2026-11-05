@@ -11,7 +11,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pytest
 
-from anylabeling.views.labeling import project_dashboard
+from jllabeling.views.labeling import project_dashboard
 
 _QAPP = None  # QApplication 必须留引用：被 GC 后下一个控件创建是原生崩溃
 
@@ -83,8 +83,8 @@ def switcher(qapp, tmp_path, monkeypatch):
     后台线程被关掉：呈现层测试必须确定，计数本身归
     ``collect_progress`` 的测试管。
     """
-    from anylabeling.views.labeling import project_registry
-    from anylabeling.views.labeling.widgets.project_switcher import (
+    from jllabeling.views.labeling import project_registry
+    from jllabeling.views.labeling.widgets.project_switcher import (
         ProjectSwitcherDialog,
     )
 
@@ -131,8 +131,8 @@ def test_empty_registry_shows_no_progress_column_junk(
     qapp, tmp_path, monkeypatch
 ):
     """空列表（占位行）不该参与进度回填，也不该因此崩。"""
-    from anylabeling.views.labeling import project_registry
-    from anylabeling.views.labeling.widgets.project_switcher import (
+    from jllabeling.views.labeling import project_registry
+    from jllabeling.views.labeling.widgets.project_switcher import (
         ProjectSwitcherDialog,
     )
 

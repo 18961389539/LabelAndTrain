@@ -11,7 +11,7 @@ import os.path as osp
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from anylabeling.views.labeling import project, project_model
+from jllabeling.views.labeling import project, project_model
 
 PROJECT_FILE = osp.join(project.PROJECT_DIR_NAME, project.PROJECT_FILE_NAME)
 
@@ -38,7 +38,7 @@ def _write_schema1(root):
 
 def test_task_types_match_the_training_side():
     """标注侧刻意不 import 训练包，所以两个集合靠这条断言锁在一起。"""
-    from anylabeling.services.auto_training.ultralytics.config import (
+    from jllabeling.services.auto_training.ultralytics.config import (
         TASK_TYPES as TRAINING_TASK_TYPES,
     )
 

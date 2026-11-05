@@ -3,7 +3,7 @@ import json
 
 import yaml
 
-from anylabeling.services.auto_training.ultralytics.utils import (
+from jllabeling.services.auto_training.ultralytics.utils import (
     autolabel_type_for_task,
     collect_class_names,
     dataset_overview_stats,
@@ -164,7 +164,7 @@ class _LineEdit:
 
 
 def _dialog_with_pose_config(tmp_path, text):
-    from anylabeling.views.training.ultralytics_dialog import (
+    from jllabeling.views.training.ultralytics_dialog import (
         UltralyticsDialog,
     )
 
@@ -180,7 +180,7 @@ def _dialog_with_pose_config(tmp_path, text):
 
 
 def test_pose_yaml_keeps_the_keypoint_mapping(tmp_path):
-    from anylabeling.services.auto_training.ultralytics.utils import (
+    from jllabeling.services.auto_training.ultralytics.utils import (
         write_autolabel_model_yaml,
     )
 
@@ -203,7 +203,7 @@ def test_pose_yaml_keeps_the_keypoint_mapping(tmp_path):
 
 
 def test_detect_yaml_stays_a_plain_class_list(tmp_path):
-    from anylabeling.services.auto_training.ultralytics.utils import (
+    from jllabeling.services.auto_training.ultralytics.utils import (
         write_autolabel_model_yaml,
     )
 

@@ -1,6 +1,6 @@
 # 命令行界面（CLI）
 
-X-AnyLabeling 提供命令行界面，用于启动图形界面、查询系统信息和转换标签格式。
+JLLabelingAndTrain 提供命令行界面，用于启动图形界面、查询系统信息和转换标签格式。
 
 > [!NOTE]
 > 使用命令行前，请先按照[快速入门指南](./get_started.md)安装对应运行环境的依赖。
@@ -90,7 +90,7 @@ options:
                         image or label filename; If a directory path is passed in, the folder will be loaded automatically
   --output OUTPUT, -O OUTPUT, -o OUTPUT
                         output file or directory (if it ends with .json it is recognized as file, else as directory)
-  --config CONFIG       config file or yaml-format string (default: /home/cvhub/.xanylabelingrc)
+  --config CONFIG       config file or yaml-format string (default: /home/cvhub/.jllabelingrc)
   --nodata              stop storing image data to JSON file
   --autosave            auto save
   --nosortlabels        stop sorting labels
@@ -117,7 +117,7 @@ jllabelingandtrain checks
 ```bash
 Application
 ────────────────────────────────────────────────────────────
-  App Name:          X-AnyLabeling
+  App Name:          JLLabelingAndTrain
   App Version:       4.0.0
   Preferred Device:  CPU
 ────────────────────────────────────────────────────────────
@@ -167,7 +167,7 @@ jllabelingandtrain config
 - 输出
 
 ```bash
-~/.xanylabelingrc
+~/.jllabelingrc
 ```
 
 ## 3. 标签格式转换命令
@@ -310,7 +310,7 @@ Converting YOLO detect to XLABEL: 100%|█████████████�
 
 ### Q1：什么是 XLABEL 格式？
 
-XLABEL 是 X-AnyLabeling 的原生 JSON 格式。它以人类可读的格式存储所有标注信息，包括对象信息、标签信息、属性信息及元数据等。
+XLABEL 是 JLLabelingAndTrain 的原生 JSON 格式。它以人类可读的格式存储所有标注信息，包括对象信息、标签信息、属性信息及元数据等。
 
 ### Q2：是否需要为所有转换提供类别名称？
 

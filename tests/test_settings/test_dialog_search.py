@@ -15,11 +15,11 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 try:
     from PyQt6 import QtCore, QtWidgets
 
-    from anylabeling.views.labeling.settings.controller import (
+    from jllabeling.views.labeling.settings.controller import (
         SettingsController,
     )
-    from anylabeling.views.labeling.settings.dialog import SettingsDialog
-    from anylabeling.views.labeling.settings.schema import (
+    from jllabeling.views.labeling.settings.dialog import SettingsDialog
+    from jllabeling.views.labeling.settings.schema import (
         SETTING_FIELD_MAP,
         SETTINGS_PRIMARY_ORDER,
         load_template_config,
@@ -31,8 +31,10 @@ except Exception:
 
 
 QM_PATH = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-    "anylabeling",
+    os.path.dirname(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    ),
+    "jllabeling",
     "resources",
     "translations",
     "zh_CN.qm",
@@ -110,13 +112,9 @@ class TestSettingsSearch(unittest.TestCase):
     def test_matches_key_and_title_and_description(self):
         dialog = self._create_dialog()
         by_key = dialog._search_matches("canvas.num_backups")
-        self.assertIn(
-            "canvas.num_backups", [field.key for field in by_key]
-        )
+        self.assertIn("canvas.num_backups", [field.key for field in by_key])
         by_label = dialog._search_matches("Undo Backups")
-        self.assertIn(
-            "canvas.num_backups", [field.key for field in by_label]
-        )
+        self.assertIn("canvas.num_backups", [field.key for field in by_label])
         by_page = dialog._search_matches("Interaction")
         self.assertTrue(
             all(

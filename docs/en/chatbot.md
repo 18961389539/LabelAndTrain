@@ -1,7 +1,7 @@
 # Overview
 
 > **Archived: an upstream feature.** This build is YOLO-only and ships no such
-> panel; the page describes upstream X-AnyLabeling, not JLLabelingAndTrain.
+> panel; the page describes upstream X-AnyLabeling, not X-AnyLabeling.
 > See "Fork scope" in the [README](../../README.md).
 
 
@@ -100,7 +100,7 @@ Supports one-click export of multimodal image data in the ShareGPT format.
 The Chatbot stores its configuration in the following directory:
 
 ```
-~/xanylabeling_data/chatbot/
+~/jllabeling_data/chatbot/
 ```
 
 This directory contains:

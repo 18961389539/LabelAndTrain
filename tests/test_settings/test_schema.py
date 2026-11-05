@@ -1,10 +1,10 @@
 import unittest
 
 try:
-    from anylabeling.views.labeling.utils.shortcuts_help import (
+    from jllabeling.views.labeling.utils.shortcuts_help import (
         SHORTCUT_GROUPS,
     )
-    from anylabeling.views.labeling.settings.schema import (
+    from jllabeling.views.labeling.settings.schema import (
         EXCLUDED_KEYS,
         SETTING_FIELD_MAP,
         SETTING_FIELDS,
@@ -231,7 +231,7 @@ class TestSettingsSchema(unittest.TestCase):
         They were listed in EXCLUDED_KEYS with the note "set once, then never
         touched again", which left an annotator who wants a warmer attribute
         box, or a shallower brush undo, with no path but hand-editing
-        ``~/.xanylabelingrc``. They are dialog fields now.
+        ``~/.jllabelingrc``. They are dialog fields now.
         """
         for key in (
             "canvas.attributes.background_color",

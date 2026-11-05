@@ -13,7 +13,7 @@ import unittest
 
 from PIL import Image
 
-from anylabeling.views.labeling.label_converter import LabelConverter
+from jllabeling.views.labeling.label_converter import LabelConverter
 
 IMAGE_WIDTH = 200
 IMAGE_HEIGHT = 100

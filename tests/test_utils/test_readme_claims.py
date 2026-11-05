@@ -113,7 +113,7 @@ def _model_sections(name):
 
 class TestReadmeClaims(unittest.TestCase):
     def test_every_loadable_model_type_is_documented(self):
-        from anylabeling.services.auto_labeling import _CUSTOM_MODELS
+        from jllabeling.services.auto_labeling import _CUSTOM_MODELS
 
         for name in READMES:
             text = _read(name).lower()
@@ -201,7 +201,7 @@ class TestDocsInventory(unittest.TestCase):
         ``compile_languages.py`` command fail on the missing files.
         """
         catalog_dir = os.path.join(
-            REPO_ROOT, "anylabeling", "resources", "translations"
+            REPO_ROOT, "jllabeling", "resources", "translations"
         )
         shipped = {
             os.path.splitext(name)[0]

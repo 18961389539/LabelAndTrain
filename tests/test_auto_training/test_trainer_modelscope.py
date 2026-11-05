@@ -1,4 +1,5 @@
 """Train-side ModelScope-first weight download: offline unit tests."""
+
 import os
 import sys
 import tempfile
@@ -8,13 +9,13 @@ from unittest import mock
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from anylabeling.services.auto_training.ultralytics import trainer
+from jllabeling.services.auto_training.ultralytics import trainer
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 
 def _clear_hub_env():
-    for key in ("XANYLABELING_MODEL_HUB",):
+    for key in ("JLLABELING_MODEL_HUB",):
         os.environ.pop(key, None)
 
 
@@ -44,7 +45,7 @@ class TestModelscopeUrlMapping(unittest.TestCase):
 class TestHubPreference(unittest.TestCase):
     def setUp(self):
         _clear_hub_env()
-        self.config_patcher = mock.patch("anylabeling.config.get_config")
+        self.config_patcher = mock.patch("jllabeling.config.get_config")
         self.mock_get_config = self.config_patcher.start()
 
     def tearDown(self):
@@ -53,15 +54,13 @@ class TestHubPreference(unittest.TestCase):
 
     def test_env_github_wins_over_config_modelscope(self):
         self.mock_get_config.return_value = {"model_hub": "modelscope"}
-        with mock.patch.dict(
-            os.environ, {"XANYLABELING_MODEL_HUB": "github"}
-        ):
+        with mock.patch.dict(os.environ, {"JLLABELING_MODEL_HUB": "github"}):
             self.assertFalse(trainer._hub_prefers_modelscope())
 
     def test_env_modelscope_wins(self):
         self.mock_get_config.return_value = {"model_hub": "github"}
         with mock.patch.dict(
-            os.environ, {"XANYLABELING_MODEL_HUB": "modelscope"}
+            os.environ, {"JLLABELING_MODEL_HUB": "modelscope"}
         ):
             self.assertTrue(trainer._hub_prefers_modelscope())
 
@@ -84,9 +83,11 @@ class FakeResponse:
     def __init__(self, chunks, total=None):
         self._chunks = list(chunks)
         self.headers = {
-            "Content-Length": str(total if total is not None else sum(
-                len(c) for c in self._chunks
-            ))
+            "Content-Length": str(
+                total
+                if total is not None
+                else sum(len(c) for c in self._chunks)
+            )
         }
 
     def __enter__(self):
@@ -106,9 +107,7 @@ class TestDownloadFile(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             dest = os.path.join(tmp, "yolov8s.pt")
             response = FakeResponse([b"PK\x03\x04rest-of-file"])
-            with mock.patch(
-                "urllib.request.urlopen", return_value=response
-            ):
+            with mock.patch("urllib.request.urlopen", return_value=response):
                 self.assertTrue(trainer._download_file("http://x/y.pt", dest))
             self.assertTrue(os.path.exists(dest))
             with open(dest, "rb") as f:
@@ -119,12 +118,8 @@ class TestDownloadFile(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             dest = os.path.join(tmp, "yolov8s.pt")
             response = FakeResponse([b"not a torch archive"])
-            with mock.patch(
-                "urllib.request.urlopen", return_value=response
-            ):
-                self.assertFalse(
-                    trainer._download_file("http://x/y.pt", dest)
-                )
+            with mock.patch("urllib.request.urlopen", return_value=response):
+                self.assertFalse(trainer._download_file("http://x/y.pt", dest))
             self.assertFalse(os.path.exists(dest))
             self.assertFalse(os.path.exists(dest + ".part"))
 
@@ -135,9 +130,7 @@ class TestDownloadFile(unittest.TestCase):
                 "urllib.request.urlopen",
                 side_effect=OSError("connection refused"),
             ):
-                self.assertFalse(
-                    trainer._download_file("http://x/y.pt", dest)
-                )
+                self.assertFalse(trainer._download_file("http://x/y.pt", dest))
             self.assertFalse(os.path.exists(dest))
 
 
@@ -157,41 +150,46 @@ class TestResolveTrainingModelPath(unittest.TestCase):
     def test_cache_hit_returns_without_download(self):
         cached = Path(self.tmp.name) / "yolov8s.pt"
         cached.write_bytes(b"PK cached")
-        with mock.patch.object(
-            trainer, "_try_download_modelscope"
-        ) as ms, mock.patch.object(
-            trainer, "_fallback_official_download"
-        ) as fb:
+        with (
+            mock.patch.object(trainer, "_try_download_modelscope") as ms,
+            mock.patch.object(trainer, "_fallback_official_download") as fb,
+        ):
             result = trainer.resolve_training_model_path("yolov8s.pt")
             ms.assert_not_called()
             fb.assert_not_called()
         self.assertEqual(result, str(cached))
 
     def test_modelscope_tried_first_then_official_fallback(self):
-        with mock.patch.object(
-            trainer, "_hub_prefers_modelscope", return_value=True
-        ), mock.patch.object(
-            trainer, "_try_download_modelscope", return_value=False
-        ) as ms, mock.patch.object(
-            trainer,
-            "_fallback_official_download",
-            return_value="/official/yolov8s.pt",
-        ) as fb:
+        with (
+            mock.patch.object(
+                trainer, "_hub_prefers_modelscope", return_value=True
+            ),
+            mock.patch.object(
+                trainer, "_try_download_modelscope", return_value=False
+            ) as ms,
+            mock.patch.object(
+                trainer,
+                "_fallback_official_download",
+                return_value="/official/yolov8s.pt",
+            ) as fb,
+        ):
             result = trainer.resolve_training_model_path("yolov8s.pt")
             ms.assert_called_once()
             fb.assert_called_once()
         self.assertEqual(result, "/official/yolov8s.pt")
 
     def test_github_hub_skips_modelscope(self):
-        with mock.patch.object(
-            trainer, "_hub_prefers_modelscope", return_value=False
-        ), mock.patch.object(
-            trainer, "_try_download_modelscope"
-        ) as ms, mock.patch.object(
-            trainer,
-            "_fallback_official_download",
-            return_value="/official/yolov8s.pt",
-        ) as fb:
+        with (
+            mock.patch.object(
+                trainer, "_hub_prefers_modelscope", return_value=False
+            ),
+            mock.patch.object(trainer, "_try_download_modelscope") as ms,
+            mock.patch.object(
+                trainer,
+                "_fallback_official_download",
+                return_value="/official/yolov8s.pt",
+            ) as fb,
+        ):
             result = trainer.resolve_training_model_path("yolov8s.pt")
             ms.assert_not_called()
             fb.assert_called_once()

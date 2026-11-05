@@ -36,7 +36,7 @@ class TestVisibleRowNavigation(unittest.TestCase):
 
         list_widget = _List(10)
         widget = type("W", (), {"file_list_widget": list_widget})()
-        from anylabeling.views.labeling.label_widget import (
+        from jllabeling.views.labeling.label_widget import (
             LabelingWidget as LabelWidget,
         )
 
@@ -87,7 +87,7 @@ class TestVisibleRowNavigation(unittest.TestCase):
                 return None
 
         widget = type("W", (), {"file_list_widget": _List()})()
-        from anylabeling.views.labeling.label_widget import (
+        from jllabeling.views.labeling.label_widget import (
             LabelingWidget as LabelWidget,
         )
 
@@ -109,7 +109,7 @@ class TestAsyncLabelCheck(unittest.TestCase):
     def test_label_file_checked_detection(self):
         import tempfile
 
-        from anylabeling.views.labeling.utils.async_label_check import (
+        from jllabeling.views.labeling.utils.async_label_check import (
             _label_file_checked,
         )
 
@@ -183,7 +183,7 @@ class TestUncheckedImageNavigation(unittest.TestCase):
     N = 2000
 
     def _make_widget(self, checked_rows=()):
-        from anylabeling.views.labeling.label_widget import (
+        from jllabeling.views.labeling.label_widget import (
             LabelingWidget as LabelWidget,
         )
 
@@ -299,7 +299,7 @@ class TestFileSortKeepsIndexMap(unittest.TestCase):
     N = 2000
 
     def _make_widget(self, paths):
-        from anylabeling.views.labeling.label_widget import (
+        from jllabeling.views.labeling.label_widget import (
             LabelingWidget as LabelWidget,
         )
 

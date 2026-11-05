@@ -1,7 +1,7 @@
 ﻿import unittest
 
-from anylabeling.services.auto_labeling import _CUSTOM_MODELS
-from anylabeling.views.labeling.utils.model_task_groups import (
+from jllabeling.services.auto_labeling import _CUSTOM_MODELS
+from jllabeling.views.labeling.utils.model_task_groups import (
     TASK_FILTER_ORDER,
     TASK_GROUP_LABELS,
     TASK_TYPE_GROUPS,

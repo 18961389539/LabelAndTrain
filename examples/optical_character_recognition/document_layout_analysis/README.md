@@ -12,7 +12,7 @@ DocLayout-YOLO is a real-time and robust layout detection model for diverse docu
 
 ### Usage
 
-1. Import images (`Ctrl+I`) or a video (`Ctrl+O`) into X-AnyLabeling.
+1. Import images (`Ctrl+I`) or a video (`Ctrl+O`) into JLLabelingAndTrain.
 2. Select and load the [DocLayout-YOLO](https://github.com/opendatalab/DocLayout-YOLO) model.
 3. Click `Run (i)` to process the current image. After checking the result, press `Ctrl+B` to process all images.
 
@@ -54,4 +54,4 @@ You can tweak the settings in [pp_doclayout_v3.yaml](https://github.com/CVHub520
 
 ### Usage
 
-Launch the X-AnyLabeling client, press `Ctrl+A` or click the `AI` button in the left menu bar to open the auto-labeling panel. In the model dropdown list, select `Remote-Server`, then choose `PP-DocLayoutV3`.
+Launch the JLLabelingAndTrain client, press `Ctrl+A` or click the `AI` button in the left menu bar to open the auto-labeling panel. In the model dropdown list, select `Remote-Server`, then choose `PP-DocLayoutV3`.

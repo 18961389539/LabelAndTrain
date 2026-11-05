@@ -6,14 +6,14 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 try:
     from PyQt6 import QtCore, QtGui, QtWidgets
 
-    import anylabeling.resources.resources  # noqa: F401
-    from anylabeling.views.labeling.utils.qt import new_icon
-    from anylabeling.views.labeling.utils.theme import init_theme
-    from anylabeling.views.labeling.widgets.toolbar import (
+    import jllabeling.resources.resources  # noqa: F401
+    from jllabeling.views.labeling.utils.qt import new_icon
+    from jllabeling.views.labeling.utils.theme import init_theme
+    from jllabeling.views.labeling.widgets.toolbar import (
         FloatingToolPanel,
         ToolBar,
     )
-    from anylabeling.views.labeling.widgets.zoom_widget import ZoomWidget
+    from jllabeling.views.labeling.widgets.zoom_widget import ZoomWidget
 
     PYQT_AVAILABLE = True
 except Exception:
@@ -56,7 +56,9 @@ class TestToolBarLayout(unittest.TestCase):
 
         button = toolbar.widgetForAction(action)
         self.assertIsNotNone(button)
-        self.assertGreaterEqual(button.height(), toolbar.iconSize().height() + 4)
+        self.assertGreaterEqual(
+            button.height(), toolbar.iconSize().height() + 4
+        )
         # Button geometry is relative to the inner content widget, so map
         # its corners into the toolbar's coordinate system.
         top_left = button.mapTo(toolbar, QtCore.QPoint(0, 0))
@@ -90,7 +92,9 @@ class TestToolBarLayout(unittest.TestCase):
         self._widgets.append(widget)
 
         self.assertEqual(widget.size(), QtCore.QSize(30, 24))
-        self.assertEqual(widget.alignment(), QtCore.Qt.AlignmentFlag.AlignCenter)
+        self.assertEqual(
+            widget.alignment(), QtCore.Qt.AlignmentFlag.AlignCenter
+        )
 
     def test_floating_toolbar_panel_stays_clamped_in_parent(self):
         init_theme("dark")
@@ -149,9 +153,7 @@ class TestToolBarLayout(unittest.TestCase):
     def test_floating_toolbar_double_click_on_handle_resets_position(self):
         panel, _ = self._make_panel()
         committed = []
-        panel.positionCommitted.connect(
-            lambda x, y: committed.append((x, y))
-        )
+        panel.positionCommitted.connect(lambda x, y: committed.append((x, y)))
 
         panel.set_saved_position(60, 40)
         self.assertEqual(panel.pos(), QtCore.QPoint(60, 40))
@@ -169,15 +171,14 @@ class TestToolBarLayout(unittest.TestCase):
         self.assertEqual(panel.pos(), panel.default_position())
         self.assertFalse(panel._user_moved)
         self.assertEqual(
-            committed, [(panel.default_position().x(), panel.default_position().y())]
+            committed,
+            [(panel.default_position().x(), panel.default_position().y())],
         )
 
     def test_floating_toolbar_drag_release_commits_position(self):
         panel, _ = self._make_panel()
         committed = []
-        panel.positionCommitted.connect(
-            lambda x, y: committed.append((x, y))
-        )
+        panel.positionCommitted.connect(lambda x, y: committed.append((x, y)))
         self.assertEqual(panel.pos(), QtCore.QPoint(8, 8))
 
         # Synthetic press/move/release over the grip, mimicking a real drag.
@@ -226,9 +227,7 @@ class TestToolBarLayout(unittest.TestCase):
             .convertToFormat(QtGui.QImage.Format.Format_ARGB32)
         )
         return bytes(
-            image.constBits().asarray(
-                image.height() * image.bytesPerLine()
-            )
+            image.constBits().asarray(image.height() * image.bytesPerLine())
         )
 
     def test_floating_toolbar_collapse_hides_content_and_toggles(self):
@@ -294,7 +293,7 @@ class TestToolBarLayout(unittest.TestCase):
         import os.path as osp
         import tempfile
 
-        from anylabeling import config as cfg_module
+        from jllabeling import config as cfg_module
 
         old_config_file = cfg_module.current_config_file
         old_work_dir = cfg_module.get_work_directory()
@@ -302,7 +301,7 @@ class TestToolBarLayout(unittest.TestCase):
             with tempfile.TemporaryDirectory() as tmp:
                 cfg_module.set_work_directory(tmp)
                 # Point the loader at the per-user rc file like the real app.
-                cfg_module.current_config_file = osp.join(tmp, ".xanylabelingrc")
+                cfg_module.current_config_file = osp.join(tmp, ".jllabelingrc")
                 cfg = cfg_module.get_config()
                 self.assertIn("tools_panel", cfg)
                 self.assertIsNone(cfg["tools_panel"].get("position"))

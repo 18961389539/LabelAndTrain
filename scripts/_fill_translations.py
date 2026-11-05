@@ -14,7 +14,7 @@ Run once, then re-run scripts/generate_languages.py to rebuild the .qm.
 
 import xml.etree.ElementTree as ET
 
-TS = "anylabeling/resources/translations/zh_CN.ts"
+TS = "jllabeling/resources/translations/zh_CN.ts"
 
 TRANSLATIONS = {
     # --- LabelingWidget: export / upload / crop ---------------------------

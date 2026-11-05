@@ -10,7 +10,7 @@ try:
 except Exception:  # pragma: no cover
     PYQT_AVAILABLE = False
 
-from anylabeling.views.labeling.widgets.label_list_widget import (
+from jllabeling.views.labeling.widgets.label_list_widget import (
     LabelListWidget,
     LabelListWidgetItem,
 )
@@ -84,9 +84,7 @@ class TestLabelListWidget(unittest.TestCase):
 
         seen = []
         lst.item_selection_changed.connect(
-            lambda selected, deselected: seen.append(
-                (selected, deselected)
-            )
+            lambda selected, deselected: seen.append((selected, deselected))
         )
 
         lst.clearSelection()

@@ -8,7 +8,7 @@ from unittest import mock
 
 from PIL import Image
 
-from anylabeling.views.labeling import label_file
+from jllabeling.views.labeling import label_file
 
 
 class TestLabelFileSave(unittest.TestCase):
@@ -173,7 +173,7 @@ class TestReviewStatePersistence(unittest.TestCase):
             self.assertEqual(label.other_data["custom_note"], "keep me")
 
     def test_scanner_agrees_with_full_parse(self):
-        from anylabeling.views.labeling.utils.async_label_check import (
+        from jllabeling.views.labeling.utils.async_label_check import (
             _label_file_review_state,
         )
 

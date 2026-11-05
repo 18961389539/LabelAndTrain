@@ -25,13 +25,13 @@ conda install expat=2.5.0 -y
 
 - 方法1：使用命令行参数强制使用 XCB 平台
 ```bash
-python -m anylabeling --qt-platform xcb
+python -m jllabeling --qt-platform xcb
 ```
 
 - 方法2：设置环境变量
 ```bash
 export QT_QPA_PLATFORM=xcb
-python -m anylabeling
+python -m jllabeling
 ```
 
 详情可参考[#1145](https://github.com/CVHub520/X-AnyLabeling/issues/1145)。
@@ -65,7 +65,7 @@ python -m anylabeling
 <details>
 <summary>Q: 启动时报错：AttributeError: 'NoneType' object has no attribute 'items'</summary>
 
-可删除用户目录下的 `.xanylabelingrc` 文件再尝试重启。可参考[#877](https://github.com/CVHub520/X-AnyLabeling/issues/877)。
+可删除用户目录下的 `.jllabelingrc` 文件再尝试重启。可参考[#877](https://github.com/CVHub520/X-AnyLabeling/issues/877)。
 </details>
 
 <details>
@@ -130,7 +130,7 @@ python -m anylabeling
 <details>
 <summary>Q: 绘制矩形等目标框时，如何开启连续绘制模式？</summary>
 
-可以打开电脑用户目录下的 .xanylabelingrc 配置文件，修改 auto_highlight_shape 和 auto_switch_to_edit_mode 为 False。
+可以打开电脑用户目录下的 .jllabelingrc 配置文件，修改 auto_highlight_shape 和 auto_switch_to_edit_mode 为 False。
 可参考 [#887](https://github.com/CVHub520/X-AnyLabeling/issues/887)。
 </details>
 
@@ -149,7 +149,7 @@ python -m anylabeling
 <details>
 <summary>Q: 复制粘贴标注对象时出现重叠？(Duplicate Polygons vs Copy & Paste Objects)</summary>
 
-X-AnyLabeling 提供两种用途不同的复制方式：
+JLLabelingAndTrain 提供两种用途不同的复制方式：
 
 - `Ctrl+D` 用于在当前图片中快速复制对象。新对象默认会偏移 2 个像素，避免与原对象完全重叠。
 - `Ctrl+C` 和 `Ctrl+V` 主要用于跨图片复制对象。粘贴时会保留原坐标，因此在同一张图片中粘贴时会与原对象重叠。
@@ -174,7 +174,7 @@ X-AnyLabeling 提供两种用途不同的复制方式：
 - 方式1：通过 GUI 设置
   打开 `Settings`（`Ctrl+0`）> `General`，修改 `Qt Image Allocation Limit`
 - 方式2：通过配置文件
-  编辑用户目录下的 `.xanylabelingrc`，设置 `qt_image_allocation_limit`
+  编辑用户目录下的 `.jllabelingrc`，设置 `qt_image_allocation_limit`
 - 方式3：通过启动参数
   使用 `--qt-image-allocation-limit`
 
@@ -214,9 +214,9 @@ YOLO26 默认导出为 end2end（NMS-free）模型，若希望使用带 NMS 的�
 <details>
 <summary>Q: 为什么使用预编译的 EXE 运行 Ultralytics（YOLO）训练会报错？</summary>
 
-目前，通过 X-AnyLabeling 的预编译可执行文件（EXE）版本直接进行 Ultralytics/YOLO 模型训练暂不支持。主要原因包括：1）官方发布的 EXE 默认未打包 Ultralytics 训练环境；2）将应用打包成独立 EXE 后，Python 在子进程调用、动态脚本执行（例如 train_script.py）等方面存在固有的复杂性和限制，无法像在源码环境中一样正确生成并调用训练脚本。
+目前，通过 JLLabelingAndTrain 的预编译可执行文件（EXE）版本直接进行 Ultralytics/YOLO 模型训练暂不支持。主要原因包括：1）官方发布的 EXE 默认未打包 Ultralytics 训练环境；2）将应用打包成独立 EXE 后，Python 在子进程调用、动态脚本执行（例如 train_script.py）等方面存在固有的复杂性和限制，无法像在源码环境中一样正确生成并调用训练脚本。
 
-在 Python 源码环境中运行 X-AnyLabeling 时，训练功能可正常使用。因此如需进行 YOLO 模型训练，请使用 Python 环境运行本软件。
+在 Python 源码环境中运行 JLLabelingAndTrain 时，训练功能可正常使用。因此如需进行 YOLO 模型训练，请使用 Python 环境运行本软件。
 
 详情可参考 [#1100](https://github.com/CVHub520/X-AnyLabeling/issues/1100)。
 </details>
@@ -226,7 +226,7 @@ YOLO26 默认导出为 end2end（NMS-free）模型，若希望使用带 NMS 的�
 
 这个问题的根源在于 Python 的资源加载机制。当我们用 `importlib.resources.files()` 获取包内资源时，它返回的实际上是一个 `Traversable` 对象。这个对象在不同环境下的行为会有差异：在某些情况下（比如通过 `pip install -e .` 可编辑模式安装时），直接把 `Traversable` 对象当作文件路径传给需要真实路径的函数（如 `Tokenizer.from_file()`）就会出现文件找不到的错误。
 
-此问题已修复。资源加载方式已统一改为 `read_text()`，直接读取资源内容而不是依赖文件路径，从而确保在不同安装方式和运行环境下正常工作。如果仍遇到此问题，建议重新安装或更新 X-AnyLabeling。
+此问题已修复。资源加载方式已统一改为 `read_text()`，直接读取资源内容而不是依赖文件路径，从而确保在不同安装方式和运行环境下正常工作。如果仍遇到此问题，建议重新安装或更新 JLLabelingAndTrain。
 
 </details>
 
@@ -485,7 +485,7 @@ onnx 和 onnxruntime 库版本不兼容，具体可参考[#886](https://github.c
 </details>
 
 <details>
-<summary>Q: 在 Labelme 中导入 X-AnyLabeling 的标签会提示 `AssertionError` 错误</summary>
+<summary>Q: 在 Labelme 中导入 JLLabelingAndTrain 的标签会提示 `AssertionError` 错误</summary>
 
 可参考此[#1007](https://github.com/CVHub520/X-AnyLabeling/issues/1007)。
 </details>

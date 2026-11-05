@@ -19,7 +19,7 @@ sys.path.insert(
 from PyQt6.QtGui import QPixmap  # noqa: E402
 from PyQt6.QtWidgets import QApplication  # noqa: E402
 
-from anylabeling.views.labeling.widgets.thumbnail_panel import (  # noqa: E402
+from jllabeling.views.labeling.widgets.thumbnail_panel import (  # noqa: E402
     ThumbnailPanel,
 )
 

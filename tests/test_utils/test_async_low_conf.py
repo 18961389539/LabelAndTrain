@@ -11,20 +11,20 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 try:
     from PyQt6 import QtCore, QtWidgets
 
-    from anylabeling.views.labeling.filelist.controller import (
+    from jllabeling.views.labeling.filelist.controller import (
         FileReviewController,
     )
-    from anylabeling.views.labeling.filelist.roles import (
+    from jllabeling.views.labeling.filelist.roles import (
         FILE_ANNOTATION_ROLE,
         FILE_LOW_CONF_ROLE,
         FILE_REVIEW_ROLE,
     )
-    from anylabeling.views.labeling.schema import REVIEW_UNCHECKED
-    from anylabeling.views.labeling.utils.async_label_check import (
+    from jllabeling.views.labeling.schema import REVIEW_UNCHECKED
+    from jllabeling.views.labeling.utils.async_label_check import (
         LabelCheckWorker,
         label_file_low_conf,
     )
-    from anylabeling.views.labeling.utils.file_list_ops import (
+    from jllabeling.views.labeling.utils.file_list_ops import (
         refresh_file_progress,
     )
 

@@ -13,8 +13,8 @@ from types import SimpleNamespace
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 try:
-    from anylabeling.views.labeling import utils
-    from anylabeling.views.labeling.utils import file_lifecycle
+    from jllabeling.views.labeling import utils
+    from jllabeling.views.labeling.utils import file_lifecycle
 
     AVAILABLE = True
 except Exception:

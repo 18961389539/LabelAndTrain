@@ -3,7 +3,7 @@ import os
 import tempfile
 import unittest
 
-from anylabeling.views.labeling.utils.yolo_detect import (
+from jllabeling.views.labeling.utils.yolo_detect import (
     merge_class_names,
     rename_class_in_classes_txt,
     rename_label_across_folder,
@@ -145,7 +145,9 @@ class TestYoloDetectRename(unittest.TestCase):
                 80,
                 extra_class_names=["背景", "产品"],
             )
-            with open(os.path.join(tmp, "a.txt"), "r", encoding="utf-8") as handle:
+            with open(
+                os.path.join(tmp, "a.txt"), "r", encoding="utf-8"
+            ) as handle:
                 self.assertTrue(handle.read().startswith("1 "))
 
             changed = rename_label_across_folder(
@@ -155,7 +157,11 @@ class TestYoloDetectRename(unittest.TestCase):
             with open(json_path, "r", encoding="utf-8") as handle:
                 data = json.load(handle)
             self.assertEqual(data["shapes"][0]["label"], "零件")
-            with open(os.path.join(tmp, "classes.txt"), "r", encoding="utf-8") as handle:
+            with open(
+                os.path.join(tmp, "classes.txt"), "r", encoding="utf-8"
+            ) as handle:
                 self.assertEqual(handle.read(), "背景\n零件\n")
-            with open(os.path.join(tmp, "a.txt"), "r", encoding="utf-8") as handle:
+            with open(
+                os.path.join(tmp, "a.txt"), "r", encoding="utf-8"
+            ) as handle:
                 self.assertTrue(handle.read().startswith("1 "))

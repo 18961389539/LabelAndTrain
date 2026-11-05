@@ -6,7 +6,7 @@ from unittest import mock
 
 from PIL import Image
 
-from anylabeling.views.labeling import label_file
+from jllabeling.views.labeling import label_file
 
 
 class TestLabelFileLoad(unittest.TestCase):

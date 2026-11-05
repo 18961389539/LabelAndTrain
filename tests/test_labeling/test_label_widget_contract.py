@@ -18,16 +18,16 @@ REPO_ROOT = os.path.abspath(
 )
 
 LABEL_WIDGET = os.path.join(
-    REPO_ROOT, "anylabeling", "views", "labeling", "label_widget.py"
+    REPO_ROOT, "jllabeling", "views", "labeling", "label_widget.py"
 )
 CONTRACT = os.path.join(
-    REPO_ROOT, "anylabeling", "views", "labeling", "label_widget_contract.py"
+    REPO_ROOT, "jllabeling", "views", "labeling", "label_widget_contract.py"
 )
 
 #: The modules the split batches extracted -- every widget-first function
 #: in them takes the whole widget as its first parameter.
 EXTRACTED_MODULES = [
-    os.path.join(REPO_ROOT, "anylabeling", "views", "labeling", "utils", name)
+    os.path.join(REPO_ROOT, "jllabeling", "views", "labeling", "utils", name)
     for name in (
         "file_lifecycle.py",
         "file_navigation.py",
@@ -124,7 +124,7 @@ def _member_exists_on_widget(name):
     runtime getattr on the class."""
     if name in _widget_class_members():
         return True
-    from anylabeling.views.labeling.label_widget import LabelingWidget
+    from jllabeling.views.labeling.label_widget import LabelingWidget
 
     return hasattr(LabelingWidget, name)
 

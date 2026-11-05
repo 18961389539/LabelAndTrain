@@ -81,7 +81,7 @@ widgets**:
 
 ```python
 from types import SimpleNamespace
-from anylabeling.views.labeling.label_widget import LabelingWidget
+from jllabeling.views.labeling.label_widget import LabelingWidget
 
 widget = SimpleNamespace(canvas=SimpleNamespace(), actions=SimpleNamespace())
 result = LabelingWidget.apply_attribute_change(widget, shape, "label", "cat")
@@ -133,7 +133,7 @@ belongs in a module-level function instead.
 - **Tests must never write the real user config.** Anything that saves
   config must run under `config.set_work_directory(tmp_path)` with a
   `finally` that restores the old work directory — `save_config` falls
-  through to `~/.xanylabelingrc` when the current config file does not
+  through to `~/.jllabelingrc` when the current config file does not
   exist yet, and a test that forgets this corrupts a real user file.
 - **Wiring claims get real objects.** Stub tests verify logic;
   `tests/test_labeling/test_widget_wiring.py` constructs the real

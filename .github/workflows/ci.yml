@@ -44,7 +44,7 @@ jobs:
       # touched is exactly what left three files in widgets/auto_labeling/
       # unformatted while every gate stayed green.
       - name: Check formatting across the repository
-        run: python -m black --check anylabeling tests scripts
+        run: python -m black --check jllabeling tests scripts
 
   test:
     name: Unit tests (${{ matrix.os }})
@@ -85,7 +85,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          python -m pytest tests --cov=anylabeling --cov-report=term > pytest-out.txt 2>&1
+          python -m pytest tests --cov=jllabeling --cov-report=term > pytest-out.txt 2>&1
           code=$?
           set -e
           tail -40 pytest-out.txt

@@ -4,8 +4,8 @@ smart-action stack."""
 import ast
 from pathlib import Path
 
-from anylabeling.views.labeling.utils import label_backup
-from anylabeling.views.labeling.utils import session_snapshot
+from jllabeling.views.labeling.utils import label_backup
+from jllabeling.views.labeling.utils import session_snapshot
 
 
 def test_the_engine_lives_in_label_backup():

@@ -15,7 +15,7 @@ from unittest import mock
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from anylabeling.services.auto_training.ultralytics import trainer
+from jllabeling.services.auto_training.ultralytics import trainer
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 

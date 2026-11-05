@@ -3,7 +3,7 @@ import os
 import tempfile
 import unittest
 
-from anylabeling.views.labeling.utils.active_learning import (
+from jllabeling.views.labeling.utils.active_learning import (
     DEFAULT_ACCEPT,
     DEFAULT_REVIEW,
     append_iteration,
@@ -94,7 +94,10 @@ class TestCalibration(unittest.TestCase):
 
     def test_small_class_falls_back_to_global_pool(self):
         result = calibrate_thresholds(
-            {"rare": [0.9], "common": [0.2, 0.25, 0.3, 0.8, 0.85, 0.9, 0.95, 0.99]},
+            {
+                "rare": [0.9],
+                "common": [0.2, 0.25, 0.3, 0.8, 0.85, 0.9, 0.95, 0.99],
+            },
             min_samples=4,
         )
         self.assertIn("rare", result)
@@ -103,11 +106,11 @@ class TestCalibration(unittest.TestCase):
         scores = [0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9]
         plain = calibrate_thresholds({"dog": scores}, min_samples=4)
         confirmed = calibrate_thresholds(
-            {"dog": scores}, {"dog": [0.5, 0.52, 0.55, 0.58, 0.6]}, min_samples=4
+            {"dog": scores},
+            {"dog": [0.5, 0.52, 0.55, 0.58, 0.6]},
+            min_samples=4,
         )
-        self.assertLess(
-            confirmed["dog"]["accept"], plain["dog"]["accept"]
-        )
+        self.assertLess(confirmed["dog"]["accept"], plain["dog"]["accept"])
 
     def test_thresholds_are_clamped_and_ordered(self):
         result = calibrate_thresholds(
@@ -126,9 +129,7 @@ class TestCalibration(unittest.TestCase):
             save_thresholds(tmp, thresholds)
             loaded = load_thresholds(tmp)
             self.assertEqual(loaded["cat"]["accept"], 0.7)
-            self.assertEqual(
-                thresholds_for("cat", loaded), (0.7, 0.3)
-            )
+            self.assertEqual(thresholds_for("cat", loaded), (0.7, 0.3))
 
     def test_thresholds_for_unknown_label(self):
         self.assertEqual(
@@ -159,7 +160,10 @@ class TestIterationHistory(unittest.TestCase):
             self.assertEqual(history["rounds"][0]["round"], 1)
 
             history = append_iteration(
-                tmp, model="run2", labeled_images=200, total_shapes=700,
+                tmp,
+                model="run2",
+                labeled_images=200,
+                total_shapes=700,
                 new_shapes=200,
             )
             self.assertEqual(len(history["rounds"]), 2)
@@ -167,7 +171,9 @@ class TestIterationHistory(unittest.TestCase):
             history = update_last_iteration(tmp, reviewed_images=80)
             self.assertEqual(history["rounds"][-1]["reviewed_images"], 80)
             # reload from disk to prove it is persisted
-            self.assertEqual(load_history(tmp)["rounds"][-1]["reviewed_images"], 80)
+            self.assertEqual(
+                load_history(tmp)["rounds"][-1]["reviewed_images"], 80
+            )
 
     def test_suggest_stop_when_gain_is_tiny(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -183,10 +189,20 @@ class TestIterationHistory(unittest.TestCase):
     def test_suggest_continue_when_gain_is_real(self):
         history = {
             "rounds": [
-                {"round": 1, "labeled_images": 100, "total_shapes": 500,
-                 "new_shapes": 500, "reviewed_images": 100},
-                {"round": 2, "labeled_images": 250, "total_shapes": 1100,
-                 "new_shapes": 600, "reviewed_images": 150},
+                {
+                    "round": 1,
+                    "labeled_images": 100,
+                    "total_shapes": 500,
+                    "new_shapes": 500,
+                    "reviewed_images": 100,
+                },
+                {
+                    "round": 2,
+                    "labeled_images": 250,
+                    "total_shapes": 1100,
+                    "new_shapes": 600,
+                    "reviewed_images": 150,
+                },
             ]
         }
         suggestion = suggest_next_step(history)
@@ -208,8 +224,17 @@ class TestIterationHistory(unittest.TestCase):
         self.assertEqual(suggest_next_step(history)["action"], "continue")
 
     def test_summary_text(self):
-        history = {"rounds": [{"round": 1, "model": "run1", "map50": 0.8123,
-                               "labeled_images": 10, "total_shapes": 40}]}
+        history = {
+            "rounds": [
+                {
+                    "round": 1,
+                    "model": "run1",
+                    "map50": 0.8123,
+                    "labeled_images": 10,
+                    "total_shapes": 40,
+                }
+            ]
+        }
         lines = format_iteration_summary(history)
         self.assertIn("第 1 轮", lines[0])
         self.assertIn("0.812", lines[0])
@@ -250,9 +275,12 @@ class TestCalibrationIntegration(unittest.TestCase):
             )
         ]
         class_scores, confirmed = collect_score_samples(entries)
-        thresholds = calibrate_thresholds(class_scores, confirmed, min_samples=4)
-        accept, _review = thresholds_for("cat", thresholds, DEFAULT_ACCEPT,
-                                         DEFAULT_REVIEW)
+        thresholds = calibrate_thresholds(
+            class_scores, confirmed, min_samples=4
+        )
+        accept, _review = thresholds_for(
+            "cat", thresholds, DEFAULT_ACCEPT, DEFAULT_REVIEW
+        )
         shapes = entries[0][0]["shapes"]
         # with a calibrated (low) accept threshold the 0.31 box is the only
         # one that still needs a human

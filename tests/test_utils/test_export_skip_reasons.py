@@ -13,13 +13,13 @@ import re
 
 import pytest
 
-from anylabeling.views.labeling.utils.export import _skip_reason_text
+from jllabeling.views.labeling.utils.export import _skip_reason_text
 
 REPO_ROOT = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..")
 )
 CONVERTER = os.path.join(
-    REPO_ROOT, "anylabeling", "views", "labeling", "label_converter.py"
+    REPO_ROOT, "jllabeling", "views", "labeling", "label_converter.py"
 )
 
 #: What each f-string hole in a reason template stands for, so the guard can
@@ -81,7 +81,7 @@ def test_the_rotation_vertex_count_is_not_lost():
 def test_the_summary_line_is_chinese_end_to_end():
     from types import SimpleNamespace
 
-    from anylabeling.views.labeling.utils import export
+    from jllabeling.views.labeling.utils import export
 
     stats = {
         "exported": 7,

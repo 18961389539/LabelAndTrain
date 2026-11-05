@@ -1,6 +1,6 @@
 import unittest
 
-from anylabeling.views.labeling.utils.review_queue import (
+from jllabeling.views.labeling.utils.review_queue import (
     next_review_target,
     queue_position,
 )
@@ -31,8 +31,10 @@ class TestReviewQueue(unittest.TestCase):
         self.assertEqual((path, index), (None, None))
 
     def test_backward_goes_up(self):
-        self.assertEqual(next_review_target(self.QUEUE, "a.jpg", forward=False),
-                         ("b.jpg", 0))
+        self.assertEqual(
+            next_review_target(self.QUEUE, "a.jpg", forward=False),
+            ("b.jpg", 0),
+        )
 
     def test_queue_position(self):
         self.assertEqual(queue_position(self.QUEUE, "a.jpg"), 1)

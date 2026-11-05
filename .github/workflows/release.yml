@@ -7,7 +7,7 @@
 #
 # The build and notes steps reuse scripts/build_executable.sh and
 # scripts/generate_release_notes.py, which already know how to validate the
-# tag against anylabeling/app_info.py and CHANGELOG.md. Nothing here should
+# tag against jllabeling/app_info.py and CHANGELOG.md. Nothing here should
 # grow its own copy of that logic.
 
 name: Release

@@ -85,7 +85,7 @@ Example of group_id and lineedit attributes:
 **Step 1: Run the Application**
 
 ```bash
-python anylabeling/app.py
+python jllabeling/app.py
 ```
 
 **Step 2: Upload the Configuration File**
@@ -98,7 +98,7 @@ Click on `Upload -> Upload Attributes File` in the top menu bar and select the p
 > [!NOTE]
 > **Attribute label color customization**
 >
-> You can customize the colors of attribute labels displayed on the canvas by configuring the `.xanylabelingrc` file in your user directory. Add or modify the following settings under the `canvas` section:
+> You can customize the colors of attribute labels displayed on the canvas by configuring the `.jllabelingrc` file in your user directory. Add or modify the following settings under the `canvas` section:
 >
 > ```yaml
 > canvas:
@@ -141,7 +141,7 @@ helmet:
 **Step 1: Run the Application**
 
 ```bash
-python anylabeling/app.py
+python jllabeling/app.py
 ```
 
 **Step 2: Upload the Configuration File**
@@ -153,7 +153,7 @@ Click on `Upload -> Upload Label Flags File` in the top menu bar and select the 
 **Option 1: Quick Start**
 
 ```bash
-python anylabeling/app.py --labels person,helmet --labelflags "{'person': ['male', 'female'], 'helmet': ['white', 'red', 'blue', 'yellow', 'green']}" --validatelabel exact
+python jllabeling/app.py --labels person,helmet --labelflags "{'person': ['male', 'female'], 'helmet': ['white', 'red', 'blue', 'yellow', 'green']}" --validatelabel exact
 ```
 
 > [!TIP]
@@ -162,7 +162,7 @@ python anylabeling/app.py --labels person,helmet --labelflags "{'person': ['male
 **Option 2: Using a Configuration File**
 
 ```bash
-python anylabeling/app.py --labels labels.txt --labelflags label_flags.yaml --validatelabel exact
+python jllabeling/app.py --labels labels.txt --labelflags label_flags.yaml --validatelabel exact
 ```
 
 For detailed output examples, refer to [this file](./sources/multi-label/worker.json).

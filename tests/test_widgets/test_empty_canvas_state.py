@@ -7,7 +7,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 try:
     from PyQt6 import QtWidgets
 
-    from anylabeling.views.labeling.widgets.canvas_empty_state import (
+    from jllabeling.views.labeling.widgets.canvas_empty_state import (
         CanvasEmptyStateWidget,
     )
 
@@ -57,7 +57,7 @@ class TestCanvasEmptyStateWidget(unittest.TestCase):
 
 class TestFileListHelpers(unittest.TestCase):
     def test_fill_progress_template(self):
-        from anylabeling.views.labeling.label_widget import (
+        from jllabeling.views.labeling.label_widget import (
             fill_progress_template,
         )
 
@@ -65,7 +65,7 @@ class TestFileListHelpers(unittest.TestCase):
         self.assertEqual(text, "已标 12/50 · 已检查 3")
 
     def test_move_file_to_delete_folder(self):
-        from anylabeling.views.labeling.label_widget import (
+        from jllabeling.views.labeling.label_widget import (
             move_file_to_delete_folder,
         )
 

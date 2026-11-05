@@ -1,6 +1,6 @@
 """The stale cleanup summary must not hide skipped boxes."""
 
-from anylabeling.views.labeling.utils import smart_stale
+from jllabeling.views.labeling.utils import smart_stale
 
 
 def _counts(**overrides):

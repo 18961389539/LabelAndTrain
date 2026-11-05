@@ -20,7 +20,7 @@ import unittest
 REPO_ROOT = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..")
 )
-PACKAGE = os.path.join(REPO_ROOT, "anylabeling")
+PACKAGE = os.path.join(REPO_ROOT, "jllabeling")
 
 #: Setters Qt shows to the user, plus the widget constructors that take a
 #: caption as their first argument.

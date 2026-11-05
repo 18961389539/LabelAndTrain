@@ -16,7 +16,7 @@ import os
 REPO = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 )
-ROOT = os.path.join(REPO, "anylabeling", "views", "labeling")
+ROOT = os.path.join(REPO, "jllabeling", "views", "labeling")
 
 #: Functions the scan flags that write a label-shaped JSON without
 #: snapshotting, and why that is correct. A new entry needs a reason; a stale
@@ -95,13 +95,13 @@ def test_the_scan_finds_the_writers_this_fork_fixed():
     """A scan that matches nothing would pass every later assertion."""
     keys = {key for key, _node, _snap in _writer_functions()}
     for expected in (
-        "anylabeling/views/labeling/utils/batch.py::save_auto_labeling_result",
-        "anylabeling/views/labeling/utils/file_lifecycle.py::delete_image_file",
-        "anylabeling/views/labeling/widgets/shape_dialog.py::delete_images_in_range",
-        "anylabeling/views/labeling/widgets/shape_dialog.py::remove_selected_shapes_in_range",
-        "anylabeling/views/labeling/utils/yolo_detect.py::rename_label_across_folder",
-        "anylabeling/views/labeling/widgets/shape_dialog.py::remove_selected_shapes_in_range",
-        "anylabeling/views/labeling/widgets/label_dialog.py::modify_group_id",
+        "jllabeling/views/labeling/utils/batch.py::save_auto_labeling_result",
+        "jllabeling/views/labeling/utils/file_lifecycle.py::delete_image_file",
+        "jllabeling/views/labeling/widgets/shape_dialog.py::delete_images_in_range",
+        "jllabeling/views/labeling/widgets/shape_dialog.py::remove_selected_shapes_in_range",
+        "jllabeling/views/labeling/utils/yolo_detect.py::rename_label_across_folder",
+        "jllabeling/views/labeling/widgets/shape_dialog.py::remove_selected_shapes_in_range",
+        "jllabeling/views/labeling/widgets/label_dialog.py::modify_group_id",
     ):
         assert expected in keys, f"the scan no longer covers {expected}"
 

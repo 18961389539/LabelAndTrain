@@ -134,6 +134,11 @@ cpu-train = [
     "torchvision>=0.15.0",
     "ultralytics>=8.3.0",
     "onnxslim>=0.1.44",
+    # ModelScope mirrors ultralytics weights that were saved with
+    # pickle_module=dill (e.g. yolo11n-seg.pt), so torch.load needs dill
+    # importable to unpickle them. Ultralytics 8.4 no longer imports it
+    # itself, hence the explicit dependency.
+    "dill>=0.3.9",
 ]
 # What CI's test job and the release gate need beyond the runtime extras.
 # Kept as an extra so the lock files can pin them like everything else.
@@ -184,7 +189,7 @@ gpu-cu13 = [
 "Changelog" = "https://github.com/CVHub520/X-AnyLabeling/releases"
 
 [project.scripts]
-jllabelingandtrain = "anylabeling.app:main"
+jllabelingandtrain = "jllabeling.app:main"
 
 [tool.uv]
 conflicts = [
@@ -216,10 +221,10 @@ conflicts = [
 
 # Tools settings -------------------------------------------------------------------------------------------------------
 [tool.setuptools]  # configuration specific to the `setuptools` build backend.
-packages = { find = { where = ["."], include = ["anylabeling*"], exclude = ["resources*"] } }
+packages = { find = { where = ["."], include = ["jllabeling*"], exclude = ["resources*"] } }
 
 [tool.setuptools.dynamic]
-version = {attr = "anylabeling.app_info.__version__"}
+version = {attr = "jllabeling.app_info.__version__"}
 
 [tool.pytest.ini_options]
 addopts = "--doctest-modules --durations=30 --color=yes"
@@ -244,10 +249,10 @@ norecursedirs = [".git", "dist", "build"]
 # someone's to-do, not a gate. Rounded down a point to 53 so ordinary float
 # drift between runs cannot fail CI.
 [tool.coverage.run]
-source = ["anylabeling"]
+source = ["jllabeling"]
 omit = [
     # Emitted by pyside6-rcc: a multi-megabyte byte literal, nothing to cover.
-    "anylabeling/resources/resources.py",
+    "jllabeling/resources/resources.py",
 ]
 
 [tool.coverage.report]
@@ -276,7 +281,7 @@ exclude = '''
   | dist
   | tests
 )/
-| ^/anylabeling/resources/resources\.py$
+| ^/jllabeling/resources/resources\.py$
 | _ui\.py$
 '''
 # The last alternative is the pyuic6 output (``*_ui.py``).  Those modules are

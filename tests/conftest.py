@@ -2,14 +2,14 @@
 
 Every test runs with the config work directory pointed at a per-test temp
 folder and the global ``current_config_file`` reset, so no test can ever
-read or write the real ``~/.xanylabelingrc``. Tests that want a specific
+read or write the real ``~/.jllabelingrc``. Tests that want a specific
 work directory can still call ``config.set_work_directory`` on their own;
 the fixture restores both globals afterwards.
 """
 
 import pytest
 
-from anylabeling import config
+from jllabeling import config
 
 
 @pytest.fixture(autouse=True)

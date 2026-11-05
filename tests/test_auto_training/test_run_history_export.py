@@ -8,8 +8,8 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pytest
 
-from anylabeling.views.training import run_history_dialog as dialog_module
-from anylabeling.views.training.run_history_dialog import write_history_csv
+from jllabeling.views.training import run_history_dialog as dialog_module
+from jllabeling.views.training.run_history_dialog import write_history_csv
 
 
 def test_rows_and_bom(tmp_path):

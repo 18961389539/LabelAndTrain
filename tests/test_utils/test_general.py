@@ -5,12 +5,12 @@ import cv2
 import numpy as np
 import pytest
 
-from anylabeling.views.labeling.utils.crop import (
+from jllabeling.views.labeling.utils.crop import (
     crop_and_save,
     process_single_image,
 )
-from anylabeling.views.labeling.utils.general import is_possible_rectangle
-from anylabeling.views.labeling.utils.general import (
+from jllabeling.views.labeling.utils.general import is_possible_rectangle
+from jllabeling.views.labeling.utils.general import (
     resolve_export_directory,
 )
 
@@ -129,7 +129,7 @@ class TestRuntimeVersions(unittest.TestCase):
 
         import onnxruntime
 
-        from anylabeling.views.labeling.utils import general
+        from jllabeling.views.labeling.utils import general
 
         with mock.patch.object(
             general, "get_installed_package_version", return_value=None
@@ -144,7 +144,7 @@ class TestRuntimeVersions(unittest.TestCase):
     def test_missing_module_falls_back_to_metadata(self):
         from unittest import mock
 
-        from anylabeling.views.labeling.utils import general
+        from jllabeling.views.labeling.utils import general
 
         with mock.patch.object(
             general, "get_installed_package_version", return_value="9.9.9"
@@ -157,7 +157,7 @@ class TestRuntimeVersions(unittest.TestCase):
             )
 
     def test_collect_system_info_has_no_none_for_bundled_packages(self):
-        from anylabeling.views.labeling.utils.general import (
+        from jllabeling.views.labeling.utils.general import (
             collect_system_info,
         )
 
@@ -167,7 +167,7 @@ class TestRuntimeVersions(unittest.TestCase):
         self.assertTrue(str(pkg_info["PyQt6 Version"]).startswith("6."))
 
     def test_pyqt_version_reports_both_halves(self):
-        from anylabeling.views.labeling.utils.general import get_pyqt_version
+        from jllabeling.views.labeling.utils.general import get_pyqt_version
 
         value = get_pyqt_version()
         # The Qt runtime behind PyQt is the number that explains plugin

@@ -2,7 +2,7 @@
 
 from unittest import mock
 
-from anylabeling.views.labeling.utils import smart_archive
+from jllabeling.views.labeling.utils import smart_archive
 
 
 def test_all_moved_reports_success():

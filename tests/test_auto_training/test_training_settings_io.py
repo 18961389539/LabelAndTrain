@@ -3,7 +3,7 @@
 import json
 from unittest import mock
 
-from anylabeling.services.auto_training.ultralytics import _io
+from jllabeling.services.auto_training.ultralytics import _io
 
 
 def _target(tmp_path, monkeypatch):

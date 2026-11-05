@@ -8,7 +8,7 @@ import os
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from anylabeling.views.labeling import project_registry
+from jllabeling.views.labeling import project_registry
 
 
 def _make_dirs(tmp_path, count, prefix="p"):
@@ -129,7 +129,7 @@ def test_record_recent_reports_eviction_in_the_status_bar(
     tmp_path, monkeypatch
 ):
     """经 project_view.record_recent 的路径：挤掉谁，状态条要说。"""
-    from anylabeling.views.labeling.utils import project_view
+    from jllabeling.views.labeling.utils import project_view
 
     monkeypatch.setattr(project_registry, "MAX_ENTRIES", 2)
     _record_all(_make_dirs(tmp_path, 2))

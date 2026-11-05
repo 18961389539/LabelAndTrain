@@ -11,11 +11,11 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 try:
     from PyQt6 import QtCore, QtWidgets
 
-    from anylabeling.views.labeling.settings.runtime_applier import (
+    from jllabeling.views.labeling.settings.runtime_applier import (
         SettingsRuntimeApplier,
     )
-    from anylabeling.views.labeling.label_widget import LabelingWidget
-    from anylabeling.views.labeling.utils.upload import (
+    from jllabeling.views.labeling.label_widget import LabelingWidget
+    from jllabeling.views.labeling.utils.upload import (
         upload_shape_attrs_file,
         validate_shape_attributes_config,
     )
@@ -58,7 +58,7 @@ class TestUploadShapeAttributes(unittest.TestCase):
 
     def setUp(self):
         # Imported schemas are persisted now; never touch the real config.
-        patcher = patch("anylabeling.views.labeling.utils.upload.save_config")
+        patcher = patch("jllabeling.views.labeling.utils.upload.save_config")
         self.addCleanup(patcher.stop)
         patcher.start()
 
@@ -198,11 +198,9 @@ class TestUploadShapeAttributes(unittest.TestCase):
                     "getOpenFileName",
                     return_value=(file, ""),
                 ),
+                patch("jllabeling.views.labeling.utils.upload.Popup") as popup,
                 patch(
-                    "anylabeling.views.labeling.utils.upload.Popup"
-                ) as popup,
-                patch(
-                    "anylabeling.views.labeling.utils.upload.logger.error"
+                    "jllabeling.views.labeling.utils.upload.logger.error"
                 ) as log_error,
             ):
                 upload_shape_attrs_file(widget, 128)
@@ -268,7 +266,7 @@ class TestUploadShapeAttributes(unittest.TestCase):
                     "getOpenFileName",
                     return_value=(file, ""),
                 ),
-                patch("anylabeling.views.labeling.utils.upload.Popup"),
+                patch("jllabeling.views.labeling.utils.upload.Popup"),
             ):
                 upload_shape_attrs_file(widget, 128)
 
@@ -316,7 +314,7 @@ class TestUploadShapeAttributes(unittest.TestCase):
                             return_value=(file, ""),
                         ),
                         patch(
-                            "anylabeling.views.labeling.utils.upload.Popup"
+                            "jllabeling.views.labeling.utils.upload.Popup"
                         ) as popup,
                     ):
                         upload_shape_attrs_file(widget, 128)

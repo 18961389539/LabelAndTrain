@@ -17,8 +17,8 @@ Before you begin, make sure you have the following prerequisites installed:
 **Step 1:** Create a new Conda environment with Python version `3.10` or higher, and activate it:
 
 ```bash
-conda create -n x-anylabeling-sam2 python=3.10 -y
-conda activate x-anylabeling-sam2
+conda create -n jllabeling-sam2 python=3.10 -y
+conda activate jllabeling-sam2
 ```
 
 You'll need to install SAM2 first. The code requires `torch>=2.3.1` and `torchvision>=0.18.1`. Follow the instructions [here](https://pytorch.org/get-started/locally/) to install both PyTorch and TorchVision dependencies.
@@ -31,12 +31,12 @@ cd segment-anything-2
 pip install -e .
 ```
 
-Finally, clone X-AnyLabeling:
+Finally, clone JLLabelingAndTrain:
 
 ```bash
 cd ..
 git clone https://github.com/CVHub520/X-AnyLabeling
-cd X-AnyLabeling
+cd JLLabelingAndTrain
 ```
 
 Return to the installation guide ([简体中文](../../../docs/zh_cn/get_started.md) | [English](../../../docs/en/get_started.md)) to install the remaining dependencies.
@@ -49,7 +49,7 @@ Return to the installation guide ([简体中文](../../../docs/zh_cn/get_started
 **Step 0:** Launch the app:
 
 ```bash
-python3 anylabeling/app.py
+python3 jllabeling/app.py
 ```
 
 **Step 1:** Load the SAM 2 Video model
@@ -65,10 +65,10 @@ After downloading, place the checkpoint file in the corresponding model folder w
 
 ```bash
 # Windows
-C:\Users\${User}\xanylabeling_data\models\sam2_hiera_large_video-r20240901
+C:\Users\${User}\jllabeling_data\models\sam2_hiera_large_video-r20240901
 
 # Linux or macOS
-~/xanylabeling_data/models/sam2_hiera_large_video-r20240901
+~/jllabeling_data/models/sam2_hiera_large_video-r20240901
 ```
 
 To use another SAM 2 model size or change the model path, see the custom model guide: [简体中文](../../../docs/zh_cn/custom_model.md) | [English](../../../docs/en/custom_model.md).
@@ -144,4 +144,4 @@ After completing all tasks, you can:
 
 ---
 
-Congratulations! 🎉 You’ve now mastered the basics of X-AnyLabeling. Feel free to experiment with it on your own videos and various use cases!
+Congratulations! 🎉 You’ve now mastered the basics of JLLabelingAndTrain. Feel free to experiment with it on your own videos and various use cases!

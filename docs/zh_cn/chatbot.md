@@ -1,7 +1,7 @@
 # 概述
 
 > **归档页面：上游功能。** 本构建为 YOLO-only，不包含该面板。此页面描述的是上游
-> X-AnyLabeling，而非 JLLabelingAndTrain。参见 [README](../../README_zh-CN.md)
+> X-AnyLabeling，而非 X-AnyLabeling。参见 [README](../../README_zh-CN.md)
 > 的「Fork 范围」一节。
 
 
@@ -96,7 +96,7 @@ X-AnyLabeling 的聊天机器人是集成在标注流程中的 AI 助手，可�
 聊天机器人将其配置存储在用户目录下的如下位置：
 
 ```
-~/xanylabeling_data/chatbot/
+~/jllabeling_data/chatbot/
 ```
 
 其中包括：

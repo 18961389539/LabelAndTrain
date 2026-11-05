@@ -14,8 +14,8 @@ name the module does not define fails here instead of on a user's machine.
 
 from types import SimpleNamespace
 
-from anylabeling.views.training import ultralytics_dialog as dialog_module
-from anylabeling.views.training.ultralytics_dialog import UltralyticsDialog
+from jllabeling.views.training import ultralytics_dialog as dialog_module
+from jllabeling.views.training.ultralytics_dialog import UltralyticsDialog
 
 CRASH_CODE = "Training process exited with code -1073741819"
 

@@ -1,7 +1,7 @@
 # PaddleOCR Document Parsing and Intelligent Text Recognition
 
 > **Archived: an upstream feature.** This build is YOLO-only and ships no such
-> panel; the page describes upstream X-AnyLabeling, not JLLabelingAndTrain.
+> panel; the page describes upstream X-AnyLabeling, not X-AnyLabeling.
 > See "Fork scope" in the [README](../../README.md).
 
 
@@ -39,7 +39,7 @@ To obtain the required API information:
 The configuration is saved locally:
 
 ```text
-${workspace}/xanylabeling_data/paddleocr/api_settings.json
+${workspace}/jllabeling_data/paddleocr/api_settings.json
 ```
 
 By default, `${workspace}` is the user's home directory, `~`. If X-AnyLabeling is started with `--work-dir`, that directory is used instead.
@@ -163,7 +163,7 @@ The following editors are currently supported:
 The PaddleOCR panel saves imported files and parsed results in the local workspace:
 
 ```text
-${workspace}/xanylabeling_data/paddleocr/
+${workspace}/jllabeling_data/paddleocr/
 ├── api_settings.json
 ├── ui_state.json
 ├── files/

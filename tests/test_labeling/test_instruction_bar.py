@@ -19,10 +19,10 @@ from types import SimpleNamespace
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from anylabeling.views.labeling.label_widget import (
+from jllabeling.views.labeling.label_widget import (
     LabelingWidget,
 )  # noqa: E402
-from anylabeling.views.labeling.utils.style import keycap_html  # noqa: E402
+from jllabeling.views.labeling.utils.style import keycap_html  # noqa: E402
 
 REPO_ROOT = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..")
@@ -163,7 +163,7 @@ class TestTheBarIsRefreshed(unittest.TestCase):
     def test_loading_a_file_refreshes_the_bar(self):
         path = os.path.join(
             REPO_ROOT,
-            "anylabeling",
+            "jllabeling",
             "views",
             "labeling",
             "utils",
@@ -177,7 +177,7 @@ class TestTheBarIsRefreshed(unittest.TestCase):
     def test_clearing_the_state_refreshes_the_bar(self):
         path = os.path.join(
             REPO_ROOT,
-            "anylabeling",
+            "jllabeling",
             "views",
             "labeling",
             "label_widget.py",

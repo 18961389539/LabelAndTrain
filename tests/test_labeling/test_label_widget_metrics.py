@@ -23,7 +23,7 @@ class TestLabelWidgetMetrics(unittest.TestCase):
             self.app = QtWidgets.QApplication([])
 
     def test_measure_text_width_matches_horizontal_advance(self):
-        from anylabeling.views.labeling.label_widget import _measure_text_width
+        from jllabeling.views.labeling.label_widget import _measure_text_width
 
         font = self.app.font()
         metrics = QtGui.QFontMetrics(font)
@@ -34,7 +34,7 @@ class TestLabelWidgetMetrics(unittest.TestCase):
         )
 
     def test_measure_text_width_falls_back_to_width(self):
-        from anylabeling.views.labeling.label_widget import _measure_text_width
+        from jllabeling.views.labeling.label_widget import _measure_text_width
 
         class LegacyFontMetrics:
             def width(self, text):
@@ -44,7 +44,7 @@ class TestLabelWidgetMetrics(unittest.TestCase):
         self.assertEqual(_measure_text_width(metrics, "vehicle"), 49)
 
     def test_format_label_list_text_includes_group_id(self):
-        from anylabeling.views.labeling.label_widget import (
+        from jllabeling.views.labeling.label_widget import (
             _format_label_list_text,
         )
 
@@ -57,11 +57,11 @@ class TestLabelWidgetMetrics(unittest.TestCase):
         )
 
     def test_locked_item_uses_svg_icon(self):
-        from anylabeling.resources import resources  # noqa: F401
-        from anylabeling.views.labeling.label_widget import (
+        from jllabeling.resources import resources  # noqa: F401
+        from jllabeling.views.labeling.label_widget import (
             _set_label_list_item_lock,
         )
-        from anylabeling.views.labeling.widgets import LabelListWidgetItem
+        from jllabeling.views.labeling.widgets import LabelListWidgetItem
 
         item = LabelListWidgetItem("vehicle")
 
@@ -72,7 +72,7 @@ class TestLabelWidgetMetrics(unittest.TestCase):
         self.assertFalse(item.is_locked())
 
     def test_right_double_click_does_not_emit_item_double_clicked(self):
-        from anylabeling.views.labeling.widgets import (
+        from jllabeling.views.labeling.widgets import (
             LabelListWidget,
             LabelListWidgetItem,
         )
@@ -107,7 +107,7 @@ class TestLabelWidgetMetrics(unittest.TestCase):
         widget.close()
 
     def test_right_click_requests_lock_for_selected_items(self):
-        from anylabeling.views.labeling.widgets import (
+        from jllabeling.views.labeling.widgets import (
             LabelListWidget,
             LabelListWidgetItem,
         )
@@ -139,7 +139,7 @@ class TestLabelWidgetMetrics(unittest.TestCase):
         widget.close()
 
     def test_canvas_lock_action_uses_checkbox_without_icon(self):
-        from anylabeling.views.labeling.label_widget import LabelingWidget
+        from jllabeling.views.labeling.label_widget import LabelingWidget
 
         shape = SimpleNamespace(locked=True)
         item = SimpleNamespace(shape=lambda: shape)

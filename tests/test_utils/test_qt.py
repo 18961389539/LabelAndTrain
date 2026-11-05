@@ -7,8 +7,8 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 try:
     from PyQt6 import QtCore
 
-    from anylabeling.views.labeling import utils
-    from anylabeling.views.labeling.shape import Shape
+    from jllabeling.views.labeling import utils
+    from jllabeling.views.labeling.shape import Shape
 
     PYQT_AVAILABLE = True
 except Exception:

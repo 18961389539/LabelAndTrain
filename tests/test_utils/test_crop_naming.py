@@ -6,7 +6,7 @@ import os
 import cv2
 import numpy as np
 
-from anylabeling.views.labeling.utils.crop import (
+from jllabeling.views.labeling.utils.crop import (
     duplicate_stem_suffixes,
     process_single_image,
 )

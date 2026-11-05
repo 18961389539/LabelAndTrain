@@ -7,7 +7,7 @@
 
 [PaddleOCR-VL-1.5](https://huggingface.co/PaddlePaddle/PaddleOCR-VL-1.5) is a unified Vision-Language OCR model that supports multiple document understanding tasks through a single model architecture. Built upon powerful vision-language foundations, it can handle diverse OCR scenarios including text recognition, table extraction, formula recognition, chart understanding, seal recognition, and text spotting with bounding boxes.
 
-Here, we will show you how to use PaddleOCR-VL-1.5 on X-AnyLabeling to perform various OCR and document understanding tasks.
+Here, we will show you how to use PaddleOCR-VL-1.5 on JLLabelingAndTrain to perform various OCR and document understanding tasks.
 
 Let's get started!
 
@@ -38,7 +38,7 @@ When the PPOCR panel uses `PP-DocLayoutV3` for layout detection and then sends e
 | **Image Only (no text task)** | `image`, `header_image`, `footer_image` |
 
 > [!NOTE]
-> `PP-DocLayoutV3` officially provides 25 labels. X-AnyLabeling also routes an additional compatibility label `formula` to Formula Recognition when it appears in layout output.
+> `PP-DocLayoutV3` officially provides 25 labels. JLLabelingAndTrain also routes an additional compatibility label `formula` to Formula Recognition when it appears in layout output.
 
 ## Installation
 
@@ -78,7 +78,7 @@ You can tweak the settings in [paddleocr_vl_1_5.yaml](https://github.com/CVHub52
 
 ## Getting Started
 
-Launch the X-AnyLabeling client, press `Ctrl+A` or click the `AI` button in the left menu bar to open the auto-labeling panel. In the model dropdown list, select `Remote-Server`, then choose `PaddleOCR-VL-1.5`.
+Launch the JLLabelingAndTrain client, press `Ctrl+A` or click the `AI` button in the left menu bar to open the auto-labeling panel. In the model dropdown list, select `Remote-Server`, then choose `PaddleOCR-VL-1.5`.
 
 ### OCR (Text Recognition)
 

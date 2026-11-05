@@ -4,7 +4,7 @@ from unittest import mock
 from PIL import Image
 from PyQt6 import QtGui
 
-from anylabeling.views.labeling.utils.image import (
+from jllabeling.views.labeling.utils.image import (
     get_supported_image_extensions,
     img_data_to_qimage,
 )
@@ -25,12 +25,10 @@ class TestImageUtils(unittest.TestCase):
             return_value=QtGui.QImage(),
         ):
             with mock.patch(
-                "anylabeling.views.labeling.utils.image.img_data_to_pil",
+                "jllabeling.views.labeling.utils.image.img_data_to_pil",
                 return_value=Image.new("RGB", (2, 3), "white"),
             ):
-                image = img_data_to_qimage(
-                    b"not-a-qt-image", "sample.heic"
-                )
+                image = img_data_to_qimage(b"not-a-qt-image", "sample.heic")
 
         self.assertFalse(image.isNull())
         self.assertEqual((image.width(), image.height()), (2, 3))
@@ -42,11 +40,9 @@ class TestImageUtils(unittest.TestCase):
             return_value=QtGui.QImage(),
         ):
             with mock.patch(
-                "anylabeling.views.labeling.utils.image.img_data_to_pil"
+                "jllabeling.views.labeling.utils.image.img_data_to_pil"
             ) as mocked_img_data_to_pil:
-                image = img_data_to_qimage(
-                    b"not-a-qt-image", "sample.jpg"
-                )
+                image = img_data_to_qimage(b"not-a-qt-image", "sample.jpg")
 
         self.assertTrue(image.isNull())
         mocked_img_data_to_pil.assert_not_called()

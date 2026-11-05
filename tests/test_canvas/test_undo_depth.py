@@ -12,17 +12,15 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 try:
     from PyQt6 import QtWidgets
 
-    from anylabeling.views.labeling.shape import Shape
-    from anylabeling.views.labeling.widgets.canvas import Canvas
+    from jllabeling.views.labeling.shape import Shape
+    from jllabeling.views.labeling.widgets.canvas import Canvas
 
     PYQT_AVAILABLE = True
 except Exception:
     PYQT_AVAILABLE = False
 
 
-@unittest.skipUnless(
-    PYQT_AVAILABLE, "PyQt6 is required for canvas tests"
-)
+@unittest.skipUnless(PYQT_AVAILABLE, "PyQt6 is required for canvas tests")
 class TestUndoDepth(unittest.TestCase):
 
     @classmethod

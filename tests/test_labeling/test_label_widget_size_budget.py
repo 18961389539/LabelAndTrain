@@ -102,7 +102,7 @@ BUDGETS = {
     # Lowered 6697 -> 6663 on 2026-10-26: _refresh_file_progress moved
     # to file_list_ops (the low-confidence count now reads a background
     # role), and the widget keeps a one-line delegation.
-    "anylabeling/views/labeling/label_widget.py": 6663,
+    "jllabeling/views/labeling/label_widget.py": 6663,
     # Lowered 3772 -> 3760 on 2026-09-29: the undo/redo stacks moved out to
     # widgets/shape_history.py (which is also what made them survive a file
     # switch) and the canvas reaches them through the attribute names it has
@@ -137,13 +137,18 @@ BUDGETS = {
     # Lowered 2704 -> 795 later that day: 37 interaction fields and 62 event,
     # selection, hover, pan and keyboard methods moved to canvas_interaction.
     # Descriptors preserve the historical Canvas attribute surface.
-    "anylabeling/views/labeling/widgets/canvas.py": 795,
+    "jllabeling/views/labeling/widgets/canvas.py": 795,
     # Lowered 4406 -> 4002 -> 3335 on 2026-10-26: first the
     # export/autolabel cluster moved to views/training/export_autolabel.py
     # (nine delegating stubs, is_fresh_export included), then
     # init_train_settings moved to views/training/train_settings_form.py as
     # eleven section builders behind one stub.
-    "anylabeling/views/training/ultralytics_dialog.py": 3335,
+    # Raised 3335 -> 3388 on 2026-11-03, documented feature: the Training
+    # Images panel falls back to the run's dataset images when plots are off
+    # (_dataset_preview_images plus the slot filling in update_training_images).
+    # Lowered 3388 -> 3384 right after: black collapsed the two wrapped
+    # expressions in that helper.
+    "jllabeling/views/training/ultralytics_dialog.py": 3384,
 }
 
 

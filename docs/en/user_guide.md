@@ -1,6 +1,6 @@
 # User Manual
 
-This guide provides comprehensive instructions for using X-AnyLabeling, covering everything from basic file management and annotation tasks to advanced features and customization.
+This guide provides comprehensive instructions for using JLLabelingAndTrain, covering everything from basic file management and annotation tasks to advanced features and customization.
 
 ## 0. Table of Contents
    * [1. File Management](#1-file-management)
@@ -42,7 +42,7 @@ This guide provides comprehensive instructions for using X-AnyLabeling, covering
       * [5.6 Group ID Manager](#56-group-id-manager)
       * [5.7 Shape Manager](#57-shape-manager)
    * [6. Help and Language](#6-help-and-language)
-      * [6.1 About X-AnyLabeling](#61-about-x-anylabeling)
+      * [6.1 About JLLabelingAndTrain](#61-about-x-anylabeling)
       * [6.2 Setting the Language](#62-setting-the-language)
    * [7. Configuration](#7-configuration)
       * [7.1 Keyboard Shortcuts](#71-keyboard-shortcuts)
@@ -74,13 +74,13 @@ This guide provides comprehensive instructions for using X-AnyLabeling, covering
 
 ## 1. File Management
 
-This section explains how to import, manage, and save data in X-AnyLabeling. You can import images and videos using various methods, including menu options and keyboard shortcuts. It also covers deleting data, switching between images, and saving labels, helping you maintain an efficient workflow and manage your data securely.
+This section explains how to import, manage, and save data in JLLabelingAndTrain. You can import images and videos using various methods, including menu options and keyboard shortcuts. It also covers deleting data, switching between images, and saving labels, helping you maintain an efficient workflow and manage your data securely.
 
 ### 1.1 Importing Data
 
 After opening the application, select the type of data you want to import from the `File` menu or use the keyboard shortcuts:
 
-X-AnyLabeling supports importing data in the following ways:
+JLLabelingAndTrain supports importing data in the following ways:
 
 - **Image File Directory** (`Ctrl+U`): Import all image files within a selected directory, including those nested in subdirectories.
 - **Single Image File** (`Ctrl+I`): Import an individual image file (formats: `*.jpg`, `*.png`, `*.bmp`, `*.webp`, `*.tif`).
@@ -88,7 +88,7 @@ X-AnyLabeling supports importing data in the following ways:
 
 ### 1.2 Deleting Data
 
-X-AnyLabeling offers the following options for deleting data:
+JLLabelingAndTrain offers the following options for deleting data:
 
 - **Delete Label File** (`Ctrl+Delete`): Deletes the annotation file (`.json`) associated with the currently displayed image. **Warning:** This action cannot be undone.
 - **Delete Image File** (`Ctrl+Shift+Delete`): Moves the currently displayed image file and its corresponding label file (if any) to a `_delete_` subfolder within the image directory.
@@ -109,13 +109,13 @@ These checkboxes indicate whether a label file exists and are separate from the 
 
 ### 1.4 Saving Label Data
 
-X-AnyLabeling enables auto-save by default. You can verify or toggle this setting via `File` > `Auto Save`.
+JLLabelingAndTrain enables auto-save by default. You can verify or toggle this setting via `File` > `Auto Save`.
 
 Label files are saved in `*.json` format in the same directory as the images by default. The structure is:
 
 ```json
 {
-  "version": "${version}", // X-AnyLabeling version
+  "version": "${version}", // JLLabelingAndTrain version
   "flags": {},             // Image-level flags (if any)
   "shapes": [              // List of annotated shapes
     {
@@ -172,11 +172,11 @@ To embed the image data (encoded in `base64` by default) directly into the `.jso
 
 ## 2. Editing
 
-This section explains how to create, edit, and manage different types of annotation objects (shapes) and their associated labels in X-AnyLabeling.
+This section explains how to create, edit, and manage different types of annotation objects (shapes) and their associated labels in JLLabelingAndTrain.
 
 ### 2.1 Creating Shapes
 
-In X-AnyLabeling, each distinct annotated object is called a `shape`. Key properties stored for each shape include:
+In JLLabelingAndTrain, each distinct annotated object is called a `shape`. Key properties stored for each shape include:
 
 | Field         | Type    | Description                                                      |
 |---------------|---------|------------------------------------------------------------------|
@@ -192,9 +192,9 @@ In X-AnyLabeling, each distinct annotated object is called a `shape`. Key proper
 | `kie_linking` | List    | Information linking shapes (e.g., for Key Info Extraction). Empty `[]` if none. |
 | `cuboid3d`    | Dictionary | Cuboid-only metadata for 3D projection in 2D, including `version`, `mode`, `vertices2d_order`, `depth_vector`, and `source`. |
 
-For detailed field definitions, see [`shape.py`](../../anylabeling/views/labeling/shape.py).
+For detailed field definitions, see [`shape.py`](../../jllabeling/views/labeling/shape.py).
 
-X-AnyLabeling supports creating the following types of shapes:
+JLLabelingAndTrain supports creating the following types of shapes:
 
 | Shape Type | Shortcut | Drawing Method |
 | --- | --- | --- |
@@ -212,7 +212,7 @@ You can create shapes using the tools in the left toolbar, the right-click conte
 
 ### 2.2 Editing Shapes
 
-X-AnyLabeling provides two shape interaction modes:
+JLLabelingAndTrain provides two shape interaction modes:
 
 - **Drawing Mode** allows rapid creation of new shapes.
 - **Editing Mode** enables operations such as undo (`Ctrl+Z`), copy (`Ctrl+C`), paste (`Ctrl+V`), delete (`Delete`), move, resize, and rotate.
@@ -233,7 +233,7 @@ Additionally, you can quickly copy the coordinates of any selected shape to your
 When drawing a shape on a zoomed canvas with scrollbars, hold `Space` and drag with the left mouse button to temporarily pan the canvas without leaving Drawing Mode.
 
 > [!TIP]
-> X-AnyLabeling provides two convenient shape navigation features:
+> JLLabelingAndTrain provides two convenient shape navigation features:
 > - **Loop Through Objects** (Ctrl+Shift+N): Sequentially zoom in on each shape in the canvas for detailed inspection of annotation quality.
 > - **Loop Select Objects** (Ctrl+Shift+C): Sequentially select each shape in the canvas for quick editing or management of annotations.
 
@@ -253,7 +253,7 @@ When you create a shape or select an existing one in Edit Mode, the label panel 
 
 ### 2.4 Adding Image Captions
 
-X-AnyLabeling allows you to add a description or caption to the entire image:
+JLLabelingAndTrain allows you to add a description or caption to the entire image:
 
 1. Enter Edit Mode (`Ctrl+J`).
 2. Click an empty area of the canvas.
@@ -305,7 +305,7 @@ Filter images by object attributes using the format `attribute::value`:
 
 ## 3. View Options
 
-This section explains how to customize the view settings in X-AnyLabeling, including adjusting the canvas, image appearance, and how shape information is displayed, to optimize your workflow.
+This section explains how to customize the view settings in JLLabelingAndTrain, including adjusting the canvas, image appearance, and how shape information is displayed, to optimize your workflow.
 
 ### 3.1 Canvas Controls
 
@@ -325,7 +325,7 @@ To maintain the current zoom level when switching between images, enable `View` 
   <img src="../../assets/resources/brightness_contrast.png" alt="Brightness-Contrast">
 </p>
 
-X-AnyLabeling allows you to adjust the appearance of the current image and the visibility of annotations:
+JLLabelingAndTrain allows you to adjust the appearance of the current image and the visibility of annotations:
 
 - Select `View` > `Brightness Contrast` to open the adjustment controls.
 - To apply the current adjustments to all subsequent images in the session, enable `View` > `Keep Current Brightness` and `View` > `Keep Current Contrast`.
@@ -374,7 +374,7 @@ This feature is particularly useful when working with ultra-high resolution imag
   <img src="../../assets/resources/compare_view.png" alt="Compare-View">
 </p>
 
-X-AnyLabeling provides a Compare View feature that allows you to compare two images side-by-side using a split-screen interface. This is particularly useful for:
+JLLabelingAndTrain provides a Compare View feature that allows you to compare two images side-by-side using a split-screen interface. This is particularly useful for:
 
 - **Infrared + Visible Light**: Comparing thermal and RGB images to identify targets that are clearer in different spectrums.
 - **Mask Preview**: Viewing segmentation results overlaid on the original image in real-time.
@@ -392,7 +392,7 @@ X-AnyLabeling provides a Compare View feature that allows you to compare two ima
 
 ## 4. Annotation Formats (Import/Export)
 
-`X-AnyLabeling` supports importing and exporting annotations in various standard formats. This section provides a guide for each. Access import/export functions via the `File` menu or dedicated toolbar buttons (e.g., `Import Annotations`, `Export Annotations`).
+`JLLabelingAndTrain` supports importing and exporting annotations in various standard formats. This section provides a guide for each. Access import/export functions via the `File` menu or dedicated toolbar buttons (e.g., `Import Annotations`, `Export Annotations`).
 
 > [!TIP]
 > You can also consider to use the command-line tool for batch conversions! The CLI provides more efficient and flexible label format conversion capabilities, especially suited for large-scale datasets. See the [CLI docs](./cli.md#3-label-format-conversion) for details.
@@ -520,12 +520,12 @@ Supports importing and exporting Multi-Object Tracking (MOT) challenge format la
 - **`seqinfo.ini`**: Sequence metadata (name, frame rate, dimensions, etc.).
 - **`det.txt`**: Detection results (used by some trackers, format: `frame,id,bb_left,bb_top,bb_width,bb_height,conf,-1,-1,-1`). Exported detections might have default confidence/ID.
 - **`gt.txt`**: Ground truth tracking annotations (format: `frame,id,bb_left,bb_top,bb_width,bb_height,valid,class_id,visibility`).
-    - `id`: Corresponds to the `group_id` assigned in X-AnyLabeling.
+    - `id`: Corresponds to the `group_id` assigned in JLLabelingAndTrain.
     - `valid`: `1` for valid, `0` for invalid/ignored. This corresponds to the 'Difficult' checkbox in the label editing panel; checking 'Difficult' marks the trajectory as invalid (`0`).
     - `class_id`: 0-indexed based on your `classes.txt`.
 
 **MOTS (Segmentation Tracking) Export:**
-X-AnyLabeling supports exporting polygon annotations in a MOTS-compatible format through the CLI.
+JLLabelingAndTrain supports exporting polygon annotations in a MOTS-compatible format through the CLI.
 
 > [!NOTE]
 > Run the following command with the directory containing the XLABEL JSON files, an output directory, and a `classes.txt` file:
@@ -616,7 +616,7 @@ The toolbar (usually at the top or integrated with the menu) provides access to 
 
 ### 5.1 Data Statistics (Overview)
 
-`X-AnyLabeling` provides a data statistics tool (`Tools` > `Overview`) for reviewing your annotation progress.
+`JLLabelingAndTrain` provides a data statistics tool (`Tools` > `Overview`) for reviewing your annotation progress.
 
 **Features:**
 - **Flexible Scope**: Analyze all images or select a specific range using sliders or input fields. Statistics update in real-time.
@@ -648,7 +648,7 @@ You can also use **Tools** > **Save Visualization Image** or **Save Visualizatio
 
 ### 5.3 Label Manager
 
-`X-AnyLabeling` provides tools for managing labels globally across your dataset via `Tools` > `Label Manager`.
+`JLLabelingAndTrain` provides tools for managing labels globally across your dataset via `Tools` > `Label Manager`.
 
 **Operations:**
 - **Delete Labels**: Remove specific label classes entirely from the list of available labels.
@@ -664,7 +664,7 @@ You can also use **Tools** > **Save Visualization Image** or **Save Visualizatio
 
 ### 5.4 Shape Type Conversion
 
-X-AnyLabeling provides a unified **Shape Converter**.
+JLLabelingAndTrain provides a unified **Shape Converter**.
 Open it from **Tools -> Shape Converter**, then select a source shape type and a target shape type to run batch conversion.
 
 Currently supported conversion mappings:
@@ -701,7 +701,7 @@ In the Digit Shortcut Manager dialog, users can see a table containing all numer
 
 **Using Shortcuts**: In the labeling interface, simply press the configured numeric key (0-9). The system will automatically switch to the corresponding drawing mode with the preset label name. After drawing is complete, the annotation will automatically use the preset label name.
 
-**Offline Configuration**: In addition to configuration through the GUI interface, users can directly configure shortcuts in the `.xanylabelingrc` configuration file in their user directory. The configuration format is as follows:
+**Offline Configuration**: In addition to configuration through the GUI interface, users can directly configure shortcuts in the `.jllabelingrc` configuration file in their user directory. The configuration format is as follows:
 
 ```yaml
 digit_shortcuts:
@@ -711,7 +711,7 @@ digit_shortcuts:
   # More configurations...
 ```
 
-Settings made in the interface are saved to `.xanylabelingrc` and loaded at the next startup. Manual configuration changes also take effect after restarting the application.
+Settings made in the interface are saved to `.jllabelingrc` and loaded at the next startup. Manual configuration changes also take effect after restarting the application.
 
 ### 5.6 Group ID Manager
 
@@ -745,7 +745,7 @@ Set the start and end frame numbers: From defaults to the current frame, To defa
 
 ## 6. Help and Language
 
-### 6.1 About X-AnyLabeling
+### 6.1 About JLLabelingAndTrain
 
 <p align="center">
   <img src="../../assets/resources/information.png" alt="About Dialog">
@@ -761,16 +761,16 @@ Select your preferred interface language (`Chinese`, `English`, `Japanese`, or `
 
 ## 7. Configuration
 
-`X-AnyLabeling` stores user preferences in a configuration file named `.xanylabelingrc`, located in your user's home directory:
+`JLLabelingAndTrain` stores user preferences in a configuration file named `.jllabelingrc`, located in your user's home directory:
 
-- **Linux/macOS**: `~/.xanylabelingrc`
-- **Windows**: `C:\Users\<YourUsername>\.xanylabelingrc`
+- **Linux/macOS**: `~/.jllabelingrc`
+- **Windows**: `C:\Users\<YourUsername>\.jllabelingrc`
 
-Most common options can now be changed directly in `Settings` (`Ctrl+0`), while the configuration file remains useful for manual editing and advanced customization. Close X-AnyLabeling before editing the file manually and restart it afterwards for changes to take effect.
+Most common options can now be changed directly in `Settings` (`Ctrl+0`), while the configuration file remains useful for manual editing and advanced customization. Close JLLabelingAndTrain before editing the file manually and restart it afterwards for changes to take effect.
 
 ### 7.1 Keyboard Shortcuts
 
-The default keyboard shortcuts are listed below. You can customize these in the `.xanylabelingrc` file if needed (e.g., to resolve conflicts with system shortcuts or match personal preferences).
+The default keyboard shortcuts are listed below. You can customize these in the `.jllabelingrc` file if needed (e.g., to resolve conflicts with system shortcuts or match personal preferences).
 You can also update shortcuts in the GUI: open Settings with `Ctrl+0`, then edit them in the right-side `Shortcuts` panel.
 
 | Shortcut              | Function                                         | Notes                                      |
@@ -855,11 +855,11 @@ You can also update shortcuts in the GUI: open Settings with `Ctrl+0`, then edit
 
 To persistently define custom colors for specific labels:
 
-1. Open the `.xanylabelingrc` file in a text editor.
+1. Open the `.jllabelingrc` file in a text editor.
 2. Ensure the `shape_color:` field is set to `manual`. If it's `null` or `auto`, change it to `manual`.
 3. Find or add the `label_colors:` section.
 4. Add or modify entries for your labels using the format `label_name: [R, G, B]`, where R, G, B are integer values from 0 to 255.
-5. Save the file and restart X-AnyLabeling.
+5. Save the file and restart JLLabelingAndTrain.
 
 Example configuration:
 ```YAML
@@ -880,7 +880,7 @@ label_colors:
 
 ### 7.3 Predefined Labels
 
-To offer flexibility in label management and meet diverse usage scenarios, X-AnyLabeling supports not only loading labels via startup command-line arguments but also provides two additional convenient methods for loading predefined labels.
+To offer flexibility in label management and meet diverse usage scenarios, JLLabelingAndTrain supports not only loading labels via startup command-line arguments but also provides two additional convenient methods for loading predefined labels.
 
 **Option 1: Set via Config File (Persistent)**
 
@@ -917,14 +917,14 @@ Then upload it through the menu: `Upload` → `Upload Label Classes File`.
 
 ### 7.4 Auto-Switch to Edit Mode
 
-To streamline the annotation workflow, you can configure the application to automatically switch to **Edit Mode** immediately after a shape is created. This is useful if you frequently need to adjust a shape right after drawing it. You can change this in `Settings > General > Behavior > Auto Switch To Edit Mode`, or through the `auto_switch_to_edit_mode` setting in the `.xanylabelingrc` file.
+To streamline the annotation workflow, you can configure the application to automatically switch to **Edit Mode** immediately after a shape is created. This is useful if you frequently need to adjust a shape right after drawing it. You can change this in `Settings > General > Behavior > Auto Switch To Edit Mode`, or through the `auto_switch_to_edit_mode` setting in the `.jllabelingrc` file.
 
 - Set to `true` to enable automatic switching to Edit Mode.
 - Set to `false` to remain in Drawing Mode, which allows continuous creation of multiple shapes. The default is `true`.
 
 ### 7.5 Hover Auto-Highlight
 
-For quicker selection of shapes, you can enable **Hover Auto-Highlight**. When this feature is active, simply moving your mouse cursor over a shape will highlight it, making it clear which shape will be selected if you click. You can change this in `Settings > General > Behavior > Auto Highlight Shape`, or through the `auto_highlight_shape` setting in the `.xanylabelingrc` file.
+For quicker selection of shapes, you can enable **Hover Auto-Highlight**. When this feature is active, simply moving your mouse cursor over a shape will highlight it, making it clear which shape will be selected if you click. You can change this in `Settings > General > Behavior > Auto Highlight Shape`, or through the `auto_highlight_shape` setting in the `.jllabelingrc` file.
 
 - Set to `true` to highlight shapes on hover.
 - Set to `false` to highlight shapes only after clicking. The default is `true`.
@@ -933,7 +933,7 @@ For quicker selection of shapes, you can enable **Hover Auto-Highlight**. When t
 
 ### 7.6 Shape Appearance
 
-Customize the default appearance of shapes (colors during drawing/selection, point size, line width) in `Settings > Shape`, or by editing the `shape:` section in the `.xanylabelingrc` file:
+Customize the default appearance of shapes (colors during drawing/selection, point size, line width) in `Settings > Shape`, or by editing the `shape:` section in the `.jllabelingrc` file:
 
 ```YAML
 shape:
@@ -954,11 +954,11 @@ shape:
 
 ### 7.7 Model Download Source
 
-`X-AnyLabeling` downloads pre-trained models used for AI-assisted features (like SAM or detection models). You can configure the download source (Model Hub). The source is determined in the following order of priority:
+`JLLabelingAndTrain` downloads pre-trained models used for AI-assisted features (like SAM or detection models). You can configure the download source (Model Hub). The source is determined in the following order of priority:
 
-1. **Environment Variable (Highest Priority)**: Set `XANYLABELING_MODEL_HUB=modelscope` before launch to force ModelScope. If the variable contains another non-empty value, the original URL in the model configuration is used.
+1. **Environment Variable (Highest Priority)**: Set `JLLABELING_MODEL_HUB=modelscope` before launch to force ModelScope. If the variable contains another non-empty value, the original URL in the model configuration is used.
 
-2. **Configuration File (Medium Priority)**: When the environment variable is unset or empty, change `General > Behavior > Model Hub` in `Settings` (`Ctrl+0`), or edit `model_hub` in `.xanylabelingrc`:
+2. **Configuration File (Medium Priority)**: When the environment variable is unset or empty, change `General > Behavior > Model Hub` in `Settings` (`Ctrl+0`), or edit `model_hub` in `.jllabelingrc`:
 
    ```yaml
    model_hub: github  # Options: github, modelscope
@@ -968,7 +968,7 @@ shape:
 
 ### 7.8 Theme Settings
 
-X-AnyLabeling supports three theme modes, accessible from the top-level **Theme** menu:
+JLLabelingAndTrain supports three theme modes, accessible from the top-level **Theme** menu:
 
 | Option | Description |
 |--------|-------------|
@@ -978,7 +978,7 @@ X-AnyLabeling supports three theme modes, accessible from the top-level **Theme*
 
 After selecting an option, a confirmation dialog appears. Click **OK** to save the setting. The application does not restart automatically; a prompt will remind you to restart for the theme to take effect. Click **Cancel** to discard the change.
 
-You can also set the theme directly in `~/.xanylabelingrc`:
+You can also set the theme directly in `~/.jllabelingrc`:
 
 ```yaml
 theme: auto  # Options: auto, light, dark
@@ -998,7 +998,7 @@ When editing the value manually, the named font must be installed on the current
 
 ## 8. Supported Tasks
 
-X-AnyLabeling supports various annotation tasks. Follow the links below for specific guides and examples for each task type:
+JLLabelingAndTrain supports various annotation tasks. Follow the links below for specific guides and examples for each task type:
 
 ### 8.1 Image Classification
   - Image-level: [Link](../../examples/classification/image-level/README.md)
@@ -1049,7 +1049,7 @@ X-AnyLabeling supports various annotation tasks. Follow the links below for spec
 
 ## 9. Custom Models
 
-For details on integrating and using your own custom AI models within X-AnyLabeling for assisted annotation, refer to the [Custom Models](./custom_model.md) guide.
+For details on integrating and using your own custom AI models within JLLabelingAndTrain for assisted annotation, refer to the [Custom Models](./custom_model.md) guide.
 
 ## 10. Advanced Features
 

@@ -4,8 +4,8 @@ import json
 
 from PIL import Image
 
-from anylabeling.views.labeling.label_converter import LabelConverter
-from anylabeling.views.labeling.utils.upload import import_yolo_labels
+from jllabeling.views.labeling.label_converter import LabelConverter
+from jllabeling.views.labeling.utils.upload import import_yolo_labels
 
 VALID = "0 0.5 0.5 0.2 0.2\n"
 

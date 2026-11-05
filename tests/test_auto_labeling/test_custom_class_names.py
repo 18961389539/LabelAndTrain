@@ -4,8 +4,8 @@ import unittest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 try:
-    from anylabeling.services.auto_labeling.types import AutoLabelingMode
-    from anylabeling.views.labeling.widgets.auto_labeling.auto_labeling import (
+    from jllabeling.services.auto_labeling.types import AutoLabelingMode
+    from jllabeling.views.labeling.widgets.auto_labeling.auto_labeling import (
         _UNNAMED_CLASS,
         _classes_need_name_fallback,
         _first_user_label,
@@ -68,9 +68,7 @@ class TestCustomClassNameFallback(unittest.TestCase):
 
     def test_skips_autolabel_placeholder_rows(self):
         self.assertEqual(
-            _first_user_label(
-                [AutoLabelingMode.OBJECT, "  ", "缺陷", "其它"]
-            ),
+            _first_user_label([AutoLabelingMode.OBJECT, "  ", "缺陷", "其它"]),
             "缺陷",
         )
 

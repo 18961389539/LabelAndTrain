@@ -15,8 +15,8 @@ import zlib
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from anylabeling.views.labeling.utils import file_lifecycle  # noqa: E402
-from anylabeling.views.labeling.utils.image import (  # noqa: E402
+from jllabeling.views.labeling.utils import file_lifecycle  # noqa: E402
+from jllabeling.views.labeling.utils.image import (  # noqa: E402
     icc_profile_issue,
 )
 

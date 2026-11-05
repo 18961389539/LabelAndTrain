@@ -8,18 +8,18 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 try:
     from PyQt6 import QtCore, QtWidgets, uic
 
-    import anylabeling.resources.resources  # noqa: F401
-    from anylabeling import config
-    from anylabeling.config import get_config
-    from anylabeling.views.labeling.utils.style import (
+    import jllabeling.resources.resources  # noqa: F401
+    from jllabeling import config
+    from jllabeling.config import get_config
+    from jllabeling.views.labeling.utils.style import (
         get_model_selection_scroll_area_style,
     )
-    from anylabeling.views.labeling.widgets.auto_labeling.auto_labeling import (
+    from jllabeling.views.labeling.widgets.auto_labeling.auto_labeling import (
         _TOOLBAR_COMPACT,
         AutoLabelingWidget,
         update_model_selection_scroll_area_height,
     )
-    from anylabeling.views.labeling.widgets.searchable_model_dropdown import (
+    from jllabeling.views.labeling.widgets.searchable_model_dropdown import (
         SearchableModelDropdownPopup,
     )
 
@@ -48,7 +48,7 @@ class TestAutoLabelingLayout(unittest.TestCase):
         self._widgets.append(form)
         ui_path = (
             Path(__file__).resolve().parents[2]
-            / "anylabeling/views/labeling/widgets/auto_labeling/auto_labeling.ui"
+            / "jllabeling/views/labeling/widgets/auto_labeling/auto_labeling.ui"
         )
 
         uic.loadUi(str(ui_path), form)
@@ -122,7 +122,7 @@ class TestAutoLabelingLayout(unittest.TestCase):
         self._widgets.append(form)
         ui_path = (
             Path(__file__).resolve().parents[2]
-            / "anylabeling/views/labeling/widgets/auto_labeling/auto_labeling.ui"
+            / "jllabeling/views/labeling/widgets/auto_labeling/auto_labeling.ui"
         )
         uic.loadUi(str(ui_path), form)
 
@@ -164,7 +164,7 @@ class TestAutoLabelingLayout(unittest.TestCase):
         self._widgets.append(form)
         ui_path = (
             Path(__file__).resolve().parents[2]
-            / "anylabeling/views/labeling/widgets/auto_labeling/auto_labeling.ui"
+            / "jllabeling/views/labeling/widgets/auto_labeling/auto_labeling.ui"
         )
 
         uic.loadUi(str(ui_path), form)
@@ -181,7 +181,7 @@ class TestAutoLabelingLayout(unittest.TestCase):
         widget._amg_warning_confirmed = False
 
         warning_path = (
-            "anylabeling.views.labeling.widgets.auto_labeling."
+            "jllabeling.views.labeling.widgets.auto_labeling."
             "auto_labeling.QMessageBox.warning"
         )
         with patch(
@@ -213,7 +213,7 @@ class TestAutoLabelingLayout(unittest.TestCase):
 
     def test_initial_show_reflows_model_selection_row(self):
         config.current_config_file = (
-            "anylabeling/configs/jllabeling_config.yaml"
+            "jllabeling/configs/jllabeling_config.yaml"
         )
         parent = type(
             "Parent",
@@ -274,7 +274,7 @@ class TestAutoLabelingLayout(unittest.TestCase):
 
     def test_panel_visibility_syncs_the_parent_auto_run_action(self):
         config.current_config_file = (
-            "anylabeling/configs/jllabeling_config.yaml"
+            "jllabeling/configs/jllabeling_config.yaml"
         )
         action = type("Action", (), {"enabled": False})()
         action.setEnabled = lambda value: setattr(action, "enabled", value)
@@ -306,7 +306,7 @@ class TestAutoLabelingLayout(unittest.TestCase):
         then appended the labels onto the outer toolbar.
         """
         config.current_config_file = (
-            "anylabeling/configs/jllabeling_config.yaml"
+            "jllabeling/configs/jllabeling_config.yaml"
         )
         parent = type(
             "Parent",
@@ -410,18 +410,18 @@ class TestAutoLabelingLayout(unittest.TestCase):
         self.assertNotIn("YOLOv8s-Seg", visible_names)
 
     def test_init_model_data_drops_stale_cache_entries(self):
-        """Regression: stale entries in xanylabeling_data/models.json must
+        """Regression: stale entries in jllabeling_data/models.json must
         not leak into the dropdown after built-in presets change."""
         import json
         import tempfile
         import shutil
 
-        from anylabeling.views.labeling.widgets import (
+        from jllabeling.views.labeling.widgets import (
             searchable_model_dropdown as searchable_mod,
         )
 
         config.current_config_file = (
-            "anylabeling/configs/jllabeling_config.yaml"
+            "jllabeling/configs/jllabeling_config.yaml"
         )
 
         tmp = tempfile.mkdtemp()

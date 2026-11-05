@@ -5,7 +5,7 @@ from unittest import mock
 
 import pytest
 
-from anylabeling.views.labeling import label_converter
+from jllabeling.views.labeling import label_converter
 
 
 def test_save_json_keeps_the_old_file_on_failure(tmp_path):

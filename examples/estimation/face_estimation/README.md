@@ -3,7 +3,7 @@
 ## Introduction
 
 **Face estimation** covers face detection and facial landmark annotation.
-X-AnyLabeling supports models that create a face rectangle and five facial
+JLLabelingAndTrain supports models that create a face rectangle and five facial
 keypoints with a shared `group_id`, making it easy to keep each face and its
 landmarks linked as one object.
 
@@ -13,10 +13,10 @@ landmarks linked as one object.
 
 | Model | Provider | Output |
 | --- | --- | --- |
-| [SCRFD_10G_KPS](../../../anylabeling/configs/auto_labeling/scrfd_10g_bnkps.yaml) | InsightFace | Face rectangle + five landmarks |
-| [YOLOv6Lite_l-Face](../../../anylabeling/configs/auto_labeling/yolov6lite_l_face.yaml) | MeiTuan | Face rectangle + five landmarks |
-| [YOLOv6Lite_m-Face](../../../anylabeling/configs/auto_labeling/yolov6lite_m_face.yaml) | MeiTuan | Face rectangle + five landmarks |
-| [YOLOv6Lite_s-Face](../../../anylabeling/configs/auto_labeling/yolov6lite_s_face.yaml) | MeiTuan | Face rectangle + five landmarks |
+| [SCRFD_10G_KPS](../../../jllabeling/configs/auto_labeling/scrfd_10g_bnkps.yaml) | InsightFace | Face rectangle + five landmarks |
+| [YOLOv6Lite_l-Face](../../../jllabeling/configs/auto_labeling/yolov6lite_l_face.yaml) | MeiTuan | Face rectangle + five landmarks |
+| [YOLOv6Lite_m-Face](../../../jllabeling/configs/auto_labeling/yolov6lite_m_face.yaml) | MeiTuan | Face rectangle + five landmarks |
+| [YOLOv6Lite_s-Face](../../../jllabeling/configs/auto_labeling/yolov6lite_s_face.yaml) | MeiTuan | Face rectangle + five landmarks |
 
 ## Usage
 
@@ -42,6 +42,6 @@ The generated landmarks are:
 
 ## Export
 
-Face estimation annotations use standard X-AnyLabeling shapes: a `rectangle`
+Face estimation annotations use standard JLLabelingAndTrain shapes: a `rectangle`
 for each face and `point` shapes for facial landmarks. Export them with the
 format that matches your downstream training or conversion workflow.

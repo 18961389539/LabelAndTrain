@@ -56,7 +56,7 @@ For example, to segment a plant while excluding its pot, place positive points o
 
 **Auto Mask Decode (AMD)** continuously adds prompt points as the pointer moves and updates the mask in real time. Enable `AMD`, place the first point, and move the pointer along the target. Double-click the canvas, or press `F`, to finish. Click `Clear`, or press `B`, to exit without saving.
 
-The AMD feature includes several configurable parameters that can be adjusted in [canvas.py](../../anylabeling/views/labeling/widgets/canvas.py) for optimal performance:
+The AMD feature includes several configurable parameters that can be adjusted in [canvas.py](../../jllabeling/views/labeling/widgets/canvas.py) for optimal performance:
 
 | Parameter | Default Value | Description |
 |-----------|---------------|-------------|
@@ -96,7 +96,7 @@ For both methods, refer to the provided [binary mask](./binary_semantic_segmenta
 
 ## Instance Segmentation
 
-[YOLOv8-SAM2.1](../../anylabeling/configs/auto_labeling/yolov8s_sam2_hiera_base.yaml) is one available combined model: YOLOv8 proposes objects and SAM2.1 generates their masks.
+[YOLOv8-SAM2.1](../../jllabeling/configs/auto_labeling/yolov8s_sam2_hiera_base.yaml) is one available combined model: YOLOv8 proposes objects and SAM2.1 generates their masks.
 
 To export your instance segmentation annotations, proceed with the following steps:
 1. Click on the `Export` button located in the menu bar at the top.

@@ -59,7 +59,7 @@ class _StubWidget(QtWidgets.QWidget):
 
 @pytest.fixture()
 def dialog(qapp, monkeypatch):
-    from anylabeling.views.labeling.widgets.project_search_dialog import (
+    from jllabeling.views.labeling.widgets.project_search_dialog import (
         ProjectSearchDialog,
     )
 
@@ -139,7 +139,7 @@ def test_jump_is_refused_when_unsaved_work_is_pending(dialog, monkeypatch):
 
 
 def test_empty_session_says_no_images(qapp):
-    from anylabeling.views.labeling.widgets.project_search_dialog import (
+    from jllabeling.views.labeling.widgets.project_search_dialog import (
         ProjectSearchDialog,
     )
 

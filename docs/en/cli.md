@@ -1,6 +1,6 @@
 # Command Line Interface
 
-X-AnyLabeling provides a powerful command-line interface for label format conversion and system management.
+JLLabelingAndTrain provides a powerful command-line interface for label format conversion and system management.
 
 > [!NOTE]
 > Before using these commands, ensure all dependencies are installed. See the [Quick Start Guide](./get_started.md) for details.
@@ -90,7 +90,7 @@ options:
                         image or label filename; If a directory path is passed in, the folder will be loaded automatically
   --output OUTPUT, -O OUTPUT, -o OUTPUT
                         output file or directory (if it ends with .json it is recognized as file, else as directory)
-  --config CONFIG       config file or yaml-format string (default: /home/cvhub/.xanylabelingrc)
+  --config CONFIG       config file or yaml-format string (default: /home/cvhub/.jllabelingrc)
   --nodata              stop storing image data to JSON file
   --autosave            auto save
   --nosortlabels        stop sorting labels
@@ -117,7 +117,7 @@ jllabelingandtrain checks
 ```bash
 Application
 ────────────────────────────────────────────────────────────
-  App Name:          X-AnyLabeling
+  App Name:          JLLabelingAndTrain
   App Version:       4.0.0
   Preferred Device:  CPU
 ────────────────────────────────────────────────────────────
@@ -167,7 +167,7 @@ jllabelingandtrain config
 - Output
 
 ```bash
-~/.xanylabelingrc
+~/.jllabelingrc
 ```
 
 ## 3. Label Format Conversion
@@ -310,7 +310,7 @@ Converting YOLO detect to XLABEL: 100%|█████████████�
 
 ### Q1: What is the XLABEL format?
 
-XLABEL is X-AnyLabeling's native JSON format. It stores all annotation information in a human-readable format, including shape data, labels, attributes, and metadata.
+XLABEL is JLLabelingAndTrain's native JSON format. It stores all annotation information in a human-readable format, including shape data, labels, attributes, and metadata.
 
 ### Q2: Do I need to provide class names for all conversions?
 

@@ -11,7 +11,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from anylabeling.services.auto_training.ultralytics.utils import (  # noqa: E402
+from jllabeling.services.auto_training.ultralytics.utils import (  # noqa: E402
     estimate_remaining_seconds,
 )
 

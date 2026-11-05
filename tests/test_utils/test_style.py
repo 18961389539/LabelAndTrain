@@ -1,10 +1,10 @@
 import unittest
 
-from anylabeling.views.labeling.utils.style import (
+from jllabeling.views.labeling.utils.style import (
     get_instruction_bar_style,
     keycap_html,
 )
-from anylabeling.views.labeling.utils.theme import get_theme, init_theme
+from jllabeling.views.labeling.utils.theme import get_theme, init_theme
 
 
 class TestInstructionBarStyle(unittest.TestCase):

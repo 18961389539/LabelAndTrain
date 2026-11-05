@@ -12,7 +12,7 @@ import tempfile
 import unittest
 from types import SimpleNamespace
 
-from anylabeling.views.labeling.utils.export import (
+from jllabeling.views.labeling.utils.export import (
     _format_yolo_export_summary,
     _write_classes_file,
     _write_data_yaml,

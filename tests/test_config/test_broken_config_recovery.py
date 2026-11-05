@@ -11,7 +11,7 @@ import os
 import pytest
 import yaml
 
-from anylabeling import config
+from jllabeling import config
 
 
 def _write(path, text):
@@ -20,7 +20,7 @@ def _write(path, text):
 
 
 def test_invalid_yaml_is_backed_up_and_defaults_are_used(tmp_path):
-    rc = tmp_path / ".xanylabelingrc"
+    rc = tmp_path / ".jllabelingrc"
     _write(rc, "labels: [cat, dog\n")
 
     cfg = config.get_config(str(rc))
@@ -37,7 +37,7 @@ def test_invalid_yaml_is_backed_up_and_defaults_are_used(tmp_path):
 
 
 def test_empty_file_uses_defaults_without_renaming(tmp_path):
-    rc = tmp_path / ".xanylabelingrc"
+    rc = tmp_path / ".jllabelingrc"
     _write(rc, "")
 
     cfg = config.get_config(str(rc))
@@ -49,7 +49,7 @@ def test_empty_file_uses_defaults_without_renaming(tmp_path):
 
 @pytest.mark.parametrize("text", ["- cat\n- dog\n", "just a scalar\n", "42\n"])
 def test_non_mapping_config_is_preserved(tmp_path, text):
-    rc = tmp_path / ".xanylabelingrc"
+    rc = tmp_path / ".jllabelingrc"
     _write(rc, text)
 
     config.get_config(str(rc))
@@ -66,13 +66,13 @@ def test_a_custom_config_is_not_overwritten_by_rc_creation(
     custom = tmp_path / "custom.yaml"
     _write(custom, "labels:\n  - cat\n")
     monkeypatch.setattr(config, "current_config_file", str(custom))
-    assert not (tmp_path / ".xanylabelingrc").exists()
+    assert not (tmp_path / ".jllabelingrc").exists()
 
     cfg = config.get_config(str(custom))
 
     assert cfg["labels"] == ["cat"]
     assert custom.read_text(encoding="utf-8") == "labels:\n  - cat\n"
-    assert (tmp_path / ".xanylabelingrc").exists()
+    assert (tmp_path / ".jllabelingrc").exists()
 
 
 def test_current_config_file_is_cleared_after_recovery(tmp_path, monkeypatch):
@@ -88,7 +88,7 @@ def test_current_config_file_is_cleared_after_recovery(tmp_path, monkeypatch):
 def test_save_config_keeps_the_old_file_when_the_write_fails(
     tmp_path, monkeypatch
 ):
-    rc = tmp_path / ".xanylabelingrc"
+    rc = tmp_path / ".jllabelingrc"
     _write(rc, "labels: [cat]\n")
     monkeypatch.setattr(config, "current_config_file", str(rc))
 
@@ -99,16 +99,16 @@ def test_save_config_keeps_the_old_file_when_the_write_fails(
     monkeypatch.setattr(config.yaml, "safe_dump", broken_dump)
     assert config.save_config({"labels": ["dog"]}) is False
     assert rc.read_text(encoding="utf-8") == "labels: [cat]\n"
-    assert not list(tmp_path.glob(".xanylabelingrc_*.tmp"))
+    assert not list(tmp_path.glob(".jllabelingrc_*.tmp"))
 
 
 def test_the_shipped_template_is_never_a_save_target(tmp_path, monkeypatch):
     from importlib import resources
 
-    from anylabeling import configs as anylabeling_configs
+    from jllabeling import configs as jllabeling_configs
 
     template = str(
-        resources.files(anylabeling_configs) / "jllabeling_config.yaml"
+        resources.files(jllabeling_configs) / "jllabeling_config.yaml"
     )
     with open(template, encoding="utf-8") as f:
         before = f.read()
@@ -118,12 +118,12 @@ def test_the_shipped_template_is_never_a_save_target(tmp_path, monkeypatch):
 
     with open(template, encoding="utf-8") as f:
         assert f.read() == before
-    with open(tmp_path / ".xanylabelingrc", encoding="utf-8") as f:
+    with open(tmp_path / ".jllabelingrc", encoding="utf-8") as f:
         assert yaml.safe_load(f)["labels"] == ["cat"]
 
 
 def test_save_config_replaces_the_file_atomically(tmp_path, monkeypatch):
-    rc = tmp_path / ".xanylabelingrc"
+    rc = tmp_path / ".jllabelingrc"
     monkeypatch.setattr(config, "current_config_file", str(rc))
     cfg = {"labels": ["cat", "dog"], "canvas": {"num_backups": 7}}
 
@@ -131,4 +131,4 @@ def test_save_config_replaces_the_file_atomically(tmp_path, monkeypatch):
 
     with open(rc, encoding="utf-8") as f:
         assert yaml.safe_load(f) == cfg
-    assert not list(tmp_path.glob(".xanylabelingrc_*.tmp"))
+    assert not list(tmp_path.glob(".jllabelingrc_*.tmp"))

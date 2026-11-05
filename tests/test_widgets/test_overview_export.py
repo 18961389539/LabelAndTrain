@@ -7,7 +7,7 @@ import pytest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from anylabeling.views.labeling.widgets import overview_dialog
+from jllabeling.views.labeling.widgets import overview_dialog
 
 
 def test_export_does_not_touch_existing_files(tmp_path):

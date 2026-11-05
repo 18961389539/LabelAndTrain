@@ -8,7 +8,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 try:
     from PyQt6 import QtCore, QtGui, QtWidgets
 
-    from anylabeling.views.labeling.utils.shortcuts_help import (
+    from jllabeling.views.labeling.utils.shortcuts_help import (
         UNBOUND_ACTIONS,
     )
 
@@ -20,7 +20,7 @@ REPO_ROOT = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..")
 )
 TEMPLATE_CONFIG = os.path.join(
-    REPO_ROOT, "anylabeling", "configs", "jllabeling_config.yaml"
+    REPO_ROOT, "jllabeling", "configs", "jllabeling_config.yaml"
 )
 
 #: Shortcut keys that deliberately have no action of their own: the runtime
@@ -46,7 +46,7 @@ def shortcut_action_mapping():
     """Parse ``"shortcuts.X": self._widget.actions.Y`` out of the applier."""
     path = os.path.join(
         REPO_ROOT,
-        "anylabeling",
+        "jllabeling",
         "views",
         "labeling",
         "settings",
@@ -70,8 +70,8 @@ def build_labeling_widget(filename=None):
     ``menu()``, and ``get_config()`` returns ``None`` unless the config module
     already knows which yaml to read.
     """
-    from anylabeling import config as app_config
-    from anylabeling.views.labeling.label_widget import LabelingWidget
+    from jllabeling import config as app_config
+    from jllabeling.views.labeling.label_widget import LabelingWidget
 
     app_config.current_config_file = TEMPLATE_CONFIG
     LabelingWidget.menu = lambda self, title: QtWidgets.QMenu(title)
@@ -172,7 +172,7 @@ class TestWidgetWiring(unittest.TestCase):
         import shutil
         import tempfile
 
-        import anylabeling.views.training.run_history_dialog as module
+        import jllabeling.views.training.run_history_dialog as module
 
         original_root = module.get_default_project_dir
         original_exec = module.RunHistoryDialog.exec
@@ -343,8 +343,8 @@ class TestStaleCleanupOnOpenFile(unittest.TestCase):
             self.app = QtWidgets.QApplication([])
         from PIL import Image
 
-        from anylabeling.views.labeling.provenance import shape_marker
-        from anylabeling.views.labeling.utils import smart_stale
+        from jllabeling.views.labeling.provenance import shape_marker
+        from jllabeling.views.labeling.utils import smart_stale
 
         self.shape_marker = shape_marker
         self.smart_stale = smart_stale
@@ -517,14 +517,14 @@ class TestWidgetLaunchedWithFolder(unittest.TestCase):
         # Loading an image from inside a queued signal corrupts the heap under
         # offscreen Qt (its error path opens a modal QMessageBox), and the
         # invariant here is startup order, not decoding pixels.
-        from anylabeling.views.labeling.label_widget import LabelingWidget
+        from jllabeling.views.labeling.label_widget import LabelingWidget
 
         self._real_load_file = LabelingWidget.load_file
         LabelingWidget.load_file = lambda self, *a, **k: False
         self.widget, self.parent = build_labeling_widget(self.tmp.name)
 
     def tearDown(self):
-        from anylabeling.views.labeling.label_widget import LabelingWidget
+        from jllabeling.views.labeling.label_widget import LabelingWidget
 
         LabelingWidget.load_file = self._real_load_file
         QtCore.QSettings.setPath(
@@ -552,7 +552,7 @@ class TestWidgetLaunchedWithFolder(unittest.TestCase):
 
     def test_folder_is_recorded_as_recent(self):
         """打开文件夹即记入项目注册表 —— 最近项目的唯一来源。"""
-        from anylabeling.views.labeling.utils import project_view
+        from jllabeling.views.labeling.utils import project_view
 
         recorded = [
             os.path.normcase(path)
@@ -568,7 +568,7 @@ class TestWidgetLaunchedWithFolder(unittest.TestCase):
         输出目录和续点。冒烟脚本先发现的 —— 单测只验了
         ``dataset_dir_for`` 自己的语义，没验调用点传的是什么。
         """
-        from anylabeling.views.labeling.utils import project_view
+        from jllabeling.views.labeling.utils import project_view
 
         self.assertEqual(
             project_view.current_root(self.widget),

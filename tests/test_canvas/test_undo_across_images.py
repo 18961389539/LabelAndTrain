@@ -13,17 +13,17 @@ from unittest import mock
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from anylabeling.views.labeling.widgets import shape_history
+from jllabeling.views.labeling.widgets import shape_history
 
-from anylabeling.views.labeling.widgets.shape_history import (
+from jllabeling.views.labeling.widgets.shape_history import (
     ShapeHistoryStore,
 )
 
 try:
     from PyQt6 import QtWidgets
 
-    from anylabeling.views.labeling.shape import Shape
-    from anylabeling.views.labeling.widgets.canvas import Canvas
+    from jllabeling.views.labeling.shape import Shape
+    from jllabeling.views.labeling.widgets.canvas import Canvas
 
     PYQT_AVAILABLE = True
 except Exception:

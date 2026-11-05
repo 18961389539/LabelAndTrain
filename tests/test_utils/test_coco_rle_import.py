@@ -14,7 +14,7 @@ import os
 import numpy as np
 import pytest
 
-from anylabeling.views.labeling.label_converter import (
+from jllabeling.views.labeling.label_converter import (
     LabelConverter,
     _rle_run_counts,
     _rle_to_mask,

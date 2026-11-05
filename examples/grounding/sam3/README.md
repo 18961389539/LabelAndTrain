@@ -6,7 +6,7 @@
 
 <img src=".data/model_diagram.png" width="100%" />
 
-X-AnyLabeling supports SAM 3 in two deployment modes:
+JLLabelingAndTrain supports SAM 3 in two deployment modes:
 
 | Mode | Backend | Visual Prompting | Speed |
 | --- | --- | --- | --- |
@@ -21,7 +21,7 @@ Please refer to [X-AnyLabeling-Server](https://github.com/CVHub520/X-AnyLabeling
 
 ### Usage
 
-Launch the X-AnyLabeling client, press `Ctrl+A` or click the `AI` button in the left menu bar to open the auto-labeling panel. In the model dropdown list, select `Remote-Server`, then choose `Segment Anything 3`.
+Launch the JLLabelingAndTrain client, press `Ctrl+A` or click the `AI` button in the left menu bar to open the auto-labeling panel. In the model dropdown list, select `Remote-Server`, then choose `Segment Anything 3`.
 
 #### Text Prompting
 
@@ -45,7 +45,7 @@ Launch the X-AnyLabeling client, press `Ctrl+A` or click the `AI` button in the 
 
 ## Client-side
 
-The client-side path runs the full SAM 3 pipeline locally using ONNX Runtime — no server required. All three ONNX models (image encoder, language encoder, decoder) are loaded directly inside X-AnyLabeling.
+The client-side path runs the full SAM 3 pipeline locally using ONNX Runtime — no server required. All three ONNX models (image encoder, language encoder, decoder) are loaded directly inside JLLabelingAndTrain.
 
 > [!WARNING]
 > **Known limitations of the client-side mode:**
@@ -56,7 +56,7 @@ The client-side path runs the full SAM 3 pipeline locally using ONNX Runtime —
 
 See the installation guide ([English](../../../docs/en/get_started.md) | [Chinese](../../../docs/zh_cn/get_started.md)) for environment setup details.
 
-When you select the model for the first time, X-AnyLabeling will automatically download the six required files (three `.onnx` files plus their `.onnx.data` sidecars) to your local cache.
+When you select the model for the first time, JLLabelingAndTrain will automatically download the six required files (three `.onnx` files plus their `.onnx.data` sidecars) to your local cache.
 
 If your network connection is unstable, you can download them manually from the [Model Zoo](../../../docs/en/model_zoo.md) and place them in a local directory, then update the path fields in the config file as described in [Model Configuration](#model-configuration) below.
 
@@ -65,7 +65,7 @@ If your network connection is unstable, you can download them manually from the 
 
 ### Model Configuration
 
-The default config is at [`anylabeling/configs/auto_labeling/sam3_vit_h.yaml`](../../../anylabeling/configs/auto_labeling/sam3_vit_h.yaml). If you place the model files in a custom directory, update the six path fields accordingly:
+The default config is at [`jllabeling/configs/auto_labeling/sam3_vit_h.yaml`](../../../jllabeling/configs/auto_labeling/sam3_vit_h.yaml). If you place the model files in a custom directory, update the six path fields accordingly:
 
 ```yaml
 encoder_model_path:        /path/to/sam3_image_encoder.onnx
@@ -85,7 +85,7 @@ You can also tune the following inference parameters:
 
 ### Usage
 
-Launch X-AnyLabeling, press `Ctrl+A` or click the `AI` button in the left menu bar to open the auto-labeling panel. In the model dropdown list, select `Segment Anything 3 (ViT-H)`.
+Launch JLLabelingAndTrain, press `Ctrl+A` or click the `AI` button in the left menu bar to open the auto-labeling panel. In the model dropdown list, select `Segment Anything 3 (ViT-H)`.
 
 #### Text Prompting
 

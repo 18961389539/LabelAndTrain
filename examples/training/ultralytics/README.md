@@ -61,7 +61,7 @@ in the advanced settings if you would rather leave them out.
 
 | Field | Notes |
 | :--- | :--- |
-| `Project` / `Name` | The run directory is `<Project>/<Name>`; Project defaults to `<work_dir>/xanylabeling_data/trainer/ultralytics/runs/<task>`. |
+| `Project` / `Name` | The run directory is `<Project>/<Name>`; Project defaults to `<work_dir>/jllabeling_data/trainer/ultralytics/runs/<task>`. |
 | `Model` | Pretrained checkpoint. The dropdown offers the usual weights for the selected task (`yolov8n.pt`, `yolo11s-seg.pt`, …); a **bare name is downloaded on first use** — progress shows up in the training log, not as a frozen window — and `Browse` takes a local `.pt`. |
 | `Data` | Class-list YAML. For Detect/Segment/Pose only the `names` mapping is read: the panel generates a file for the open folder automatically (under the trainer's `data/` directory, named after the folder and task), regenerates it whenever you enter the Config tab, and `从标注生成` (From Labels) refreshes it on demand. A YAML you picked yourself is never overwritten. **Classify may leave it empty** (the dataset is built from image flags) or point it at a pre-organized `train/ val/ class/` directory. |
 | `Pose Config` | Pose only: the keypoint definition used to convert the labels. |
@@ -224,7 +224,7 @@ traceback stays in the log view.
 ## Outputs
 
 ```
-<work_dir>/xanylabeling_data/trainer/ultralytics/
+<work_dir>/jllabeling_data/trainer/ultralytics/
 ├── weights/                       downloaded pretrained .pt (cache)
 ├── data/                          generated class-list YAMLs
 ├── datasets/<task>/<name>_<stamp>/    one build per run
@@ -278,7 +278,7 @@ Everything above works without a GPU — it is just slower per epoch:
 - Ultralytics forces dataloader workers to 0 on CPU; leave `Workers` alone.
 - The released `-CPU-Train-win64.zip` (built by
   `scripts/build_executable.sh win-cpu-train`, spec
-  `packaging/pyinstaller/specs/x-anylabeling-win-cpu-train.spec`) bundles CPU
+  `packaging/pyinstaller/specs/jllabeling-win-cpu-train.spec`) bundles CPU
   torch, Ultralytics and `onnxslim` for machines that have no CUDA at all.
 
 ## Troubleshooting

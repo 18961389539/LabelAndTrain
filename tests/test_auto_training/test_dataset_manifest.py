@@ -6,8 +6,8 @@ import numpy as np
 import pytest
 import yaml
 
-from anylabeling.services.auto_training.ultralytics import general
-from anylabeling.services.auto_training.ultralytics.general import (
+from jllabeling.services.auto_training.ultralytics import general
+from jllabeling.services.auto_training.ultralytics.general import (
     create_yolo_dataset,
     load_dataset_manifest,
 )
@@ -303,7 +303,7 @@ def test_real_prune_frees_the_expected_bytes(tmp_path):
 
 
 def test_run_metadata_ties_a_finished_run_to_its_data(tmp_path):
-    from anylabeling.views.training.ultralytics_dialog import (
+    from jllabeling.views.training.ultralytics_dialog import (
         UltralyticsDialog,
     )
 
@@ -361,7 +361,7 @@ def test_run_metadata_ties_a_finished_run_to_its_data(tmp_path):
 
 
 def test_run_metadata_is_skipped_for_a_missing_project(tmp_path):
-    from anylabeling.views.training.ultralytics_dialog import (
+    from jllabeling.views.training.ultralytics_dialog import (
         UltralyticsDialog,
     )
 

@@ -4,7 +4,7 @@ import os
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from anylabeling.views.labeling.utils import file_lifecycle
+from jllabeling.views.labeling.utils import file_lifecycle
 
 
 def _image(path):

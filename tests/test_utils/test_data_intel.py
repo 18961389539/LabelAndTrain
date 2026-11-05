@@ -2,7 +2,7 @@ import os
 import tempfile
 import unittest
 
-from anylabeling.views.labeling.utils.data_intel import (
+from jllabeling.views.labeling.utils.data_intel import (
     analyze_distribution,
     box_iou,
     find_duplicate_groups,
@@ -41,7 +41,9 @@ class TestBoxIoU(unittest.TestCase):
         self.assertEqual(box_iou((0, 0, 10, 10), (0, 0, 10, 10)), 1.0)
         self.assertEqual(box_iou((0, 0, 10, 10), (20, 20, 30, 30)), 0.0)
         # overlap 5x5 = 25, union = 100 + 100 - 25 = 175
-        self.assertAlmostEqual(box_iou((0, 0, 10, 10), (5, 5, 15, 15)), 25 / 175)
+        self.assertAlmostEqual(
+            box_iou((0, 0, 10, 10), (5, 5, 15, 15)), 25 / 175
+        )
 
     def test_degenerate_boxes(self):
         self.assertEqual(box_iou((0, 0, 0, 0), (0, 0, 10, 10)), 0.0)
@@ -52,7 +54,7 @@ class TestMissingPredictions(unittest.TestCase):
     def test_unmatched_high_score_prediction_is_missing(self):
         annotations = [_box("cat", [[0, 0], [10, 10]])]
         predictions = [
-            _box("cat", [[0, 0], [10, 10]], score=0.9),   # matched
+            _box("cat", [[0, 0], [10, 10]], score=0.9),  # matched
             _box("cat", [[50, 50], [60, 60]], score=0.8),  # missed label
         ]
         missing = find_missing_predictions(predictions, annotations)
@@ -138,7 +140,9 @@ class TestHardExampleMining(unittest.TestCase):
         self.assertEqual(mined[0][0], "empty")
 
     def test_top_k_and_floor(self):
-        entries = [(f"img{index}", [_box("a", score=0.99)]) for index in range(10)]
+        entries = [
+            (f"img{index}", [_box("a", score=0.99)]) for index in range(10)
+        ]
         self.assertEqual(len(mine_hard_examples(entries, top_k=5)), 0)
         uncertain = [
             (f"img{index}", [_box("a", score=0.2)]) for index in range(10)

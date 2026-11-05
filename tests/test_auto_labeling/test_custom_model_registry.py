@@ -14,8 +14,8 @@ import pytest
 import yaml
 from PyQt6 import QtWidgets
 
-from anylabeling import config
-from anylabeling.services.auto_labeling.model_manager import ModelManager
+from jllabeling import config
+from jllabeling.services.auto_labeling.model_manager import ModelManager
 
 
 @pytest.fixture()
@@ -27,7 +27,7 @@ def qapp():
 
 
 def _write_config(tmp_path, monkeypatch, custom_models):
-    rc = tmp_path / ".xanylabelingrc"
+    rc = tmp_path / ".jllabelingrc"
     payload = copy.deepcopy(config._load_template_config())
     payload["custom_models"] = custom_models
     rc.write_text(

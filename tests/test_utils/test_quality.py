@@ -3,14 +3,16 @@ import os
 import tempfile
 import unittest
 
-from anylabeling.views.labeling.utils.quality import (
+from jllabeling.views.labeling.utils.quality import (
     file_needs_re_autolabel,
     format_save_quality_status,
     inspect_shape_quality,
     json_txt_mismatch,
     shapes_have_low_confidence,
 )
-from anylabeling.views.labeling.utils.yolo_detect import write_yolo_detect_sidecar
+from jllabeling.views.labeling.utils.yolo_detect import (
+    write_yolo_detect_sidecar,
+)
 
 
 def _box(label, points, score=None):
@@ -57,9 +59,7 @@ class TestQualityChecks(unittest.TestCase):
             image = os.path.join(tmp, "a.jpg")
             json_path = os.path.join(tmp, "a.json")
             open(image, "wb").close()
-            shapes = [
-                _box("产品", [[0, 0], [50, 0], [50, 40], [0, 40]], 0.32)
-            ]
+            shapes = [_box("产品", [[0, 0], [50, 0], [50, 40], [0, 40]], 0.32)]
             with open(json_path, "w", encoding="utf-8") as handle:
                 json.dump(
                     {
@@ -90,7 +90,7 @@ class TestQualityChecks(unittest.TestCase):
 
 
 try:
-    from anylabeling.views.labeling.utils.data_audit import audit_dataset
+    from jllabeling.views.labeling.utils.data_audit import audit_dataset
 
     _AUDIT_AVAILABLE = True
 except Exception:

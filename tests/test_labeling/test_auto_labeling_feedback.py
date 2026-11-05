@@ -48,7 +48,7 @@ class TestAutoLabelingFeedback(_WidgetCase):
         self.assertEqual(statuses, ["本图未检测到目标，已保留原有标注"])
 
     def test_a_result_reports_how_many(self):
-        from anylabeling.views.labeling.shape import Shape
+        from jllabeling.views.labeling.shape import Shape
 
         widget, statuses = self._widget_with_image()
         shape = Shape(label="cat", shape_type="rectangle")

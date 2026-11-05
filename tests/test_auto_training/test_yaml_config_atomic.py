@@ -6,7 +6,7 @@ from unittest import mock
 import pytest
 import yaml
 
-from anylabeling.services.auto_training.ultralytics import _io
+from jllabeling.services.auto_training.ultralytics import _io
 
 
 def test_save_json_atomic_writes_and_leaves_no_temp(tmp_path):

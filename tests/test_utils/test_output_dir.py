@@ -15,10 +15,10 @@ import unittest
 from types import SimpleNamespace
 from unittest import mock
 
-from anylabeling.views.labeling.utils import output_dir
+from jllabeling.views.labeling.utils import output_dir
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
-UTILS = ROOT / "anylabeling/views/labeling/utils"
+UTILS = ROOT / "jllabeling/views/labeling/utils"
 
 
 class _FakeButton:

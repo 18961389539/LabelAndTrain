@@ -10,7 +10,7 @@ CHANGELOG_PATTERN = re.compile(r"^## `([^`]+)`[^\n]*$", re.MULTILINE)
 
 
 def read_app_info_field(name: str) -> str:
-    app_info = ROOT_DIR / "anylabeling" / "app_info.py"
+    app_info = ROOT_DIR / "jllabeling" / "app_info.py"
     match = re.search(
         rf'^__{name}__\s*=\s*["\']([^"\']+)["\']',
         app_info.read_text(encoding="utf-8"),

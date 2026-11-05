@@ -204,7 +204,7 @@ jllabelingandtrain
 | `--no-auto-update-check`   | Disable automatic update checks on startup.                                                                   |
 
 > [!NOTE]
-> Please refer to the X-AnyLabeling [pyproject.toml](../../pyproject.toml) file for a list of dependencies. Note that all the examples above install all required dependencies.
+> Please refer to the JLLabelingAndTrain [pyproject.toml](../../pyproject.toml) file for a list of dependencies. Note that all the examples above install all required dependencies.
 
 We also supports batch conversion between multiple annotation formats:
 
@@ -234,7 +234,7 @@ jllabelingandtrain convert <task>  # Show detailed help and examples for a speci
 If you update UI text or maintain localization files, note that **this build ships
 one catalog only: `zh_CN`**, so the interface language is Simplified Chinese in
 practice. The scripts below refresh every catalog that exists in
-`anylabeling/resources/translations/`, and they need Qt's `lrelease` and `rcc`
+`jllabeling/resources/translations/`, and they need Qt's `lrelease` and `rcc`
 (the PyQt6 wheel does not include them):
 
 ```bash
@@ -250,16 +250,16 @@ python scripts/compile_languages.py
 
 ```bash
 # Linux or macOS
-export PYTHONPATH=/path/to/X-AnyLabeling
+export PYTHONPATH=/path/to/JLLabelingAndTrain
 
 # Windows
-set PYTHONPATH=C:\path\to\X-AnyLabeling
+set PYTHONPATH=C:\path\to\JLLabelingAndTrain
 ```
 
 > [!CAUTION]
 > **Avoid Dependency Conflicts**: To avoid conflicts with third-party packages, please uninstall the old version first:
 > ```bash
-> pip uninstall anylabeling -y
+> pip uninstall jllabeling -y
 > ```
 
 > [!NOTE]
@@ -285,7 +285,7 @@ are builds of a different program and are not a substitute for this fork.
 
 ## 2. Usage
 
-For detailed instructions on how to use X-AnyLabeling, please refer to the corresponding [User Guide](./user_guide.md).
+For detailed instructions on how to use JLLabelingAndTrain, please refer to the corresponding [User Guide](./user_guide.md).
 
 ## 3. Packaging and Compilation
 
@@ -295,7 +295,7 @@ For detailed instructions on how to use X-AnyLabeling, please refer to the corre
 <details>
 <summary>Expand/Collapse</summary>
 
-To facilitate users running `X-AnyLabeling` on different platforms, this tool provides packaging and compilation instructions along with relevant notes. Install the dependency extra for the target runtime before executing the corresponding packaging command.
+To facilitate users running `JLLabelingAndTrain` on different platforms, this tool provides packaging and compilation instructions along with relevant notes. Install the dependency extra for the target runtime before executing the corresponding packaging command.
 
 ### 3.1 Notes
 
@@ -330,9 +330,9 @@ bash scripts/build_executable.sh macos
 > [!TIP]
 > If you encounter permission issues when executing the above commands on Windows, after ensuring the above preparation steps are completed, you can directly execute the following commands:
 > ```bash
-> pyinstaller --noconfirm packaging/pyinstaller/specs/x-anylabeling-win-cpu.spec
-> pyinstaller --noconfirm packaging/pyinstaller/specs/x-anylabeling-win-cpu-train.spec
-> pyinstaller --noconfirm packaging/pyinstaller/specs/x-anylabeling-win-gpu.spec
+> pyinstaller --noconfirm packaging/pyinstaller/specs/jllabeling-win-cpu.spec
+> pyinstaller --noconfirm packaging/pyinstaller/specs/jllabeling-win-cpu-train.spec
+> pyinstaller --noconfirm packaging/pyinstaller/specs/jllabeling-win-gpu.spec
 > ```
 
 </details>

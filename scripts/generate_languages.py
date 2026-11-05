@@ -24,7 +24,7 @@ SKIP_DIRS = {
 #: Roots of the shipped application. Only this tree carries user-facing
 #: strings, so tests and build scripts are left out and the catalog stays
 #: free of assertion text.
-SOURCE_ROOTS = ("anylabeling",)
+SOURCE_ROOTS = ("jllabeling",)
 
 #: Generated blobs: resources.py is a multi-megabyte byte literal, so there is
 #: nothing to translate and parsing it just slows the extraction down.
@@ -126,7 +126,7 @@ def compile_resources(output: str, qrc: str) -> None:
     )
 
 
-TRANSLATIONS_DIR = "anylabeling/resources/translations"
+TRANSLATIONS_DIR = "jllabeling/resources/translations"
 
 
 def existing_catalogs():
@@ -236,6 +236,6 @@ for language in supported_languages:
     subprocess.run([lrelease, translation_file], check=True)
 
 compile_resources(
-    output="anylabeling/resources/resources.py",
-    qrc="anylabeling/resources/resources.qrc",
+    output="jllabeling/resources/resources.py",
+    qrc="jllabeling/resources/resources.qrc",
 )

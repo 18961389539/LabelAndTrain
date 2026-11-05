@@ -9,12 +9,12 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 try:
     from PyQt6 import QtWidgets
 
-    from anylabeling.views.labeling.settings.controller import (
+    from jllabeling.views.labeling.settings.controller import (
         SettingsController,
     )
-    from anylabeling.views.labeling.settings.dialog import SettingsDialog
-    from anylabeling.views.labeling.settings.editors import ColorRgbaEditor
-    from anylabeling.views.labeling.settings.schema import load_template_config
+    from jllabeling.views.labeling.settings.dialog import SettingsDialog
+    from jllabeling.views.labeling.settings.editors import ColorRgbaEditor
+    from jllabeling.views.labeling.settings.schema import load_template_config
 
     PYQT_AVAILABLE = True
 except Exception:  # pragma: no cover - mirrors sibling settings tests

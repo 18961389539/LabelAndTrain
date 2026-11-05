@@ -8,14 +8,14 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 try:
     from PyQt6 import QtCore, QtGui, QtWidgets
 
-    from anylabeling.views.labeling.filelist.roles import REVIEW_STATE_FIELD
-    from anylabeling.views.labeling.label_widget import LabelingWidget
-    from anylabeling.views.labeling.schema import (
+    from jllabeling.views.labeling.filelist.roles import REVIEW_STATE_FIELD
+    from jllabeling.views.labeling.label_widget import LabelingWidget
+    from jllabeling.views.labeling.schema import (
         REVIEW_NOTE_FIELD,
         REVIEW_REJECTED,
     )
-    from anylabeling.views.labeling.utils import file_lifecycle
-    from anylabeling.views.labeling.utils.async_label_check import (
+    from jllabeling.views.labeling.utils import file_lifecycle
+    from jllabeling.views.labeling.utils.async_label_check import (
         _label_file_review_state,
         label_file_review_info,
     )
@@ -33,7 +33,7 @@ FILE_REVIEW_NOTE_ROLE = QtCore.Qt.ItemDataRole.UserRole + 6
 
 
 def _bind(widget, *names):
-    from anylabeling.views.labeling.label_widget import LabelingWidget as LW
+    from jllabeling.views.labeling.label_widget import LabelingWidget as LW
 
     for name in names:
         raw = LW.__dict__.get(name)
@@ -224,7 +224,7 @@ class TestReviewStatePersistence(unittest.TestCase):
     """The verdict the action records must land on disk in the same shape."""
 
     def _widget(self, directory, filename):
-        from anylabeling.views.labeling.label_file import LabelFile
+        from jllabeling.views.labeling.label_file import LabelFile
 
         class Widget:
             def __init__(self):

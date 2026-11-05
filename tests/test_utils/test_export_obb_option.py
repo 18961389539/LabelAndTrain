@@ -16,9 +16,9 @@ from PIL import Image
 import pytest
 from PyQt6 import QtWidgets
 
-from anylabeling.views.labeling import project_model
-from anylabeling.views.labeling.label_converter import LabelConverter
-from anylabeling.views.labeling.utils import export
+from jllabeling.views.labeling import project_model
+from jllabeling.views.labeling.label_converter import LabelConverter
+from jllabeling.views.labeling.utils import export
 
 APP = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
 

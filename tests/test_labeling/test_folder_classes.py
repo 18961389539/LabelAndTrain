@@ -7,10 +7,10 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from PyQt6.QtCore import Qt  # noqa: E402
 from PyQt6.QtWidgets import QApplication  # noqa: E402
 
-from anylabeling.views.labeling.label_widget import (  # noqa: E402
+from jllabeling.views.labeling.label_widget import (  # noqa: E402
     LabelingWidget as LabelWidget,
 )
-from anylabeling.views.labeling.widgets.unique_label_qlist_widget import (  # noqa: E402
+from jllabeling.views.labeling.widgets.unique_label_qlist_widget import (  # noqa: E402
     UniqueLabelQListWidget,
 )
 
@@ -174,7 +174,7 @@ class TestLoadClassesFromFolder(unittest.TestCase):
 
     def test_the_project_record_wins_over_classes_txt(self):
         """单源化：记录里有标签后，classes.txt 退化为不再被读的种子。"""
-        from anylabeling.views.labeling import project_model
+        from jllabeling.views.labeling import project_model
 
         with tempfile.TemporaryDirectory() as tmp:
             self._write_classes(tmp, ["from_classes_txt"])
@@ -192,7 +192,7 @@ class TestLoadClassesFromFolder(unittest.TestCase):
             )
 
     def test_a_record_classes_txt_mismatch_says_so(self):
-        from anylabeling.views.labeling import project_model
+        from jllabeling.views.labeling import project_model
 
         with tempfile.TemporaryDirectory() as tmp:
             self._write_classes(tmp, ["stale", "classes"])
@@ -212,7 +212,7 @@ class TestLoadClassesFromFolder(unittest.TestCase):
             )
 
     def test_a_matching_classes_txt_says_nothing(self):
-        from anylabeling.views.labeling import project_model
+        from jllabeling.views.labeling import project_model
 
         with tempfile.TemporaryDirectory() as tmp:
             self._write_classes(tmp, ["bag"])
@@ -228,7 +228,7 @@ class TestResolveOpenLabels:
     """解析本身只读：打开一个数据集不写盘（离开时的 flush 才写）。"""
 
     def test_seeding_from_classes_txt_writes_nothing(self, tmp_path):
-        from anylabeling.views.labeling import (
+        from jllabeling.views.labeling import (
             project_model,
             project_settings,
         )
@@ -245,7 +245,7 @@ class TestResolveOpenLabels:
         assert not project_model.has_record(str(tmp_path))
 
     def test_the_record_beats_the_seed(self, tmp_path):
-        from anylabeling.views.labeling import (
+        from jllabeling.views.labeling import (
             project_model,
             project_settings,
         )
@@ -260,7 +260,7 @@ class TestResolveOpenLabels:
         assert resolution["names"] == ["live"]
 
     def test_nothing_to_read(self, tmp_path):
-        from anylabeling.views.labeling import project_settings
+        from jllabeling.views.labeling import project_settings
 
         resolution = project_settings.resolve_open_labels(
             str(tmp_path), (None, str(tmp_path))

@@ -20,7 +20,7 @@ To annotate objects manually:
 
 <img src="https://github.com/ultralytics/docs/releases/download/0/object-detection-examples.avif" width="100%" />
 
-1. Import images (`Ctrl+I` or `Ctrl+U`) or a video (`Ctrl+O`) into X-AnyLabeling.
+1. Import images (`Ctrl+I` or `Ctrl+U`) or a video (`Ctrl+O`) into JLLabelingAndTrain.
 2. Select and load the `YOLO11` model, or choose from other available object detection models.
 3. Click `Run (i)` to process the current image. After checking the result, press `Ctrl+B` to run the model on all images.
 
@@ -61,12 +61,12 @@ pip install -v -e .
 cd -
 ```
 
-Finally, clone X-AnyLabeling:
+Finally, clone JLLabelingAndTrain:
 
 ```bash
 cd ..
 git clone https://github.com/CVHub520/X-AnyLabeling
-cd X-AnyLabeling
+cd JLLabelingAndTrain
 ```
 
 Then follow the installation guide ([简体中文](../../../docs/zh_cn/get_started.md) | [English](../../../docs/en/get_started.md)) to install the remaining dependencies.
@@ -74,7 +74,7 @@ Then follow the installation guide ([简体中文](../../../docs/zh_cn/get_start
 
 Here's how to set up for the UPN job:
 
-1. Import your image (`Ctrl+I`) or video (`Ctrl+O`) file into X-AnyLabeling
+1. Import your image (`Ctrl+I`) or video (`Ctrl+O`) file into JLLabelingAndTrain
 2. Select and load the `Universal Proposal Network (IDEA)` model from the model list
 3. Click `Run (i)` to process the current image. After checking the result, press `Ctrl+B` to process all images.
 
@@ -87,7 +87,7 @@ Additionally, you can adjust the following parameters to filter detection result
 
 ### Text-Visual Prompting Grounding
 
-The [OpenVision](../../../anylabeling/configs/auto_labeling/open_vision.yaml) model demonstrates advanced usage with dual-granularity prompt tuning for comprehensive object detection at both instance and part levels. It combines the [CountGD](https://github.com/niki-amini-naieni/CountGD) model for counting-based detection and the [Segment Anything Model](https://github.com/facebookresearch/segment-anything) for precise segmentation, enabling both coarse and fine-grained object analysis.
+The [OpenVision](../../../jllabeling/configs/auto_labeling/open_vision.yaml) model demonstrates advanced usage with dual-granularity prompt tuning for comprehensive object detection at both instance and part levels. It combines the [CountGD](https://github.com/niki-amini-naieni/CountGD) model for counting-based detection and the [Segment Anything Model](https://github.com/facebookresearch/segment-anything) for precise segmentation, enabling both coarse and fine-grained object analysis.
 
 Follow these step-by-step instructions to install the environment:
 
@@ -117,24 +117,24 @@ Follow these step-by-step instructions to install the environment:
    python test.py
    ```
 
-5. Clone the X-AnyLabeling repository and navigate to the project directory:
+5. Clone the JLLabelingAndTrain repository and navigate to the project directory:
    ```bash
    cd /path/to/x-anylabeling/project
    git clone https://github.com/CVHub520/X-AnyLabeling
-   cd X-AnyLabeling
+   cd JLLabelingAndTrain
    ```
 
 6. Follow the [installation guide](../../../docs/en/get_started.md#12-installation) to install the required packages, ensuring compatibility with your local CUDA version.
 
 7. Run the application:
    ```bash
-   python anylabeling/app.py
+   python jllabeling/app.py
    ```
 
 For a demonstration of the workflow, watch the video on [YouTube](https://www.youtube.com/watch?v=QtoVMiTwXqk) or [Bilibili](https://www.bilibili.com/video/BV1jyqrYyE74).
 
 
-X-AnyLabeling supports three different prompting modes for object detection and annotation:
+JLLabelingAndTrain supports three different prompting modes for object detection and annotation:
 
 - **Point Prompting Mode**:
   - Uses the Segment Anything Model (SAM) to generate high-precision segmentation masks

@@ -17,9 +17,9 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 try:
     from PyQt6 import QtCore, QtWidgets
 
-    from anylabeling.views.labeling.label_widget import LabelingWidget
-    from anylabeling.views.labeling.shape import Shape
-    from anylabeling.views.labeling.widgets.mode_controller import (
+    from jllabeling.views.labeling.label_widget import LabelingWidget
+    from jllabeling.views.labeling.shape import Shape
+    from jllabeling.views.labeling.widgets.mode_controller import (
         ModeController,
     )
 

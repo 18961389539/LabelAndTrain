@@ -3,13 +3,13 @@
 import ast
 from pathlib import Path
 
-from anylabeling.views.labeling.utils import smart_ui
+from jllabeling.views.labeling.utils import smart_ui
 
 
 def test_the_dialog_lives_in_smart_ui():
     assert (
         smart_ui._ResultDialog.__module__
-        == "anylabeling.views.labeling.utils.smart_ui"
+        == "jllabeling.views.labeling.utils.smart_ui"
     )
 
 

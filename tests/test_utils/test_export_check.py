@@ -20,13 +20,13 @@ import unittest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
-EXPORT_SOURCE = REPO_ROOT / "anylabeling/views/labeling/utils/export.py"
+EXPORT_SOURCE = REPO_ROOT / "jllabeling/views/labeling/utils/export.py"
 
-from anylabeling.views.labeling.utils import export_check  # noqa: E402
-from anylabeling.views.labeling.utils.data_audit import (  # noqa: E402
+from jllabeling.views.labeling.utils import export_check  # noqa: E402
+from jllabeling.views.labeling.utils.data_audit import (  # noqa: E402
     audit_dataset,
 )
-from anylabeling.views.labeling.utils.export_check import (  # noqa: E402
+from jllabeling.views.labeling.utils.export_check import (  # noqa: E402
     build_manifest,
     check_export_readiness,
     format_readiness,

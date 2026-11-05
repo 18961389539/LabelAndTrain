@@ -10,8 +10,8 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pytest
 
-from anylabeling.views.labeling import project_registry
-from anylabeling.views.labeling.utils import project_view
+from jllabeling.views.labeling import project_registry
+from jllabeling.views.labeling.utils import project_view
 
 
 @pytest.fixture()
@@ -61,7 +61,7 @@ def test_project_name_is_the_folder_name(tmp_path):
 
 def test_project_name_prefers_the_record_and_falls_back(tmp_path):
     """有清单就用项目名；没有就回退目录名 —— 两者都不为空。"""
-    from anylabeling.views.labeling import project_model
+    from jllabeling.views.labeling import project_model
 
     root = tmp_path / "螺丝"
     root.mkdir()

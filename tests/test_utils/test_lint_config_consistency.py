@@ -181,7 +181,7 @@ def test_ci_checks_formatting_across_the_repository():
         step.get("run", "") for step in workflow["jobs"]["lint"]["steps"]
     )
     assert "black --check" in lint_runs
-    assert "anylabeling tests scripts" in lint_runs, (
+    assert "jllabeling tests scripts" in lint_runs, (
         "the formatting check must name the whole tree, not the paths a "
         "commit happened to touch"
     )

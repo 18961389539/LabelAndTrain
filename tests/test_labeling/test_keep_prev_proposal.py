@@ -26,14 +26,14 @@ REPO_ROOT = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..")
 )
 TEMPLATE_CONFIG = os.path.join(
-    REPO_ROOT, "anylabeling", "configs", "jllabeling_config.yaml"
+    REPO_ROOT, "jllabeling", "configs", "jllabeling_config.yaml"
 )
 
 
 def build_labeling_widget(filename=None):
     """Construct the real widget headlessly (same hooks as test_widget_wiring)."""
-    from anylabeling import config as app_config
-    from anylabeling.views.labeling.label_widget import LabelingWidget
+    from jllabeling import config as app_config
+    from jllabeling.views.labeling.label_widget import LabelingWidget
 
     app_config.current_config_file = TEMPLATE_CONFIG
     LabelingWidget.menu = lambda self, title: QtWidgets.QMenu(title)

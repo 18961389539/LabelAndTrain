@@ -17,9 +17,9 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PyQt6.QtWidgets import QApplication, QWidget
 
-from anylabeling.views.labeling import project_model
-from anylabeling.views.training import ultralytics_dialog as dialog_module
-from anylabeling.views.training.ultralytics_dialog import UltralyticsDialog
+from jllabeling.views.labeling import project_model
+from jllabeling.views.training import ultralytics_dialog as dialog_module
+from jllabeling.views.training.ultralytics_dialog import UltralyticsDialog
 
 
 def _labeled_images(folder, count=20):

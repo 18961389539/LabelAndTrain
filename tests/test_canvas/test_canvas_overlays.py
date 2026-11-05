@@ -16,9 +16,9 @@ import unittest
 try:
     from PyQt6 import QtCore, QtGui, QtWidgets
 
-    from anylabeling.views.labeling.shape import Shape
-    from anylabeling.views.labeling.widgets import canvas_overlays
-    from anylabeling.views.labeling.widgets.canvas import Canvas
+    from jllabeling.views.labeling.shape import Shape
+    from jllabeling.views.labeling.widgets import canvas_overlays
+    from jllabeling.views.labeling.widgets.canvas import Canvas
 
     QT_AVAILABLE = True
 except Exception:  # pragma: no cover - exercised on Qt-less runners

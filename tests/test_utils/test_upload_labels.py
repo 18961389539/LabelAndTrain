@@ -7,8 +7,8 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pytest
 
-from anylabeling.views.labeling.utils import upload as upload_module
-from anylabeling.views.labeling.utils.upload import (
+from jllabeling.views.labeling.utils import upload as upload_module
+from jllabeling.views.labeling.utils.upload import (
     apply_uploaded_labels,
     persist_label_flags,
     persist_shape_attributes,

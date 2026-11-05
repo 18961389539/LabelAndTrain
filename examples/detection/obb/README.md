@@ -26,7 +26,7 @@ To display rotation angles, open `View` in the menu bar and enable `Show Degrees
 > [!NOTE]
 > **Rotation increment customization**
 >
-> You can customize the rotation increment angles by configuring the `.xanylabelingrc` file in your user directory. Add or modify the following settings under the `canvas` section:
+> You can customize the rotation increment angles by configuring the `.jllabelingrc` file in your user directory. Add or modify the following settings under the `canvas` section:
 >
 > ```yaml
 > canvas:

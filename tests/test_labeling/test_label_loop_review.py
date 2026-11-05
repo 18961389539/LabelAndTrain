@@ -28,7 +28,7 @@ class TestLabelLoopReview(unittest.TestCase):
         self.app.processEvents()
 
     def test_find_next_shape_skips_deleted_entries_by_identity(self):
-        from anylabeling.views.labeling.label_widget import (
+        from jllabeling.views.labeling.label_widget import (
             _find_next_label_loop_shape,
         )
 
@@ -43,15 +43,13 @@ class TestLabelLoopReview(unittest.TestCase):
         shapes = [first, deleted, last]
         canvas_shapes = [first, added, last]
 
-        index, shape = _find_next_label_loop_shape(
-            shapes, 1, canvas_shapes
-        )
+        index, shape = _find_next_label_loop_shape(shapes, 1, canvas_shapes)
 
         self.assertEqual(index, 2)
         self.assertIs(shape, last)
 
     def test_find_next_shape_reports_completed_snapshot(self):
-        from anylabeling.views.labeling.label_widget import (
+        from jllabeling.views.labeling.label_widget import (
             _find_next_label_loop_shape,
         )
 
@@ -63,7 +61,7 @@ class TestLabelLoopReview(unittest.TestCase):
         self.assertIsNone(shape)
 
     def test_popup_reuses_text_timer_and_nested_widget_position(self):
-        from anylabeling.views.labeling.widgets.popup import Popup
+        from jllabeling.views.labeling.widgets.popup import Popup
 
         host = QtWidgets.QWidget()
         host.setGeometry(100, 120, 400, 300)
@@ -76,7 +74,7 @@ class TestLabelLoopReview(unittest.TestCase):
         icon_path = os.path.join(
             os.path.dirname(__file__),
             "../..",
-            "anylabeling",
+            "jllabeling",
             "resources",
             "images",
             "copy-green.svg",
@@ -93,9 +91,9 @@ class TestLabelLoopReview(unittest.TestCase):
         popup.show_popup(child, popup_height=36, top_offset=24)
 
         origin = child.mapToGlobal(QtCore.QPoint(0, 0))
-        expected_x = origin.x() + (
-            child.width() - popup.sizeHint().width()
-        ) // 2
+        expected_x = (
+            origin.x() + (child.width() - popup.sizeHint().width()) // 2
+        )
         self.assertEqual(popup.label.text(), "Reviewing 2 / 3")
         self.assertIsNotNone(popup.icon_label)
         self.assertFalse(popup.icon_label.pixmap().isNull())

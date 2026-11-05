@@ -6,9 +6,9 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 try:
     from PyQt6 import QtCore, QtGui, QtWidgets
 
-    import anylabeling.resources.resources  # noqa: F401
-    from anylabeling.views.labeling.utils.qt import new_icon, new_icon_path
-    from anylabeling.views.labeling.utils.theme import init_theme
+    import jllabeling.resources.resources  # noqa: F401
+    from jllabeling.views.labeling.utils.qt import new_icon, new_icon_path
+    from jllabeling.views.labeling.utils.theme import init_theme
 
     PYQT_AVAILABLE = True
 except Exception:
@@ -62,9 +62,7 @@ class TestQtIcons(unittest.TestCase):
             QtGui.QImage.Format.Format_ARGB32
         )
         data = bytes(
-            image.constBits().asarray(
-                image.height() * image.bytesPerLine()
-            )
+            image.constBits().asarray(image.height() * image.bytesPerLine())
         )
         pixels = [
             (data[i] + data[i + 1] + data[i + 2]) / 3
@@ -91,9 +89,7 @@ class TestQtIcons(unittest.TestCase):
                 # The theme-independent property is that a disabled glyph sits
                 # closer to mid-grey than an active one, so it recedes against
                 # both a dark and a light background.
-                self.assertLess(
-                    abs(disabled_lum - 128), abs(normal_lum - 128)
-                )
+                self.assertLess(abs(disabled_lum - 128), abs(normal_lum - 128))
 
     def test_recently_mapped_icons_are_generated(self):
         for icon_name, ext in (

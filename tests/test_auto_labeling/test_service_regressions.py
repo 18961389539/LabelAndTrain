@@ -19,9 +19,9 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
-from anylabeling.services.auto_labeling import yolov8_cls as cls_module
-from anylabeling.services.auto_labeling import yolov8_sam2 as sam2_module
-from anylabeling.services.auto_labeling.worker import GenericWorker
+from jllabeling.services.auto_labeling import yolov8_cls as cls_module
+from jllabeling.services.auto_labeling import yolov8_sam2 as sam2_module
+from jllabeling.services.auto_labeling.worker import GenericWorker
 
 
 class TestGenericWorkerAlwaysFinishes:
@@ -188,7 +188,7 @@ class TestYOLOv8Sam2Unload:
 
 class TestLRUCache:
     def test_clear_drops_every_entry(self):
-        from anylabeling.services.auto_labeling.lru_cache import LRUCache
+        from jllabeling.services.auto_labeling.lru_cache import LRUCache
 
         cache = LRUCache(maxsize=2)
         cache.put("a", 1)
@@ -201,7 +201,7 @@ class TestLRUCache:
         assert cache.find("a") is False
 
     def test_len_reports_the_live_entry_count(self):
-        from anylabeling.services.auto_labeling.lru_cache import LRUCache
+        from jllabeling.services.auto_labeling.lru_cache import LRUCache
 
         cache = LRUCache(maxsize=2)
         assert len(cache) == 0

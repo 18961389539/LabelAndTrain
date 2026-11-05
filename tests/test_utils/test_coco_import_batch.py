@@ -3,7 +3,7 @@
 import json
 from unittest import mock
 
-from anylabeling.views.labeling.label_converter import LabelConverter
+from jllabeling.views.labeling.label_converter import LabelConverter
 
 
 def _doc(annotations, images=None, categories=None):
