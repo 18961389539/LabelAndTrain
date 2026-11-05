@@ -5214,8 +5214,8 @@ Results have been saved to:
         </message>
         <message>
             <location filename="..\..\views\training\launcher.py" line="23" />
-            <source>Missing Ultralytics</source>
-            <translation>缺少 ultralytics</translation>
+            <source>Missing JLTrain</source>
+            <translation>缺少 JLTrain</translation>
         </message>
         <message>
             <location filename="..\..\views\training\launcher.py" line="26" />
@@ -7596,8 +7596,8 @@ Changes will not be saved until you click Save.</source>
         </message>
         <message>
             <location filename="..\..\views\training\ultralytics_dialog.py" line="1527" />
-            <source>Data-loader worker processes. Ultralytics forces 0 on CPU; 0-2 is the safest range on Windows.</source>
-            <translation>数据加载进程数。CPU 上 ultralytics 会强制为 0；Windows 上 0-2 最稳。</translation>
+            <source>Data-loader worker processes. JLTrain forces 0 on CPU; 0-2 is the safest range on Windows.</source>
+            <translation>数据加载进程数。CPU 上 JLTrain 会强制为 0；Windows 上 0-2 最稳。</translation>
         </message>
         <message>
             <location filename="..\..\views\training\ultralytics_dialog.py" line="1534" />

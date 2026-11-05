@@ -175,7 +175,7 @@ UNBOUND_ACTIONS = [
     ("save_with_image_data", "保存时内嵌图像数据"),
     ("set_cross_line", "设置十字线"),
     ("toggle_shape_lock", "锁定/解锁选中标注"),
-    ("ultralytics_train", "启动 Ultralytics 训练"),
+    ("ultralytics_train", "启动 JLTrain 训练"),
     ("upload_image_flags_file", "导入图像标志文件"),
     ("upload_label_classes_file", "导入类别文件"),
     ("upload_label_flags_file", "导入标签标志文件"),

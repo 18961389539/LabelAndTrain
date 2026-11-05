@@ -153,7 +153,7 @@ def _add_basic_group(widget, layout):
     widget.config_widgets["workers"].setToolTip(
         QCoreApplication.translate(
             "UltralyticsDialog",
-            "Data-loader worker processes. Ultralytics forces 0 on CPU; "
+            "Data-loader worker processes. JLTrain forces 0 on CPU; "
             "0-2 is the safest range on Windows.",
         )
     )

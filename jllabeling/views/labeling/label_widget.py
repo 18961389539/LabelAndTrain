@@ -5508,7 +5508,7 @@ def _build_actions(widget):
     widget.select_toggle_action = select_toggle_shapes
 
     ultralytics_train = action(
-        "Ultralytics",
+        "JLTrain",
         lambda: widget.start_training("ultralytics"),
         icon="ultralytics",
     )

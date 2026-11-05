@@ -21,7 +21,7 @@ def start_training(widget, mode):
         if not check_package_installed("ultralytics"):
             widget.error_message(
                 QCoreApplication.translate(
-                    "LabelingWidget", "Missing Ultralytics"
+                    "LabelingWidget", "Missing JLTrain"
                 ),
                 QCoreApplication.translate(
                     "LabelingWidget",
