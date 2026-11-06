@@ -7,7 +7,7 @@
       <img alt="JLLabelingAndTrain" height="200px" src="https://github.com/user-attachments/assets/0714a182-92bd-4b47-b48d-1c5d7c225176"></a>
   </p>
 
-[简体中文](README_zh-CN.md) | [English](README.md)
+[简体中文](README_zh-CN.md) | [精简运行指南](README.md)
 
 </div>
 
