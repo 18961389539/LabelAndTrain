@@ -20,6 +20,7 @@ from jllabeling.views.labeling.logger import logger
 from jllabeling.views.labeling.shape import Shape
 from jllabeling.views.labeling.utils.qt import new_icon_path
 from jllabeling.views.labeling.utils.style import (
+    get_cancel_btn_style,
     get_dialog_style,
     get_ok_btn_style,
     get_spinbox_style,
@@ -126,16 +127,22 @@ class ShapeModifyDialog(RangeTableDialog):
         self.to_input.setFixedWidth(104)
         self.to_input.setStyleSheet(get_spinbox_style())
 
-        self.ok_button = QPushButton("Go")
+        self.ok_button = QPushButton(self.tr("应用"))
         self.ok_button.setFixedSize(124, 36)
         self.ok_button.setStyleSheet(get_ok_btn_style())
         self.ok_button.clicked.connect(self.accept)
+
+        self.cancel_button = QPushButton(self.tr("取消"))
+        self.cancel_button.setFixedSize(84, 36)
+        self.cancel_button.setStyleSheet(get_cancel_btn_style())
+        self.cancel_button.clicked.connect(self.reject)
 
         bottom_layout.addWidget(from_label)
         bottom_layout.addWidget(self.from_input)
         bottom_layout.addWidget(to_label)
         bottom_layout.addWidget(self.to_input)
         bottom_layout.addStretch()
+        bottom_layout.addWidget(self.cancel_button)
         bottom_layout.addWidget(self.ok_button)
 
         layout.addLayout(bottom_layout)

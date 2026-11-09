@@ -118,7 +118,7 @@ def test_apply_progress_fills_its_row_and_tooltip(switcher):
     item = switcher.list.topLevelItem(0)
     assert item.text(3) == "12/40"
     assert "已标注: 12/40" in item.toolTip(0)
-    assert "已确认 5" in item.toolTip(0)
+    assert "已检查 5" in item.toolTip(0)
     assert "待复检 1" in item.toolTip(0)
 
 

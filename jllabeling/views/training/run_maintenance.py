@@ -15,6 +15,7 @@ import time
 from PyQt6.QtCore import QCoreApplication
 from PyQt6.QtWidgets import QMessageBox
 
+from jllabeling.views.common.formatting import format_size
 from jllabeling.services.auto_training.ultralytics._io import (
     save_json_atomic,
 )
@@ -72,7 +73,7 @@ def offer_dataset_cleanup(dialog):
             "LabelingWidget",
             "Training left dataset copies taking %1 across %2 old directories.",
         )
-        .replace("%1", f"{size / (1024 * 1024):.1f} MB")
+        .replace("%1", format_size(size))
         .replace("%2", str(len(candidates))),
         "",
     ]
@@ -109,10 +110,10 @@ def offer_dataset_cleanup(dialog):
     )
     dialog.append_training_log(
         QCoreApplication.translate(
-            "LabelingWidget", "Cleaned %1 dataset copies, freeing %2 MB."
+            "LabelingWidget", "已清理 %1 个旧数据集副本，释放 %2。"
         )
         .replace("%1", str(len(deleted)))
-        .replace("%2", f"{freed / (1024 * 1024):.1f}")
+        .replace("%2", format_size(freed))
     )
     if failed:
         dialog.append_training_log(

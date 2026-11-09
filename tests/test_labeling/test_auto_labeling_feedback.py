@@ -8,6 +8,7 @@ how much came back.
 import os
 import unittest
 from types import SimpleNamespace
+from unittest import mock
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
@@ -55,6 +56,74 @@ class TestAutoLabelingFeedback(_WidgetCase):
         shape.points = [QtCore.QPointF(0, 0), QtCore.QPointF(10, 10)]
         widget.new_shapes_from_auto_labeling(self._result([shape]))
         self.assertEqual(statuses, ["自动标注完成：1 个目标"])
+
+    def _human_shape(self):
+        from jllabeling.views.labeling.shape import Shape
+
+        shape = Shape(label="cat", shape_type="rectangle")
+        shape.points = [QtCore.QPointF(0, 0), QtCore.QPointF(10, 10)]
+        return shape
+
+    def _new_shape(self):
+        from jllabeling.views.labeling.shape import Shape
+
+        shape = Shape(label="dog", shape_type="rectangle")
+        shape.points = [QtCore.QPointF(0, 0), QtCore.QPointF(10, 10)]
+        return shape
+
+    def test_replacing_human_work_asks_first_and_keeps_it_on_no(self):
+        from jllabeling.views.labeling.utils import auto_labeling_result
+
+        widget, statuses = self._widget_with_image()
+        human = self._human_shape()
+        widget.canvas.shapes = [human]
+
+        with mock.patch.object(
+            auto_labeling_result, "ask_replace", return_value=False
+        ) as asked:
+            widget.new_shapes_from_auto_labeling(
+                self._result([self._new_shape()])
+            )
+
+        asked.assert_called_once()
+        self.assertEqual(widget.canvas.shapes, [human])
+        self.assertEqual(statuses, ["已保留原有标注（自动标注结果未应用）"])
+
+    def test_replacing_proceeds_when_the_user_accepts(self):
+        from jllabeling.views.labeling.utils import auto_labeling_result
+
+        widget, statuses = self._widget_with_image()
+        widget.canvas.shapes = [self._human_shape()]
+
+        with mock.patch.object(
+            auto_labeling_result, "ask_replace", return_value=True
+        ) as asked:
+            widget.new_shapes_from_auto_labeling(
+                self._result([self._new_shape()])
+            )
+
+        asked.assert_called_once()
+        self.assertEqual([s.label for s in widget.canvas.shapes], ["dog"])
+        self.assertEqual(statuses, ["自动标注完成：1 个目标"])
+
+    def test_model_boxes_are_replaced_without_a_prompt(self):
+        from jllabeling.views.labeling.provenance import SOURCE_MODEL
+        from jllabeling.views.labeling.utils import auto_labeling_result
+
+        widget, statuses = self._widget_with_image()
+        previous = self._human_shape()
+        previous.source = SOURCE_MODEL
+        widget.canvas.shapes = [previous]
+
+        with mock.patch.object(
+            auto_labeling_result, "ask_replace", return_value=False
+        ) as asked:
+            widget.new_shapes_from_auto_labeling(
+                self._result([self._new_shape()])
+            )
+
+        asked.assert_not_called()
+        self.assertEqual([s.label for s in widget.canvas.shapes], ["dog"])
 
 
 if __name__ == "__main__":

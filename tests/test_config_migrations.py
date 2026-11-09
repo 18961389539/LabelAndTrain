@@ -6,7 +6,7 @@ import unittest
 from jllabeling.config import _apply_config_migrations
 
 #: Bump together with ``config_version`` in jllabeling_config.yaml.
-CURRENT_VERSION = 3
+CURRENT_VERSION = 4
 
 #: Every old shipped default replaced in v3, and its replacement.
 V3_OLD_DEFAULTS = {
@@ -174,7 +174,7 @@ class TestConfigMigrations(unittest.TestCase):
         self.assertEqual(rc["config_version"], CURRENT_VERSION)
 
     def test_version3_already_current_keeps_old_looking_values(self):
-        """Once stamped v3, even an old-looking value is a user choice."""
+        """Once stamped current, even an old-looking value is a user choice."""
         rc = {
             "config_version": CURRENT_VERSION,
             "shortcuts": {"undo_last_point": "Ctrl+Z"},
@@ -183,6 +183,25 @@ class TestConfigMigrations(unittest.TestCase):
         _apply_config_migrations(rc)
         self.assertEqual(rc["shortcuts"]["undo_last_point"], "Ctrl+Z")
         self.assertTrue(rc["exif_scan_enabled"])
+
+    # --- v4 -------------------------------------------------------------
+
+    def test_version4_ctrl_a_moves_auto_label_and_frees_select_all(self):
+        rc = {
+            "config_version": 3,
+            "shortcuts": {"auto_label": "Ctrl+A"},
+        }
+        _apply_config_migrations(rc)
+        self.assertEqual(rc["shortcuts"]["auto_label"], "Ctrl+Alt+L")
+        self.assertEqual(rc["config_version"], CURRENT_VERSION)
+
+    def test_version4_custom_auto_label_is_left_alone(self):
+        rc = {
+            "config_version": 3,
+            "shortcuts": {"auto_label": "F2"},
+        }
+        _apply_config_migrations(rc)
+        self.assertEqual(rc["shortcuts"]["auto_label"], "F2")
 
 
 if __name__ == "__main__":

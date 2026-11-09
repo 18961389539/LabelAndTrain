@@ -109,8 +109,8 @@ classified/
 |--------|------|
 | A | 上一张图片 |
 | D | 下一张图片 |
-| Ctrl+A 或 ⌘+A | 上一张未标注的图片 |
-| Ctrl+D 或 ⌘+D | 下一张未标注的图片 |
+| Ctrl+Shift+A 或 ⌘+Shift+A | 上一张未标注的图片 |
+| Ctrl+Shift+D 或 ⌘+Shift+D | 下一张未标注的图片 |
 
 # 数据
 

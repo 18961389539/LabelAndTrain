@@ -49,7 +49,7 @@ from .utils.async_label_check import (
     _label_file_review_state,
     label_file_review_info,
 )
-from .utils.theme import get_theme
+from .utils.theme import apply_theme_to_app, get_theme
 from .utils.style import (
     get_cancel_btn_style,
     get_checkbox_indicator_style,
@@ -139,6 +139,7 @@ from .utils.file_search import (
 )
 from .utils.qt import new_icon_path
 from .utils import panel_visibility
+from .utils import auto_labeling_result as auto_labeling_result_ops
 from .utils import file_lifecycle
 from .utils import file_navigation
 from .utils import file_list_ops
@@ -146,6 +147,7 @@ from .utils import label_editing
 from .utils import shape_union
 from .utils import shortcuts_help
 from .utils import device_menu
+from .utils import help_menu
 from .utils import missing_classes_hint
 from .utils import smart_tools_menu
 from .utils import exit_cleanup
@@ -187,7 +189,6 @@ from .widgets import (
     ZoomWidget,
     NavigatorDialog,
 )
-from jllabeling.views.common.toaster import QToaster
 
 LABEL_COLORMAP = utils.label_colormap()
 # Whole-image class suggestions from a classification model. Deliberately not
@@ -559,6 +560,9 @@ class LabelingWidget(LabelDialog):
         # whole 3000-row model on scrollToItem (27 ms per switch), even when
         # the target is already visible.
         self.file_list_widget.setUniformItemSizes(True)
+        self.file_list_widget.setItemDelegate(
+            filelist_items.FileRowDisplayDelegate(self.file_list_widget)
+        )
         self.file_status_icons = {
             "checked": _create_file_status_icon(FILE_CHECKED_COLOR, True),
             "annotated": _create_file_status_icon(FILE_ANNOTATED_COLOR, True),
@@ -862,14 +866,20 @@ class LabelingWidget(LabelDialog):
         NavigatorDialog.closeEvent(self.navigator_dialog, event)
 
     def _on_theme_changed(self, mode: str) -> None:
-        """Handle Theme menu selection (System / Light / Dark)."""
+        """Apply the theme now, preserving the open project and image.
+
+        Every inline stylesheet in the app is built from ``get_theme()`` at
+        construction time, so a live switch rebuilds the labeling UI rather
+        than trying to rewrite hundreds of widgets in place. The save prompt
+        runs first: a theme change must never cost unsaved annotations.
+        """
         prev_mode = self._config.get("theme", "auto")
         if prev_mode == mode:
             return
 
         dialog = QtWidgets.QDialog(self)
         dialog.setWindowTitle(self.tr("Theme"))
-        dialog.setFixedWidth(360)
+        dialog.setFixedWidth(420)
         dialog.setWindowFlags(
             dialog.windowFlags()
             & ~QtCore.Qt.WindowType.WindowContextHelpButtonHint
@@ -882,7 +892,7 @@ class LabelingWidget(LabelDialog):
 
         label = QLabel(
             self.tr(
-                "The new theme will take effect after restarting the application. Apply this setting now?"
+                "主题会立即应用，界面将重新加载；当前标注会先保存。继续吗？"
             )
         )
         label.setWordWrap(True)
@@ -903,21 +913,32 @@ class LabelingWidget(LabelDialog):
         btn_layout.addWidget(ok_btn)
         layout.addLayout(btn_layout)
 
-        if dialog.exec() == QtWidgets.QDialog.DialogCode.Accepted:
-            self._config["theme"] = mode
-            save_config(self._config)
-            popup = Popup(
-                text=self.tr(
-                    "Please restart the application to apply changes."
-                ),
-                parent=self,
-            )
-            popup.show_popup(self, position="center")
-        else:
+        if dialog.exec() != QtWidgets.QDialog.DialogCode.Accepted:
             # Revert the checkmark to the previously active mode
             prev_act = self._theme_actions.get(prev_mode)
             if prev_act:
                 prev_act.setChecked(True)
+            return
+
+        main = self.parent.parent
+        target = self.filename or self.last_open_dir
+        close_event = QtGui.QCloseEvent()
+        self.closeEvent(close_event)
+        if not close_event.isAccepted():
+            prev_act = self._theme_actions.get(prev_mode)
+            if prev_act:
+                prev_act.setChecked(True)
+            return
+
+        self._config["theme"] = mode
+        save_config(self._config)
+        apply_theme_to_app(QtWidgets.QApplication.instance(), mode)
+        main.replace_labeling_widget(
+            config=self._config,
+            filename=target,
+            output_file=self.output_file,
+            output_dir=self.output_dir,
+        )
 
     def get_labeling_instruction(self):
         shortcuts = self._config.get("shortcuts", {})
@@ -997,6 +1018,10 @@ class LabelingWidget(LabelDialog):
         )
 
     def _install_save_status_widget(self):
+        # A theme switch replaces this view; its queued install timer must not
+        # add status-bar widgets after MainWindow handed the bar to the new view.
+        if getattr(self, "_status_widget_retired", False):
+            return
         if getattr(self, "_save_state_label", None) is not None:
             return
         try:
@@ -1422,28 +1447,29 @@ class LabelingWidget(LabelDialog):
         self.status(message, timeout)
 
     def _window_title(self):
-        """标题栏：先把项目名放在最前面，再接当前图片与进度。
+        """标题栏以图片名开头，任务栏和 Alt+Tab 才看得到当前图。
 
-        项目名取数据集目录名（路径即身份），让"我在哪个项目里"和
-        "我在看哪张图"在同一条标题里都能读到；没有打开项目时标题与
-        改造前完全一致。
+        项目名（数据集目录名）和应用名跟在后面：项目上下文仍然在标题
+        里，但不再挤掉用户最先要找的那个文件名。
         """
         project = project_view.title_project_prefix(self)
-        title = f"{__appname__} v{__version__}"
+        app = f"{__appname__} v{__version__}"
+        if self.filename is None:
+            return f"{app} - {project.strip()}" if project else app
+
+        current_index, total_count = self.get_image_progress_info()
+        basename = osp.basename(str(self.filename))
+        dirty_marker = "*" if self.dirty else ""
+        image_size = ""
+        if hasattr(self, "image") and not self.image.isNull():
+            image_size = f" [{self.image.width()}x{self.image.height()}]"
+        title = (
+            f"{basename}{dirty_marker}{image_size} "
+            f"[{current_index}/{total_count}]"
+        )
         if project:
             title = f"{title} - {project.strip()}"
-        if self.filename is not None:
-            current_index, total_count = self.get_image_progress_info()
-            basename = osp.basename(str(self.filename))
-            dirty_marker = "*" if self.dirty else ""
-            image_size = ""
-            if hasattr(self, "image") and not self.image.isNull():
-                image_size = f" [{self.image.width()}x{self.image.height()}]"
-            title = (
-                f"{title} - {basename}{dirty_marker}{image_size} "
-                f"[{current_index}/{total_count}]"
-            )
-        return title
+        return f"{title} - {app}"
 
     def update_progress_title(self):
         self.parent.parent.setWindowTitle(self._window_title())
@@ -1522,6 +1548,25 @@ class LabelingWidget(LabelDialog):
         self._update_select_toggle_button_tooltip()
         # State is empty again, and the bar talks about state: re-read it or it
         # keeps describing the image that was just torn down.
+        self.update_labeling_instruction()
+
+    def select_all_shapes(self):
+        """Select every annotation; text editors keep their own Ctrl+A."""
+        focus = QtWidgets.QApplication.focusWidget()
+        if isinstance(
+            focus,
+            (
+                QtWidgets.QLineEdit,
+                QtWidgets.QTextEdit,
+                QtWidgets.QPlainTextEdit,
+                QtWidgets.QAbstractSpinBox,
+            ),
+        ):
+            focus.selectAll()
+            return
+        if not self.canvas.shapes:
+            return
+        self.canvas.select_shapes(list(self.canvas.shapes))
         self.update_labeling_instruction()
 
     def toggle_select_all(self):
@@ -3200,6 +3245,7 @@ class LabelingWidget(LabelDialog):
                 self.actions.show_navigator.setChecked(False)
         else:
             self.navigator_dialog.show()
+            self.navigator_dialog.raise_()
             if hasattr(self, "image") and not self.image.isNull():
                 self.navigator_dialog.set_image(
                     QtGui.QPixmap.fromImage(self.image)
@@ -3962,9 +4008,9 @@ class LabelingWidget(LabelDialog):
     def _show_save_feedback(self, ok):
         """Show a short, non-modal feedback about the last save operation.
 
-        Success is shown briefly in the status bar; failures are surfaced
-        through the corner toaster (red) so they do not stomp on other
-        status-bar messages while the user keeps annotating.
+        Success is shown briefly in the status bar; failures use the same
+        centered Popup as the other batch actions, so the error does not
+        disappear with the next status-bar message.
         """
         try:
             name = osp.basename(str(self.filename)) if self.filename else ""
@@ -3975,17 +4021,13 @@ class LabelingWidget(LabelDialog):
                     message = f"{message}  {quality}"
                 self.status(message, 5000 if quality else 2500)
             else:
-                try:
-                    t = get_theme()
-                    error_color = t.get("error", "#E5484D")
-                except Exception:  # noqa: BLE001
-                    error_color = "#E5484D"
-                QToaster.show_message(
-                    self,
+                popup = Popup(
                     self.tr("✗ 保存失败：%s") % name,
-                    timeout=5000,
-                    color=error_color,
+                    parent=self,
+                    msec=5000,
+                    icon=new_icon_path("error", "svg"),
                 )
+                popup.show_popup(self, position="center")
                 self.statusBar().showMessage(
                     self.tr("✗ 保存失败：%s") % name,
                     5000,
@@ -4021,34 +4063,11 @@ class LabelingWidget(LabelDialog):
 
         return image_file
 
-    def _confirm_destructive_action(self, title, message):
-        """破坏性操作的确认，默认焦点在"取消"，回车不会误删。
-
-        勾选"本次会话不再询问"后，本次会话内后续删除将直接执行
-        （仅存内存、不落盘，重启后恢复询问），在批量复核时既安全
-        又不至于每次都被弹窗打断。
-        """
-        if getattr(self, "_skip_delete_confirm", False):
-            return True
-        box = QMessageBox(self)
-        box.setWindowTitle(title)
-        box.setIcon(QMessageBox.Icon.Warning)
-        box.setText(message)
-        delete_btn = box.addButton(
-            self.tr("Delete"), QMessageBox.ButtonRole.DestructiveRole
+    def _confirm_destructive_action(self, title, message, allow_skip=True):
+        """Delegates to file_lifecycle (default focus stays on Cancel)."""
+        return file_lifecycle.confirm_destructive_action(
+            self, title, message, allow_skip=allow_skip
         )
-        cancel_btn = box.addButton(
-            self.tr("Cancel"), QMessageBox.ButtonRole.RejectRole
-        )
-        box.setDefaultButton(cancel_btn)
-        checkbox = QCheckBox(self.tr("本次会话不再询问"))
-        box.setCheckBox(checkbox)
-        box.exec()
-        if box.clickedButton() != delete_btn:
-            return False
-        if checkbox.isChecked():
-            self._skip_delete_confirm = True
-        return True
 
     def delete_file(self):
         """Delegates to file_lifecycle (wiring and tests stay)."""
@@ -4120,9 +4139,7 @@ class LabelingWidget(LabelDialog):
         return False
 
     def error_message(self, title, message):
-        return QtWidgets.QMessageBox.critical(
-            self, title, f"<p><b>{title}</b></p>{message}"
-        )
+        return QtWidgets.QMessageBox.critical(self, title, message)
 
     def current_path(self):
         return osp.dirname(str(self.filename)) if self.filename else "."
@@ -4455,78 +4472,8 @@ class LabelingWidget(LabelDialog):
         return len(doomed)
 
     def new_shapes_from_auto_labeling(self, auto_labeling_result):
-        """Apply auto labeling results to the current image."""
-        if not self.image or not self.image_path:
-            return
-
-        result_image_path = getattr(auto_labeling_result, "image_path", None)
-        if result_image_path and self.filename:
-            current_filename = osp.normpath(osp.abspath(self.filename))
-            result_filename = osp.normpath(osp.abspath(result_image_path))
-            if result_filename != current_filename:
-                logger.warning(
-                    "Ignore stale auto labeling result for "
-                    f"{result_filename}; current file is {current_filename}"
-                )
-                return
-
-        new_shapes = auto_labeling_result.shapes
-        predictions = getattr(auto_labeling_result, "predictions", None)
-        if predictions is not None:
-            # A classifier returns a whole-image suggestion rather than shapes;
-            # handling it here keeps it out of the shape-replacement logic,
-            # which would otherwise clear the canvas on an empty shape list.
-            self._apply_model_predictions(predictions)
-            return
-        stamp_model_shapes(
-            new_shapes,
-            self._current_model_identity(),
-            self._current_model_version(),
-        )
-        # YOLO-consistent guard: a prediction that found *nothing* must not
-        # silently erase human ground truth. When the model outputs no
-        # shapes (empty/background or missed detection) and the current
-        # image already has annotations, we keep them untouched instead of
-        # clearing them (locked shapes were already preserved, now the
-        # default replace path is safe for the empty-result case too).
-        if (
-            auto_labeling_result.replace
-            and not new_shapes
-            and any(not shape.locked for shape in self.canvas.shapes)
-        ):
-            logger.info(
-                "Auto labeling found no objects on this image; keeping "
-                "existing annotations (empty results never erase "
-                "ground truth)."
-            )
-            self.status(self.tr("本图未检测到目标，已保留原有标注"), 5000)
-            return
-
-        # Clear existing shapes
-        if auto_labeling_result.replace:
-            locked_shapes = [
-                shape for shape in self.canvas.shapes if shape.locked
-            ]
-            self.label_list.clear()
-            self.load_shapes(locked_shapes + new_shapes, replace=True)
-        else:  # Just update existing shapes
-            # Remove shapes with label AutoLabelingMode.OBJECT
-            for shape in self.canvas.shapes:
-                if shape.label == AutoLabelingMode.OBJECT:
-                    item = self.label_list.find_item_by_shape(shape)
-                    self.label_list.remove_item(item)
-            self.load_shapes(new_shapes, replace=False)
-
-        self.set_dirty()
-        # The run used to end in silence either way: zero detections left
-        # the canvas unchanged with no word about it (only the log knew),
-        # and a hit list never said how much came back.
-        if new_shapes:
-            self.status(
-                self.tr("自动标注完成：%d 个目标") % len(new_shapes), 5000
-            )
-        else:
-            self.status(self.tr("本图未检测到目标"), 5000)
+        """Delegates to utils.auto_labeling_result (overwrite guard lives there)."""
+        auto_labeling_result_ops.apply(self, auto_labeling_result)
 
     def clear_auto_labeling_marks(self):
         """Clear auto labeling marks from the current image."""
@@ -5306,6 +5253,16 @@ def _build_actions(widget):
         QCoreApplication.translate("LabelingWidget", "Paste copied polygons"),
         enabled=widget._config["system_clipboard"],
     )
+    select_all = action(
+        QCoreApplication.translate("LabelingWidget", "Select All Shapes"),
+        widget.select_all_shapes,
+        shortcuts["select_all"],
+        None,
+        QCoreApplication.translate(
+            "LabelingWidget", "Select every annotation on this image"
+        ),
+        enabled=True,
+    )
     undo_last_point = action(
         QCoreApplication.translate("LabelingWidget", "Undo last point"),
         widget.canvas.undo_last_point,
@@ -5508,7 +5465,7 @@ def _build_actions(widget):
     widget.select_toggle_action = select_toggle_shapes
 
     ultralytics_train = action(
-        "JLTrain",
+        "打开训练面板",
         lambda: widget.start_training("ultralytics"),
         icon="ultralytics",
     )
@@ -6065,6 +6022,7 @@ def _build_actions(widget):
         loop_thru_labels=loop_thru_labels,
         loop_select_labels=loop_select_labels,
         select_toggle_shapes=select_toggle_shapes,
+        select_all=select_all,
         file_menu_actions=(
             open_,
             opendir,
@@ -6076,6 +6034,7 @@ def _build_actions(widget):
         # 每个绑定的键都由窗口里已安装的 QAction 承载：验收第 15 步守住这点
         editMenu=(
             edit,
+            select_all,
             duplicate,
             delete,
             copy,
@@ -6190,6 +6149,7 @@ def _build_actions(widget):
     widget.addAction(widget.actions.keep_prev_brightness)
     widget.addAction(widget.actions.keep_prev_contrast)
     widget.addAction(widget.actions.select_toggle_shapes)
+    widget.addAction(widget.actions.select_all)
     widget.addAction(widget.actions.shape_converter)
     widget.addAction(widget.actions.show_groups)
     widget.addAction(widget.actions.show_scores)
@@ -6219,6 +6179,7 @@ def _build_actions(widget):
         smart_tools=widget.menu(
             QCoreApplication.translate("LabelingWidget", "智能工具")
         ),
+        help=widget.menu(QCoreApplication.translate("LabelingWidget", "帮助")),
         recent_files=QtWidgets.QMenu(
             QCoreApplication.translate("LabelingWidget", "Open Recent")
         ),
@@ -6258,6 +6219,7 @@ def _build_actions(widget):
         widget.menus.smart_tools, widget.actions
     )
     device_menu.populate_device_menu(widget)
+    help_menu.populate_help_menu(widget, widget.menus.help, shortcuts_help)
     utils.add_actions(widget.menus.train, (ultralytics_train, run_history))
     utils.add_actions(
         widget.menus.tool,
@@ -6273,8 +6235,6 @@ def _build_actions(widget):
             shape_manager,
             None,
             shape_converter,
-            None,
-            shortcuts_help,
         ),
     )
     utils.add_actions(widget.menus.theme, theme_mode_actions)

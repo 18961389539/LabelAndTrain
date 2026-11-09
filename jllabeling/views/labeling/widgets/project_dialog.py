@@ -86,7 +86,7 @@ def build_overview_group(overview):
             QtWidgets.QLabel(
                 QtCore.QCoreApplication.translate(
                     "LabelingWidget",
-                    "已标 {annotated}/{images} · 已确认 {confirmed} · 需返工 {rework}",
+                    "已标 {annotated}/{images} · 已检查 {confirmed} · 需返工 {rework}",
                 ).format(**progress)
             )
         )

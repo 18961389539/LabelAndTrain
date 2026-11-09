@@ -232,6 +232,73 @@ class TestRangeEditorSnapshots(unittest.TestCase):
         saved = self._snapshot("a")
         self.assertEqual([s["label"] for s in saved["shapes"]], ["cat", "dog"])
 
+    def test_group_id_batch_edit_asks_before_writing(self):
+        from jllabeling.views.labeling.widgets import (
+            label_dialog as label_dialog_module,
+        )
+        from jllabeling.views.labeling.widgets.label_dialog import (
+            GroupIDModifyDialog,
+        )
+
+        self._widget_with(
+            {
+                "a": [_box("cat", group_id=1)],
+                "b": [_box("dog", group_id=2)],
+            }
+        )
+        dialog = GroupIDModifyDialog(parent=self.widget)
+        self.addCleanup(dialog.deleteLater)
+        self.assertEqual(
+            [
+                dialog.table_widget.horizontalHeaderItem(i).text()
+                for i in range(dialog.table_widget.columnCount())
+            ],
+            ["原分组号", "新分组号", "删除该分组"],
+        )
+        container = dialog.table_widget.cellWidget(0, 1)
+        container.layout().itemAt(0).widget().setText("9")
+
+        calls = []
+        dialog.modify_group_id = lambda *args, **kwargs: (
+            calls.append((args, kwargs)) or True
+        )
+        no = QtWidgets.QMessageBox.StandardButton.No
+        yes = QtWidgets.QMessageBox.StandardButton.Yes
+
+        with (
+            mock.patch.object(
+                QtWidgets.QMessageBox, "question", return_value=no
+            ),
+            mock.patch.object(label_dialog_module, "Popup", mock.Mock()),
+        ):
+            dialog.confirm_changes(1, 2)
+        self.assertEqual(calls, [], "declining must not rewrite any label")
+
+        with (
+            mock.patch.object(
+                QtWidgets.QMessageBox, "question", return_value=yes
+            ),
+            mock.patch.object(label_dialog_module, "Popup", mock.Mock()),
+        ):
+            dialog.confirm_changes(1, 2)
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(calls[0][0][0], {1: {"new_gid": 9}})
+
+    def test_label_manager_headers_are_chinese(self):
+        from jllabeling.views.labeling.widgets.label_dialog import (
+            LabelModifyDialog,
+        )
+
+        self._widget_with({"a": [_box("cat")]})
+        dialog = LabelModifyDialog(parent=self.widget, opacity=128)
+        self.addCleanup(dialog.deleteLater)
+
+        headers = [
+            dialog.table_widget.horizontalHeaderItem(i).text()
+            for i in range(dialog.table_widget.columnCount())
+        ]
+        self.assertEqual(headers, ["类别", "删除", "新值", "可见", "颜色"])
+
     def test_delete_images_in_range_keeps_the_removed_label_recoverable(self):
         """The image is moved to _delete_, but its JSON is destroyed.
 

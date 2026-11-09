@@ -47,6 +47,10 @@ from jllabeling.views.training.image_preview_dialog import (
 )
 from jllabeling.views.training.platform_open import open_path
 from jllabeling.views.training import run_maintenance
+from jllabeling.views.training.dataset_preparation import (
+    DatasetPreparationMixin,
+)
+from jllabeling.views.training.eta_format import format_remaining
 from jllabeling.views.training import export_autolabel
 from jllabeling.views.training import train_settings_form
 from jllabeling.views.training.widgets.ultralytics_widgets import (
@@ -277,10 +281,10 @@ def _dataset_dir_for(dialog):
     )
 
 
-class UltralyticsDialog(QDialog):
+class UltralyticsDialog(DatasetPreparationMixin, QDialog):
     # Emitted from the background dataset-preparation thread when the YOLO
-    # dataset build finishes (temp_dir_or_empty, error_message).
-    dataset_preparation_finished = pyqtSignal(str, str)
+    # dataset build finishes (temp_dir_or_empty, error_message, cancelled).
+    dataset_preparation_finished = pyqtSignal(str, str, bool)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -364,6 +368,13 @@ class UltralyticsDialog(QDialog):
         # image sets do not freeze the dialog while YOLO files are written).
         self._dataset_thread = None
         self._dataset_pending_config = None
+        self._dataset_cancel_event = threading.Event()
+        self._dataset_progress = ("", 0, 0)
+        self._close_after_prepare = False
+        self.dataset_progress_timer = QTimer()
+        self.dataset_progress_timer.timeout.connect(
+            self._update_dataset_progress
+        )
         self.dataset_preparation_finished.connect(
             self._on_dataset_preparation_finished
         )
@@ -458,19 +469,7 @@ class UltralyticsDialog(QDialog):
 
     def closeEvent(self, event):
         """Handle window close event"""
-        if (
-            self._dataset_thread is not None
-            and self._dataset_thread.is_alive()
-        ):
-            QMessageBox.warning(
-                self,
-                self.tr("Dataset Preparation in Progress"),
-                self.tr(
-                    "Cannot close window while the dataset is being prepared. "
-                    "Please wait for it to finish."
-                ),
-            )
-            event.ignore()
+        if self.handle_preparation_close(event):
             return
 
         if self.training_status == "training":
@@ -2216,11 +2215,7 @@ class UltralyticsDialog(QDialog):
         remaining = estimate_remaining_seconds(results_file, self.total_epochs)
         if remaining is None:
             return ""
-        if remaining < 60:
-            return self.tr("Less than a minute left")
-        return self.tr("About %1 min left").replace(
-            "%1", str(int(round(remaining / 60)))
-        )
+        return format_remaining(remaining, self.tr)
 
     def _dataset_preview_images(self, limit):
         """Sample training images from the run's dataset.
@@ -2364,6 +2359,9 @@ class UltralyticsDialog(QDialog):
             self.total_epochs = data["total_epochs"]
             self.current_epochs = 0
             self._training_started_at = time.time()
+            self.dataset_progress_timer.stop()
+            self._set_preparation_controls(False)
+            self.progress_bar.setRange(0, 100)
             self.progress_bar.setValue(0)
             self.progress_bar.setFormat(f"0/{self.total_epochs}")
             self.update_training_status_display()
@@ -2622,6 +2620,15 @@ class UltralyticsDialog(QDialog):
         self.progress_bar.setFormat("0/0")
         self.progress_bar.setStyleSheet(get_progress_bar_style())
         progress_layout.addWidget(self.progress_bar)
+        self.cancel_preparation_button = SecondaryButton(self.tr("取消准备"))
+        self.cancel_preparation_button.setToolTip(
+            self.tr("停止数据集准备，并清理本次生成的临时文件")
+        )
+        self.cancel_preparation_button.clicked.connect(
+            self.cancel_dataset_preparation
+        )
+        self.cancel_preparation_button.setVisible(False)
+        progress_layout.addWidget(self.cancel_preparation_button)
         status_layout.addLayout(progress_layout)
         self.metrics_label = QLabel("")
         self.metrics_label.setWordWrap(True)
@@ -3020,59 +3027,7 @@ class UltralyticsDialog(QDialog):
 
         # Build the dataset off the UI thread so large image sets do not
         # freeze the dialog for tens of seconds / minutes.
-        self._dataset_pending_config = config
-        self.start_training_button.setEnabled(False)
-        self.start_training_button.setText(self.tr("Preparing dataset..."))
-        # Name the phase in the status area too: the button is on the config
-        # tab, and "Ready to train" would otherwise sit there for the whole
-        # build (the training_started event takes over from here).
-        self.training_status = "preparing"
-        self.update_training_status_display()
-        self.progress_bar.setValue(0)
-        self.progress_bar.setFormat(self.tr("Preparing dataset..."))
-        if hasattr(self, "metrics_label"):
-            self.metrics_label.setText(self.tr("Preparing dataset..."))
-        self.refresh_wizard_state()
-        self.append_training_log(
-            self.tr("Preparing dataset in the background...")
-        )
-        self._dataset_thread = threading.Thread(
-            target=self._prepare_dataset_worker,
-            args=(config,),
-            daemon=True,
-        )
-        self._dataset_thread.start()
-
-    def _prepare_dataset_worker(self, config):
-        """Run create_yolo_dataset off the UI thread (pure file IO)."""
-        temp_dir = None
-        error_msg = ""
-        report = {}
-        try:
-            # Runs on a worker thread: no widget calls here. The seed reaches
-            # the log through the training command line on the UI thread.
-            seed, seed_source = self._project_split_seed()
-            temp_dir = create_yolo_dataset(
-                self.image_list,
-                self.selected_task_type,
-                config["basic"]["dataset_ratio"],
-                config["basic"]["data"],
-                self.output_dir,
-                config["basic"].get("pose_config"),
-                config["checkpoint"].get("skip_empty_files", False),
-                config["checkpoint"].get("only_checked_files", False),
-                seed=seed,
-                seed_source=seed_source,
-                report=report,
-            )
-        except Exception as e:  # noqa: BLE001
-            logger.error(f"Dataset preparation failed: {e}")
-            error_msg = str(e)
-        # Read by the UI thread once the queued signal lands; the assignment
-        # happens before the emit so the dict is always there.
-        self._dataset_report = report
-        # PyQt signals are thread-safe; delivery is queued to the UI thread.
-        self.dataset_preparation_finished.emit(temp_dir or "", error_msg)
+        self.start_dataset_preparation(config)
 
     def _report_dataset_skips(self, report):
         """Put what a build left out into the log; returns the skip list."""
@@ -3161,67 +3116,6 @@ class UltralyticsDialog(QDialog):
         box.exec()
         return box.clickedButton() is train_btn
 
-    def _leave_preparing_status(self):
-        """Drop the dataset-build phase when the build did not lead to a run."""
-        self.training_status = "idle"
-        self.update_training_status_display()
-        self.progress_bar.setFormat("0/0")
-        if hasattr(self, "metrics_label"):
-            self.metrics_label.setText("")
-        self.refresh_wizard_state()
-
-    def _on_dataset_preparation_finished(self, temp_dir, error_msg):
-        """Continue the training flow once the background dataset is ready."""
-        self._dataset_thread = None
-        self.start_training_button.setEnabled(True)
-        self.start_training_button.setText(self.tr("Start Training"))
-
-        if error_msg:
-            self._leave_preparing_status()
-            self.append_training_log(f"Failed to prepare dataset: {error_msg}")
-            QMessageBox.critical(
-                self,
-                self.tr("Dataset Error"),
-                self.tr("Failed to prepare dataset:\n%s") % error_msg,
-            )
-            return
-        if not temp_dir:
-            self._leave_preparing_status()
-            self.append_training_log(
-                self.tr("Dataset preparation returned no output directory.")
-            )
-            return
-
-        logger.info(f"Successfully created YOLO dataset at {temp_dir}")
-        self.append_training_log(f"Created dataset: {temp_dir}")
-
-        # A build that had to leave label files out says so here, before the
-        # run starts: those images are absent from the dataset, not trained as
-        # empty ones, and the difference is invisible in the metrics.
-        report = getattr(self, "_dataset_report", None) or {}
-        self._report_dataset_skips(report)
-        if not self._confirm_dataset_skips(report):
-            self._leave_preparing_status()
-            self.append_training_log(
-                self.tr(
-                    "Training cancelled: fix the listed label files first."
-                )
-            )
-            return
-
-        config = self._dataset_pending_config
-        try:
-            if self.selected_task_type == "Classify":
-                data_path = temp_dir
-            else:
-                data_path = os.path.join(temp_dir, "data.yaml")
-            train_args = self.get_training_args(config, data_path=data_path)
-            self._start_training_after_args(train_args)
-        except Exception as e:
-            error_msg = f"Failed to start training: {str(e)}"
-            self.append_training_log(f"ERROR: {error_msg}")
-            QMessageBox.critical(self, self.tr("Training Error"), error_msg)
-
     def _start_training_after_args(self, train_args):
         success, message = self.training_manager.start_training(train_args)
         if not success:
@@ -3286,6 +3180,10 @@ class UltralyticsDialog(QDialog):
         )
         self.use_autolabel_button.setVisible(False)
         actions_layout.addWidget(self.use_autolabel_button)
+
+        self.close_button = SecondaryButton(self.tr("关闭"))
+        self.close_button.clicked.connect(self.close)
+        actions_layout.addWidget(self.close_button)
 
         parent_layout.addLayout(actions_layout)
 
@@ -3356,8 +3254,11 @@ class UltralyticsDialog(QDialog):
         self.current_project_path = None
         self.current_epochs = 0
         self._training_started_at = None
+        self.dataset_progress_timer.stop()
+        self.progress_bar.setRange(0, 100)
         self.progress_bar.setValue(0)
         self.progress_bar.setFormat("0/0")
+        self._set_preparation_controls(False)
         self.update_training_status_display()
         if hasattr(self, "metrics_label"):
             self.metrics_label.setText("")

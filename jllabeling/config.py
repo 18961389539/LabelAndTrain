@@ -209,6 +209,12 @@ _MIGRATIONS = {
         ("shortcuts.undo_last_point", "Ctrl+Z", "Ctrl+Shift+Backspace"),
         ("shortcuts.auto_labeling_run", "I", "Ctrl+Shift+I"),
     ],
+    # v4: Ctrl+A is the standard select-all key again, so it selects every
+    # annotation; the auto-labeling panel moves to Ctrl+Alt+L. An rc that
+    # already rebound auto_label keeps its own choice.
+    4: [
+        ("shortcuts.auto_label", "Ctrl+A", "Ctrl+Alt+L"),
+    ],
 }
 
 

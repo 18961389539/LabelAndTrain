@@ -4,6 +4,7 @@ import json
 import re
 import yaml
 import importlib.metadata
+import importlib.util
 from packaging.specifiers import SpecifierSet
 from typing import List, Dict, Optional
 
@@ -154,7 +155,11 @@ def check_package_installed(package_name, version_spec=None):
         bool: True if package is installed and version matches spec (if provided), False otherwise
     """
     try:
-        __import__(package_name)
+        # ``find_spec`` answers the question without importing the package;
+        # ``import ultralytics`` pulls torch and freezes the UI thread for
+        # seconds just to tell the user the menu entry is available.
+        if importlib.util.find_spec(package_name) is None:
+            return False
 
         if version_spec:
             try:
@@ -165,7 +170,7 @@ def check_package_installed(package_name, version_spec=None):
                 return False
 
         return True
-    except ImportError:
+    except (ImportError, ValueError):
         return False
 
 

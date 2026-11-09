@@ -259,7 +259,7 @@ class ProjectSwitcherDialog(QtWidgets.QDialog):
                 0,
                 item.toolTip(0)
                 + f"\n{self.tr('已标注')}: {progress['short']}"
-                + f"（{self.tr('已确认')} {stat.get('confirmed') or 0}，"
+                + f"（{self.tr('已检查')} {stat.get('confirmed') or 0}，"
                 + f"{self.tr('待复检')} {stat.get('rework') or 0}）",
             )
             return

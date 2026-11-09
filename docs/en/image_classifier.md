@@ -111,8 +111,8 @@ Users can manually click the left/right arrows to switch between previous/next i
 |----------|----------|
 | A | Previous image |
 | D | Next image |
-| Ctrl+A or ⌘+A | Previous unlabeled image |
-| Ctrl+D or ⌘+D | Next unlabeled image |
+| Ctrl+Shift+A or ⌘+Shift+A | Previous unlabeled image |
+| Ctrl+Shift+D or ⌘+Shift+D | Next unlabeled image |
 
 # Data Format
 

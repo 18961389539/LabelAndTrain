@@ -205,7 +205,7 @@ def test_collect_joins_both_halves(tmp_path):
                 },
                 "training": {"runs": 0},
             },
-            ["已标 2/3 · 已确认 1 · 需返工 0", "尚未训练"],
+            ["已标 2/3 · 已检查 1 · 需返工 0", "尚未训练"],
         ),
         (
             {

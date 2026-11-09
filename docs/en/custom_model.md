@@ -7,7 +7,7 @@ JLLabelingAndTrain includes a variety of built-in models. See the [Model Zoo](./
 
 ## Loading Built-in Models
 
-Before enabling the AI-assisted labeling feature, you need to load a model. This can be done via the `AI` icon button in the left sidebar or by using the shortcut `Ctrl+A`.
+Before enabling the AI-assisted labeling feature, you need to load a model. This can be done via the `AI` icon button in the left sidebar or by using the shortcut `Ctrl+Alt+L`.
 
 When you select a model, the application checks `~/jllabeling_data/models/${model_name}` for its files. Existing files are loaded directly; otherwise, they are downloaded automatically. When `--work-dir` is set, the data directory is created under that working directory instead.
 

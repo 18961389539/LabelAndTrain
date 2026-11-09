@@ -54,7 +54,6 @@ class FloatingToolPanel(QtWidgets.QFrame):
         self._collapse_btn = QtWidgets.QToolButton(self._handle)
         self._collapse_btn.setObjectName("FloatingToolPanelCollapseBtn")
         self._collapse_btn.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
-        self._collapse_btn.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
         self._collapse_btn.setFixedSize(18, 16)
         self._collapse_btn.setIconSize(QtCore.QSize(12, 12))
         self._collapse_btn.clicked.connect(self.toggle_collapse)
@@ -105,14 +104,12 @@ class FloatingToolPanel(QtWidgets.QFrame):
     def _update_collapse_button(self):
         if self._collapsed:
             self._collapse_btn.setIcon(new_icon("caret-up", "svg"))
-            self._collapse_btn.setToolTip(
-                self.tr("展开工具栏，显示全部标注工具（折叠状态会记住）")
-            )
+            text = self.tr("展开工具栏，显示全部标注工具（折叠状态会记住）")
         else:
             self._collapse_btn.setIcon(new_icon("caret-down", "svg"))
-            self._collapse_btn.setToolTip(
-                self.tr("收起工具栏，只留这条把手，给画布腾出空间")
-            )
+            text = self.tr("收起工具栏，只留这条把手，给画布腾出空间")
+        self._collapse_btn.setToolTip(text)
+        self._collapse_btn.setAccessibleName(text)
 
     def toggle_collapse(self):
         self.set_collapsed(not self._collapsed)
@@ -419,6 +416,7 @@ class ToolBar(QtWidgets.QFrame):
         super().addAction(action)
         btn = QtWidgets.QToolButton(self)
         btn.setDefaultAction(action)
+        btn.setAccessibleName(action.text())
         btn.setToolButtonStyle(self.toolButtonStyle())
         btn.setIconSize(self._icon_size)
         btn.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)

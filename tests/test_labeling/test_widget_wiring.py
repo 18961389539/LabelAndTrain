@@ -164,7 +164,7 @@ class TestWidgetWiring(unittest.TestCase):
             if menu.text()
         ]
         self.assertIn("实验历史", texts)
-        self.assertIn("JLTrain", texts)
+        self.assertIn("打开训练面板", texts)
 
     def test_run_history_handler_opens_the_dialog_with_the_label_dir(self):
         # exec() blocks, so the handler is verified by capturing the dialog

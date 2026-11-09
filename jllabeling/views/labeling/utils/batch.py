@@ -17,6 +17,8 @@ from PyQt6.QtWidgets import (
     QCheckBox,
     QListWidget,
     QPushButton,
+    QTreeWidget,
+    QTreeWidgetItem,
 )
 
 from jllabeling.app_info import __version__
@@ -79,7 +81,8 @@ class BatchRunOptionsDialog(QDialog):
         layout.addWidget(self.skip_existing)
         hint = QLabel(
             self.tr(
-                "处理过程中可点「暂停」随时停下。失败的图片结束后可点回去检查。"
+                "处理过程中可点「停止」随时停下（停止后不能续跑）。"
+                "失败的图片结束后可点回去检查。"
             )
         )
         hint.setWordWrap(True)
@@ -105,9 +108,27 @@ class FailedImagesDialog(QDialog):
         layout.addWidget(
             QLabel(self.tr("以下图片自动标注失败，双击或点打开可跳转："))
         )
-        self.list_widget = QListWidget()
-        for path in failed_files:
-            self.list_widget.addItem(path)
+        self.list_widget = QTreeWidget()
+        self.list_widget.setColumnCount(2)
+        self.list_widget.setHeaderLabels(
+            [self.tr("图片"), self.tr("失败原因")]
+        )
+        self.list_widget.setRootIsDecorated(False)
+        for entry in failed_files:
+            path, reason = (
+                (entry, "")
+                if isinstance(entry, str)
+                else (entry[0], entry[1] if len(entry) > 1 else "")
+            )
+            item = QTreeWidgetItem([path, reason])
+            item.setData(0, Qt.ItemDataRole.UserRole, path)
+            self.list_widget.addTopLevelItem(item)
+        self.list_widget.header().setSectionResizeMode(
+            0, QtWidgets.QHeaderView.ResizeMode.Stretch
+        )
+        self.list_widget.header().setSectionResizeMode(
+            1, QtWidgets.QHeaderView.ResizeMode.ResizeToContents
+        )
         self.list_widget.itemDoubleClicked.connect(self.accept)
         layout.addWidget(self.list_widget)
         buttons = QHBoxLayout()
@@ -126,7 +147,7 @@ class FailedImagesDialog(QDialog):
         item = self.list_widget.currentItem()
         if item is None:
             return None
-        return item.text()
+        return item.data(0, Qt.ItemDataRole.UserRole) or item.text(0)
 
 
 def get_image_size(image_path):
@@ -148,6 +169,51 @@ def image_has_annotations(image_file, output_dir=None):
         return False
 
 
+def batch_finish_message(succeeded, failed, stopped):
+    """End-of-batch sentence; "stopped" must never read as success."""
+    if stopped:
+        total = succeeded + failed
+        if total == 0:
+            return QCoreApplication.translate(
+                "LabelingWidget", "已停止：没有处理任何图片"
+            )
+        if failed:
+            return (
+                QCoreApplication.translate(
+                    "LabelingWidget",
+                    "已停止：完成 %1 张，失败 %2 张（共 %3 张）",
+                )
+                .replace("%1", str(succeeded))
+                .replace("%2", str(failed))
+                .replace("%3", str(total))
+            )
+        return (
+            QCoreApplication.translate(
+                "LabelingWidget", "已停止：完成 %1 张（共 %2 张）"
+            )
+            .replace("%1", str(succeeded))
+            .replace("%2", str(total))
+        )
+    if succeeded == 0 and failed == 0:
+        # Legacy callers without stats: keep the historical message.
+        return QCoreApplication.translate(
+            "LabelingWidget", "Processing completed successfully!"
+        )
+    total = succeeded + failed
+    if failed > 0:
+        return QCoreApplication.translate(
+            "LabelingWidget",
+            "Processing finished: %d succeeded, %d failed (of %d total).",
+        ) % (succeeded, failed, total)
+    return (
+        QCoreApplication.translate(
+            "LabelingWidget",
+            "Processing completed successfully! (%d images processed)",
+        )
+        % total
+    )
+
+
 def finish_processing(
     self, progress_dialog, succeeded=0, failed=0, failed_files=None
 ):
@@ -155,6 +221,7 @@ def finish_processing(
         progress_dialog.close()
         return
 
+    stopped = bool(getattr(self, "cancel_processing", False))
     try:
         target_file = self.image_list[self.current_index]
         self.import_image_folder(osp.dirname(target_file), load=False)
@@ -171,38 +238,16 @@ def finish_processing(
         _reset_batch_processing_state(self)
         progress_dialog.close()
 
-    if succeeded == 0 and failed == 0:
-        # Legacy callers without stats: keep the historical message.
-        message = QCoreApplication.translate(
-            "LabelingWidget", "Processing completed successfully!"
-        )
-    else:
-        total = succeeded + failed
-        if failed > 0:
-            message = QCoreApplication.translate(
-                "LabelingWidget",
-                "Processing finished: %d succeeded, %d failed "
-                "(of %d total).",
-            ) % (succeeded, failed, total)
-        else:
-            message = (
-                QCoreApplication.translate(
-                    "LabelingWidget",
-                    "Processing completed successfully! "
-                    "(%d images processed)",
-                )
-                % total
-            )
+    message = batch_finish_message(succeeded, failed, stopped)
 
-    popup = Popup(
-        message,
-        self,
-        icon=(
-            new_icon_path("error", "svg")
-            if failed > 0
-            else new_icon_path("copy-green", "svg")
-        ),
-    )
+    if failed > 0:
+        icon = new_icon_path("error", "svg")
+    elif stopped:
+        icon = new_icon_path("warning", "svg")
+    else:
+        icon = new_icon_path("copy-green", "svg")
+
+    popup = Popup(message, self, icon=icon)
     popup.show_popup(self, position="center")
     failed_files = getattr(self, "_batch_failed_files", None) or []
     if failed_files:
@@ -437,7 +482,7 @@ class BatchProcessingThread(QThread):
     progress_updated = pyqtSignal(int, str)
     processing_finished = pyqtSignal(
         int, int, list
-    )  # succeeded, failed, failed_files
+    )  # succeeded, failed, (image_file, reason) pairs
     error_occurred = pyqtSignal(str)
 
     def __init__(
@@ -490,17 +535,26 @@ class BatchProcessingThread(QThread):
                     )
                     continue
 
-                result = (
-                    self.app.auto_labeling_widget.model_manager.predict_shapes(
+                failure_reason = ""
+                result = None
+                try:
+                    result = self.app.auto_labeling_widget.model_manager.predict_shapes(
                         self.app.image, image_file, batch=True
                     )
-                )
+                except Exception as e:  # noqa: BLE001
+                    failure_reason = str(e)
+                    logger.error(
+                        f"Batch inference failed for {image_file}: {e}"
+                    )
 
                 try:
-                    saved = save_auto_labeling_result(
-                        self.app, image_file, result
+                    saved = (
+                        save_auto_labeling_result(self.app, image_file, result)
+                        if result is not None
+                        else False
                     )
                 except Exception as e:  # noqa: BLE001
+                    failure_reason = str(e)
                     logger.error(
                         f"Failed to save result for {image_file}: {e}"
                     )
@@ -510,10 +564,13 @@ class BatchProcessingThread(QThread):
                     self._succeeded += 1
                 else:
                     self._failed += 1
-                    self._failed_files.append(image_file)
+                    reason = failure_reason or QCoreApplication.translate(
+                        "LabelingWidget", "未返回结果或保存失败"
+                    )
+                    self._failed_files.append((image_file, reason))
                     logger.warning(
                         f"Batch: image {image_index + 1}/{total_images} "
-                        f"produced no result or failed to save: {image_file}"
+                        f"failed ({reason}): {image_file}"
                     )
 
                 self.image_index += 1
@@ -591,7 +648,7 @@ def show_progress_dialog_and_process(self):
 
     progress_dialog = QProgressDialog(
         QCoreApplication.translate("LabelingWidget", "Processing..."),
-        QCoreApplication.translate("LabelingWidget", "暂停"),
+        QCoreApplication.translate("LabelingWidget", "停止"),
         0,
         len(self.image_list),
         self,

@@ -262,6 +262,7 @@ class TestRunHistoryDialog:
             },
         )
         assert dialog.table.rowCount() == 2
+        assert dialog.train_button.isHidden()
         assert dialog.table.item(0, _column("运行")).text() == "exp3"
         assert dialog.table.item(0, _column("mAP50")).text() == "0.8100"
         text = dialog.summary_label.text()
@@ -294,6 +295,9 @@ class TestRunHistoryDialog:
         # Naming the folder scanned is what tells a user whose runs live under a
         # custom Project that this table is not looking where they trained.
         assert str(tmp_path / "runs") in text
+        # The empty state has a way out: open the training panel.
+        assert not dialog.train_button.isHidden()
+        assert dialog.train_button.text() == "去训练"
 
     def test_legacy_runs_are_reported_as_a_count(self, tmp_path):
         # Created before the dialog so the patched root already contains it.

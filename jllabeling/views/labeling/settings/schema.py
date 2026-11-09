@@ -245,6 +245,7 @@ SETTINGS_GENERAL_KEYS = (
     "file_list_checkbox_editable",
     "system_clipboard",
     "font_family",
+    "ui_scale",
     "model_hub",
     "logger_level",
     "qt_image_allocation_limit",
@@ -405,63 +406,26 @@ def set_nested_value(data: dict[str, Any], key_path: str, value: Any) -> None:
     current[parts[-1]] = value
 
 
+@lru_cache(maxsize=1)
+def _shortcut_labels() -> dict[str, str]:
+    """The same Chinese names the F1 sheet uses, keyed by config name.
+
+    Imported lazily: the settings schema is read by config code that must not
+    pull in Qt widgets just to validate a value.
+    """
+    try:
+        from ..utils.shortcuts_help import SHORTCUT_GROUPS, UNBOUND_ACTIONS
+    except Exception:  # noqa: BLE001 - labels are cosmetic
+        return {}
+    labels = {key: text for _, rows in SHORTCUT_GROUPS for key, text in rows}
+    labels.update(dict(UNBOUND_ACTIONS))
+    return labels
+
+
 def _shortcut_label(short_key: str) -> str:
-    label_overrides = {
-        "edit_digit_shortcut": QT_TRANSLATE_NOOP(
-            SETTINGS_TRANSLATION_CONTEXT,
-            "Open Digit Shortcut Manager Dialog",
-        ),
-        "edit_group_id": QT_TRANSLATE_NOOP(
-            SETTINGS_TRANSLATION_CONTEXT, "Open Group ID Manager"
-        ),
-        "edit_labels": QT_TRANSLATE_NOOP(
-            SETTINGS_TRANSLATION_CONTEXT, "Open Label Manager Dialog"
-        ),
-        "show_navigator": QT_TRANSLATE_NOOP(
-            SETTINGS_TRANSLATION_CONTEXT, "Show Navigator Dialog"
-        ),
-        "show_overview": QT_TRANSLATE_NOOP(
-            SETTINGS_TRANSLATION_CONTEXT, "Open Overview Dialog"
-        ),
-        "edit_shapes": QT_TRANSLATE_NOOP(
-            SETTINGS_TRANSLATION_CONTEXT, "Open Shape Manager Dialog"
-        ),
-        "open_settings": QT_TRANSLATE_NOOP(
-            SETTINGS_TRANSLATION_CONTEXT, "Open Settings Dialog"
-        ),
-        "open_next": QT_TRANSLATE_NOOP(
-            SETTINGS_TRANSLATION_CONTEXT, "Switch Next Image"
-        ),
-        "open_next_unchecked": QT_TRANSLATE_NOOP(
-            SETTINGS_TRANSLATION_CONTEXT, "Switch Next Unchecked Image"
-        ),
-        "open_prev": QT_TRANSLATE_NOOP(
-            SETTINGS_TRANSLATION_CONTEXT, "Switch Prev Image"
-        ),
-        "open_prev_unchecked": QT_TRANSLATE_NOOP(
-            SETTINGS_TRANSLATION_CONTEXT, "Switch Prev Unchecked Image"
-        ),
-        "toggle_annotation_checked": QT_TRANSLATE_NOOP(
-            SETTINGS_TRANSLATION_CONTEXT, "Toggle Annotation Checked"
-        ),
-        "auto_labeling_add_point": QT_TRANSLATE_NOOP(
-            SETTINGS_TRANSLATION_CONTEXT, "Add Point"
-        ),
-        "auto_labeling_clear": QT_TRANSLATE_NOOP(
-            SETTINGS_TRANSLATION_CONTEXT, "Clear"
-        ),
-        "auto_labeling_finish_object": QT_TRANSLATE_NOOP(
-            SETTINGS_TRANSLATION_CONTEXT, "Finish Object"
-        ),
-        "auto_labeling_remove_point": QT_TRANSLATE_NOOP(
-            SETTINGS_TRANSLATION_CONTEXT, "Remove Point"
-        ),
-        "auto_labeling_run": QT_TRANSLATE_NOOP(
-            SETTINGS_TRANSLATION_CONTEXT, "Run"
-        ),
-    }
-    if short_key in label_overrides:
-        return label_overrides[short_key]
+    label = _shortcut_labels().get(short_key)
+    if label:
+        return label
     chunks = short_key.split("_")
     return " ".join(chunk.capitalize() for chunk in chunks)
 
@@ -831,9 +795,7 @@ def _non_shortcut_fields() -> list[SettingField]:
         ),
         SettingField(
             "canvas.pixelated_zoom",
-            QT_TRANSLATE_NOOP(
-                SETTINGS_TRANSLATION_CONTEXT, "Pixelated Zoom"
-            ),
+            QT_TRANSLATE_NOOP(SETTINGS_TRANSLATION_CONTEXT, "Pixelated Zoom"),
             "bool",
             "Canvas",
             "Interaction",
@@ -1160,6 +1122,16 @@ def _non_shortcut_fields() -> list[SettingField]:
             ),
         ),
         SettingField(
+            "ui_scale",
+            "界面缩放（重启生效）",
+            "enum",
+            "General",
+            "Appearance",
+            "Interface",
+            options=("100%", "125%", "150%"),
+            description="整体缩放界面和文字；保存后重启应用生效。",
+        ),
+        SettingField(
             "model_hub",
             QT_TRANSLATE_NOOP(SETTINGS_TRANSLATION_CONTEXT, "Model Hub"),
             "enum",
@@ -1268,6 +1240,7 @@ def _shortcut_category_map() -> dict[str, tuple[str, ...]]:
             "hide_selected_polygons",
             "paste_polygon",
             "remove_selected_point",
+            "select_all",
             "show_hidden_polygons",
             "undo",
             "undo_last_point",

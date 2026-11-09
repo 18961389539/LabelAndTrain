@@ -34,7 +34,7 @@ def _project(tmp_path, monkeypatch):
     (root / ".jllabel").mkdir(parents=True)
     files = [
         _label(root, "a.png", ["划痕"], "unchecked"),  # 未复检
-        _label(root, "b.png", ["凹坑"], "confirmed"),  # 已确认
+        _label(root, "b.png", ["凹坑"], "confirmed"),  # 已检查
         _label(root, "c.png", []),  # 空标注 = 未标注
         str(root / "d.png"),  # 无标注文件 = 未标注
     ]
@@ -47,7 +47,7 @@ def test_states_match_the_list_and_the_dashboard(tmp_path, monkeypatch):
     rows = project_search.search_project(root, files=files)
     states = {r["file"]: r["state"] for r in rows}
     assert states[str(root / "a.png")] == "未复检"
-    assert states[str(root / "b.png")] == "已确认"
+    assert states[str(root / "b.png")] == "已检查"
     assert states[str(root / "c.png")] == "未标注"
     assert states[str(root / "d.png")] == "未标注"
 
@@ -87,7 +87,7 @@ def test_state_and_label_query_stack(tmp_path, monkeypatch):
         _label(root, "c.png", ["划痕"], "unchecked"),
     ]
     rows = project_search.search_project(
-        root, files=files, label_query="划痕", state_query="已确认"
+        root, files=files, label_query="划痕", state_query="已检查"
     )
     assert [r["file"] for r in rows] == [str(root / "a.png")]
 

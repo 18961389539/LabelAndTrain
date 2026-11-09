@@ -176,11 +176,31 @@ def _read_label_info(label_file: str):
     return label_bytes, label_info
 
 
+class DatasetPreparationCancelled(Exception):
+    """Raised when a caller-requested cancellation stops a dataset build."""
+
+
+def _check_cancelled(cancel_check):
+    if cancel_check is not None and cancel_check():
+        raise DatasetPreparationCancelled()
+
+
+def _report_progress(progress_callback, stage, processed, total):
+    if progress_callback is None:
+        return
+    try:
+        progress_callback(stage, int(processed), int(total))
+    except Exception:  # noqa: BLE001 - progress reporting is cosmetic
+        pass
+
+
 def partition_images(
     image_list: List[str],
     task_type: str,
     output_dir: str = None,
     only_checked_files: bool = False,
+    progress_callback=None,
+    cancel_check=None,
 ) -> dict:
     """Group the image list the way a dataset build needs it.
 
@@ -190,6 +210,10 @@ def partition_images(
     in the dataset: ``unreadable_labels`` (present but unparsable) and
     ``unchecked_files``. The last two used to be silently folded into
     ``background``, which trained an annotated image as an empty one.
+
+    ``progress_callback(stage, processed, total)`` reports the label scan;
+    ``cancel_check`` is polled between images so a cancelled build stops
+    before it copies the remaining files.
     """
     valid_shapes = TASK_SHAPE_MAPPINGS.get(task_type, [])
     background_images = []
@@ -203,7 +227,10 @@ def partition_images(
     if task_type in ("Detect", "Segment"):
         from jllabeling.views.labeling.utils import yolo_labels
 
-    for image_file in image_list:
+    total = len(image_list)
+    for index, image_file in enumerate(image_list):
+        _check_cancelled(cancel_check)
+        _report_progress(progress_callback, "scanning", index, total)
         label_dir, filename = os.path.split(image_file)
         if output_dir:
             label_dir = output_dir
@@ -268,6 +295,7 @@ def partition_images(
         else:
             background_images.append(image_file)
 
+    _report_progress(progress_callback, "scanning", total, total)
     return {
         "background": background_images,
         "valid": valid_images,
@@ -341,6 +369,8 @@ def create_yolo_dataset(
     seed: int = None,
     seed_source: str = "generated",
     report: dict = None,
+    progress_callback=None,
+    cancel_check=None,
 ) -> str:
     """Build a dataset; a failed build removes what it had written.
 
@@ -348,7 +378,12 @@ def create_yolo_dataset(
     usable dataset to the cleanup tools and occupies the disk until the
     user finds it; removing it keeps a failed build from leaving a
     misleading artifact. The caller's ``report`` still describes the
-    failure's context.
+    failure's context. A cancelled build raises
+    :class:`DatasetPreparationCancelled` after the same cleanup.
+
+    ``progress_callback(stage, processed, total)`` reports a determinate
+    build progress ("scanning" labels, then "copying" images);
+    ``cancel_check`` is polled between files.
     """
     build_report = report if report is not None else {}
     try:
@@ -364,6 +399,8 @@ def create_yolo_dataset(
             seed=seed,
             seed_source=seed_source,
             report=build_report,
+            progress_callback=progress_callback,
+            cancel_check=cancel_check,
         )
     except Exception:
         _discard_partial_dataset(build_report)
@@ -382,6 +419,8 @@ def _build_yolo_dataset(
     seed: int = None,
     seed_source: str = "generated",
     report: dict = None,
+    progress_callback=None,
+    cancel_check=None,
 ) -> str:
     """Create YOLO dataset from image list and annotations.
 
@@ -427,12 +466,22 @@ def _build_yolo_dataset(
     conversion_stats = {}
 
     def _process_images_batch(
-        image_label_pairs, images_dir, labels_dir, converter, mode, skip_empty
+        image_label_pairs,
+        images_dir,
+        labels_dir,
+        converter,
+        mode,
+        skip_empty,
+        on_start=None,
+        cancel_check=None,
     ):
         """Write one split and return only the pairs that are in it."""
         used_names = set()
         kept = []
         for image_file, label_file in image_label_pairs:
+            _check_cancelled(cancel_check)
+            if on_start is not None:
+                on_start()
             filename = os.path.basename(image_file)
             stem, ext = os.path.splitext(filename)
             dst_image_path = os.path.join(images_dir, filename)
@@ -503,9 +552,14 @@ def _build_yolo_dataset(
 
         return kept
 
-    def _process_classify_images_batch(image_label_pairs, base_dir):
+    def _process_classify_images_batch(
+        image_label_pairs, base_dir, on_start=None, cancel_check=None
+    ):
         used_names = set()
         for image_file, label_file in image_label_pairs:
+            _check_cancelled(cancel_check)
+            if on_start is not None:
+                on_start()
             filename = os.path.basename(image_file)
             stem, ext = os.path.splitext(filename)
 
@@ -596,7 +650,12 @@ def _build_yolo_dataset(
         report["dataset_dir"] = temp_dir
 
     partitioned = partition_images(
-        image_list, task_type, output_dir, only_checked_files
+        image_list,
+        task_type,
+        output_dir,
+        only_checked_files,
+        progress_callback=progress_callback,
+        cancel_check=cancel_check,
     )
     background_images = partitioned["background"]
     valid_images = partitioned["valid"]
@@ -614,9 +673,32 @@ def _build_yolo_dataset(
     train_valid_images = valid_images[:train_count]
     val_valid_images = valid_images[train_count:]
 
+    copy_state = {"done": 0, "total": 0}
+
+    def _copy_started():
+        copy_state["done"] += 1
+        _report_progress(
+            progress_callback,
+            "copying",
+            copy_state["done"],
+            copy_state["total"],
+        )
+
     if task_type == "Classify":
-        _process_classify_images_batch(train_valid_images, train_dir)
-        _process_classify_images_batch(val_valid_images, val_dir)
+        copy_state["total"] = len(train_valid_images) + len(val_valid_images)
+        _report_progress(progress_callback, "copying", 0, copy_state["total"])
+        _process_classify_images_batch(
+            train_valid_images,
+            train_dir,
+            on_start=_copy_started,
+            cancel_check=cancel_check,
+        )
+        _process_classify_images_batch(
+            val_valid_images,
+            val_dir,
+            on_start=_copy_started,
+            cancel_check=cancel_check,
+        )
     else:
         if skip_empty_files:
             all_train_images = train_valid_images
@@ -625,6 +707,8 @@ def _build_yolo_dataset(
                 (img, None) for img in background_images
             ] + train_valid_images
 
+        copy_state["total"] = len(all_train_images) + len(val_valid_images)
+        _report_progress(progress_callback, "copying", 0, copy_state["total"])
         mode = TASK_LABEL_MAPPINGS.get(task_type, "hbb")
         all_train_images = _process_images_batch(
             all_train_images,
@@ -633,6 +717,8 @@ def _build_yolo_dataset(
             converter,
             mode,
             skip_empty_files,
+            on_start=_copy_started,
+            cancel_check=cancel_check,
         )
         val_valid_images = _process_images_batch(
             val_valid_images,
@@ -641,7 +727,13 @@ def _build_yolo_dataset(
             converter,
             mode,
             skip_empty_files,
+            on_start=_copy_started,
+            cancel_check=cancel_check,
         )
+
+    _report_progress(
+        progress_callback, "copying", copy_state["total"], copy_state["total"]
+    )
 
     info_file = os.path.join(temp_dir, "dataset_info.txt")
     dropped_shapes = conversion_stats.get("skipped", {}) or {}

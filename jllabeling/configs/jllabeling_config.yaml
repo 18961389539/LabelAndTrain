@@ -52,7 +52,7 @@ canvas:
     adjust_step: 2.0
     enable: true
     scale_step: 0.05
-config_version: 3
+config_version: 4
 custom_models: []
 default_shape_color:
 - 0
@@ -79,6 +79,7 @@ flag_dock:
   show: true
 flags: null
 font_family: null
+ui_scale: "100%"
 keep_prev: false
 keep_prev_brightness: false
 keep_prev_contrast: false
@@ -139,7 +140,7 @@ shape_dock:
 shift_auto_shape_color: 0
 shortcuts:
   add_point_to_edge: Ctrl+Shift+P
-  auto_label: Ctrl+A
+  auto_label: Ctrl+Alt+L
   auto_labeling_add_point: Q
   auto_labeling_clear: B
   auto_labeling_finish_object: F
@@ -208,6 +209,7 @@ shortcuts:
   save_to: Ctrl+Shift+E
   save_visualization_image: null
   save_with_image_data: null
+  select_all: Ctrl+A
   select_toggle_shapes: Ctrl+Alt+X
   set_cross_line: null
   shape_converter: Ctrl+Alt+Y

@@ -336,7 +336,7 @@ def _format_yolo_export_summary(
         lines.append(
             QCoreApplication.translate(
                 "LabelingWidget",
-                "按「仅导出已确认图片」跳过 %d 张（未检查或需返工）",
+                "按「仅导出已检查图片」跳过 %d 张（未检查或需返工）",
             )
             % skipped_unchecked
         )
@@ -614,7 +614,7 @@ def export_yolo_annotation(self, mode):
         layout.addWidget(obb_clamp_checkbox)
 
     only_checked_checkbox = QtWidgets.QCheckBox(
-        QCoreApplication.translate("LabelingWidget", "仅导出「已确认」的图片")
+        QCoreApplication.translate("LabelingWidget", "仅导出「已检查」的图片")
     )
     only_checked_checkbox.setChecked(
         bool(remembered.get("only_confirmed", False))
@@ -622,11 +622,11 @@ def export_yolo_annotation(self, mode):
     only_checked_checkbox.setToolTip(
         QCoreApplication.translate(
             "LabelingWidget",
-            "Only export confirmed images / 仅导出已确认的图片\n"
+            "Only export confirmed images / 仅导出已检查的图片\n"
             "\n"
             "默认关闭：导出当前文件夹里的全部图片，含未检查与「需返工」的。\n"
             "\n"
-            "勾选后：只导出在文件列表里标记为「已确认」的图片，"
+            "勾选后：只导出在文件列表里标记为「已检查」的图片，"
             "未检查与需返工的一律跳过（数量会在导出结果里报出来）。\n"
             "训练侧本来就有同样的过滤（只用已检查的图片），"
             "勾上它可以让导出与训练集合保持一致。",
@@ -670,7 +670,7 @@ def export_yolo_annotation(self, mode):
             "写入导出记录 export_manifest.json / export record\n"
             "\n"
             "勾选后会在导出目录生成一份 JSON，记下本次导出的类别列表及其来源、"
-            "筛选条件（仅已确认 / 跳过空标注 / 复制图片）、导出与跳过的数量，"
+            "筛选条件（仅已检查 / 跳过空标注 / 复制图片）、导出与跳过的数量，"
             "以及源数据的检查结果（无标注 / 空标注 / 读不出的文件 / "
             "不在类别表里的标签）。\n"
             "\n"
@@ -759,9 +759,9 @@ def export_yolo_annotation(self, mode):
             popup = Popup(
                 QCoreApplication.translate(
                     "LabelingWidget",
-                    "没有「已确认」的图片可导出（共 %d 张未确认）。\n"
+                    "没有「已检查」的图片可导出（共 %d 张未检查）。\n"
                     "先在文件列表里把要看过的图标成「已检查」，"
-                    "或取消勾选「仅导出已确认的图片」。",
+                    "或取消勾选「仅导出已检查的图片」。",
                 )
                 % skipped_unchecked,
                 self,

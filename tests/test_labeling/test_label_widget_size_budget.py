@@ -102,7 +102,29 @@ BUDGETS = {
     # Lowered 6697 -> 6663 on 2026-10-26: _refresh_file_progress moved
     # to file_list_ops (the low-confidence count now reads a background
     # role), and the widget keeps a one-line delegation.
-    "jllabeling/views/labeling/label_widget.py": 6663,
+    # Lowered 6663 -> 6597 on 2026-11-09: new_shapes_from_auto_labeling
+    # moved to utils/auto_labeling_result.py (the overwrite guard added
+    # there would otherwise have grown the widget). The widget keeps a
+    # two-line delegation. The file-row display delegate and the empty-
+    # folder/resume fixes live outside this file too.
+    # Lowered 6597 -> 6575 the same day: _confirm_destructive_action moved
+    # to file_lifecycle so image deletion can bypass the session-wide skip;
+    # the Help menu adds two lines but the extraction wins.
+    # Lowered 6575 -> 6570 on 2026-11-09: the save-feedback toaster was the
+    # last QToaster user and became the shared Popup; its color-guessing
+    # block went with it. The window title now leads with the image name.
+    #
+    # Raised 6570 -> 6591 on 2026-11-09, documented feature: theme hot switch.
+    # The confirmation dialog, the save-then-rebuild handoff to MainWindow and
+    # the retired-view guard for the status-bar widget are the whole delta;
+    # the rebuild machinery itself lives in views/mainwindow.py and
+    # utils/theme.py.
+    #
+    # Raised 6591 -> 6623 on 2026-11-09, documented feature: Ctrl+A now
+    # selects every annotation. The method (with its text-editor guard), the
+    # action, the Edit-menu entry and the shortcut registration are the delta;
+    # auto-labeling keeps its panel behind Ctrl+Alt+L.
+    "jllabeling/views/labeling/label_widget.py": 6623,
     # Lowered 3772 -> 3760 on 2026-09-29: the undo/redo stacks moved out to
     # widgets/shape_history.py (which is also what made them survive a file
     # switch) and the canvas reaches them through the attribute names it has
@@ -137,7 +159,9 @@ BUDGETS = {
     # Lowered 2704 -> 795 later that day: 37 interaction fields and 62 event,
     # selection, hover, pan and keyboard methods moved to canvas_interaction.
     # Descriptors preserve the historical Canvas attribute surface.
-    "jllabeling/views/labeling/widgets/canvas.py": 795,
+    # Raised 795 -> 796 on 2026-11-09: the canvas carries an accessible name
+    # for screen readers; the audit found this surface had almost none.
+    "jllabeling/views/labeling/widgets/canvas.py": 796,
     # Lowered 4406 -> 4002 -> 3335 on 2026-10-26: first the
     # export/autolabel cluster moved to views/training/export_autolabel.py
     # (nine delegating stubs, is_fresh_export included), then
@@ -148,7 +172,16 @@ BUDGETS = {
     # (_dataset_preview_images plus the slot filling in update_training_images).
     # Lowered 3388 -> 3384 right after: black collapsed the two wrapped
     # expressions in that helper.
-    "jllabeling/views/training/ultralytics_dialog.py": 3384,
+    # Raised 3384 -> 3388 on 2026-11-09, documented feature: a visible
+    # 关闭 button in the action row. The window X worked, but every other
+    # action there is a named button; users who never try the title bar
+    # were left without an obvious exit. Lowered 3388 -> 3385 the same
+    # day when remaining-time wording moved to training/eta_format.py.
+    # Lowered 3385 -> 3285 on 2026-11-09: the dataset-preparation lifecycle
+    # (determinate progress, cancel, close-after-cancel) moved to
+    # views/training/dataset_preparation.py, where the rules are testable
+    # without constructing the dialog.
+    "jllabeling/views/training/ultralytics_dialog.py": 3285,
 }
 
 

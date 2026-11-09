@@ -90,6 +90,10 @@ class RunHistoryDialog(QtWidgets.QDialog):
         for button in (export_button, open_button, refresh_button):
             buttons.addWidget(button)
         buttons.addStretch()
+        self.train_button = QtWidgets.QPushButton(self.tr("去训练"))
+        self.train_button.setStyleSheet(get_ok_btn_style())
+        self.train_button.clicked.connect(self._open_training)
+        buttons.addWidget(self.train_button)
         buttons.addWidget(close_button)
         layout.addLayout(buttons)
 
@@ -149,6 +153,14 @@ class RunHistoryDialog(QtWidgets.QDialog):
                     "No training runs with metadata found under %1. After a training run finishes, run_meta.json appears in the run directory and shows up in this table; runs whose Project points elsewhere are not visible here."
                 ).replace("%1", runs_root or "")
             )
+        self.train_button.setVisible(not (self.rows or data["unrecorded"]))
+
+    def _open_training(self):
+        opener = getattr(self.parent(), "start_training", None)
+        if opener is None:
+            return
+        self.accept()
+        opener("ultralytics")
 
     def selected_row_index(self):
         row = self.table.currentRow()

@@ -65,7 +65,7 @@ def _model_is_local(model_name):
 
 
 class SearchBar(QLineEdit):
-    def __init__(self, parent=None, placeholder_text: str = "Search models"):
+    def __init__(self, parent=None, placeholder_text: str = "搜索模型"):
         super().__init__(parent)
         t = get_theme()
         self.setPlaceholderText(placeholder_text)
@@ -109,7 +109,7 @@ class ProviderSection(QFrame):
         # Provider header
         header = QHBoxLayout()
         icon = QLabel()
-        if provider_name in ("Favorites", "推荐"):
+        if provider_name in ("收藏", "推荐"):
             icon_name, ext = "star-black", "svg"
         elif provider_name == "Custom":
             icon_name, ext = "logo", "png"
@@ -503,7 +503,7 @@ class SearchableModelDropdownPopup(QWidget):
                     favorites.append((provider, model_name, model_data))
 
         if favorites:
-            fav_section = ProviderSection("Favorites")
+            fav_section = ProviderSection("收藏")
             self.container_layout.addWidget(fav_section)
 
             for provider, model_name, model_data in favorites:
@@ -652,7 +652,7 @@ class SearchableModelDropdownPopup(QWidget):
         self._apply_filters(self._search_text, match_threshold)
 
     def _apply_filters(self, search_text, match_threshold=0.7):
-        empty_text = "No models found."
+        empty_text = "没有找到模型"
         search_text = (search_text or "").lower()
 
         for i in reversed(range(self.container_layout.count())):

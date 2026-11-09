@@ -47,7 +47,7 @@ def collect_progress(root, output_dir=None):
 
     The review state is the same scan the file list uses (first bytes of
     the label JSON), so the overview and the list cannot disagree about
-    what 已确认 means. A label file that cannot be read counts as
+    what 已检查 means. A label file that cannot be read counts as
     unreviewed - the same judgement the list makes - and never as an
     error.
     """

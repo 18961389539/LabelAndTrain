@@ -83,6 +83,51 @@ class MainWindow(QMainWindow):
         self.setStatusBar(status_bar)
         self._restore_window_state()
 
+    def replace_labeling_widget(
+        self, config=None, filename=None, output_file=None, output_dir=None
+    ):
+        """Rebuild the labeling UI in place (used by the theme switch).
+
+        Menus and the embedded sidebars belong to the old labeling widget, so
+        the menu bar is cleared before the replacement constructs its own;
+        otherwise every theme switch would stack a second set of menus.
+        """
+        old = getattr(self, "labeling_widget", None)
+        layout = self.centralWidget().layout()
+        self.menuBar().clear()
+        if old is not None:
+            old_view = getattr(old, "view", None)
+            if old_view is not None:
+                old_view._status_widget_retired = True
+                # The status bar is owned by MainWindow, so its permanent
+                # widgets outlive the old view and would be left behind as
+                # duplicates when the replacement adds its own.
+                status_bar = self.statusBar()
+                for attr in ("_status_context_label", "_save_state_label"):
+                    label = getattr(old_view, attr, None)
+                    if label is not None:
+                        status_bar.removeWidget(label)
+                        label.hide()
+                        label.setParent(None)
+                        label.deleteLater()
+                    setattr(old_view, attr, None)
+            layout.removeWidget(old)
+            old.hide()
+            old.deleteLater()
+        wrapper = LabelingWrapper(
+            self,
+            config=config,
+            filename=filename,
+            output_file=output_file,
+            output_dir=output_dir,
+        )
+        layout.addWidget(wrapper)
+        self.labeling_widget = wrapper
+        self.settings = wrapper.view.settings
+        self.setWindowTitle(__appname__)
+        wrapper.show()
+        return wrapper.view
+
     def closeEvent(self, event):
         self.labeling_widget.closeEvent(event)
         if not event.isAccepted():

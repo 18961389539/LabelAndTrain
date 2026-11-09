@@ -116,6 +116,9 @@ DARK: Dict[str, str] = {
 
 _active_mode: str = "light"
 _active_theme: Dict[str, str] = LIGHT
+#: Captured before the first Fusion palette, so switching back to light can
+#: restore the platform's native look instead of keeping Fusion forever.
+_native_style_name: Optional[str] = None
 
 
 def _is_wsl() -> bool:
@@ -203,6 +206,30 @@ def init_theme(mode: str) -> None:
         resolved = "light"
     _active_mode = resolved
     _active_theme = DARK if resolved == "dark" else LIGHT
+
+
+def apply_theme_to_app(app, mode: str, initial: bool = False) -> None:
+    """Apply palette + application stylesheet for ``mode``.
+
+    ``initial`` mirrors the historical startup path exactly (light leaves the
+    native style/palette alone). A later switch has to undo a dark palette,
+    so light restores the style name captured at startup and the standard
+    palette before the QSS is regenerated.
+    """
+    global _native_style_name
+    if app is None:
+        return
+    if initial:
+        _native_style_name = app.style().name()
+    init_theme(mode)
+    dark_palette = get_dark_palette()
+    if dark_palette is not None:
+        app.setStyle("Fusion")
+        app.setPalette(dark_palette)
+    elif not initial:
+        app.setStyle(_native_style_name or "Fusion")
+        app.setPalette(app.style().standardPalette())
+    app.setStyleSheet(get_app_stylesheet())
 
 
 def get_theme() -> Dict[str, str]:

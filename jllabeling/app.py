@@ -464,11 +464,8 @@ def _main():
     from jllabeling.views.mainwindow import MainWindow
     from jllabeling.views.labeling.logger import PlainFormatter, logger
     from jllabeling.views.labeling.utils import new_icon, gradient_text
-    from jllabeling.views.labeling.utils.theme import (
-        init_theme,
-        get_app_stylesheet,
-        get_dark_palette,
-    )
+    from jllabeling.views.labeling.utils.theme import apply_theme_to_app
+    from jllabeling.views.labeling.utils.ui_scale import apply_ui_scale_env
     from jllabeling.views.labeling.utils.qt import apply_application_font
 
     # NOTE: Do not remove this import, it is required for loading translations
@@ -611,17 +608,14 @@ def _main():
                 f"{qt_image_allocation_limit} MB"
             )
 
+    # Must be set before QApplication reads the Qt scale factor.
+    apply_ui_scale_env(config.get("ui_scale", "100%"))
     app = QtWidgets.QApplication(sys.argv)
     apply_application_font(config.get("font_family"))
-    init_theme(config.get("theme", "auto"))
+    apply_theme_to_app(app, config.get("theme", "auto"), initial=True)
     # Registers this instance so later ones can detect it; the returned
     # server is kept alive inside the module (like _KEEP_OPEN_LOGS).
     hint_second_instance(get_work_directory(), logger)
-    _dark_palette = get_dark_palette()
-    if _dark_palette is not None:
-        app.setStyle("Fusion")
-        app.setPalette(_dark_palette)
-    app.setStyleSheet(get_app_stylesheet())
     app.processEvents()
     _install_runtime_exception_hook(logger)
 
@@ -690,6 +684,7 @@ def _main():
                     config.get("startup_show_project_manager", False)
                 ),
                 has_registry=bool(project_registry.recent_projects()),
+                explicit_target=filename is not None,
             )
             if action == "manager":
                 widget.open_project_switcher()

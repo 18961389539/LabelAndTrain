@@ -97,7 +97,7 @@ class CanvasAdjustmentWidget(QtWidgets.QWidget):
         self.toggle_button.setIconSize(QtCore.QSize(10, 10))
         self.toggle_button.setFixedSize(20, 20)
         self.toggle_button.setToolTip(self.tr("Collapse adjustments"))
-        self.toggle_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.toggle_button.setAccessibleName(self.tr("Collapse adjustments"))
         t = get_theme()
         self.toggle_button.setStyleSheet(
             "QToolButton { background: transparent; border: none;"
@@ -221,8 +221,8 @@ class CanvasAdjustmentWidget(QtWidgets.QWidget):
         slider.setValue(default)
         slider.setFixedWidth(self.SLIDER_WIDTH)
         slider.setTracking(True)
-        slider.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         slider.setToolTip(tooltip)
+        slider.setAccessibleName(title)
 
         value_label = QtWidgets.QLabel()
         value_label.setProperty("display", display)
@@ -238,7 +238,7 @@ class CanvasAdjustmentWidget(QtWidgets.QWidget):
         reset_btn.setFixedSize(22, 20)
         reset_btn.setStyleSheet(self._theme_reset_css())
         reset_btn.setToolTip(self.tr("Reset to default"))
-        reset_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        reset_btn.setAccessibleName(self.tr("Reset to default"))
         reset_btn.clicked.connect(
             lambda _=False, s=slider: s.setValue(default)
         )

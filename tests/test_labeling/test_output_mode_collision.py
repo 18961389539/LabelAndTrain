@@ -54,6 +54,9 @@ def test_import_refuses_and_leaves_the_current_project_alone(tmp_path):
         def may_continue(self):
             return True
 
+        def isVisible(self):  # noqa: N802 - QWidget spelling
+            return False
+
         def error_message(self, title, message):
             calls["title"] = title
             calls["message"] = message

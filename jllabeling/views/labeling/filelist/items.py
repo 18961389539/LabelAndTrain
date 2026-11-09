@@ -7,6 +7,7 @@ can drive them with a light stub, the same pattern as
 
 import os.path as osp
 
+from PyQt6 import QtWidgets
 from PyQt6.QtCore import QCoreApplication, QFile, Qt
 
 from ..schema import REVIEW_CONFIRMED, REVIEW_REJECTED, REVIEW_UNCHECKED
@@ -18,6 +19,23 @@ from .roles import (
     FILE_REVIEW_NOTE_ROLE,
     FILE_REVIEW_ROLE,
 )
+
+
+class FileRowDisplayDelegate(QtWidgets.QStyledItemDelegate):
+    """Show the filename before the folder.
+
+    Rows keep the absolute path as their text because navigation, filters and
+    batch jumps read it back; only the painted string is shortened. The full
+    path (and review status) stays in the tooltip.
+    """
+
+    def displayText(self, value, locale):  # noqa: N802 - Qt override
+        path = str(value or "")
+        name = osp.basename(path)
+        if not name:
+            return path
+        folder = osp.basename(osp.dirname(path))
+        return f"{name}  ·  {folder}" if folder else name
 
 
 def is_confirmed(state):

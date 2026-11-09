@@ -177,7 +177,7 @@ class TestExportSummary(unittest.TestCase):
         )
 
         self.assertIn("7", summary)
-        self.assertIn("仅导出已确认图片", summary)
+        self.assertIn("仅导出已检查图片", summary)
 
 
 class TestReviewStateFilter(unittest.TestCase):

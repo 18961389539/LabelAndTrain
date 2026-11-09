@@ -22,7 +22,7 @@ from jllabeling.views.labeling.schema import (
 #: 展示层的状态词。搜索、文件列表、概览说同一套话。
 STATE_UNLABELED = "未标注"
 STATE_UNCHECKED = "未复检"
-STATE_CONFIRMED = "已确认"
+STATE_CONFIRMED = "已检查"
 STATE_REWORK = "待复检"
 SEARCH_STATES = (
     STATE_UNLABELED,

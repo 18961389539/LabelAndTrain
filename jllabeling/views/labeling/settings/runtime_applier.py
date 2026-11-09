@@ -129,6 +129,7 @@ class SettingsRuntimeApplier:
             "shortcuts.keep_prev_contrast": self._widget.actions.keep_prev_contrast,
             "shortcuts.keep_prev_scale": self._widget.actions.keep_prev_scale,
             "shortcuts.select_toggle_shapes": self._widget.actions.select_toggle_shapes,
+            "shortcuts.select_all": self._widget.actions.select_all,
             "shortcuts.shape_converter": self._widget.actions.shape_converter,
             "shortcuts.show_degrees": self._widget.actions.show_degrees,
             "shortcuts.show_groups": self._widget.actions.show_groups,
@@ -443,9 +444,7 @@ class SettingsRuntimeApplier:
         """
         canvas_config = self._widget._config["canvas"]
         canvas = self._widget.canvas
-        canvas.pixelated_zoom = bool(
-            canvas_config.get("pixelated_zoom", True)
-        )
+        canvas.pixelated_zoom = bool(canvas_config.get("pixelated_zoom", True))
         canvas.pixel_grid_threshold = float(
             canvas_config.get("pixel_grid_threshold", 8.0)
         )

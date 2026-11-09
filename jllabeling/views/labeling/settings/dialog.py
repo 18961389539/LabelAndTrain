@@ -2011,16 +2011,19 @@ class SettingsDialog(QtWidgets.QDialog):
         )
 
     def _show_restart_required_notice(self, changed_keys: list[str]) -> None:
-        if "qt_image_allocation_limit" not in changed_keys:
+        changed = set(changed_keys)
+        if "ui_scale" in changed:
+            text = self.tr("界面缩放将在重启应用后生效。")
+        elif "qt_image_allocation_limit" in changed:
+            text = self.tr(
+                "Qt image allocation limit changes will take effect after restarting the application."
+            )
+        else:
             return
         msg_box = QtWidgets.QMessageBox(self)
         msg_box.setIcon(QtWidgets.QMessageBox.Icon.Information)
         msg_box.setWindowTitle(self.tr("Restart Required"))
-        msg_box.setText(
-            self.tr(
-                "Qt image allocation limit changes will take effect after restarting the application."
-            )
-        )
+        msg_box.setText(text)
         msg_box.setStyleSheet(self._message_box_style())
         msg_box.exec()
 

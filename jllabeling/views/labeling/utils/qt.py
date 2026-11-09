@@ -236,12 +236,21 @@ EXIF_BACKUP_DIR_NAME = "jllabeling-exif-backup"
 LEGACY_EXIF_BACKUP_DIR_NAMES = ("x-anylabeling-exif-backup",)
 
 
-def scan_all_images(folder_path):
+def scan_all_images(folder_path, on_progress=None):
+    """Recursively list supported images, newest callers may cancel.
+
+    ``on_progress(found_count)`` is called every few hundred files while
+    walking; returning ``False`` aborts the scan and makes this function
+    return ``None``. Callers that do not pass a callback keep the old
+    ``list``-only contract (an empty folder is ``[]``).
+    """
     try:
         extensions = get_supported_image_extensions()
 
         images = []
         folder_path = osp.normpath(osp.abspath(folder_path))
+        walked = 0
+        next_report = 500
 
         for root, dirs, files in os.walk(folder_path):
             dirs[:] = [
@@ -255,6 +264,11 @@ def scan_all_images(folder_path):
                     relative_path = osp.normpath(osp.join(root, file))
                     relative_path = str(relative_path)
                     images.append(relative_path)
+            walked += len(files)
+            if on_progress is not None and walked >= next_report:
+                next_report = walked + 500
+                if on_progress(len(images)) is False:
+                    return None
 
         try:
             return natsort.natsorted(images)

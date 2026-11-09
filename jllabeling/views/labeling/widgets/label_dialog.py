@@ -407,7 +407,11 @@ class GroupIDModifyDialog(RangeTableDialog):
         layout.setContentsMargins(24, 24, 24, 24)
         layout.setSpacing(20)
 
-        title_list = ["Ori Group-ID", "New Group-ID", "Delete Group by ID"]
+        title_list = [
+            self.tr("原分组号"),
+            self.tr("新分组号"),
+            self.tr("删除该分组"),
+        ]
         self.table_widget = QTableWidget(self)
         self.table_widget.setColumnCount(len(title_list))
         self.table_widget.setHorizontalHeaderLabels(title_list)
@@ -497,7 +501,7 @@ class GroupIDModifyDialog(RangeTableDialog):
         range_layout.addWidget(to_label)
         range_layout.addWidget(self.to_input)
 
-        self.range_button = QtWidgets.QPushButton("Go")
+        self.range_button = QtWidgets.QPushButton(self.tr("应用范围"))
         self.range_button.setStyleSheet(get_ok_btn_style())
         range_layout.addWidget(self.range_button)
         self.range_button.clicked.connect(self.update_range)
@@ -640,6 +644,36 @@ class GroupIDModifyDialog(RangeTableDialog):
                 updated_gid_info[int(old_gid)] = {"new_gid": int(new_gid)}
             else:
                 new_gid_info.append(old_gid)
+
+        if not updated_gid_info and not deleted_gid_info:
+            QtWidgets.QMessageBox.information(
+                self,
+                self.tr("没有修改"),
+                self.tr("没有需要应用的分组号修改。"),
+            )
+            return
+
+        first = start_index if start_index != -1 else self.start_index
+        last = end_index if end_index != -1 else self.end_index
+        reply = QtWidgets.QMessageBox.question(
+            self,
+            self.tr("确认批量修改分组号"),
+            self.tr(
+                "将对第 %1–%2 张图应用修改：重命名 %3 个分组，"
+                "删除 %4 个分组。\n\n"
+                "此操作会直接改写范围内的标注文件，原文件会先备份到 "
+                ".label_backups。继续吗？"
+            )
+            .replace("%1", str(first))
+            .replace("%2", str(last))
+            .replace("%3", str(len(updated_gid_info)))
+            .replace("%4", str(len(deleted_gid_info))),
+            QtWidgets.QMessageBox.StandardButton.Yes
+            | QtWidgets.QMessageBox.StandardButton.No,
+            QtWidgets.QMessageBox.StandardButton.No,
+        )
+        if reply != QtWidgets.QMessageBox.StandardButton.Yes:
+            return
 
         # Try to modify group IDs
         if self.modify_group_id(
@@ -811,7 +845,13 @@ class LabelModifyDialog(RangeTableDialog):
         self.resize(700, 400)
         self.move_to_center()
 
-        title_list = ["Category", "Delete", "New Value", "Visible", "Color"]
+        title_list = [
+            self.tr("类别"),
+            self.tr("删除"),
+            self.tr("新值"),
+            self.tr("可见"),
+            self.tr("颜色"),
+        ]
         self.table_widget = QTableWidget(self)
         self.table_widget.setColumnCount(len(title_list))
         self.table_widget.setHorizontalHeaderLabels(title_list)
@@ -872,7 +912,7 @@ class LabelModifyDialog(RangeTableDialog):
         range_layout.addWidget(to_label)
         range_layout.addWidget(self.to_input)
 
-        self.range_button = QtWidgets.QPushButton("Go")
+        self.range_button = QtWidgets.QPushButton(self.tr("应用范围"))
         self.range_button.setStyleSheet(get_ok_btn_style())
         range_layout.addWidget(self.range_button)
         self.range_button.clicked.connect(self.update_range)
@@ -1414,6 +1454,7 @@ class LabelDialog(QtWidgets.QDialog):
 
         super(LabelDialog, self).__init__(parent)
         self.setObjectName("LabelDialog")
+        self.setWindowTitle(self.tr("输入标签"))
         t = get_theme()
         self.setStyleSheet(f"""
             QDialog#LabelDialog QLineEdit,
@@ -1487,6 +1528,12 @@ class LabelDialog(QtWidgets.QDialog):
             layout_edit.addWidget(self.edit, 4)
             layout_edit.addWidget(self.edit_group_id, 2)
             layout.addLayout(layout_edit)
+
+        self._edit_error = QtWidgets.QLabel("", self)
+        self._edit_error.setStyleSheet("color: #E5484D; padding: 0 2px;")
+        self._edit_error.setVisible(False)
+        layout.addWidget(self._edit_error)
+        self.edit.textChanged.connect(self._clear_edit_error)
 
         # buttons
         self.button_box = bb = QtWidgets.QDialogButtonBox(
@@ -1620,6 +1667,10 @@ class LabelDialog(QtWidgets.QDialog):
             # Clear the edit field if no item is selected
             self.edit.clear()
 
+    def _clear_edit_error(self, _text=""):
+        if hasattr(self, "_edit_error"):
+            self._edit_error.setVisible(False)
+
     def validate(self):
         text = self.edit.text()
         if hasattr(text, "strip"):
@@ -1627,7 +1678,12 @@ class LabelDialog(QtWidgets.QDialog):
         else:
             text = text.trimmed()
         if text:
+            self._clear_edit_error()
             self.accept()
+            return
+        self._edit_error.setText(self.tr("标签不能为空"))
+        self._edit_error.setVisible(True)
+        self.edit.setFocus()
 
     def label_double_clicked(self, _):
         self.validate()

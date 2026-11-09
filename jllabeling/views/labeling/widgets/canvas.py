@@ -157,6 +157,7 @@ class Canvas(
         # Set widget options.
         self.setMouseTracking(True)
         self.setFocusPolicy(QtCore.Qt.FocusPolicy.WheelFocus)
+        self.setAccessibleName(self.tr("标注画布"))
         # Render flags, colors and loading/compare state live in
         # CanvasRenderState; the descriptors on CanvasRenderMixin keep the
         # historical attribute names for actions, settings and tests.

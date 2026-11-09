@@ -481,10 +481,11 @@ class NavigatorDialog(QtWidgets.QDialog):
 
         self.setWindowTitle(self.tr("Navigator"))
         self.setStyleSheet(get_dialog_style())
+        # Not always-on-top: a floating navigator that cannot go behind the
+        # canvas permanently covers the corner it lives in. Reopening it from
+        # the menu raises it again.
         self.setWindowFlags(
-            Qt.WindowType.Window
-            | Qt.WindowType.WindowStaysOnTopHint
-            | Qt.WindowType.WindowCloseButtonHint
+            Qt.WindowType.Window | Qt.WindowType.WindowCloseButtonHint
         )
 
         self.setSizePolicy(

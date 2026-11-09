@@ -152,7 +152,9 @@ def forget_project(root):
     return save_registry(registry)
 
 
-def decide_startup_action(has_session, always_show_manager, has_registry):
+def decide_startup_action(
+    has_session, always_show_manager, has_registry, explicit_target=False
+):
     """What the startup flow should do; one of ``restore``/``manager``/``none``.
 
     ``restore``  - reopen the last session directly, no questions asked (the
@@ -161,9 +163,15 @@ def decide_startup_action(has_session, always_show_manager, has_registry):
     ``none``     - stay on the empty canvas, whose CTA already says to open a
                    folder (a first run gains nothing from an empty dialog).
 
-    The always-show switch wins over everything: the manager dialog lists the
-    last project preselected, so nothing is hidden behind it.
+    ``explicit_target`` means the user named a file or folder on the command
+    line (or asked the OS to open one): that is the answer to "which project",
+    so neither a resume nor the manager may replace it.
+
+    The always-show switch wins over everything else: the manager dialog lists
+    the last project preselected, so nothing is hidden behind it.
     """
+    if explicit_target:
+        return "none"
     if always_show_manager:
         return "manager"
     if has_session:

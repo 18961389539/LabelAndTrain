@@ -174,7 +174,6 @@ def build_main_splitter(widget, central_layout, sidebar_layout, sections):
 
     button = QtWidgets.QToolButton()
     button.setObjectName("SidebarCollapseButton")
-    button.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
     button.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
     button.setFixedSize(SIDEBAR_STRIP_WIDTH, 28)
     button.setIconSize(QtCore.QSize(10, 10))
@@ -256,7 +255,7 @@ def set_sidebar_collapsed(widget, collapsed, persist=True):
     widget.sidebar_collapse_button.setIcon(
         new_icon("caret-left" if collapsed else "caret-right", "svg")
     )
-    widget.sidebar_collapse_button.setToolTip(
+    button_text = (
         translate("LabelingWidget", "展开右侧面板（标签/对象/文件）")
         if collapsed
         else translate(
@@ -264,6 +263,8 @@ def set_sidebar_collapsed(widget, collapsed, persist=True):
             "收起右侧面板（标签/对象/文件），给画布腾出空间",
         )
     )
+    widget.sidebar_collapse_button.setToolTip(button_text)
+    widget.sidebar_collapse_button.setAccessibleName(button_text)
 
     if persist:
         state = widget._config.setdefault("sidebar", {})

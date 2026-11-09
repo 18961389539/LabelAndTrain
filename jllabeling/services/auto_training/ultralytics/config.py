@@ -28,7 +28,7 @@ def get_default_project_dir():
 
 
 # UI configuration
-DEFAULT_WINDOW_TITLE = "JLTrain Training Platforms 🚀"
+DEFAULT_WINDOW_TITLE = "Ultralytics 训练"
 DEFAULT_WINDOW_SIZE = (1200, 800)  # (w, h)
 ICON_SIZE_NORMAL = (32, 32)
 ICON_SIZE_SMALL = (16, 16)

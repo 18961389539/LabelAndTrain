@@ -104,7 +104,9 @@ class TestSettingsSchema(unittest.TestCase):
         # +toggle_sidebar (2026-10-08): the one-click collapse of the whole
         # right sidebar, wired as a hidden action with a default key
         # (Ctrl+Shift+B) so the mouse-only strip is not its only entry.
-        self.assertEqual(len(shortcut_fields), 119)
+        # +select_all (2026-11-09): Ctrl+A selects all annotations again;
+        # auto-labeling moved to Ctrl+Alt+L.
+        self.assertEqual(len(shortcut_fields), 120)
         keys = {field.key for field in shortcut_fields}
         self.assertIn("shortcuts.open_project", keys)
         self.assertIn("shortcuts.mark_checked_and_next", keys)
@@ -145,6 +147,7 @@ class TestSettingsSchema(unittest.TestCase):
             "auto_switch_to_edit_mode",
             "system_clipboard",
             "font_family",
+            "ui_scale",
             "shape.line_color",
             "canvas.mask.opacity",
             "canvas.crosshair.show",

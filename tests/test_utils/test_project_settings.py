@@ -588,6 +588,10 @@ def test_startup_action_matrix():
     assert decide(False, False, True) == "manager"
     # First run: the empty-canvas CTA stays unobstructed.
     assert decide(False, False, False) == "none"
+    # An explicit file/folder on the command line wins over both resume and
+    # the project manager: the user already answered "which project".
+    assert decide(True, False, True, explicit_target=True) == "none"
+    assert decide(True, True, True, explicit_target=True) == "none"
 
 
 def test_startup_show_project_manager_defaults_off():

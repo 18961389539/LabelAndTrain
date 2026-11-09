@@ -722,11 +722,134 @@ def duplicate_output_stems(image_files):
     return sorted(stem for stem, paths in by_stem.items() if len(paths) > 1)
 
 
+def _scan_images_with_progress(widget, dirpath, show_progress):
+    """Scan with a cancellable busy dialog for a visible window.
+
+    Search-as-you-type reuses the same import path; spawning a modal dialog
+    for every keystroke would fight the user, so only a real folder open asks.
+    A cancel returns ``None`` before any widget state has changed.
+    """
+    app = QtWidgets.QApplication.instance()
+    if not show_progress or app is None or not widget.isVisible():
+        return utils.scan_all_images(dirpath)
+
+    dialog = QtWidgets.QProgressDialog(
+        QCoreApplication.translate("LabelingWidget", "正在扫描图片…"),
+        QCoreApplication.translate("LabelingWidget", "取消"),
+        0,
+        0,
+        widget,
+    )
+    dialog.setWindowTitle(
+        QCoreApplication.translate("LabelingWidget", "导入图片")
+    )
+    dialog.setWindowModality(Qt.WindowModality.WindowModal)
+    dialog.setMinimumDuration(300)
+    dialog.setAutoClose(False)
+    dialog.setAutoReset(False)
+
+    def on_progress(found):
+        dialog.setLabelText(
+            QCoreApplication.translate(
+                "LabelingWidget", "正在扫描图片… 已找到 %1 张"
+            ).replace("%1", str(found))
+        )
+        app.processEvents()
+        return not dialog.wasCanceled()
+
+    try:
+        return utils.scan_all_images(dirpath, on_progress=on_progress)
+    finally:
+        dialog.close()
+
+
+def _build_rows_progress(widget, total, pattern):
+    """Progress for the row-building pass on a large, unfiltered folder."""
+    app = QtWidgets.QApplication.instance()
+    if app is None or pattern or not widget.isVisible() or total < 1000:
+        return None, app
+    dialog = QtWidgets.QProgressDialog(
+        QCoreApplication.translate("LabelingWidget", "正在载入图片列表…"),
+        None,
+        0,
+        total,
+        widget,
+    )
+    dialog.setWindowTitle(
+        QCoreApplication.translate("LabelingWidget", "导入图片")
+    )
+    dialog.setWindowModality(Qt.WindowModality.WindowModal)
+    dialog.setMinimumDuration(300)
+    dialog.setValue(0)
+    return dialog, app
+
+
+def _row_matches_search(widget, filename, file_index, search_pattern):
+    """Whether one scanned image belongs in the file list's current filter."""
+    if not search_pattern:
+        return True
+    if search_pattern.mode == "index":
+        return search_pattern.index == file_index
+    if not matches_filename(filename, search_pattern):
+        return False
+    if search_pattern.mode != "attribute":
+        return True
+    label_file = osp.splitext(filename)[0] + ".json"
+    if widget.output_dir:
+        label_file = widget.output_dir + "/" + osp.basename(label_file)
+    return matches_label_attribute(filename, label_file, search_pattern)
+
+
+def _finish_empty_import(widget, pattern, previous_filename):
+    """Explain a zero-row import and leave the widget in a truthful state."""
+    if pattern:
+        # A filter that matches nothing must not tear down the image the
+        # user is editing; only the visible list is empty.
+        widget.status(
+            QCoreApplication.translate(
+                "LabelingWidget", "没有匹配的图片，请调整筛选条件"
+            ),
+            5000,
+        )
+        widget.filename = previous_filename
+    else:
+        # Opening an empty folder used to leave the previous image and its
+        # shapes on the canvas while the file list said zero rows: the user
+        # could keep drawing against a file the panel no longer claimed to
+        # have open.
+        widget.reset_state()
+        widget.image = QtGui.QImage()
+        widget.toggle_actions(False)
+        for action in (
+            widget.actions.open_next_image,
+            widget.actions.open_prev_image,
+            widget.actions.open_next_unchecked_image,
+            widget.actions.open_prev_unchecked_image,
+        ):
+            action.setEnabled(False)
+        widget.update_progress_title()
+        widget.status(
+            QCoreApplication.translate(
+                "LabelingWidget", "该目录没有找到支持的图片"
+            ),
+            5000,
+        )
+    widget._refresh_file_panel()
+
+
 def import_image_folder(widget, dirpath, pattern=None, load=True):
     if not widget.may_continue() or not dirpath:
         return
 
-    scanned = utils.scan_all_images(dirpath)
+    previous_filename = widget.filename
+    scanned = _scan_images_with_progress(
+        widget, dirpath, show_progress=not pattern
+    )
+    if scanned is None:
+        widget.status(
+            QCoreApplication.translate("LabelingWidget", "已取消导入"), 4000
+        )
+        return
     if widget.output_dir:
         collisions = duplicate_output_stems(scanned)
         if collisions:
@@ -778,32 +901,14 @@ def import_image_folder(widget, dirpath, pattern=None, load=True):
     # the per-file review "checked" dots in the background so a large
     # folder does not freeze the UI for seconds.
     widget.async_label_checker.stop()
+    build_dialog, app = _build_rows_progress(widget, len(scanned), pattern)
     widget.file_list_widget.setUpdatesEnabled(False)
     try:
         for file_index, filename in enumerate(scanned, start=1):
-            if search_pattern:
-                if search_pattern.mode == "index":
-                    if search_pattern.index != file_index:
-                        continue
-                else:
-                    if not matches_filename(filename, search_pattern):
-                        continue
-
-                    if search_pattern.mode == "attribute":
-                        label_file = osp.splitext(filename)[0] + ".json"
-                        if widget.output_dir:
-                            label_file_without_path = osp.basename(label_file)
-                            label_file = (
-                                widget.output_dir
-                                + "/"
-                                + label_file_without_path
-                            )
-
-                        if not matches_label_attribute(
-                            filename, label_file, search_pattern
-                        ):
-                            continue
-
+            if not _row_matches_search(
+                widget, filename, file_index, search_pattern
+            ):
+                continue
             image_files.append(filename)
             label_file = osp.splitext(filename)[0] + ".json"
             if widget.output_dir:
@@ -813,8 +918,17 @@ def import_image_folder(widget, dirpath, pattern=None, load=True):
             item = _create_label_row(widget, filename, label_file)
             widget.file_list_widget.addItem(item)
             widget.fn_to_index[filename] = widget.file_list_widget.count() - 1
+            if build_dialog is not None and file_index % 200 == 0:
+                build_dialog.setValue(file_index)
+                app.processEvents()
     finally:
         widget.file_list_widget.setUpdatesEnabled(True)
+        if build_dialog is not None:
+            build_dialog.close()
+
+    if not image_files:
+        _finish_empty_import(widget, pattern, previous_filename)
+        return
 
     widget.actions.open_next_image.setEnabled(True)
     widget.actions.open_prev_image.setEnabled(True)
@@ -905,6 +1019,43 @@ def delete_file(widget):
             widget.load_file(widget.filename)
 
 
+def confirm_destructive_action(widget, title, message, allow_skip=True):
+    """Ask before a destructive write; default focus stays on Cancel.
+
+    ``allow_skip`` controls the "本次会话不再询问" shortcut. Label deletion
+    may remember it because a review pass deletes many labels; deleting whole
+    images (and their annotations) always asks, because each one is a file
+    the user cannot see coming from the list alone.
+    """
+    if allow_skip and getattr(widget, "_skip_delete_confirm", False):
+        return True
+    box = QtWidgets.QMessageBox(widget)
+    box.setWindowTitle(title)
+    box.setIcon(QtWidgets.QMessageBox.Icon.Warning)
+    box.setText(message)
+    delete_btn = box.addButton(
+        QCoreApplication.translate("LabelingWidget", "Delete"),
+        QtWidgets.QMessageBox.ButtonRole.DestructiveRole,
+    )
+    cancel_btn = box.addButton(
+        QCoreApplication.translate("LabelingWidget", "Cancel"),
+        QtWidgets.QMessageBox.ButtonRole.RejectRole,
+    )
+    box.setDefaultButton(cancel_btn)
+    checkbox = None
+    if allow_skip:
+        checkbox = QtWidgets.QCheckBox(
+            QCoreApplication.translate("LabelingWidget", "本次会话不再询问")
+        )
+        box.setCheckBox(checkbox)
+    box.exec()
+    if box.clickedButton() is not delete_btn:
+        return False
+    if checkbox is not None and checkbox.isChecked():
+        widget._skip_delete_confirm = True
+    return True
+
+
 def delete_image_file(widget):
     if len(widget.image_list) < 2:
         widget.status(
@@ -924,7 +1075,7 @@ def delete_image_file(widget):
             QCoreApplication.translate("LabelingWidget", "Attention"),
             QCoreApplication.translate(
                 "LabelingWidget",
-                "Please disable 'Keep Previous Annotation' before deleting the image file.",
+                "请先关闭「沿用上一张标注」再删除图片。",
             ),
             mb.StandardButton.Ok,
         )
@@ -932,11 +1083,13 @@ def delete_image_file(widget):
 
     msg = QCoreApplication.translate(
         "LabelingWidget",
-        "You are about to permanently delete this image file, "
-        "proceed anyway?",
+        "将把这张图片移到同级 _delete_ 文件夹（可从那里找回），"
+        "其标注文件会先备份再删除。继续吗？",
     )
     if not widget._confirm_destructive_action(
-        QCoreApplication.translate("LabelingWidget", "Attention"), msg
+        QCoreApplication.translate("LabelingWidget", "Attention"),
+        msg,
+        allow_skip=False,
     ):
         return
 
