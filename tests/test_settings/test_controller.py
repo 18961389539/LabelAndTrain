@@ -69,16 +69,17 @@ class TestSettingsController(unittest.TestCase):
         self.assertIn(("canvas.epsilon", 12.5), self.applied)
 
     def test_optional_integer_accepts_none_and_non_negative_values(self):
-        self.assertIsNone(
-            self.controller.get_value("qt_image_allocation_limit")
+        # Config v3 ships 1024 here; it used to be unset (None).
+        self.assertEqual(
+            self.controller.get_value("qt_image_allocation_limit"), 1024
         )
 
         changed = self.controller.update_field(
-            "qt_image_allocation_limit", 1024, schedule_save=False
+            "qt_image_allocation_limit", 512, schedule_save=False
         )
         self.assertTrue(changed)
         self.assertEqual(
-            self.controller.get_value("qt_image_allocation_limit"), 1024
+            self.controller.get_value("qt_image_allocation_limit"), 512
         )
 
         changed = self.controller.update_field(
@@ -294,6 +295,10 @@ class TestSettingsController(unittest.TestCase):
         self.assertIn("shortcuts.open", ctx.exception.conflict_keys)
         self.assertIn("shortcuts.save", ctx.exception.conflict_keys)
 
+        # undo_last_point no longer shares Ctrl+Z with undo (its shipped
+        # default is Ctrl+Shift+Backspace), and the duplicate whitelist is
+        # now empty. A free key still round-trips, but binding any key twice
+        # -- even the Ctrl+S used above -- must be rejected.
         self.controller.update_field(
             "shortcuts.undo_last_point",
             "Alt+Shift+Z",
@@ -301,14 +306,20 @@ class TestSettingsController(unittest.TestCase):
         )
         changed = self.controller.update_field(
             "shortcuts.undo_last_point",
-            "Ctrl+Z",
+            "Ctrl+Shift+Backspace",
             schedule_save=False,
         )
         self.assertTrue(changed)
         self.assertEqual(
             self.controller.get_value("shortcuts.undo_last_point"),
-            "Ctrl+Z",
+            "Ctrl+Shift+Backspace",
         )
+        with self.assertRaises(SettingsValidationError):
+            self.controller.update_field(
+                "shortcuts.undo_last_point",
+                "Ctrl+S",
+                schedule_save=False,
+            )
 
     def test_shortcut_clear_behavior(self):
         changed = self.controller.update_field(

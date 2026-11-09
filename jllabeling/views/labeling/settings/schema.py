@@ -288,9 +288,12 @@ SETTINGS_SHORTCUT_KEYS_CORE = (
     "shortcuts.undo",
 )
 
-SHORTCUT_DUPLICATE_WHITELIST = {
-    frozenset({"shortcuts.undo", "shortcuts.undo_last_point"}),
-}
+# Historically ``undo`` and ``undo_last_point`` were both bound to Ctrl+Z;
+# that one duplicate pair was whitelisted so the dialog would accept the
+# template's own defaults. ``undo_last_point`` is now Ctrl+Shift+Backspace,
+# so no shipped keys collide and no exception is needed. Kept as an (empty)
+# set because controller.py and the shortcut tests import the name.
+SHORTCUT_DUPLICATE_WHITELIST = set()
 
 EXCLUDED_KEYS = frozenset(
     {

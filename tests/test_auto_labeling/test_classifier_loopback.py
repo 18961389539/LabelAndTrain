@@ -174,6 +174,25 @@ def test_missing_class_names_fall_back_to_indexes(model_dir):
     assert predictions[0]["label"] == "0"
 
 
+def test_missing_conf_threshold_uses_shared_default(model_dir):
+    """A yaml without conf_threshold must not silently fall back to 0.0."""
+    from jllabeling.services.auto_labeling.thresholds import (
+        DEFAULT_CONF_THRESHOLD,
+    )
+
+    _tmp, onnx_path = model_dir
+    config = {
+        "type": "yolov8_cls",
+        "name": "run_07_best",
+        "display_name": "训练权重 · run_07",
+        "model_path": onnx_path,
+        "classes": CLASSES,
+        "topk": 3,
+    }  # deliberately no conf_threshold key
+    adapter = YOLOv8Cls(config, on_message=lambda _text: None)
+    assert adapter.conf_thres == DEFAULT_CONF_THRESHOLD == 0.25
+
+
 def test_blob_is_channel_first_and_expected_size(model_dir):
     _tmp, onnx_path = model_dir
     adapter = _adapter(onnx_path)

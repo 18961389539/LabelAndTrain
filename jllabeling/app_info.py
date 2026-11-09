@@ -24,6 +24,14 @@ CLI_HELP_MSG = """
         jllabelingandtrain --config FILE                      Use custom config file
         jllabelingandtrain --reset-config                     Reset Qt config
         jllabelingandtrain --qt-image-allocation-limit 1024  Set Qt image allocation limit to 1024 MB
+        jllabelingandtrain --logger-level LEVEL               Set logger level (debug, info, warning, error, fatal)
+        jllabelingandtrain --autosave                         Enable auto save
+        jllabelingandtrain --no-autosave                      Disable auto save
+        jllabelingandtrain --data                             Store image data to JSON file
+        jllabelingandtrain --nodata                           Stop storing image data to JSON file
+        jllabelingandtrain --labels LABELS                    Comma separated labels or labels file
+        jllabelingandtrain --work-dir DIR                     Working directory for config and data files
+        jllabelingandtrain --qt-platform PLUGIN               Force Qt platform plugin (e.g. xcb, wayland)
 
     Conversion Tasks:
         jllabelingandtrain convert                            List all conversion tasks

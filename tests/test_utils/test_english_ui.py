@@ -52,9 +52,10 @@ CONSTRUCTORS = {
 ALLOWED = {
     # A zoom percentage shown as a number, not a sentence.
     ("views/labeling/widgets/navigator_widget.py", "100"),
-    # Ultralytics run name / a confidence threshold: both are values the
-    # training command carries, and translating them would break them.
-    ("views/training/ultralytics_dialog.py", "exp"),
+    # A confidence threshold: a value the training command carries, and
+    # translating it would break it. The run directory prefix no longer
+    # needs an entry: the name is built as "exp_" + a timestamp, so the
+    # literal is part of a concatenation rather than a user-visible caption.
     ("views/training/ultralytics_dialog.py", "0.8"),
 }
 

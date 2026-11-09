@@ -1,3 +1,4 @@
+import copy
 import os
 import multiprocessing
 
@@ -48,7 +49,9 @@ TASK_LABEL_MAPPINGS = {
 }
 
 # Training configuration
-MIN_LABELED_IMAGES_THRESHOLD = 20
+#: Small-sample industrial trial runs are legitimate; 4 is the practical
+#: floor for a train/val split instead of the old 20-image hard gate.
+MIN_LABELED_IMAGES_THRESHOLD = 4
 NUM_WORKERS = multiprocessing.cpu_count()
 DEFAULT_TRAINING_CONFIG = {
     "epochs": 100,
@@ -58,7 +61,8 @@ DEFAULT_TRAINING_CONFIG = {
     "classes": "",
     "single_cls": False,
     "time": 0,
-    "patience": 100,
+    # 100 effectively disables early stopping, which is wrong on GPU too.
+    "patience": 20,
     "close_mosaic": 10,
     "optimizer": "auto",
     "cos_lr": False,
@@ -98,6 +102,41 @@ DEFAULT_TRAINING_CONFIG = {
     "resume": False,
     "cache": False,
 }
+
+#: CPU-safe overrides layered on top of the GPU-oriented defaults above. On
+#: Windows a dataloader worker count > 0 needs spawned child processes, so
+#: workers stays 0 on CPU; fewer epochs / a shorter patience keep a first
+#: CPU pass from running for hours before showing anything useful.
+CPU_TRAINING_OVERRIDES = {
+    "epochs": 50,
+    "batch": 8,
+    "imgsz": 416,
+    "workers": 0,
+    "patience": 10,
+}
+
+
+def get_default_training_config(device=None):
+    """Return a fresh deep copy of the default training config for ``device``.
+
+    ``device`` of ``None`` or ``"cpu"`` applies :data:`CPU_TRAINING_OVERRIDES`;
+    a GPU device (cuda/mps) keeps the GPU-oriented defaults. The copy is
+    independent so callers can adjust values without mutating the shared dict.
+    """
+    config = copy.deepcopy(DEFAULT_TRAINING_CONFIG)
+    if device is None or str(device).lower() == "cpu":
+        config.update(CPU_TRAINING_OVERRIDES)
+    return config
+
+
+#: Fields the CPU preset fills when still untouched. Keeping the values here
+#: (rather than duplicating them in the dialog) means the settings form and
+#: the device hint cannot drift apart.
+CPU_PARAM_PRESET = {
+    key: CPU_TRAINING_OVERRIDES[key] for key in ("epochs", "batch", "imgsz")
+}
+
+
 #: Pretrained checkpoints offered as presets in the training dialog. Bare
 #: names (no path) are downloaded on demand by ``resolve_training_model_path``.
 #: Detect leads with yolov8 (the ultralytics default); the other tasks lead

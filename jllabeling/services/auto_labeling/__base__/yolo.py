@@ -12,6 +12,10 @@ from jllabeling.views.common.device_manager import get_preferred_device
 from jllabeling.views.labeling.shape import Shape
 from jllabeling.views.labeling.logger import logger
 from jllabeling.views.labeling.utils.opencv import qt_img_to_rgb_cv_img
+from jllabeling.services.auto_labeling.thresholds import (
+    DEFAULT_CONF_THRESHOLD,
+    DEFAULT_IOU_THRESHOLD,
+)
 from ..model import Model
 from ..engines import OnnxBaseModel
 from ..types import AutoLabelingResult
@@ -105,8 +109,8 @@ class YOLO(Model):
         self.agnostic = self.config.get("agnostic", False)
         self.show_boxes = self.config.get("show_boxes", False)
         self.epsilon_factor = self.config.get("epsilon_factor", 0.005)
-        self.iou_thres = self.config.get("iou_threshold", 0.45)
-        self.conf_thres = self.config.get("conf_threshold", 0.25)
+        self.iou_thres = self.config.get("iou_threshold", DEFAULT_IOU_THRESHOLD)
+        self.conf_thres = self.config.get("conf_threshold", DEFAULT_CONF_THRESHOLD)
         self.max_det = self.config.get("max_det", 300)
         self.filter_classes = self.config.get("filter_classes", None)
         self.nc = len(self.classes)

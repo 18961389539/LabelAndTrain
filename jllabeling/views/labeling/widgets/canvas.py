@@ -95,7 +95,7 @@ class Canvas(
         self.double_click_edit_label = kwargs.pop(
             "double_click_edit_label", True
         )
-        self.num_backups = kwargs.pop("num_backups", 100)
+        self.num_backups = kwargs.pop("num_backups", 30)
         self.wheel_rectangle_editing = kwargs.pop(
             "wheel_rectangle_editing", {}
         )
@@ -108,7 +108,7 @@ class Canvas(
         self.rect_scale_step = self.wheel_rectangle_editing.get(
             "scale_step", 0.05
         )
-        self.auto_highlight_shape = kwargs.pop("auto_highlight_shape", False)
+        self.auto_highlight_shape = kwargs.pop("auto_highlight_shape", True)
         self.attributes_config = kwargs.pop("attributes", {})
         self.rotation_config = kwargs.pop("rotation", {})
         self.mask_config = kwargs.pop("mask", {})
@@ -210,7 +210,7 @@ class Canvas(
             1, int(self.brush_config.get("max_undo_steps", 30))
         )
         self._brush_max_undo_bytes = (
-            max(1, int(self.brush_config.get("max_undo_memory_mb", 128)))
+            max(1, int(self.brush_config.get("max_undo_memory_mb", 64)))
             * 1024
             * 1024
         )

@@ -15,10 +15,12 @@ from PyQt6.QtCore import QCoreApplication, Qt
 from PyQt6.QtWidgets import QDialog, QMessageBox
 
 from jllabeling.config import save_config as save_labeling_config
+from jllabeling.services.auto_labeling.thresholds import DEFAULT_CONF_THRESHOLD
 from jllabeling.services.auto_training.ultralytics._io import (
     load_yaml_config,
 )
 from jllabeling.services.auto_training.ultralytics.exporter import (
+    DEFAULT_EXPORT_FORMAT,
     get_export_validator,
 )
 from jllabeling.services.auto_training.ultralytics.utils import (
@@ -69,7 +71,7 @@ def on_export_event(widget, event_type, data):
             widget.use_autolabel_button.setEnabled(False)
     elif event_type == "export_completed":
         exported_path = data.get("exported_path", "")
-        export_format = data.get("format", "onnx")
+        export_format = data.get("format", DEFAULT_EXPORT_FORMAT)
         widget.append_training_log(
             QCoreApplication.translate(
                 "UltralyticsDialog",
@@ -233,7 +235,7 @@ def use_weights_for_autolabel(widget):
     elif os.path.exists(onnx_path):
         widget._load_exported_weights_for_autolabel(onnx_path)
         return
-    if not widget._confirm_export_dependencies("onnx"):
+    if not widget._confirm_export_dependencies(DEFAULT_EXPORT_FORMAT):
         widget.append_training_log(
             QCoreApplication.translate(
                 "UltralyticsDialog",
@@ -249,7 +251,7 @@ def use_weights_for_autolabel(widget):
         )
     )
     success, message = widget.export_manager.start_export(
-        widget.current_project_path, "onnx", allow_install=True
+        widget.current_project_path, DEFAULT_EXPORT_FORMAT, allow_install=True
     )
     if not success:
         widget._pending_autolabel_after_export = False
@@ -408,10 +410,12 @@ def _load_exported_weights_for_autolabel(widget, onnx_path):
         model_path=onnx_path,
         classes=classes,
         has_visible=has_visible,
-        # A classifier ranks its top-k; a 0.25 floor would silently drop
-        # every suggestion once the classes are many.
+        # A classifier ranks its top-k; the default conf floor would silently
+        # drop every suggestion once the classes are many.
         conf_threshold=(
-            0.0 if widget.selected_task_type == "Classify" else 0.25
+            0.0
+            if widget.selected_task_type == "Classify"
+            else DEFAULT_CONF_THRESHOLD
         ),
     )
     parent = widget.parent()

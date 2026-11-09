@@ -514,13 +514,14 @@ class SettingsRuntimeApplier:
         panel_visibility.sync_dock_checkbox(self._widget, dock_name)
 
     def apply_behavior_flags(self, key: str) -> None:
+        # Fallbacks must mirror the shipped template defaults (jllabeling_config.yaml).
         if key == "auto_highlight_shape":
-            value = self._widget._config.get("auto_highlight_shape", False)
+            value = self._widget._config.get("auto_highlight_shape", True)
             self._widget.canvas.auto_highlight_shape = value
             self._widget.canvas.h_shape_is_hovered = value
         elif key == "auto_switch_to_edit_mode":
             self.set_auto_switch_to_edit_mode(
-                self._widget._config.get("auto_switch_to_edit_mode", False)
+                self._widget._config.get("auto_switch_to_edit_mode", True)
             )
         elif key == "file_list_checkbox_editable":
             self._apply_file_list_checkbox_editable()
@@ -613,7 +614,7 @@ class SettingsRuntimeApplier:
 
     def _apply_file_list_checkbox_editable(self) -> None:
         editable = self._widget._config.get(
-            "file_list_checkbox_editable", False
+            "file_list_checkbox_editable", True
         )
         for i in range(self._widget.file_list_widget.count()):
             item = self._widget.file_list_widget.item(i)

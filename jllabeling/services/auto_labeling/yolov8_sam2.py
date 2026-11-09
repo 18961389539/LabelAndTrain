@@ -7,6 +7,10 @@ from PyQt6 import QtCore
 from PyQt6.QtCore import QThread
 from PyQt6.QtCore import QCoreApplication
 
+from jllabeling.services.auto_labeling.thresholds import (
+    DEFAULT_CONF_THRESHOLD,
+    DEFAULT_IOU_THRESHOLD,
+)
 from jllabeling.services.auto_labeling.worker import GenericWorker
 from jllabeling.views.common.device_manager import get_preferred_device
 from jllabeling.views.labeling.shape import Shape
@@ -79,8 +83,8 @@ class YOLOv8SegmentAnything2(YOLO):
         self.agnostic = self.config.get("agnostic", False)
         self.show_boxes = self.config.get("show_boxes", False)
         self.strategy = self.config.get("strategy", "largest")
-        self.iou_thres = self.config.get("iou_threshold", 0.45)
-        self.conf_thres = self.config.get("conf_threshold", 0.25)
+        self.iou_thres = self.config.get("iou_threshold", DEFAULT_IOU_THRESHOLD)
+        self.conf_thres = self.config.get("conf_threshold", DEFAULT_CONF_THRESHOLD)
         self.filter_classes = self.config.get("filter_classes", None)
 
         self.task = "det"

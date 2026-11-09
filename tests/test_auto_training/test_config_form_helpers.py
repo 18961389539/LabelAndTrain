@@ -200,6 +200,26 @@ class TestConfigFormHelpers(unittest.TestCase):
             self._widget("imgsz").value(), CPU_PARAM_PRESET["imgsz"]
         )
 
+    def test_cpu_preset_matches_the_shared_overrides(self):
+        from jllabeling.services.auto_training.ultralytics.config import (
+            CPU_TRAINING_OVERRIDES,
+        )
+
+        self.assertEqual(set(CPU_PARAM_PRESET), {"epochs", "batch", "imgsz"})
+        for key, value in CPU_PARAM_PRESET.items():
+            self.assertEqual(value, CPU_TRAINING_OVERRIDES[key])
+
+    def test_default_run_name_is_unique_and_a_single_component(self):
+        # The overwrite confirmation recursively deletes <project>/<name>, so
+        # the default must be a fresh, single-component name, not "exp".
+        name = self._widget("name").text()
+        self.assertRegex(name, r"^exp_\d{8}_\d{6}$")
+        from jllabeling.services.auto_training.ultralytics.validators import (
+            is_single_path_component,
+        )
+
+        self.assertTrue(is_single_path_component(name))
+
     # -- hint --------------------------------------------------------------
     def test_hint_names_what_was_replaced_and_only_shows_on_cpu(self):
         hint = self.dialog.device_hint
@@ -307,6 +327,20 @@ class TestConfigFormHelpers(unittest.TestCase):
             self._widget("imgsz").value(), DEFAULT_TRAINING_CONFIG["imgsz"]
         )
         self.assertFalse(self._widget("cos_lr").isChecked())
+
+    def test_standard_tier_matches_the_default_pace(self):
+        # standard doubles as "reset the pace", so its values must track the
+        # shared defaults (including the new patience of 20).
+        standard = TRAIN_PARAM_PRESETS["standard"]
+        self.assertEqual(
+            standard["epochs"], DEFAULT_TRAINING_CONFIG["epochs"]
+        )
+        self.assertEqual(
+            standard["imgsz"], DEFAULT_TRAINING_CONFIG["imgsz"]
+        )
+        self.assertEqual(
+            standard["patience"], DEFAULT_TRAINING_CONFIG["patience"]
+        )
 
     def test_a_tier_replaces_values_the_cpu_preset_would_leave_alone(self):
         """Tiers are explicit clicks, so they overwrite what is there."""

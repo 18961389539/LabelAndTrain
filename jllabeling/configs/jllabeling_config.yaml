@@ -23,7 +23,7 @@ canvas:
     - 243
     - 255
   brush:
-    max_undo_memory_mb: 128
+    max_undo_memory_mb: 64
     max_undo_steps: 30
     point_distance: 25.0
     simplify_epsilon: 2.0
@@ -42,7 +42,7 @@ canvas:
   epsilon: 10.0
   mask:
     opacity: 102
-  num_backups: 100
+  num_backups: 30
   rotation:
     large_increment: 1.0
     small_increment: 0.1
@@ -50,7 +50,7 @@ canvas:
     adjust_step: 2.0
     enable: true
     scale_step: 0.05
-config_version: 2
+config_version: 3
 custom_models: []
 default_shape_color:
 - 0
@@ -59,13 +59,13 @@ default_shape_color:
 device: null
 digit_shortcuts: {}
 display_label_popup: true
-exif_scan_enabled: true
+exif_scan_enabled: false
 file_dock:
   closable: false
   floatable: false
   movable: false
   show: true
-file_list_checkbox_editable: false
+file_list_checkbox_editable: true
 file_search: null
 fit_to_content:
   column: true
@@ -94,7 +94,7 @@ language: zh_CN
 logger_level: info
 model_hub: modelscope
 move_mode: auto
-qt_image_allocation_limit: null
+qt_image_allocation_limit: 1024
 shape:
   fill_color:
   - 220
@@ -142,7 +142,7 @@ shortcuts:
   auto_labeling_clear: B
   auto_labeling_finish_object: F
   auto_labeling_remove_point: E
-  auto_labeling_run: I
+  auto_labeling_run: Ctrl+Shift+I
   auto_run: Ctrl+B
   brightness_contrast: Ctrl+Alt+D
   close: Ctrl+W
@@ -241,7 +241,7 @@ shortcuts:
   toggle_visibility_shapes: Ctrl+H
   ultralytics_train: null
   undo: Ctrl+Z
-  undo_last_point: Ctrl+Z
+  undo_last_point: Ctrl+Shift+Backspace
   ungroup_selected_shapes: U
   union_selected_shapes: Ctrl+Shift+M
   upload_image_flags_file: null
@@ -270,7 +270,7 @@ sidebar:
   lists: null
   width: null
 sort_labels: true
-startup_show_project_manager: true
+startup_show_project_manager: false
 store_data: false
 system_clipboard: false
 theme: auto
@@ -279,5 +279,5 @@ tools_panel:
   position: null
 training:
   ultralytics:
-    project_readonly: true
+    project_readonly: false
 validate_label: null

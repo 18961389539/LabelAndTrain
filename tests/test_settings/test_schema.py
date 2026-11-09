@@ -131,11 +131,13 @@ class TestSettingsSchema(unittest.TestCase):
 
     def test_undo_depth_default_is_deeper_than_the_old_ten(self):
         defaults = defaults_map()
-        # 10 snapshots ran out after a handful of edits on one frame; 100 is
-        # the new shipped default and stays inside the field's 0..200 range.
-        self.assertEqual(defaults["canvas.num_backups"], 100)
+        # 10 snapshots ran out after a handful of edits on one frame, but
+        # 100 shallow copies per canvas was unbounded memory on large
+        # inspection images. 30 is the v3 shipped default: still far deeper
+        # than 10, and inside the field's 0..200 range.
+        self.assertEqual(defaults["canvas.num_backups"], 30)
         field = SETTING_FIELD_MAP["canvas.num_backups"]
-        self.assertLessEqual(100, field.maximum)
+        self.assertLessEqual(30, field.maximum)
 
     def test_included_and_excluded_keys(self):
         expected_keys = {

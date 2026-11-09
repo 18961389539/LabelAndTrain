@@ -17,6 +17,10 @@ from pathlib import Path
 from PyQt6.QtCore import Qt
 
 from jllabeling.config import get_work_directory
+from jllabeling.services.auto_labeling.thresholds import (
+    DEFAULT_CONF_THRESHOLD,
+    DEFAULT_IOU_THRESHOLD,
+)
 from jllabeling.services.auto_labeling.types import AutoLabelingMode
 from jllabeling.views.labeling.logger import logger
 
@@ -416,8 +420,8 @@ def _build_custom_model_yaml_from_weights(
         "display_name": f"Custom \u00b7 {weights.stem}",
         "model_path": weights_abs,
         "engine": "ort",
-        "conf_threshold": 0.25,
-        "iou_threshold": 0.45,
+        "conf_threshold": DEFAULT_CONF_THRESHOLD,
+        "iou_threshold": DEFAULT_IOU_THRESHOLD,
         "classes": classes,
     }
 

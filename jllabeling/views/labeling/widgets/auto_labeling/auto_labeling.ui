@@ -134,7 +134,7 @@
      <item>
       <widget class="QPushButton" name="button_run">
        <property name="text">
-        <string>Run (i)</string>
+        <string>Run</string>
        </property>
       </widget>
      </item>
@@ -177,9 +177,9 @@ font-size: 12px;</string>
        <property name="singleStep">
         <double>0.010000000000000</double>
        </property>
-       <!-- <property name="value">
+       <property name="value">
         <double>0.250000000000000</double>
-       </property> -->
+       </property>
       </widget>
      </item>
      <item>
@@ -202,6 +202,9 @@ font-size: 12px;</string>
        </property>
        <property name="singleStep">
         <double>0.010000000000000</double>
+       </property>
+       <property name="value">
+        <double>0.450000000000000</double>
        </property>
       </widget>
      </item>

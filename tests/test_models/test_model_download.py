@@ -491,3 +491,69 @@ def test_remove_custom_model(monkeypatch):
 
     # Removing an unknown path is a no-op.
     assert not manager.remove_custom_model(r"C:/nope.yaml")
+
+
+def test_offline_mode_fails_fast_without_network(tmp_path, monkeypatch):
+    """JLLABELING_OFFLINE=1 must abort before any socket is opened."""
+    from jllabeling import net_defaults
+
+    monkeypatch.setenv("JLLABELING_OFFLINE", "1")
+    calls = []
+    monkeypatch.setattr(
+        auto_model.urllib.request,
+        "urlopen",
+        lambda *args, **kwargs: calls.append(1),
+    )
+    monkeypatch.setattr(auto_model, "get_config", lambda: {})
+    model = DummyModel({}, lambda _: None)
+
+    with pytest.raises(net_defaults.OfflineMode):
+        model.download_with_retry(
+            "https://example.com/model.onnx",
+            str(tmp_path / "model.onnx"),
+            None,
+        )
+    assert not calls
+    assert not (tmp_path / "model.onnx").exists()
+
+
+def test_download_defaults_are_env_aware(monkeypatch):
+    """Class defaults read net_defaults live; instance overrides still win."""
+    from jllabeling import net_defaults
+
+    monkeypatch.setenv("JLLABELING_DOWNLOAD_RETRIES", "7")
+    monkeypatch.setattr(auto_model, "get_config", lambda: {})
+    model = DummyModel({}, lambda _: None)
+    assert model.MAX_RETRIES == 7
+    assert model.DOWNLOAD_TIMEOUT == net_defaults.download_timeout()
+
+    model.MAX_RETRIES = 1
+    model.RETRY_DELAY = 0
+    assert model.MAX_RETRIES == 1
+    assert model.RETRY_DELAY == 0
+
+
+def test_model_hub_is_independent_of_ui_language(tmp_path, monkeypatch):
+    """An en_US UI with no model_hub still defaults to ModelScope."""
+    monkeypatch.delenv("JLLABELING_MODEL_HUB", raising=False)
+    monkeypatch.setattr(
+        auto_model, "get_config", lambda: {"language": "en_US"}
+    )
+    monkeypatch.setattr(
+        auto_model, "get_work_directory", lambda: str(tmp_path)
+    )
+    monkeypatch.setattr(auto_model, "get_data_dir_name", lambda: "data")
+    model = DummyModel({}, lambda _: None)
+    monkeypatch.setattr(model, "allow_migrate_data", lambda: None)
+    captured = {}
+
+    def fake_download(url, *args, **kwargs):
+        captured["url"] = url
+        return True
+
+    monkeypatch.setattr(model, "download_with_retry", fake_download)
+    model.get_model_abs_path(
+        {"name": "m", "model_path": "https://github.com/foo/bar.onnx"},
+        "model_path",
+    )
+    assert "modelscope.cn" in captured["url"]

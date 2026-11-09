@@ -1,5 +1,10 @@
 import numpy as np
 
+from jllabeling.services.auto_labeling.thresholds import (
+    DEFAULT_CONF_THRESHOLD,
+    DEFAULT_IOU_THRESHOLD,
+)
+
 from .points_conversion import xywh2xyxy
 
 
@@ -102,8 +107,8 @@ def _get_covariance_matrix(boxes):
 def non_max_suppression_v5(
     prediction,
     task="det",
-    conf_thres=0.25,
-    iou_thres=0.45,
+    conf_thres=DEFAULT_CONF_THRESHOLD,
+    iou_thres=DEFAULT_IOU_THRESHOLD,
     classes=None,
     agnostic=False,
     multi_label=False,
@@ -241,8 +246,8 @@ def non_max_suppression_v5(
 def non_max_suppression_v8(
     prediction,
     task="det",
-    conf_thres=0.25,
-    iou_thres=0.45,
+    conf_thres=DEFAULT_CONF_THRESHOLD,
+    iou_thres=DEFAULT_IOU_THRESHOLD,
     classes=None,
     agnostic=False,
     multi_label=False,
@@ -384,7 +389,7 @@ def non_max_suppression_v8(
 def non_max_suppression_end2end(
     prediction,
     task="det",
-    conf_thres=0.25,
+    conf_thres=DEFAULT_CONF_THRESHOLD,
     classes=None,
     max_det=300,
     nm=0,  # number of masks (for seg task)

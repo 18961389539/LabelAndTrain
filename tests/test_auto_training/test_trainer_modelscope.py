@@ -68,12 +68,25 @@ class TestHubPreference(unittest.TestCase):
         self.mock_get_config.return_value = {"model_hub": "modelscope"}
         self.assertTrue(trainer._hub_prefers_modelscope())
 
-    def test_zh_language_fallback_enables(self):
-        self.mock_get_config.return_value = {"language": "zh_CN"}
-        self.assertTrue(trainer._hub_prefers_modelscope())
+    def test_config_github_disables(self):
+        self.mock_get_config.return_value = {"model_hub": "github"}
+        self.assertFalse(trainer._hub_prefers_modelscope())
 
-    def test_english_without_hub_disables(self):
-        self.mock_get_config.return_value = {"language": "en_US"}
+    def test_unset_hub_defaults_to_modelscope(self):
+        # An absent/empty model_hub means ModelScope regardless of the UI
+        # language: the download source must never read "language".
+        for cfg in ({"language": "zh_CN"}, {"language": "en_US"}, {}):
+            self.mock_get_config.return_value = cfg
+            self.assertTrue(
+                trainer._hub_prefers_modelscope(), f"cfg={cfg}"
+            )
+
+    def test_language_cannot_select_the_download_source(self):
+        # zh_CN used to flip the source; an explicit github hub now wins.
+        self.mock_get_config.return_value = {
+            "model_hub": "github",
+            "language": "zh_CN",
+        }
         self.assertFalse(trainer._hub_prefers_modelscope())
 
 
@@ -194,6 +207,69 @@ class TestResolveTrainingModelPath(unittest.TestCase):
             ms.assert_not_called()
             fb.assert_called_once()
         self.assertEqual(result, "/official/yolov8s.pt")
+
+
+class TestNetworkDefaults(unittest.TestCase):
+    def test_download_uses_shared_timeout_and_chunk_size(self):
+        seen = {}
+
+        class RecordingResponse(FakeResponse):
+            def read(self, size=-1):
+                seen.setdefault("chunk", size)
+                return super().read(size)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            dest = os.path.join(tmp, "yolov8s.pt")
+            response = RecordingResponse([b"PK\x03\x04rest"])
+            with (
+                mock.patch(
+                    "urllib.request.urlopen", return_value=response
+                ) as urlopen,
+                mock.patch.object(
+                    trainer.net_defaults, "weights_timeout", return_value=17
+                ),
+                mock.patch.object(
+                    trainer.net_defaults,
+                    "weights_chunk_size",
+                    return_value=99,
+                ),
+            ):
+                self.assertTrue(
+                    trainer._download_file("http://x/y.pt", dest)
+                )
+            self.assertEqual(urlopen.call_args.kwargs["timeout"], 17)
+            self.assertEqual(seen["chunk"], 99)
+
+
+class TestOfflineMode(unittest.TestCase):
+    def test_download_file_skips_the_network_in_offline_mode(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            dest = os.path.join(tmp, "yolov8s.pt")
+            with (
+                mock.patch.dict(os.environ, {"JLLABELING_OFFLINE": "1"}),
+                mock.patch("urllib.request.urlopen") as urlopen,
+            ):
+                self.assertFalse(
+                    trainer._download_file("http://x/y.pt", dest)
+                )
+                urlopen.assert_not_called()
+            self.assertFalse(os.path.exists(dest))
+
+    def test_resolve_fails_fast_with_a_readable_message(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with (
+                mock.patch.dict(os.environ, {"JLLABELING_OFFLINE": "1"}),
+                mock.patch.object(
+                    trainer, "get_training_weights_dir", return_value=tmp
+                ),
+                mock.patch.object(
+                    trainer, "_fallback_official_download"
+                ) as fallback,
+            ):
+                with self.assertRaises(RuntimeError) as ctx:
+                    trainer.resolve_training_model_path("yolov8s.pt")
+                self.assertIn("offline mode", str(ctx.exception))
+                fallback.assert_not_called()
 
 
 if __name__ == "__main__":

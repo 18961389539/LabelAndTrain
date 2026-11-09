@@ -9,7 +9,9 @@ import socket
 from urllib.parse import urlparse
 from urllib.error import URLError, HTTPError
 
-socket.setdefaulttimeout(240)  # Prevent timeout when downloading models
+from jllabeling import net_defaults
+
+socket.setdefaulttimeout(net_defaults.socket_timeout())
 
 from abc import abstractmethod
 
@@ -57,7 +59,9 @@ def _check_model_worker(model_path):
         sys.exit(1)
 
 
-def safe_check_model(model_path, timeout=30, on_stage=None):
+def safe_check_model(
+    model_path, timeout=net_defaults.model_check_timeout(), on_stage=None
+):
     """Check model integrity without crashing the application.
 
     The check is deliberately *lightweight*:
@@ -213,15 +217,37 @@ class ModelMeta(type):
     """
 
 
+def _net_property(getter_func):
+    """Class attribute that reads ``net_defaults`` on every access.
+
+    A plain class attribute would freeze the value at import time, so an
+    environment variable set later would be ignored. A read-only
+    ``@property`` would break the call sites and tests that assign
+    ``model.MAX_RETRIES`` / ``model.RETRY_DELAY`` to override the defaults;
+    the setter keeps that per-instance override while the getter falls back
+    to the shared, env-aware value.
+    """
+    field = "_" + getter_func.__name__
+
+    def getter(self):
+        override = getattr(self, field, None)
+        return getter_func() if override is None else override
+
+    def setter(self, value):
+        setattr(self, field, value)
+
+    return property(getter, setter)
+
+
 class Model(metaclass=ModelMeta):
     BASE_DOWNLOAD_URL = (
         "https://github.com/CVHub520/X-AnyLabeling/releases/tag"
     )
 
-    MAX_RETRIES = 2
-    RETRY_DELAY = 3  # seconds
-    DOWNLOAD_CHUNK_SIZE = 64 * 1024  # 64KB
-    DOWNLOAD_TIMEOUT = 30  # seconds per connection/read
+    MAX_RETRIES = _net_property(net_defaults.max_retries)
+    RETRY_DELAY = _net_property(net_defaults.retry_delay)
+    DOWNLOAD_CHUNK_SIZE = _net_property(net_defaults.chunk_size)
+    DOWNLOAD_TIMEOUT = _net_property(net_defaults.download_timeout)
 
     class Meta:
         required_config_names = []
@@ -556,6 +582,22 @@ class Model(metaclass=ModelMeta):
         earlier process cannot be proven to belong to the same URL, so the
         first attempt starts clean.
         """
+        # Fail fast before touching the network: an offline machine would
+        # otherwise hang for the full socket timeout on every retry. Turn the
+        # explicit OfflineMode into a readable log/status; the caller already
+        # wraps download failures into a user-facing message.
+        try:
+            net_defaults.ensure_online("Model download")
+        except net_defaults.OfflineMode as exc:
+            reason = str(exc)
+            logger.warning(f"Model download skipped: {reason}")
+            self._emit_stage(
+                QCoreApplication.translate(
+                    "Model", "Download failed: {reason}"
+                ).format(reason=reason)
+            )
+            raise
+
         dest_path, part_path = self._ensure_download_paths(
             dest_path, model_directory
         )
@@ -716,7 +758,13 @@ class Model(metaclass=ModelMeta):
                 # ~1.2GB), misclassifying them as corrupted and triggering
                 # an endless delete-redownload loop.
                 size_mb = os.path.getsize(model_abs_path) / (1024 * 1024)
-                check_timeout = max(30, min(300, int(size_mb)))
+                # Both bounds come from the shared network defaults: the
+                # standard model-check timeout floors it, the ceiling used
+                # for large artifacts caps it for very big encoders.
+                check_timeout = max(
+                    net_defaults.model_check_timeout(),
+                    min(net_defaults.install_timeout(), int(size_mb)),
+                )
                 is_valid = safe_check_model(
                     model_abs_path,
                     timeout=check_timeout,
@@ -750,23 +798,13 @@ class Model(metaclass=ModelMeta):
         )
         pathlib.Path(model_abs_path).parent.mkdir(parents=True, exist_ok=True)
 
-        # Download url
-        use_modelscope = False
+        # Download url. The source is chosen explicitly and never inferred
+        # from the UI language. JLLABELING_MODEL_HUB still takes priority;
+        # an absent/empty model_hub defaults to ModelScope, exactly like the
+        # training side (trainer.py): (hub or "modelscope") == "modelscope".
         env_model_hub = os.getenv("JLLABELING_MODEL_HUB")
-        if env_model_hub == "modelscope":
-            use_modelscope = True
-        elif (
-            env_model_hub is None or env_model_hub == ""
-        ):  # Only check config if env var is not set or empty
-            if self._config.get("model_hub") == "modelscope":
-                use_modelscope = True
-            # Fallback to language check only if model_hub is not 'modelscope'
-            elif (
-                self._config.get("model_hub") is None
-                or self._config.get("model_hub") == ""
-            ):
-                if self._config.get("language") == "zh_CN":
-                    use_modelscope = True
+        hub = env_model_hub or self._config.get("model_hub") or "modelscope"
+        use_modelscope = hub == "modelscope"
 
         if use_modelscope:
             model_type = model_config["name"].split("-")[0]

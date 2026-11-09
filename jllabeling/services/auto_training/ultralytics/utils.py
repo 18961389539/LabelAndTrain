@@ -7,6 +7,11 @@ import importlib.metadata
 from packaging.specifiers import SpecifierSet
 from typing import List, Dict, Optional
 
+from jllabeling.services.auto_labeling.thresholds import (
+    DEFAULT_CONF_THRESHOLD,
+    DEFAULT_IOU_THRESHOLD,
+)
+
 from .config import TASK_SHAPE_MAPPINGS
 
 #: A pure-YOLO dataset keeps its annotations in ``<stem>.txt``, and
@@ -449,7 +454,7 @@ def write_autolabel_model_yaml(
     classes,
     has_visible: bool = None,
     kpt_threshold: float = None,
-    conf_threshold: float = 0.25,
+    conf_threshold: float = DEFAULT_CONF_THRESHOLD,
 ):
     """Write a custom-model yaml that ModelManager.load_custom_model can load.
 
@@ -462,7 +467,7 @@ def write_autolabel_model_yaml(
         "display_name": display_name,
         "model_path": os.path.abspath(model_path),
         "conf_threshold": conf_threshold,
-        "iou_threshold": 0.45,
+        "iou_threshold": DEFAULT_IOU_THRESHOLD,
         "classes": (
             dict(classes) if isinstance(classes, dict) else list(classes or [])
         ),

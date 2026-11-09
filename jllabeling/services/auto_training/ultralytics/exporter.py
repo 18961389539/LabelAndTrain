@@ -10,6 +10,10 @@ from PyQt6.QtCore import QObject, pyqtSignal
 from .utils import check_package_installed
 from .validators import install_packages_with_timeout
 
+#: Default export format, shared with the export-to-auto-labeling view so the
+#: two "onnx" literals cannot drift apart.
+DEFAULT_EXPORT_FORMAT = "onnx"
+
 
 class ExportEventRedirector(QObject):
     """Thread-safe export event redirector"""
@@ -227,7 +231,7 @@ class ExportManager:
     def start_export(
         self,
         project_path: str,
-        export_format: str = "onnx",
+        export_format: str = DEFAULT_EXPORT_FORMAT,
         allow_install: bool = False,
     ) -> Tuple[bool, str]:
         """Start the export worker.
@@ -452,7 +456,7 @@ def get_export_manager() -> ExportManager:
 
 
 def export_model(
-    project_path: str, export_format: str = "onnx"
+    project_path: str, export_format: str = DEFAULT_EXPORT_FORMAT
 ) -> Tuple[bool, str]:
     manager = get_export_manager()
     return manager.start_export(project_path, export_format)

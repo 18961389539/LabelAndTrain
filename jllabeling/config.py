@@ -185,6 +185,30 @@ _MIGRATIONS = {
     2: [
         ("digit_shortcuts", None, {}),
     ],
+    # v3: defaults that assumed an unrestricted, online, single-user desktop.
+    # Industrial datasets are large, often read-only and frequently processed
+    # on machines without GitHub access, so the shipped defaults now:
+    #   * raise Qt's image allocation ceiling (256 MB is too small for large
+    #     inspection images),
+    #   * stop rewriting originals via the EXIF fixer,
+    #   * stay on the empty canvas on first run instead of opening an empty
+    #     project manager,
+    #   * let review checkboxes and the training output directory be edited,
+    #   * bound canvas undo memory, and
+    #   * remove two ambiguous bare-letter / duplicate shortcuts.
+    # As with every generation, only an rc still carrying the *old shipped
+    # default* is touched; a value the user chose survives.
+    3: [
+        ("qt_image_allocation_limit", None, 1024),
+        ("exif_scan_enabled", True, False),
+        ("startup_show_project_manager", True, False),
+        ("file_list_checkbox_editable", False, True),
+        ("training.ultralytics.project_readonly", True, False),
+        ("canvas.num_backups", 100, 30),
+        ("canvas.brush.max_undo_memory_mb", 128, 64),
+        ("shortcuts.undo_last_point", "Ctrl+Z", "Ctrl+Shift+Backspace"),
+        ("shortcuts.auto_labeling_run", "I", "Ctrl+Shift+I"),
+    ],
 }
 
 

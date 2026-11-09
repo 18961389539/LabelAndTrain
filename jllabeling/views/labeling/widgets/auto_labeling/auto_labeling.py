@@ -28,6 +28,10 @@ from jllabeling.services.auto_labeling import (
     _AUTO_LABELING_CONF_MODELS,
     _SKIP_PREDICTION_ON_NEW_MARKS_MODELS,
 )
+from jllabeling.services.auto_labeling.thresholds import (
+    DEFAULT_CONF_THRESHOLD,
+    DEFAULT_IOU_THRESHOLD,
+)
 from jllabeling.views.labeling.ai.style import SliderStyle
 from jllabeling.views.labeling.logger import logger
 from jllabeling.views.labeling.utils._io import load_json, save_json
@@ -308,7 +312,7 @@ class AutoLabelingWidget(QWidget):
 
         # --- Configuration for: button_run ---
         self.button_run.setStyleSheet(_toolbar_highlight_btn())
-        self.button_run.setText(self.tr("Run (i)"))
+        self.button_run.setText(self.tr("Run"))
         self.button_run.setToolTip(
             self.tr(
                 "用当前选中的模型标注这张图片\n"
@@ -394,7 +398,7 @@ class AutoLabelingWidget(QWidget):
 
         # --- Configuration for: button_add_point ---
         self.button_add_point.setToolTip(
-            self.tr("添加前景点（在目标上左键，快捷键 q）")
+            self.tr("添加前景点（在目标上左键，快捷键 Q）")
         )
         self.button_add_point.clicked.connect(
             lambda: self.set_auto_labeling_mode(
@@ -404,7 +408,7 @@ class AutoLabelingWidget(QWidget):
 
         # --- Configuration for: button_remove_point ---
         self.button_remove_point.setToolTip(
-            self.tr("移除背景点（左键，快捷键 e）")
+            self.tr("移除背景点（左键，快捷键 E）")
         )
         self.button_remove_point.clicked.connect(
             lambda: self.set_auto_labeling_mode(
@@ -418,14 +422,14 @@ class AutoLabelingWidget(QWidget):
         self.button_add_rect.clicked.connect(self.on_button_add_rect_clicked)
 
         # --- Configuration for: button_clear ---
-        self.button_clear.setText(self.tr("Clear (b)"))
-        self.button_clear.setToolTip(self.tr("清除所有提示（快捷键 b）"))
+        self.button_clear.setText(self.tr("Clear (B)"))
+        self.button_clear.setToolTip(self.tr("清除所有提示（快捷键 B）"))
         self.button_clear.clicked.connect(self.on_clear_clicked)
 
         # --- Configuration for: button_finish_object ---
-        self.button_finish_object.setText(self.tr("Finish (f)"))
+        self.button_finish_object.setText(self.tr("Finish (F)"))
         self.button_finish_object.setToolTip(
-            self.tr("完成当前对象（快捷键 f）")
+            self.tr("完成当前对象（快捷键 F）")
         )
         self.button_finish_object.clicked.connect(self.on_finish_clicked)
 
@@ -530,32 +534,41 @@ class AutoLabelingWidget(QWidget):
     def update_shortcut_button_texts(self, shortcuts=None):
         if shortcuts is None:
             shortcuts = self.parent._config.get("shortcuts", {})
+        # Derive the Run label from the configured shortcut instead of the
+        # hard-coded "Run (i)". The formatter splits an existing "(...)"
+        # suffix before re-appending, so repeated calls never stack suffixes.
+        self.button_run.setText(
+            self._format_button_with_shortcut(
+                self.button_run.text(),
+                shortcuts.get("auto_labeling_run"),
+            )
+        )
         self.button_add_point.setText(
             self._format_button_with_shortcut(
                 self.button_add_point.text(),
                 shortcuts.get("auto_labeling_add_point"),
-                "q",
+                "Q",
             )
         )
         self.button_remove_point.setText(
             self._format_button_with_shortcut(
                 self.button_remove_point.text(),
                 shortcuts.get("auto_labeling_remove_point"),
-                "e",
+                "E",
             )
         )
         self.button_clear.setText(
             self._format_button_with_shortcut(
                 self.button_clear.text(),
                 shortcuts.get("auto_labeling_clear"),
-                "b",
+                "B",
             )
         )
         self.button_finish_object.setText(
             self._format_button_with_shortcut(
                 self.button_finish_object.text(),
                 shortcuts.get("auto_labeling_finish_object"),
-                "f",
+                "F",
             )
         )
 
@@ -1779,7 +1792,11 @@ class AutoLabelingWidget(QWidget):
         self.model_selection_button.setEnabled(True)
         self._apply_model_button_state(model_config)
 
-        # Reset controls to initial values when the model changes
+        # Reset controls to initial values when the model changes. Pre-seed
+        # with the shared defaults: a model yaml that omits a threshold used
+        # to leave ``initial_*_value`` undefined, so the except (or else)
+        # branch silently set the spinbox to 0.0. Never fall back to 0.0.
+        initial_iou_value = DEFAULT_IOU_THRESHOLD
         try:
             if (
                 self.model_manager.loaded_model_config["type"]
@@ -1795,12 +1812,11 @@ class AutoLabelingWidget(QWidget):
                     ]
                 self.edit_iou.setValue(initial_iou_value)
             else:
-                initial_iou_value = 0.0
                 self.edit_iou.setValue(initial_iou_value)
         except Exception as _:
-            initial_iou_value = 0.0
             self.edit_iou.setValue(initial_iou_value)
 
+        initial_conf_value = DEFAULT_CONF_THRESHOLD
         try:
             if (
                 self.model_manager.loaded_model_config["type"]
@@ -1827,10 +1843,8 @@ class AutoLabelingWidget(QWidget):
                     )
                 self.edit_conf.setValue(initial_conf_value)
             else:
-                initial_conf_value = 0.0
                 self.edit_conf.setValue(initial_conf_value)
         except Exception as _:
-            initial_conf_value = 0.0
             self.edit_conf.setValue(initial_conf_value)
 
         self.on_iou_value_changed(initial_iou_value)

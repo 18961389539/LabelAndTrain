@@ -150,7 +150,8 @@ class TestSettingsDialogLayout(unittest.TestCase):
 
         spinboxes = dialog.content_body.findChildren(QtWidgets.QSpinBox)
         self.assertEqual(len(spinboxes), 1)
-        self.assertEqual(spinboxes[0].value(), 256)
+        # Config v3 ships 1024; an unset key used to fall back to Qt's 256.
+        self.assertEqual(spinboxes[0].value(), 1024)
 
     def test_general_font_selector_lists_available_font_families(self):
         dialog = self._create_dialog()

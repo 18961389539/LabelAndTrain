@@ -6,6 +6,9 @@ from datetime import datetime
 
 from PyQt6.QtCore import QCoreApplication
 
+from jllabeling.services.auto_labeling.thresholds import (
+    DEFAULT_CONF_THRESHOLD,
+)
 from .engines import OnnxBaseModel
 from .model import Model
 from .types import AutoLabelingResult
@@ -67,7 +70,11 @@ class YOLOv8Cls(Model):
         )
         self.classes = list(self.config.get("classes", []) or [])
         self.topk = max(1, int(self.config.get("topk", 3)))
-        self.conf_thres = float(self.config.get("conf_threshold", 0.0) or 0.0)
+        # A model yaml without the key must not silently disable filtering
+        # with 0.0; an explicit 0.0 (keep every suggestion) stays valid.
+        self.conf_thres = float(
+            self.config.get("conf_threshold", DEFAULT_CONF_THRESHOLD)
+        )
         # Ultralytics bakes its /255 into the exported graph. Keep it opt-in so
         # a model exported without the in-place scale can still be used.
         self.rescale = bool(self.config.get("rescale", False))

@@ -19,10 +19,10 @@ from PyQt6.QtWidgets import (
 )
 
 from jllabeling.services.auto_training.ultralytics.config import (
-    DEFAULT_TRAINING_CONFIG,
     ICON_SIZE_NORMAL,
     NUM_WORKERS,
     OPTIMIZER_OPTIONS,
+    get_default_training_config,
 )
 from jllabeling.services.auto_training.ultralytics.style import (
     get_advanced_toggle_btn_style,
@@ -36,6 +36,11 @@ from jllabeling.views.training.widgets.ultralytics_widgets import (
     CustomSpinBox,
     SecondaryButton,
 )
+
+#: One source of truth for the form's initial values: device=None yields the
+#: CPU-safe defaults, so every setValue(DEFAULT_TRAINING_CONFIG[...]) below
+#: stays in sync with the dialog's CPU preset and the trainer's fallback.
+DEFAULT_TRAINING_CONFIG = get_default_training_config()
 
 
 def init_train_settings(widget, parent_layout):

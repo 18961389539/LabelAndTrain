@@ -29,9 +29,9 @@ class TestUndoDepth(unittest.TestCase):
         if cls.app is None:
             cls.app = QtWidgets.QApplication([])
 
-    def test_default_depth_is_100(self):
+    def test_default_depth_is_30(self):
         canvas = Canvas(parent=None)
-        self.assertEqual(canvas.num_backups, 100)
+        self.assertEqual(canvas.num_backups, 30)
 
     def test_history_is_bounded_but_far_deeper_than_the_old_default(self):
         canvas = Canvas(parent=None)

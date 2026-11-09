@@ -3,9 +3,12 @@ import os
 # Temporary fix for: bus error
 # Source: https://stackoverflow.com/questions/73072612/
 # why-does-np-linalg-solve-raise-bus-error-when-running-on-its-own-thread-mac-m1
-os.environ["MKL_NUM_THREADS"] = "1"
-os.environ["NUMEXPR_NUM_THREADS"] = "1"
-os.environ["OMP_NUM_THREADS"] = "1"
+# JLLABELING_NUM_THREADS overrides the shipped default of 1; it also feeds
+# OMP_NUM_THREADS, which ONNX Runtime uses for inter_op_num_threads.
+_num_threads = os.getenv("JLLABELING_NUM_THREADS", "1")
+os.environ.setdefault("MKL_NUM_THREADS", _num_threads)
+os.environ.setdefault("NUMEXPR_NUM_THREADS", _num_threads)
+os.environ.setdefault("OMP_NUM_THREADS", _num_threads)
 
 # torch bundles its own libiomp5md.dll; without this, loading torch into the
 # GUI process (PySide6 already loaded) crashes with duplicate-OpenMP errors.
@@ -316,7 +319,7 @@ def _main():
     )
     parser.add_argument(
         "--logger-level",
-        default="info",
+        default=None,
         choices=["debug", "info", "warning", "fatal", "error"],
         help="logger level",
     )
@@ -365,14 +368,21 @@ def _main():
         "--nodata",
         dest="store_data",
         action="store_false",
-        help="stop storing image data to JSON file",
+        help="stop storing image data to JSON file (inverse: --data)",
+        default=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--data",
+        dest="store_data",
+        action="store_true",
+        help="store image data to JSON file (inverse: --nodata)",
         default=argparse.SUPPRESS,
     )
     parser.add_argument(
         "--autosave",
         dest="auto_save",
-        action="store_true",
-        help="auto save",
+        action=argparse.BooleanOptionalAction,
+        help="auto save (pass --no-autosave to disable)",
         default=argparse.SUPPRESS,
     )
     parser.add_argument(
@@ -496,7 +506,7 @@ def _main():
         config_file_or_yaml = os.path.join(
             get_work_directory(), get_config_file_name()
         )
-    logger_level = config_from_args.pop("logger_level")
+    cli_logger_level = config_from_args.pop("logger_level", None)
     qt_platform = config_from_args.pop("qt_platform", None)
 
     # --- Crash diagnostics (file logs + faulthandler) ---------------------
@@ -533,7 +543,7 @@ def _main():
     except Exception as e:  # noqa: BLE001
         logger.warning(f"Could not enable crash diagnostics: {e}")
 
-    logger.setLevel(getattr(logging, logger_level.upper()))
+    logger.setLevel(getattr(logging, (cli_logger_level or "info").upper()))
     logger.info(
         f"🚀 {gradient_text(f'{__appname__} v{__version__} launched!')}"
     )
@@ -553,13 +563,21 @@ def _main():
     jllabeling_config.current_config_file = config_file_or_yaml
     config = get_config(config_file_or_yaml, config_from_args, show_msg=True)
 
+    # Final level: CLI > rc file > "info". The startup logs above used a
+    # provisional level because the config file has only just been loaded.
+    final_logger_level = cli_logger_level or str(
+        config.get("logger_level") or "info"
+    )
+    logger.setLevel(getattr(logging, final_logger_level.upper(), logging.INFO))
+    logger.info(f"🔊 Logger level set to: {final_logger_level}")
+
     if not config["labels"] and config["validate_label"]:
-        logger.error(
+        logger.warning(
             "--labels must be specified with --validatelabel or "
             "validate_label: exact in the config file "
-            "(ex. ~/.jllabelingrc)."
+            "(ex. ~/.jllabelingrc). Disabling label validation for this run."
         )
-        sys.exit(1)
+        config["validate_label"] = None
 
     output_file = None
     output_dir = None
@@ -595,7 +613,7 @@ def _main():
 
     app = QtWidgets.QApplication(sys.argv)
     apply_application_font(config.get("font_family"))
-    init_theme(config.get("theme", "light"))
+    init_theme(config.get("theme", "auto"))
     # Registers this instance so later ones can detect it; the returned
     # server is kept alive inside the module (like _KEEP_OPEN_LOGS).
     hint_second_instance(get_work_directory(), logger)
@@ -669,7 +687,7 @@ def _main():
             action = project_registry.decide_startup_action(
                 has_session=project_view.has_session(widget),
                 always_show_manager=bool(
-                    config.get("startup_show_project_manager")
+                    config.get("startup_show_project_manager", False)
                 ),
                 has_registry=bool(project_registry.recent_projects()),
             )

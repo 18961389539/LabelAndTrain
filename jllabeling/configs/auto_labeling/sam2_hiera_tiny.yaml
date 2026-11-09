@@ -1,3 +1,6 @@
+# 权重 URL 指向 GitHub releases。默认 model_hub=modelscope 时，下载器会把该
+# URL 改写为 ModelScope 地址；离线/受限网络请预先把权重放进数据目录，或设置
+# JLLABELING_OFFLINE=1 让下载快速失败。
 type: segment_anything_2
 name: sam2_hiera_tiny-r20240801
 provider: Meta

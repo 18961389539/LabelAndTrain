@@ -625,7 +625,7 @@ class LabelingWidget(LabelDialog):
                 "wheel_rectangle_editing"
             ],
             auto_highlight_shape=self._config.get(
-                "auto_highlight_shape", False
+                "auto_highlight_shape", True
             ),
             attributes=self._config["canvas"].get("attributes", {}),
             rotation=self._config["canvas"].get("rotation", {}),
@@ -704,7 +704,7 @@ class LabelingWidget(LabelDialog):
         # [Feature] support for automatically switching to editing mode
         # when the cursor moves over an object
         self.canvas.h_shape_is_hovered = self._config.get(
-            "auto_highlight_shape", False
+            "auto_highlight_shape", True
         )
         self._settings_runtime_applier.set_auto_switch_to_edit_mode(
             self._config["auto_switch_to_edit_mode"]

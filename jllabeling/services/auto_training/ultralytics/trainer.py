@@ -14,9 +14,10 @@ from typing import Dict, Tuple
 
 from PyQt6.QtCore import QObject, pyqtSignal
 
+from jllabeling import net_defaults
 from jllabeling.config import get_work_directory
 
-from .config import get_trainer_root_dir
+from .config import get_default_training_config, get_trainer_root_dir
 
 TRAINING_WORKER_EVENT_PREFIX = "__JLLABELING_TRAIN_EVENT__="
 
@@ -58,7 +59,7 @@ class TrainingManager:
         self.training_process = None
         self.is_training = False
         self.callbacks = []
-        self.total_epochs = 100
+        self.total_epochs = get_default_training_config()["epochs"]
         self.stop_event = threading.Event()
 
     def notify_callbacks(self, event_type: str, data: dict):
@@ -73,7 +74,9 @@ class TrainingManager:
             return False, "Training is already in progress"
 
         try:
-            self.total_epochs = train_args.get("epochs", 100)
+            self.total_epochs = train_args.get(
+                "epochs", get_default_training_config()["epochs"]
+            )
             self.stop_event.clear()
             self.is_training = True
             payload_path = create_training_payload(train_args)
@@ -123,7 +126,9 @@ class TrainingManager:
                         if self.stop_event.is_set():
                             self.training_process.terminate()
                             try:
-                                self.training_process.wait(timeout=5)
+                                self.training_process.wait(
+                                    timeout=net_defaults.process_wait_timeout()
+                                )
                             except subprocess.TimeoutExpired:
                                 pass
                             # Sweep the tree unconditionally: ultralytics
@@ -383,7 +388,13 @@ _MODELSCOPE_URL_TEMPLATE = (
 
 
 def _hub_prefers_modelscope() -> bool:
-    """Mirror the auto-labeling downloader decision (model_hub config/env)."""
+    """Prefer ModelScope unless an explicit hub selects another source.
+
+    The download source must never depend on the UI language. An unset or
+    empty ``model_hub`` (env or config) means ModelScope, matching the
+    auto-labeling downloader's
+    ``(config.get("model_hub") or "modelscope") == "modelscope"``.
+    """
     env_model_hub = os.getenv("JLLABELING_MODEL_HUB")
     if env_model_hub == "modelscope":
         return True
@@ -392,13 +403,8 @@ def _hub_prefers_modelscope() -> bool:
 
     from jllabeling.config import get_config
 
-    cfg = get_config()
-    hub = cfg.get("model_hub")
-    if hub == "modelscope":
-        return True
-    if hub in (None, ""):
-        return cfg.get("language") == "zh_CN"
-    return False
+    hub = get_config().get("model_hub")
+    return (hub or "modelscope") == "modelscope"
 
 
 def _modelscope_training_url(model_name: str):
@@ -421,18 +427,28 @@ def _download_file(url: str, dest: str) -> bool:
     """
     import urllib.request
 
+    try:
+        net_defaults.ensure_online("Pretrained weight download")
+    except net_defaults.OfflineMode as exc:
+        logging.getLogger(__name__).warning(
+            "Pretrained weight download skipped (offline mode): %s", exc
+        )
+        return False
+
     tmp_dest = f"{dest}.part"
     try:
         request = urllib.request.Request(
             url, headers={"User-Agent": "Mozilla/5.0 (JLLabelingAndTrain)"}
         )
-        with urllib.request.urlopen(request, timeout=60) as response:
+        with urllib.request.urlopen(
+            request, timeout=net_defaults.weights_timeout()
+        ) as response:
             total = int(response.headers.get("Content-Length") or 0)
             with open(tmp_dest, "wb") as out:
                 downloaded = 0
                 last_reported = 0
                 while True:
-                    chunk = response.read(1024 * 256)
+                    chunk = response.read(net_defaults.weights_chunk_size())
                     if not chunk:
                         break
                     out.write(chunk)
@@ -501,6 +517,14 @@ def resolve_training_model_path(model):
     cached_model_path = weights_dir / model_path.name
     if cached_model_path.exists():
         return str(cached_model_path)
+
+    # Fail fast in offline mode: neither download source should be attempted.
+    # The worker turns the readable message into a training_error instead of
+    # an unhandled traceback or a long network timeout.
+    try:
+        net_defaults.ensure_online("Pretrained weight download")
+    except net_defaults.OfflineMode as exc:
+        raise RuntimeError(str(exc)) from exc
 
     # ModelScope first (when enabled); ultralytics official as fallback.
     if _hub_prefers_modelscope() and _try_download_modelscope(

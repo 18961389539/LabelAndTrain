@@ -61,7 +61,7 @@ SHORTCUT_GROUPS = [
             ("undo", "撤销"),
             (
                 "undo_last_point",
-                "撤销上一个点（画多边形时 Ctrl+Z 的作用）",
+                "撤销上一个点（画多边形时 Ctrl+Shift+Backspace 的作用）",
             ),
             ("redo", "重做"),
             ("add_point_to_edge", "在边上加点"),
@@ -149,8 +149,9 @@ SHORTCUT_GROUPS = [
 
 #: Config keys that may appear but are intentionally hidden (no user value).
 #: Empty on purpose: ``undo_last_point`` used to sit here, which left the
-#: drawing-time meaning of ``Ctrl+Z`` — it removes the last vertex while a
-#: polygon is being drawn — undocumented in the one place a user looks for it.
+#: drawing-time meaning of the then-shared ``Ctrl+Z`` undocumented in the
+#: one place a user looks for it. ``undo`` (Ctrl+Z) and ``undo_last_point``
+#: (Ctrl+Shift+Backspace) now have distinct keys, so both get their own row.
 _HIDDEN_KEYS = frozenset()
 
 #: Actions with no shipped default key, and why they are listed anyway: each

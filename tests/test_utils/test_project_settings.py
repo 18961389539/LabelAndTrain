@@ -590,7 +590,7 @@ def test_startup_action_matrix():
     assert decide(False, False, False) == "none"
 
 
-def test_startup_show_project_manager_defaults_on():
+def test_startup_show_project_manager_defaults_off():
     """出厂即先看管理页：项目中心化的入口不能藏在菜单里。
 
     恢复上次会话仍然是"没勾选时"的快路径 —— 勾选框每次都赢，
@@ -606,7 +606,10 @@ def test_startup_show_project_manager_defaults_on():
         jllabeling_configs, "jllabeling_config.yaml"
     ) as handle:
         template = yaml.safe_load(handle)
-    assert template["startup_show_project_manager"] is True
+    # v3: a first run has no projects to manage, so an empty manager dialog
+    # only hides the canvas CTA. The switch still exists for users who want
+    # it; it is simply no longer forced on everyone.
+    assert template["startup_show_project_manager"] is False
 
 
 # --- training prefs whitelist ---------------------------------------------

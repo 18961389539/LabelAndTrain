@@ -69,6 +69,7 @@ from jllabeling.services.auto_training.ultralytics._io import (
     save_yaml_config,
 )
 from jllabeling.services.auto_training.ultralytics.config import (
+    CPU_PARAM_PRESET,
     DEFAULT_TRAINING_CONFIG,
     DEFAULT_WINDOW_SIZE,
     DEFAULT_WINDOW_TITLE,
@@ -79,6 +80,7 @@ from jllabeling.services.auto_training.ultralytics.config import (
     TRAINING_STATUS_COLORS,
     TRAINING_STATUS_TEXTS,
     get_default_project_dir,
+    get_default_training_config,
     get_preset_models,
     get_settings_config_path,
     get_trainer_root_dir,
@@ -198,10 +200,6 @@ def is_blocking_dataset_skip(kind: str) -> bool:
 #: ``basic.dataset_ratio`` (data-tab split choice, not tuning). Everything
 #: else is the tuning a user actually iterates on per dataset.
 TRAIN_PREFS_BASIC_KEYS = ("model", "pose_config")
-#: Untouched epochs/batch/imgsz are filled from this preset while the selected
-#: device is CPU: with the GPU-oriented defaults (100 epochs at 640) a first
-#: CPU pass can run for hours before it shows anything useful.
-CPU_PARAM_PRESET = {"epochs": 50, "batch": 8, "imgsz": 416}
 #: One-click tuning tiers. Unlike CPU_PARAM_PRESET these replace the fields
 #: they name whatever the user had there — that is what a tier button is for —
 #: and they answer one question: how hard should this run try? ``standard``
@@ -217,7 +215,7 @@ TRAIN_PARAM_PRESETS = {
     "standard": {
         "epochs": 100,
         "imgsz": 640,
-        "patience": 100,
+        "patience": 20,
         "close_mosaic": 10,
         "cos_lr": False,
     },
@@ -1118,13 +1116,13 @@ class UltralyticsDialog(QDialog):
 
     def _apply_cpu_preset(self):
         """Fill CPU-friendly values into the fields still at their defaults."""
+        device = self.config_widgets.get("device")
+        text = device.currentText() if device else "cpu"
+        defaults = get_default_training_config(text)
         filled = []
         for key, value in CPU_PARAM_PRESET.items():
             widget = self.config_widgets.get(key)
-            if (
-                widget is None
-                or widget.value() != DEFAULT_TRAINING_CONFIG[key]
-            ):
+            if widget is None or widget.value() != defaults[key]:
                 continue
             widget.setValue(value)
             filled.append(f"{key}={value}")
@@ -1167,7 +1165,9 @@ class UltralyticsDialog(QDialog):
         layout.addRow(self.tr("Project:"), self.config_widgets["project"])
 
         self.config_widgets["name"] = CustomLineEdit()
-        self.config_widgets["name"].setText("exp")
+        # A constant "exp" made the overwrite confirmation delete the last run.
+        stamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        self.config_widgets["name"].setText("exp_" + stamp)
         # A run name is one directory, never a path. Project and Name are
         # joined into the directory the overwrite confirmation deletes
         # recursively, so a pasted path (or "..") in this field used to point

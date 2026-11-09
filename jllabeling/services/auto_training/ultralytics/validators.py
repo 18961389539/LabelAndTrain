@@ -4,6 +4,8 @@ import sys
 import yaml
 from typing import Dict, List, Tuple, Union
 
+from jllabeling import net_defaults
+
 from .utils import get_task_valid_images
 from .config import MIN_LABELED_IMAGES_THRESHOLD
 
@@ -178,10 +180,10 @@ def validate_data_file(file_path: str) -> Tuple[bool, Union[str, List[str]]]:
         return False, f"Failed to read file: {e}"
 
 
-#: How long a package install may take before it is called a failure. The
-#: previous 30s was shorter than a single wheel download on a slow link, so a
-#: legitimate install was reported as broken (after making the user wait).
-DEFAULT_INSTALL_TIMEOUT = 300
+#: How long a package install may take before it is called a failure. Kept as
+#: a module-level constant because several callers reference it by name; the
+#: value now comes from the shared, env-overridable network defaults.
+DEFAULT_INSTALL_TIMEOUT = net_defaults.install_timeout()
 
 
 def is_frozen_build() -> bool:
@@ -235,7 +237,9 @@ def validate_task_requirements(
     if valid_images < MIN_LABELED_IMAGES_THRESHOLD:
         return (
             False,
-            f"Need at least {MIN_LABELED_IMAGES_THRESHOLD} labeled images for {task_type} task. Found: {valid_images}",
+            f"Need at least {MIN_LABELED_IMAGES_THRESHOLD} labeled images "
+            f"for a {task_type} trial run (small-sample training is "
+            f"supported). Found: {valid_images}",
         )
 
     return True, ""
