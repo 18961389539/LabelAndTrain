@@ -292,6 +292,9 @@ class SettingsRuntimeApplier:
         if key == "canvas.mask.opacity":
             self.apply_canvas_mask()
             return
+        if key in {"canvas.pixelated_zoom", "canvas.pixel_grid_threshold"}:
+            self.apply_canvas_pixel_view()
+            return
         if key == "shift_auto_shape_color":
             self._widget._runtime_shape_color_shift = int(
                 self._widget._config.get("shift_auto_shape_color", 0)
@@ -431,6 +434,22 @@ class SettingsRuntimeApplier:
             self._widget._config["canvas"]["mask"]["opacity"]
         )
         self._widget.canvas.update()
+
+    def apply_canvas_pixel_view(self) -> None:
+        """Apply the pixel-view switches without restarting the app.
+
+        The canvas only reads these attributes while painting, so a repaint
+        is enough to switch between smooth and nearest-neighbour sampling.
+        """
+        canvas_config = self._widget._config["canvas"]
+        canvas = self._widget.canvas
+        canvas.pixelated_zoom = bool(
+            canvas_config.get("pixelated_zoom", True)
+        )
+        canvas.pixel_grid_threshold = float(
+            canvas_config.get("pixel_grid_threshold", 8.0)
+        )
+        canvas.update()
 
     def apply_shape_style(self, key: str) -> None:
         shape_config = self._widget._config["shape"]

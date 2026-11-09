@@ -43,6 +43,8 @@ canvas:
   mask:
     opacity: 102
   num_backups: 30
+  pixel_grid_threshold: 8.0
+  pixelated_zoom: true
   rotation:
     large_increment: 1.0
     small_increment: 0.1

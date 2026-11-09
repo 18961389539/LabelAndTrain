@@ -23,6 +23,40 @@ from . import canvas_overlays
 LABEL_COLORMAP = label_colormap()
 
 
+def smooth_pixmap_transform_enabled(pixelated_zoom, scale):
+    """Whether QPainter's smooth pixmap hint should stay on.
+
+    Nearest-neighbour sampling only makes sense once one image pixel maps to
+    at least one screen pixel. Below 100% Qt's smooth path does area
+    averaging; switching it off there point-samples the image and produces
+    severe aliasing on large industrial images.
+    """
+    return (not pixelated_zoom) or scale < 1.0
+
+
+def pixel_view_config(canvas):
+    """Return ``(pixelated_zoom, pixel_grid_threshold)`` for ``canvas``.
+
+    The settings live in the owning widget's config. Reading them here keeps
+    the two size-budgeted god objects (label_widget.py and canvas.py) free of
+    a display-only feature, and a freshly created scratch canvas in
+    render_visualization sees the same policy as the visible one. Explicit
+    canvas attributes win so the runtime applier can change the view live.
+    """
+    parent = getattr(canvas, "parent", None)
+    widget_config = getattr(parent, "_config", {}) or {}
+    canvas_config = widget_config.get("canvas", {}) or {}
+    pixelated = getattr(
+        canvas, "pixelated_zoom", canvas_config.get("pixelated_zoom", True)
+    )
+    threshold = getattr(
+        canvas,
+        "pixel_grid_threshold",
+        canvas_config.get("pixel_grid_threshold", 8.0),
+    )
+    return bool(pixelated), float(threshold or 0.0)
+
+
 class _RenderField:
     """Delegate one render flag to ``CanvasRenderState``.
 
@@ -220,7 +254,15 @@ class CanvasRenderMixin:
         p = self._painter
         p.begin(self)
         p.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
-        p.setRenderHint(QtGui.QPainter.RenderHint.SmoothPixmapTransform)
+        # At 100% zoom and above use nearest-neighbour sampling so individual
+        # pixels stay hard-edged for pixel-level inspection. Below 100% keep
+        # Qt's smooth path: without it a downscaled industrial image is
+        # point-sampled and shows severe aliasing instead of area averaging.
+        pixelated, _ = pixel_view_config(self)
+        p.setRenderHint(
+            QtGui.QPainter.RenderHint.SmoothPixmapTransform,
+            smooth_pixmap_transform_enabled(pixelated, self.scale),
+        )
 
         p.scale(self.scale, self.scale)
         p.translate(self.offset_to_center())
@@ -228,6 +270,7 @@ class CanvasRenderMixin:
         p.drawPixmap(0, 0, self.pixmap)
 
         self._paint_compare_view(p)
+        self._paint_pixel_grid(p)
         Shape.scale = self.scale
 
         self._paint_loading(p)
@@ -277,6 +320,48 @@ class CanvasRenderMixin:
                 )
 
         Shape.scale = self.scale
+
+    def _paint_pixel_grid(self, p):
+        """Overlay one-screen-pixel grid lines at very high zoom.
+
+        Only the clipped region is iterated. A 10k x 10k inspection image
+        has twenty thousand grid lines; drawing all of them on every repaint
+        would stall scrolling. ``clipBoundingRect`` is in logical (image)
+        coordinates, so it can be used directly after ``p.scale``.
+        """
+        _, threshold = pixel_view_config(self)
+        if threshold <= 0 or self.scale < threshold:
+            return
+        if self.pixmap is None or self.pixmap.isNull():
+            return
+
+        width, height = self.pixmap.width(), self.pixmap.height()
+        clip = p.clipBoundingRect()
+        if not clip.isValid() or clip.isEmpty():
+            clip = QtCore.QRectF(0, 0, width, height)
+        x0 = max(0, int(math.floor(clip.left())) - 1)
+        x1 = min(width, int(math.ceil(clip.right())) + 1)
+        y0 = max(0, int(math.floor(clip.top())) - 1)
+        y1 = min(height, int(math.ceil(clip.bottom())) + 1)
+        if x1 <= x0 or y1 <= y0:
+            return
+        # Hard ceiling so a hand-edited threshold cannot freeze repaints.
+        if (x1 - x0) + (y1 - y0) > 4000:
+            return
+
+        p.save()
+        p.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing, False)
+        pen = QtGui.QPen(QtGui.QColor(128, 128, 128, 110))
+        pen.setWidthF(1.0 / max(self.scale, 1e-6))
+        p.setPen(pen)
+        for x in range(x0, x1 + 1):
+            p.drawLine(QtCore.QLineF(x, y0, x, y1))
+        for y in range(y0, y1 + 1):
+            p.drawLine(QtCore.QLineF(x0, y, x1, y))
+        p.restore()
+        # Vector annotations below rely on antialiasing; make sure the grid
+        # did not leave it switched off even if save/restore differs by engine.
+        p.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing, True)
 
     def _paint_loading(self, p):
         # Draw loading/waiting screen
@@ -645,6 +730,10 @@ class CanvasRenderMixin:
         scratch.pixmap = pixmap
         scratch.shapes = list(shapes)
         scratch.scale = 1.0
+        # Keep the exported snapshot on the same sampling policy as the
+        # on-screen canvas, but never burn the grid overlay into an image.
+        scratch.pixelated_zoom = pixel_view_config(self)[0]
+        scratch.pixel_grid_threshold = 0.0
         scratch.current = None
         scratch.selected_shapes = []
         scratch.selected_shapes_copy = []

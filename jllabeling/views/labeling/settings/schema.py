@@ -830,6 +830,40 @@ def _non_shortcut_fields() -> list[SettingField]:
             ),
         ),
         SettingField(
+            "canvas.pixelated_zoom",
+            QT_TRANSLATE_NOOP(
+                SETTINGS_TRANSLATION_CONTEXT, "Pixelated Zoom"
+            ),
+            "bool",
+            "Canvas",
+            "Interaction",
+            "Pixel View",
+            description=QT_TRANSLATE_NOOP(
+                SETTINGS_TRANSLATION_CONTEXT,
+                "Use nearest-neighbour sampling at 100% zoom or above so "
+                "individual image pixels stay hard-edged. Below 100% smooth "
+                "area averaging is kept to avoid aliasing on large images.",
+            ),
+        ),
+        SettingField(
+            "canvas.pixel_grid_threshold",
+            QT_TRANSLATE_NOOP(
+                SETTINGS_TRANSLATION_CONTEXT, "Pixel Grid Threshold"
+            ),
+            "float",
+            "Canvas",
+            "Interaction",
+            "Pixel View",
+            minimum=0.0,
+            maximum=64.0,
+            decimals=1,
+            description=QT_TRANSLATE_NOOP(
+                SETTINGS_TRANSLATION_CONTEXT,
+                "Draw one-pixel grid lines once the zoom factor reaches this "
+                "value. Set to 0 to disable the grid entirely.",
+            ),
+        ),
+        SettingField(
             "canvas.wheel_rectangle_editing.enable",
             QT_TRANSLATE_NOOP(
                 SETTINGS_TRANSLATION_CONTEXT,
