@@ -108,13 +108,15 @@ Packages         PyQt6 6.12.0 (Qt 6.12.0) · ONNX 1.23.2
 
 `--work-dir` 可整体改掉工作目录；图片和标签始终留在原处。
 
-## 7. 功能边界
+## 7. 功能边界与模型清单
 
 **本构建有**：矩形 / 多边形 / 旋转框 / 圆 / 线 / 点等形状；SAM2 交互分割与自动掩码生成；YOLO 检测 / 实例分割 / 姿态 / 分类及 `yolov8_sam2` 组合；11 个智能工具（阈值校准、数据体检、漏标扫描、迭代看板、旧轮模型框盘点等）；可复现的数据集 `manifest.json` 与训练 `run_meta.json`；YOLO HBB / Seg / OBB / Pose 导入导出。
 
-**本构建没有**：远程推理服务、视频 / 音频 / 点云输入，上游约 90 个模型的模型库，OCR / VQA / 聊天 / 深度估计等面板，多语言界面，以及 DOTA / MOT / PPOCR 等交换格式。`examples/` 与 `docs/en/` 中描述这些能力的页面属于上游，不代表本构建可用。
+**本构建没有**：远程推理服务、视频 / 音频 / 点云输入，上游约 90 个模型的模型库，OCR / VQA / 聊天 / 文档解析 / 视觉语言（VLM）等面板（这些面板及其文档、示例、素材已整条删除），多语言界面，以及部分上游交换格式。`examples/` 中仍有少量页面描述上游能力，不代表本构建可用。
 
-内置模型配置只有 `sam2_hiera_tiny` 与 `sam2_hiera_base` 两个，其他模型需在界面里用自定义 YAML 注册，见 [自定义模型](./docs/zh_cn/custom_model.md)。
+本构建支持 **8 loadable model types**（8 种可加载模型类型），但只有 **2** built-in config（`sam2_hiera_tiny` / `sam2_hiera_base`）。
+
+**可加载模型类型**：`segment_anything_2`、`yolov8`、`yolov8_seg`、`yolov8_sam2`、`yolov8_cls`、`yolo26`、`yolo26_seg`、`yolo26_pose`。检测类模型需在界面里用自定义 YAML 注册，或由训练结果导出，见 [自定义模型](./docs/zh_cn/custom_model.md)。
 
 ## 8. 排错
 

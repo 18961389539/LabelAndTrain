@@ -311,7 +311,6 @@ class OverviewDialog(RangeTableDialog):
                 group_id = shape.get("group_id", -1)
                 difficult = shape.get("difficult", False)
                 description = shape.get("description", "")
-                kie_linking = shape.get("kie_linking", [])
                 if label not in label_infos:
                     label_infos[label] = dict(
                         zip(self.supported_shape, initial_nums)
@@ -327,7 +326,6 @@ class OverviewDialog(RangeTableDialog):
                     difficult=difficult,
                     shape_type=shape_type,
                     description=description,
-                    kie_linking=kie_linking,
                 )
                 shape_infos.append(current_shape)
                 self.shape_to_image_file.append(image_file)
@@ -368,7 +366,6 @@ class OverviewDialog(RangeTableDialog):
             "Filename",
             "Label",
             "Type",
-            "Linking",
             "Group ID",
             "Difficult",
             "Description",
@@ -381,7 +378,6 @@ class OverviewDialog(RangeTableDialog):
                 shape["filename"],
                 shape["label"],
                 shape["shape_type"],
-                str(shape["kie_linking"]),
                 str(shape["group_id"]),
                 str(shape["difficult"]),
                 shape["description"],

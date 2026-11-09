@@ -46,7 +46,6 @@ class Shape:
         "flags",
         "description",
         "attributes",
-        "kie_linking",
         "locked",
         "source",
         "model",
@@ -83,21 +82,17 @@ class Shape:
         difficult=False,
         direction=0,
         attributes=None,
-        kie_linking=None,
         source=None,
         model=None,
         model_version=None,
     ):
         if attributes is None:
             attributes = {}
-        if kie_linking is None:
-            kie_linking = []
         self.label = label
         self.score = score
         self.group_id = group_id
         self.description = description
         self.difficult = difficult
-        self.kie_linking = kie_linking
         # A shape built interactively is human work; loaded shapes override
         # this from the file (absent means "unknown", never "human").
         self.source = source if source in SOURCES else SOURCE_HUMAN
@@ -158,7 +153,6 @@ class Shape:
             "shape_type": self.shape_type,
             "flags": self.flags,
             "attributes": self.attributes,
-            "kie_linking": self.kie_linking,
         }
         if self.shape_type == "rotation":
             dictData["direction"] = self.direction
@@ -189,15 +183,6 @@ class Shape:
         self.shape_type = data.get("shape_type", "polygon")
         self.flags = data.get("flags", {})
         self.attributes = data.get("attributes", {})
-        kie_linking = data.get("kie_linking", [])
-        if not isinstance(kie_linking, list) or any(
-            not isinstance(linking_pair, list)
-            or len(linking_pair) != 2
-            or any(type(value) is not int for value in linking_pair)
-            for linking_pair in kie_linking
-        ):
-            raise ValueError("kie_linking must be a list of integer pairs")
-        self.kie_linking = kie_linking
         self.locked = data.get("locked", False)
         if self.shape_type == "rotation":
             self.direction = data.get("direction", 0)

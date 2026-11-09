@@ -14,8 +14,7 @@
   - [2.1 创建对象](#21-创建对象)
   - [2.2 编辑对象](#22-编辑对象)
   - [2.3 编辑标签](#23-编辑标签)
-  - [2.4 编辑图片](#24-编辑图片)
-  - [2.5 搜索图片](#25-搜索图片)
+  - [2.4 搜索图片](#24-搜索图片)
 - [3. 视图](#3-视图)
   - [3.1 画布可视化](#31-画布可视化)
   - [3.2 图片可视化](#32-图片可视化)
@@ -30,10 +29,8 @@
   - [4.4 DOTA标签](#44-dota标签)
   - [4.5 MASK标签](#45-mask标签)
   - [4.6 MOT标签](#46-mot标签)
-  - [4.7 PPOCR标签](#47-ppocr标签)
-  - [4.8 ODVG标签](#48-odvg标签)
-  - [4.9 VLM-R1-OVD标签](#49-vlm-r1-ovd标签)
-  - [4.10 MMGD标签](#410-mmgd标签)
+  - [4.7 ODVG标签](#47-odvg标签)
+  - [4.8 MMGD标签](#48-mmgd标签)
 - [5. 工具栏](#5-工具栏)
   - [5.1 数据统计](#51-数据统计)
   - [5.2 保存子图](#52-保存子图)
@@ -63,12 +60,10 @@
   - [8.5 人脸估计](#85-人脸估计)
   - [8.6 多目标跟踪](#86-多目标跟踪)
   - [8.7 深度估计](#87-深度估计)
-  - [8.8 光学字符识别](#88-光学字符识别)
-  - [8.9 交互式视频目标分割](#89-交互式视频目标分割)
-  - [8.10 抠图](#810-抠图)
-  - [8.11 视觉-语言](#811-视觉-语言)
-  - [8.12 目标计数](#812-目标计数)
-  - [8.13 视觉定位](#813-视觉定位)
+  - [8.8 交互式视频目标分割](#88-交互式视频目标分割)
+  - [8.9 抠图](#89-抠图)
+  - [8.10 目标计数](#810-目标计数)
+  - [8.11 视觉定位](#811-视觉定位)
 - [9. 模型](#9-模型)
 - [10. 高级功能](#10-高级功能)
 
@@ -149,29 +144,6 @@ JLLabelingAndTrain 默认开启自动保存功能，用户在初次启动界面�
   ],
   "description": null,      // 图片的文本描述
   "checked": false,         // 标注检查状态
-  "chat_history": [         // 聊天历史 (for chatbot)
-    {
-      "role": "user",
-      "content": "Hi",
-      "image": null
-    },
-    {
-      "role": "assistant",
-      "content": "Hi there! How can I help you today?",
-      "image": null
-    }
-    // ... 更多对话
-  ],
-  "vqaData": {
-    "question": "What animals are shown in the image?",
-    "answer": "zebras",
-    "split": "train",
-    "task": "QA",
-    "tags": [
-      "natural"
-    ],
-    // ... 更多选项
-  },
   "imagePath": "${filename}", // 图片的相对路径
   "imageData": null,         // Base64 编码的图片数据 (如果启用, 请参考 1.5)
   "imageHeight": -1,         // 图片高度
@@ -205,7 +177,6 @@ JLLabelingAndTrain 默认开启自动保存功能，用户在初次启动界面�
 | `shape_type`  | 字符串 | 对象类型，例如 `"rectangle"`、`"polygon"` 等。              |
 | `flags`       | 字典  | 附加的标志信息，用于存储额外的状态或属性，若无此信息则为 `null`。                 |
 | `attributes`  | 字典  | 对象的属性信息，可以包含任意键值对，若无此信息则为空字典 `{}`。                   |
-| `kie_linking` | 列表  | 对象间的连接信息，可包含多对连接，例如 `[[1, 2], [3, 4]]`，若无此信息则为空列表 `[]`。 |
 | `cuboid3d`    | 字典  | 仅 `cuboid` 使用的 3D 元数据，包含 `version`、`mode`、`vertices2d_order`、`depth_vector`、`source`，用于记录前后面映射和深度向量。 |
 
 
@@ -267,14 +238,9 @@ JLLabelingAndTrain 默认开启自动保存功能，用户在初次启动界面�
 | 困难标签 | 标识当前对象是否难以识别。                        |
 | 标签列表 | 展示当前已添加的标签列表，默认按字母序排列。               |
 | 标签描述 | 附加的标志信息，用于存储额外的状态或属性，若无此信息则为 `null`。 |
-| 标签连接 | 用于标识关键信息提取-关系抽取任务中的连接字段。             |
 
 
-### 2.4 编辑图片
-
-当前，JLLabelingAndTrain 支持对当前图片进行 `Caption` 描述。具体操作是打开编辑模式，点击图片空白处，在右侧的 `Description` 区域填充图片描述。
-
-### 2.5 搜索图片
+### 2.4 搜索图片
 
 文件搜索功能支持多种搜索模式，帮助用户快速定位目标图片。在右侧文件列表上方的搜索框中输入搜索条件，按回车键执行搜索。
 
@@ -403,7 +369,7 @@ JLLabelingAndTrain 支持调整当前图片的显示效果和标注对象的可�
 > **本分叉（JLLabelingAndTrain）只保留 YOLO 工作流**，界面上的「导入 / 导出」菜单提供四种：
 > 目标检测（HBB）、实例分割（Seg）、旋转框（OBB）、关键点（Pose）。
 > - 4.2 VOC、4.3 COCO：界面无入口，请用命令行转换工具。
-> - 4.4 起的 DOTA / MASK / MOT / PPOCR / ODVG / VLM-R1 / MMGD：上游实现未随本分叉发布，
+> - 4.4 起的 DOTA / MASK / MOT / ODVG / MMGD：上游实现未随本分叉发布，
 >   后续章节保留原文仅供参考，界面上找不到对应菜单。
 >
 > 本分叉自己加的功能另见[本分支独有功能](./fork_features.md)。
@@ -600,40 +566,7 @@ jllabelingandtrain convert --task xlabel2mots --labels /path/to/xlabel/labels --
 > [!NOTE]
 > 执行该命令前，需要安装 `pycocotools`。
 
-### 4.7 PPOCR标签
-
-JLLabelingAndTrain 支持一键导入/导出以下两种 PPOCR 任务的标签：
-
-- 文本检测与识别：定位出输入图像中的文字区域，并识别出图像中的具体文字内容。
-- 关键信息提取：从图像中提取所需信息，包括语义实体识别和关系抽取两个子任务。
-
-**导入任务**：
-
-1. 点击上方菜单栏的 `上传` 按钮。
-2. 选择对应的任务。
-3. 选择相应的标签文件，点击确定上传即可。
-
-**导出任务**：
-
-1. 点击上方菜单栏的 `导出` 按钮。
-2. 点击确定即可。
-
-对于**文本检测与识别**任务，其导出路径默认保存在当前图片目录的同级目录下的 `ppocr-rec` 文件夹内，其包含：
-
-1. `Label.txt`: 标注结果
-2. `rec_gt.txt`: 识别结果
-3. `crop_img`: 识别结果对应的图片训练数据
-
-具体的标签文件样式可参考 [ppocr-rec](../../assets/ppocr/ppocr-rec/)。
-
-对于**关键信息提取**任务，其导出路径默认保存在当前图片目录的同级目录下的 `ppocr-kie` 文件夹内，其包含：
-
-1. `class_list.txt`: 标签类别列表
-2. `ppocr_kie.json`: KIE 标注结果
-
-具体的标签文件样式可参考 [ppocr-kie](../../assets/ppocr/ppocr-kie/)。
-
-### 4.8 ODVG标签
+### 4.7 ODVG标签
 
 JLLabelingAndTrain 支持一键导入/导出 Grounding 任务相关的标签文件。
 
@@ -654,27 +587,7 @@ JLLabelingAndTrain 支持一键导入/导出 Grounding 任务相关的标签文�
 
 > ODVG 标签文件样式可参考 [ODVG](../../assets/ODVG)。
 
-### 4.9 VLM-R1-OVD标签
-
-JLLabelingAndTrain 支持一键导入/导出 VLM-R1-OVD 标签文件。
-
-**导入任务**：
-
-1. 点击上方菜单栏的 `上传` 按钮。
-2. 选择对应的任务。
-3. 选择标签文件所在目录，点击确定。
-
-**导出任务**：
-
-1. 点击上方菜单栏的 `导出` 按钮。
-2. 选择对应的任务。
-3. 根据实际需要填写相应的配置项点击确定即可。
-
-其中，[classes.txt](../../assets/classes.txt) 文件用于指定需要导出的类别或短语提示。若不指定，则默认以每张图片为单位检测到所有类别或短语提示作为提示类别进行导出，并自动跳过空标签文件。
-
-> VLM-R1-OVD 标签文件导出示例可参考 [vlm_r1_ovd.jsonl](../../assets/vlm_r1_ovd.jsonl) 文件。
-
-### 4.10 MMGD标签
+### 4.8 MMGD标签
 
 X-AnyLabeling 支持一键导入基于 [MM-Grounding-DINO](https://github.com/open-mmlab/mmdetection/blob/main/configs/mm_grounding_dino/README.md) 预测所获取的标签文件。
 
@@ -886,10 +799,7 @@ digit_shortcuts:
 | Ctrl + 0              | 打开 Settings                       |
 | Ctrl + Delete         | 删除当前标签文件                        |
 | Ctrl + Shift + Delete | 删除当前图像文件                        |
-| Ctrl + 1              | 打开聊天机器人对话窗口                     |
-| Ctrl + 2              | 打开视觉问答窗口                        |
 | Ctrl + 3              | 打开图像分类器窗口                       |
-| Ctrl + 4              | 打开 PaddleOCR 窗口                    |
 | Ctrl + 5              | 打开视频分类器窗口                       |
 | Ctrl + q              | 退出当前应用程序                        |
 | Ctrl + i              | 打开图像文件                          |
@@ -1107,31 +1017,21 @@ font_family: null  # null 表示使用系统默认字体，也可填写字体名
 
 - 深度估计：[链接](../../examples/estimation/depth_estimation/README.md)
 
-### 8.8 光学字符识别
-
-- 文本检测与识别：[链接](../../examples/optical_character_recognition/text_recognition/README.md)
-- 关键信息提取：[链接](../../examples/optical_character_recognition/key_information_extraction/README.md)
-
-### 8.9 交互式视频目标分割
+### 8.8 交互式视频目标分割
 
 - SAM 2 Video：[链接](../../examples/interactive_video_object_segmentation/sam2/README.md)
 - SAM 3 Video：[链接](../../examples/interactive_video_object_segmentation/sam3/README.md)
 
-### 8.10 抠图
+### 8.9 抠图
 
 - 图像抠图：[链接](../../examples/matting/image_matting/README.md)
 
-### 8.11 视觉-语言
-
-- Rex-Omni: [链接](../../examples/vision_language/rexomni/README.md)
-- Florence 2：[链接](../../examples/vision_language/florence2/README.md)
-
-### 8.12 目标计数
+### 8.10 目标计数
 
 - GeCo：[链接](../../examples/counting/geco/README.md)
 - GeCo2：[链接](../../examples/counting/geco2/README.md)
 
-### 8.13 视觉定位
+### 8.11 视觉定位
 
 - YOLOE：[链接](../../examples/grounding/yoloe/README.md)
 - SAM 3：[链接](../../examples/grounding/sam3/README.md)
@@ -1149,9 +1049,6 @@ font_family: null  # null 表示使用系统默认字体，也可填写字体名
 以下条目属于**上游**功能，本构建已移除对应面板，链接仅作归档参考：
 
 - 远程推理服务指南：[链接](https://github.com/CVHub520/X-AnyLabeling-Server)
-- 聊天机器人：[链接](./chatbot.md)
-- 视觉问答：[链接](./vqa.md)
 - 图像分类器：[链接](./image_classifier.md)
-- 文档解析与智能文字识别：[链接](./paddle_ocr.md)
 
 （上游的「视频分类器」页面在 `docs/en/` 与 `docs/zh_cn/` 中均不存在，故不再链接。）

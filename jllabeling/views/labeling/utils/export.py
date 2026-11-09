@@ -57,7 +57,6 @@ class ExportThread(QThread):
         label_dir_path,
         save_path,
         mode,
-        prefix=None,
     ):
         super().__init__()
         self.converter = converter
@@ -65,20 +64,12 @@ class ExportThread(QThread):
         self.label_dir_path = label_dir_path
         self.save_path = save_path
         self.mode = mode
-        self.prefix = prefix
 
     def run(self):
         try:
             time.sleep(1)
 
-            if self.mode == "vlm_r1_ovd":
-                self.converter.custom_to_vlm_r1_ovd(
-                    self.image_list,
-                    self.label_dir_path,
-                    self.save_path,
-                    self.prefix,
-                )
-            elif self.mode == "mot":
+            if self.mode == "mot":
                 self.converter.custom_to_mot(
                     self.label_dir_path, self.save_path
                 )

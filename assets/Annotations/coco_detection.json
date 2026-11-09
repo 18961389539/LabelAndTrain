@@ -508,16 +508,6 @@
             "date_captured": ""
         },
         {
-            "id": 10,
-            "file_name": "demo_ocr",
-            "width": 442,
-            "height": 274,
-            "license": 0,
-            "flickr_url": "",
-            "coco_url": "",
-            "date_captured": ""
-        },
-        {
             "id": 11,
             "file_name": "demo_pandas",
             "width": 900,

@@ -70,11 +70,11 @@
 
 - 远程推理服务（X-AnyLabeling-Server）；不支持视频、音频、点云输入 —— **仅图片**（Qt 能读取的格式，外加 HEIC）。
 - 上游约 90 个模型的库。本构建只有 **8 种可加载模型类型**，内置配置文件只有 **2 个**（SAM2 tiny/base），其余需以自定义模型 YAML 注册。
-- 已裁掉的任务面板：OCR / PPOCR / KIE、视觉问答、聊天机器人、文档解析（PaddleOCR-VL）、图像打标与描述、人脸估计、深度估计、目标计数、视觉定位、图像抠图、车道线检测、多目标跟踪、交互式视频分割。
+- 已裁掉的任务面板：OCR / PPOCR / KIE、视觉问答、聊天机器人、文档解析（PaddleOCR-VL）、图像打标与描述、人脸估计、深度估计、目标计数、视觉定位、图像抠图、车道线检测、多目标跟踪、交互式视频分割。其中 OCR / 文档 / VLM 一类已从代码到文档、示例、素材**整条移除**，仓库里不再保留它们的任何页面。
 - 大部分交换格式：`DOTA`、`MOT`、`MASK`、`PPOCR`、`MMGD`、`VLM-R1`、`ShareGPT` 已移除，见[标签格式](#标签格式)。
 - 可切换的界面语言：本构建只带 `zh_CN`。
 
-仓库内仍保留了被裁功能的文档与示例（如 `docs/zh_cn/chatbot.md`、`examples/grounding/`），它们描述的是**上游**能力，不是本构建。
+仓库内仍保留了少量被裁功能的文档与示例（如 `examples/grounding/`、`docs/zh_cn/model_zoo.md`），它们描述的是**上游**能力，不是本构建。
 
 本分支新增的功能过去只写在 `CHANGELOG.md` 里，现在有独立文档页：[`docs/zh_cn/fork_features.md`](./docs/zh_cn/fork_features.md)（项目管理、复核状态流程、十一个智能工具、训练闭环、形状溯源）。旁边还有过程文档，例如 [`docs/zh_cn/split_verification_2026-09-28.md`](./docs/zh_cn/split_verification_2026-09-28.md)（label_widget 拆分批次的机器核对清单）与 [`docs/zh_cn/controller_extraction_roadmap.md`](./docs/zh_cn/controller_extraction_roadmap.md)（契约成员与下一步抽取路线）。
 
@@ -202,10 +202,7 @@
 7. [常见问题答疑](./docs/zh_cn/faq.md)
 
 以下文档描述的是**上游**功能，本构建已移除对应面板，仅作归档参考：
-[聊天机器人](./docs/zh_cn/chatbot.md)、
-[视觉问答](./docs/zh_cn/vqa.md)、
 [图像分类器](./docs/zh_cn/image_classifier.md)、
-[文档解析](./docs/zh_cn/paddle_ocr.md)、
 [模型库](./docs/zh_cn/model_zoo.md)。
 
 ## 示例
@@ -217,9 +214,9 @@
 - [分割](./examples/segmentation/README.md) —— 实例分割、二分类与多分类语义分割
 - [训练](./examples/training/ultralytics/README_zh-CN.md) —— Ultralytics 训练面板（中英对照）
 
-`examples/` 下的 `optical_character_recognition`、`multiple_object_tracking`、
-`interactive_video_object_segmentation`、`matting`、`estimation`、`counting`、
-`grounding`、`vision_language`、`description` 等目录保留自上游，对应的模型与面板不在本构建中。
+`examples/` 下的 `multiple_object_tracking`、`interactive_video_object_segmentation`、
+`matting`、`estimation`、`counting`、`grounding` 等目录保留自上游，对应的模型与面板不在本构建中。
+OCR / 文档解析 / 视觉语言（VLM）相关的示例与页面已随面板一并删除。
 
 ## 开发
 

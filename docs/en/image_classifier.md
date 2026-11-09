@@ -4,7 +4,6 @@
 > panel; the page describes upstream X-AnyLabeling, not X-AnyLabeling.
 > See "Fork scope" in the [README](../../README.md).
 
-
 The X-AnyLabeling Image Classifier is a dedicated annotation window for multi-class (single-label) and multi-label classification. It supports label management, AI-assisted classification for individual images or batches, dataset statistics, keyboard navigation, and category-based image export.
 
 <video src="https://github.com/user-attachments/assets/0652adfb-48a4-4219-9b18-16ff5ce31be0" width="100%" controls>
@@ -68,60 +67,6 @@ classified/
 - **Annotation Components**:
 
 The right center panel contains the title and the following 5 annotation components.
-
-### AI Assistant
-
-Before using AI assistance, configure a model as described in the [Chatbot guide](./chatbot.md).
-
-<img src="../../assets/resources/vqa/chatbot.png" width="100%" />
-
-Once configured, click the magic-wand icon on the right side of the annotation area to open the AI dialog.
-
-<img src="../../assets/resources/image_classifier/assistance.png" width="100%" />
-
-The software includes a built-in standard prompt template that automatically adjusts based on the current mode (MultiClass or MultiLabel). You can use it directly or customize according to your specific requirements.
-
-**MultiClass Mode Example:**
-
-```prompt
-@image
-You are an expert image classifier. Your task is to perform multi-class classification.
-
-Task Definition: Analyze the given image and classify it based on the provided categories.
-
-Available Categories: ["husky", "psyduck", "ragdoll"]
-
-Instructions:
-1. Carefully examine the image and identify the main subject and their activity
-2. Be precise - only select categories that clearly match what you observe
-
-Return your result in strict JSON format:
-{"husky": false, "psyduck": false, "ragdoll": false}
-
-Set exactly ONE category to 'true' that best matches the image, keep all others as 'false'.
-```
-
-**MultiLabel Mode Example:**
-
-```prompt
-@image
-You are an expert image classifier. Your task is to perform multi-label classification.
-
-Task Definition: Analyze the given image and classify it based on the provided categories.
-
-Available Categories: ["outdoor", "sunny", "people", "building"]
-
-Instructions:
-1. Carefully examine the image and identify the main subject and their activity
-2. Be precise - only select categories that clearly match what you observe
-
-Return your result in strict JSON format:
-{"outdoor": false, "sunny": false, "people": false, "building": false}
-
-Set ALL applicable categories to 'true', keep non-applicable ones as 'false'.
-```
-
-> For advanced usage of the intelligent dialog, including special references and template library settings, please refer to the [VQA Annotation Documentation](./vqa.md).
 
 ### Add Labels
 

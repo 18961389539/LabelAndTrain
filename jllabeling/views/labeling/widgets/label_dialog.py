@@ -1,4 +1,3 @@
-import ast
 import os
 import re
 import json
@@ -1480,27 +1479,6 @@ class LabelDialog(QtWidgets.QDialog):
         self.edit_difficult = QtWidgets.QCheckBox(self.tr("困难标志"))
         self.edit_difficult.setChecked(difficult)
 
-        # Add linking input
-        self.linking_input = QtWidgets.QLineEdit()
-        self.linking_input.setPlaceholderText(
-            self.tr("Enter linking, e.g., [0,1]")
-        )
-        self.linking_input.setFixedHeight(control_height)
-        linking_font = (
-            self.linking_input.font()
-        )  # Adjust placeholder font size
-        linking_font.setPointSize(8)
-        self.linking_input.setFont(linking_font)
-        self.linking_list = QtWidgets.QListWidget()
-        self.linking_list.setHidden(True)  # Initially hide the list
-        row_height = self.linking_list.fontMetrics().height()
-        self.linking_list.setFixedHeight(
-            row_height * 4 + 2 * self.linking_list.frameWidth()
-        )
-        self.add_linking_button = QtWidgets.QPushButton(self.tr("Add"))
-        self.add_linking_button.setFixedHeight(control_height)
-        self.add_linking_button.clicked.connect(self.add_linking_pair)
-
         layout = QtWidgets.QVBoxLayout()
         layout.setContentsMargins(10, 10, 10, 10)
         if show_text_field:
@@ -1509,14 +1487,6 @@ class LabelDialog(QtWidgets.QDialog):
             layout_edit.addWidget(self.edit, 4)
             layout_edit.addWidget(self.edit_group_id, 2)
             layout.addLayout(layout_edit)
-
-        # Add linking layout
-        layout_linking = QtWidgets.QHBoxLayout()
-        layout_linking.setSpacing(6)
-        layout_linking.addWidget(self.linking_input, 4)
-        layout_linking.addWidget(self.add_linking_button, 2)
-        layout.addLayout(layout_linking)
-        layout.addWidget(self.linking_list)
 
         # buttons
         self.button_box = bb = QtWidgets.QDialogButtonBox(
@@ -1596,70 +1566,6 @@ class LabelDialog(QtWidgets.QDialog):
         # Save last label
         self._last_label = ""
         self._last_gid = None
-
-    def add_linking_pair(self):
-        linking_text = self.linking_input.text()
-        try:
-            linking_pairs = ast.literal_eval(linking_text)
-            if (
-                isinstance(linking_pairs, list)
-                and len(linking_pairs) == 2
-                and all(type(item) is int for item in linking_pairs)
-            ):
-                if linking_pairs in self.get_kie_linking():
-                    QtWidgets.QMessageBox.warning(
-                        self,
-                        self.tr("Duplicate Entry"),
-                        self.tr("This linking pair already exists."),
-                    )
-                    return
-                item = QtWidgets.QListWidgetItem(str(linking_pairs))
-                item.setData(Qt.ItemDataRole.UserRole, linking_pairs)
-                self.linking_list.addItem(item)
-                self.linking_input.clear()
-                self.linking_list.setHidden(
-                    False
-                )  # Show the list when an item is added
-            else:
-                raise ValueError
-        except Exception as e:
-            logger.error(f"An Error occurred while adding linking pair: {e}")
-            QtWidgets.QMessageBox.warning(
-                self,
-                self.tr("Invalid Input"),
-                self.tr(
-                    "Please enter a valid list of linking pairs like [1,2]."
-                ),
-            )
-
-    def keyPressEvent(self, event):
-        if event.key() == QtCore.Qt.Key.Key_Delete:
-            if hasattr(self, "linking_list") and self.linking_list is not None:
-                selected_items = self.linking_list.selectedItems()
-                if selected_items:
-                    for item in selected_items:
-                        self.linking_list.takeItem(self.linking_list.row(item))
-        else:
-            super(LabelDialog, self).keyPressEvent(event)
-
-    def remove_linking_item(self, item_widget):
-        list_item = self.linking_list.itemWidget(item_widget)
-        self.linking_list.takeItem(self.linking_list.row(list_item))
-        item_widget.deleteLater()
-
-    def reset_linking(self, kie_linking=None):
-        if kie_linking is None:
-            kie_linking = []
-        self.linking_list.clear()
-        unique_pairs = []
-        for linking_pair in kie_linking:
-            if linking_pair in unique_pairs:
-                continue
-            unique_pairs.append(linking_pair)
-            item = QtWidgets.QListWidgetItem(str(linking_pair))
-            item.setData(Qt.ItemDataRole.UserRole, linking_pair)
-            self.linking_list.addItem(item)
-        self.linking_list.setHidden(False if unique_pairs else True)
 
     def get_last_label(self):
         return self._last_label
@@ -1789,13 +1695,6 @@ class LabelDialog(QtWidgets.QDialog):
     def get_difficult_state(self):
         return self.edit_difficult.isChecked()
 
-    def get_kie_linking(self):
-        kie_linking = []
-        for index in range(self.linking_list.count()):
-            item = self.linking_list.item(index)
-            kie_linking.append(item.data(Qt.ItemDataRole.UserRole))
-        return kie_linking
-
     def pop_up(
         self,
         text=None,
@@ -1805,10 +1704,7 @@ class LabelDialog(QtWidgets.QDialog):
         group_id=None,
         description=None,
         difficult=False,
-        kie_linking=None,
     ):
-        if kie_linking is None:
-            kie_linking = []
         if self._fit_to_content["row"]:
             self.label_list.setMinimumHeight(
                 self.label_list.sizeHintForRow(0) * self.label_list.count() + 2
@@ -1824,8 +1720,6 @@ class LabelDialog(QtWidgets.QDialog):
         if description is None:
             description = ""
         self.edit_description.setPlainText(description)
-        # Set initial values for kie_linking
-        self.reset_linking(kie_linking)
         if flags:
             self.set_flags(flags)
         else:
@@ -1890,6 +1784,5 @@ class LabelDialog(QtWidgets.QDialog):
                 self.get_group_id(),
                 self.get_description(),
                 self.get_difficult_state(),
-                self.get_kie_linking(),
             )
-        return None, None, None, None, False, []
+        return None, None, None, None, False

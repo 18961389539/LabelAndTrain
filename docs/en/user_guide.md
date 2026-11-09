@@ -13,8 +13,7 @@ This guide provides comprehensive instructions for using JLLabelingAndTrain, cov
       * [2.1 Creating Shapes](#21-creating-shapes)
       * [2.2 Editing Shapes](#22-editing-shapes)
       * [2.3 Editing Labels](#23-editing-labels)
-      * [2.4 Adding Image Captions](#24-adding-image-captions)
-      * [2.5 Searching Images](#25-searching-images)
+      * [2.4 Searching Images](#24-searching-images)
    * [3. View Options](#3-view-options)
       * [3.1 Canvas Controls](#31-canvas-controls)
       * [3.2 Image Display](#32-image-display)
@@ -29,10 +28,8 @@ This guide provides comprehensive instructions for using JLLabelingAndTrain, cov
       * [4.4 DOTA Format](#44-dota-format)
       * [4.5 Mask Format](#45-mask-format)
       * [4.6 MOT Format](#46-mot-format)
-      * [4.7 PPOCR Format](#47-ppocr-format)
-      * [4.8 ODVG Format](#48-odvg-format)
-      * [4.9 VLM-R1-OVD Format](#49-vlm-r1-ovd-format)
-      * [4.10 MMGD Format](#410-mmgd-format)
+      * [4.7 ODVG Format](#47-odvg-format)
+      * [4.8 MMGD Format](#48-mmgd-format)
    * [5. Toolbar Tools](#5-toolbar-tools)
       * [5.1 Data Statistics (Overview)](#51-data-statistics-overview)
       * [5.2 Save Cropped Images](#52-save-cropped-images)
@@ -62,12 +59,10 @@ This guide provides comprehensive instructions for using JLLabelingAndTrain, cov
       * [8.5 Face Estimation](#85-face-estimation)
       * [8.6 Multi-Object Tracking](#86-multi-object-tracking)
       * [8.7 Depth Estimation](#87-depth-estimation)
-      * [8.8 Optical Character Recognition (OCR)](#88-optical-character-recognition-ocr)
-      * [8.9 Interactive Video Object Segmentation (IVOS)](#89-interactive-video-object-segmentation-ivos)
-      * [8.10 Matting](#810-matting)
-      * [8.11 Vision-Language Tasks](#811-vision-language-tasks)
-      * [8.12 Zero-Shot Counting](#812-zero-shot-counting)
-      * [8.13 Grounding](#813-grounding)
+      * [8.8 Interactive Video Object Segmentation (IVOS)](#88-interactive-video-object-segmentation-ivos)
+      * [8.9 Matting](#89-matting)
+      * [8.10 Zero-Shot Counting](#810-zero-shot-counting)
+      * [8.11 Grounding](#811-grounding)
    * [9. Custom Models](#9-custom-models)
    * [10. Advanced Features](#10-advanced-features)
 
@@ -133,29 +128,6 @@ Label files are saved in `*.json` format in the same directory as the images by 
   ],
   "description": null,      // Optional text description for the image
   "checked": false,         // Annotation review status
-  "chat_history": [         // Chat history (for chatbot)
-    {
-      "role": "user",
-      "content": "Hi",
-      "image": null
-    },
-    {
-      "role": "assistant",
-      "content": "Hi there! How can I help you today?",
-      "image": null
-    }
-    // ... more dialogs
-  ],
-  "vqaData": {
-    "question": "What animals are shown in the image?",
-    "answer": "zebras",
-    "split": "train",
-    "task": "QA",
-    "tags": [
-      "natural"
-    ],
-    // ... more items
-  },
   "imagePath": "${filename}", // Relative path to the image file
   "imageData": null,         // Base64 encoded image data (if enabled, see 1.5)
   "imageHeight": -1,         // Image height in pixels
@@ -189,7 +161,6 @@ In JLLabelingAndTrain, each distinct annotated object is called a `shape`. Key p
 | `shape_type`  | String  | Type of shape, e.g., `"rectangle"`, `"polygon"`.                 |
 | `flags`       | Dictionary | Dictionary for additional flags or attributes. `null` if none.      |
 | `attributes`  | Dictionary | Dictionary for custom object attributes. Empty `{}` if none.      |
-| `kie_linking` | List    | Information linking shapes (e.g., for Key Info Extraction). Empty `[]` if none. |
 | `cuboid3d`    | Dictionary | Cuboid-only metadata for 3D projection in 2D, including `version`, `mode`, `vertices2d_order`, `depth_vector`, and `source`. |
 
 For detailed field definitions, see [`shape.py`](../../jllabeling/views/labeling/shape.py).
@@ -248,18 +219,9 @@ When you create a shape or select an existing one in Edit Mode, the label panel 
 | **Difficult**      | Check this box if the object is difficult to recognize.             |
 | **Label List**     | Displays available labels, allowing selection.                      |
 | **Description**    | Add optional text notes specific to this shape instance.             |
-| **Label Linking**  | Used for linking shapes in tasks like Key Information Extraction (KIE). |
 | **Attributes**     | (If configured) Set custom attributes for the shape.               |
 
-### 2.4 Adding Image Captions
-
-JLLabelingAndTrain allows you to add a description or caption to the entire image:
-
-1. Enter Edit Mode (`Ctrl+J`).
-2. Click an empty area of the canvas.
-3. Enter text in the `Description` field in the right panel. The value is saved in the top-level `description` field of the label JSON.
-
-### 2.5 Searching Images
+### 2.4 Searching Images
 
 The file search feature supports multiple search modes to help you quickly locate target images. Enter your search criteria in the search box above the file list on the right panel and press Enter to execute the search.
 
@@ -534,36 +496,7 @@ JLLabelingAndTrain supports exporting polygon annotations in a MOTS-compatible f
 > jllabelingandtrain convert --task xlabel2mots --labels /path/to/xlabel/labels --output /path/to/output --classes classes.txt
 > ```
 
-### 4.7 PPOCR Format
-
-Supports importing and exporting labels for PaddleOCR (PPOCR) tasks.
-
-**Tasks Supported:**
-- **Text Detection and Recognition:** Locates text boxes and recognizes content.
-- **Key Information Extraction (KIE):** Extracts entities and relations from text regions.
-
-**Importing:**
-1. Select `Import Annotations` > `Import PPOCR Annotations`.
-2. Select the task (Recognition or KIE).
-3. Choose the appropriate label file (`Label.txt` for Rec, `kie.json` for KIE).
-
-**Exporting:**
-1. Select `Export Annotations` > `Export PPOCR Annotations`.
-2. Select the task.
-3. Click OK.
-
-**Export Paths & Files:**
-- **Recognition:** Defaults to `ppocr-rec` subfolder. Contains:
-    - `Label.txt`: Detection & transcription annotations.
-    - `rec_gt.txt`: Recognition ground truth (transcriptions only).
-    - `crop_img/`: Cropped images of text regions for recognition training.
-- **KIE:** Defaults to `ppocr-kie` subfolder. Contains:
-    - `class_list.txt`: List of KIE entity classes.
-    - `ppocr_kie.json`: KIE annotation results (linking text regions).
-
-Samples: [`ppocr-rec`](../../assets/ppocr/ppocr-rec/), [`ppocr-kie`](../../assets/ppocr/ppocr-kie/).
-
-### 4.8 ODVG Format
+### 4.7 ODVG Format
 
 Supports importing/exporting ODVG format annotations for visual grounding tasks.
 
@@ -580,25 +513,7 @@ Supports importing/exporting ODVG format annotations for visual grounding tasks.
 
 Sample: [`ODVG`](../../assets/ODVG).
 
-### 4.9 VLM-R1-OVD Format
-
-Supports importing/exporting VLM-R1-OVD format (`.jsonl`) labels, often used for Open-Vocabulary Detection tasks.
-
-**Configuration (Export):**
-- `classes.txt` (Optional): Provide a `classes.txt` file to export only annotations matching those specific categories/phrases. If omitted, all unique labels found in the images are used as prompts for export.
-
-**Importing:**
-1. Select `Import Annotations` > `Import VLM-R1-OVD Annotations`.
-2. Choose the `.jsonl` annotation file.
-
-**Exporting:**
-1. Select `Export Annotations` > `Export VLM-R1-OVD Annotations`.
-2. (Optional) Provide the `classes.txt` file if filtering categories.
-3. Fill in other configuration items if prompted and click OK.
-4. Images without any labels (or matching labels if `classes.txt` is used) are automatically skipped during export.
-Sample: [`vlm_r1_ovd.jsonl`](../../assets/vlm_r1_ovd.jsonl).
-
-### 4.10 MMGD Format
+### 4.8 MMGD Format
 
 X-AnyLabeling supports one-click import of annotation files generated by [MM-Grounding-DINO](https://github.com/open-mmlab/mmdetection/blob/main/configs/mm_grounding_dino/README.md) predictions.
 
@@ -806,10 +721,7 @@ You can also update shortcuts in the GUI: open Settings with `Ctrl+0`, then edit
 | `Ctrl+0`              | Open Settings                                    | Shortcut settings can be edited in GUI     |
 | `Ctrl+Delete`         | Delete Current Label File (`.json`)              | **Irreversible**                           |
 | `Ctrl+Shift+Delete`   | Delete Current Image & Label File                | Moves to `_delete_` folder                 |
-| `Ctrl+1`              | Open Chatbot                                     |                                            |
-| `Ctrl+2`              | Open Visual Question Answering Dialog            |                                            |
 | `Ctrl+3`              | Open Image Classifier Dialog                     |                                            |
-| `Ctrl+4`              | Open PaddleOCR Dialog                            |                                            |
 | `Ctrl+5`              | Open Video Classifier Dialog                     |                                            |
 | `Ctrl+q`              | Quit Application                                 |                                            |
 | `Ctrl+i`              | Open Single Image File                           |                                            |
@@ -1023,26 +935,18 @@ JLLabelingAndTrain supports various annotation tasks. Follow the links below for
 ### 8.7 Depth Estimation
   - Depth Annotation: [Link](../../examples/estimation/depth_estimation/README.md)
 
-### 8.8 Optical Character Recognition (OCR)
-  - Text Detection & Recognition: [Link](../../examples/optical_character_recognition/text_recognition/README.md)
-  - Key Information Extraction (KIE): [Link](../../examples/optical_character_recognition/key_information_extraction/README.md)
-
-### 8.9 Interactive Video Object Segmentation (IVOS)
+### 8.8 Interactive Video Object Segmentation (IVOS)
   - SAM2-Video: [Link](../../examples/interactive_video_object_segmentation/sam2/README.md)
   - SAM3-Video: [Link](../../examples/interactive_video_object_segmentation/sam3/README.md)
 
-### 8.10 Matting
+### 8.9 Matting
   - Image Matting (Alpha Masks): [Link](../../examples/matting/image_matting/README.md)
 
-### 8.11 Vision-Language Tasks
-  - Rex-Omni: [Link](../../examples/vision_language/rexomni/README.md)
-  - Florence 2: [Link](../../examples/vision_language/florence2/README.md)
-
-### 8.12 Zero-Shot Counting
+### 8.10 Zero-Shot Counting
   - GeCo Counting by Detection/Segmentation: [Link](../../examples/counting/geco/README.md)
   - GeCo2 Counting by Detection/Segmentation: [Link](../../examples/counting/geco2/README.md)
 
-### 8.13 Grounding
+### 8.11 Grounding
   - YOLOE: [Link](../../examples/grounding/yoloe/README.md)
   - SAM 3: [Link](../../examples/grounding/sam3/README.md)
   - LocateAnything: [Link](../../examples/grounding/locateanything/README.md)
@@ -1059,10 +963,7 @@ The entries below are **upstream** features. This build ships no such
 panels; the links are kept for reference only:
 
 - Remote Server Guide: [Link](https://github.com/CVHub520/X-AnyLabeling-Server)
-- Chatbot Guide: [Link](./chatbot.md)
-- VQA Guide: [Link](./vqa.md)
 - Image Classifier: [Link](./image_classifier.md)
-- Document Parsing and Intelligent Text Recognition: [Link](./paddle_ocr.md)
 
 (Upstream's "video classifier" page does not exist in either `docs/en/` or
 `docs/zh_cn/`, so it is no longer linked.)

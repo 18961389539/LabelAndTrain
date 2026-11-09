@@ -72,7 +72,6 @@ def _shape_editable_state(shape):
         shape.group_id,
         shape.description,
         shape.difficult,
-        shape.kie_linking,
     )
 
 
@@ -112,14 +111,12 @@ def edit_label(widget, item=None):
         group_id,
         description,
         difficult,
-        kie_linking,
     ) = widget.label_dialog.pop_up(
         text=shape.label,
         flags=shape.flags,
         group_id=shape.group_id,
         description=shape.description,
         difficult=shape.difficult,
-        kie_linking=shape.kie_linking,
         move_mode=widget._config.get("move_mode", "auto"),
     )
     if text is None:
@@ -141,7 +138,6 @@ def edit_label(widget, item=None):
     shape.group_id = group_id
     shape.description = description
     shape.difficult = difficult
-    shape.kie_linking = kie_linking
 
     # Add to label history
     widget.label_dialog.add_label_history(shape.label)
@@ -210,14 +206,13 @@ def batch_edit_labels(widget, shapes):
         group_id=first_shape.group_id,
         description=first_shape.description,
         difficult=first_shape.difficult,
-        kie_linking=first_shape.kie_linking,
         move_mode="center",
     )
 
     if result[0] is None:
         return
 
-    text, flags, group_id, description, difficult, kie_linking = result
+    text, flags, group_id, description, difficult = result
 
     if not widget.validate_label(text):
         widget.error_message(
@@ -239,7 +234,6 @@ def batch_edit_labels(widget, shapes):
         shape.group_id = group_id
         shape.description = description
         shape.difficult = difficult
-        shape.kie_linking = kie_linking
 
         widget._update_shape_color(shape)
 
@@ -489,13 +483,12 @@ def finish_auto_labeling_object(widget):
         return
 
     # Ask a label for the object
-    text, flags, group_id, description, difficult, kie_linking = (
+    text, flags, group_id, description, difficult = (
         "",
         {},
         None,
         None,
         False,
-        [],
     )
     last_label = widget.find_last_label()
     last_gid = (
@@ -516,14 +509,12 @@ def finish_auto_labeling_object(widget):
             group_id,
             description,
             difficult,
-            kie_linking,
         ) = widget.label_dialog.pop_up(
             text=widget.find_last_label(),
             flags={},
             group_id=last_gid,
             description=None,
             difficult=False,
-            kie_linking=[],
             move_mode=widget._config.get("move_mode", "auto"),
         )
         if not text:
@@ -558,7 +549,6 @@ def finish_auto_labeling_object(widget):
             shape.group_id = group_id
             shape.description = description
             shape.difficult = difficult
-            shape.kie_linking = kie_linking
             # Update unique label list
             if not widget.unique_label_list.find_items_by_label(shape.label):
                 unique_label_item = (
@@ -618,7 +608,6 @@ def new_shape(widget):
     group_id = None
     description = ""
     difficult = False
-    kie_linking = []
 
     if widget.canvas.shapes[-1].label in [
         AutoLabelingMode.ADD,
@@ -653,7 +642,6 @@ def new_shape(widget):
                 group_id,
                 description,
                 difficult,
-                kie_linking,
             ) = widget.label_dialog.pop_up(
                 text,
                 group_id=last_gid,
@@ -684,7 +672,6 @@ def new_shape(widget):
         if text not in [AutoLabelingMode.ADD, AutoLabelingMode.REMOVE]:
             shape.label = text
         shape.difficult = difficult
-        shape.kie_linking = kie_linking
         widget.add_label(shape)
         widget.actions.edit_mode.setEnabled(True)
         widget.actions.undo_last_point.setEnabled(False)

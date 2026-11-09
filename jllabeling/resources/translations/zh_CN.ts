@@ -795,39 +795,9 @@ Only the registry entry is removed. The config/weight files on disk are kept:
             <translation>困难标志</translation>
         </message>
         <message>
-            <location filename="..\..\views\labeling\widgets\label_dialog.py" line="1486" />
-            <source>Enter linking, e.g., [0,1]</source>
-            <translation>输入链接，如：[0,1]</translation>
-        </message>
-        <message>
-            <location filename="..\..\views\labeling\widgets\label_dialog.py" line="1500" />
-            <source>Add</source>
-            <translation>新增</translation>
-        </message>
-        <message>
             <location filename="..\..\views\labeling\widgets\label_dialog.py" line="1537" />
             <source>Label description</source>
             <translation>标签描述</translation>
-        </message>
-        <message>
-            <location filename="..\..\views\labeling\widgets\label_dialog.py" line="1612" />
-            <source>Duplicate Entry</source>
-            <translation>重复输入</translation>
-        </message>
-        <message>
-            <location filename="..\..\views\labeling\widgets\label_dialog.py" line="1613" />
-            <source>This linking pair already exists.</source>
-            <translation>当前链接已存在。</translation>
-        </message>
-        <message>
-            <location filename="..\..\views\labeling\widgets\label_dialog.py" line="1629" />
-            <source>Invalid Input</source>
-            <translation>无效输入</translation>
-        </message>
-        <message>
-            <location filename="..\..\views\labeling\widgets\label_dialog.py" line="1630" />
-            <source>Please enter a valid list of linking pairs like [1,2].</source>
-            <translation>请输入有效链接，如：[1,2]</translation>
         </message>
     </context>
     <context>

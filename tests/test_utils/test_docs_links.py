@@ -61,8 +61,13 @@ def test_the_case_check_is_exact_not_just_existing():
 
 
 def test_the_guard_itself_has_something_to_check():
-    """An empty file list would make every parametrized case pass vacuously."""
-    assert len(doc_files()) >= 20, doc_files()
+    """An empty file list would make every parametrized case pass vacuously.
+
+    The floor was 20 until the three OCR/VLM pages (``chatbot``, ``vqa``,
+    ``paddle_ocr``, in both locales) were deleted along with the panels they
+    documented; 19 is the remaining count, not a rounding.
+    """
+    assert len(doc_files()) >= 19, doc_files()
 
 
 @pytest.mark.parametrize(

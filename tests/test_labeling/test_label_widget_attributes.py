@@ -144,7 +144,6 @@ class TestLabelWidgetAttributes(unittest.TestCase):
             group_id=None,
             description="old",
             difficult=False,
-            kie_linking=[],
             attributes={"color": "blue"},
             fill_color=SimpleNamespace(
                 getRgb=Mock(return_value=(255, 0, 0, 255))
@@ -164,7 +163,7 @@ class TestLabelWidgetAttributes(unittest.TestCase):
             ),
             current_item=Mock(return_value=item),
             label_dialog=SimpleNamespace(
-                pop_up=Mock(return_value=("car", {}, None, "new", False, [])),
+                pop_up=Mock(return_value=("car", {}, None, "new", False)),
                 add_label_history=Mock(),
             ),
             _config={"move_mode": "auto"},
@@ -194,7 +193,6 @@ class TestLabelWidgetAttributes(unittest.TestCase):
             group_id=None,
             description="",
             difficult=False,
-            kie_linking=[],
             attributes={"color": "blue"},
         )
         changed_shape = SimpleNamespace(
@@ -203,7 +201,6 @@ class TestLabelWidgetAttributes(unittest.TestCase):
             group_id=None,
             description="",
             difficult=False,
-            kie_linking=[],
             attributes={"age": "adult"},
         )
 
@@ -214,7 +211,7 @@ class TestLabelWidgetAttributes(unittest.TestCase):
         widget = SimpleNamespace(
             _batch_edit_warning_shown=True,
             label_dialog=SimpleNamespace(
-                pop_up=Mock(return_value=("car", {}, None, "new", False, [])),
+                pop_up=Mock(return_value=("car", {}, None, "new", False)),
                 add_label_history=Mock(),
             ),
             validate_label=Mock(return_value=True),

@@ -4,7 +4,6 @@
 > X-AnyLabeling，而非 X-AnyLabeling。参见 [README](../../README_zh-CN.md)
 > 的「Fork 范围」一节。
 
-
 X-AnyLabeling 的图像分类器是独立的图像分类标注窗口，支持多类分类（单标签）和多标签分类。用户可以管理标签、对单张或多张图像进行 AI 辅助分类、查看数据集统计信息，并将已分类图像按类别导出到对应目录。
 
 <video src="https://github.com/user-attachments/assets/0652adfb-48a4-4219-9b18-16ff5ce31be0" width="100%" controls>
@@ -50,7 +49,6 @@ X-AnyLabeling 的图像分类器是独立的图像分类标注窗口，支持多
 > - MultiLabel 模式：适用于多属性标注任务，如图片标签标注（一张图片可以同时具有多个属性）
 > - 需要注意的是，当从 MultiLabel 切换到 MultiClass 模式时，系统只会保留每张图片的第一个勾选标签
 
-
 ```bash
 classified/
 ├── husky/
@@ -67,60 +65,6 @@ classified/
 - **标注组件区**：
 
 右侧中间面板包含标题和以下 5 个标注组件。
-
-### AI 助手
-
-如需使用 AI 辅助功能，请先按照[聊天机器人文档](./chatbot.md)完成模型配置。
-
-<img src="../../assets/resources/vqa/chatbot.png" width="100%" />
-
-完成配置后，点击标注组件区右侧的魔法棒图标即可打开 AI 对话框。
-
-<img src="../../assets/resources/image_classifier/assistance.png" width="100%" />
-
-软件内置了一套标准的提示词模板，会根据当前选择的模式（MultiClass 或 MultiLabel）自动调整提示内容。你可以直接使用或根据实际需求自定义。
-
-**MultiClass 模式示例：**
-
-```prompt
-@image
-You are an expert image classifier. Your task is to perform multi-class classification.
-
-Task Definition: Analyze the given image and classify it based on the provided categories.
-
-Available Categories: ["husky", "psyduck", "ragdoll"]
-
-Instructions:
-1. Carefully examine the image and identify the main subject and their activity
-2. Be precise - only select categories that clearly match what you observe
-
-Return your result in strict JSON format:
-{"husky": false, "psyduck": false, "ragdoll": false}
-
-Set exactly ONE category to 'true' that best matches the image, keep all others as 'false'.
-```
-
-**MultiLabel 模式示例：**
-
-```prompt
-@image
-You are an expert image classifier. Your task is to perform multi-label classification.
-
-Task Definition: Analyze the given image and classify it based on the provided categories.
-
-Available Categories: ["outdoor", "sunny", "people", "building"]
-
-Instructions:
-1. Carefully examine the image and identify the main subject and their activity
-2. Be precise - only select categories that clearly match what you observe
-
-Return your result in strict JSON format:
-{"outdoor": false, "sunny": false, "people": false, "building": false}
-
-Set ALL applicable categories to 'true', keep non-applicable ones as 'false'.
-```
-
-> 有关特殊引用和提示模板库等用法，请参考[视觉问答文档](./vqa.md)。
 
 ### 添加标签
 

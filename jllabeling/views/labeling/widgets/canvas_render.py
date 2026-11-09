@@ -14,7 +14,6 @@ import math
 from PyQt6 import QtCore, QtGui
 from PyQt6.QtCore import Qt
 
-from jllabeling.views.labeling.logger import logger
 from jllabeling.views.labeling.utils.colormap import label_colormap
 from jllabeling.views.labeling.utils.theme import get_theme
 
@@ -55,7 +54,6 @@ class CanvasRenderState:
         self.show_scores = True
         self.show_degrees = False
         self.show_attributes = True
-        self.show_linking = False
 
         self.cross_line_show = True
         self.cross_line_width = 2.0
@@ -93,7 +91,6 @@ class CanvasRenderMixin:
     show_scores = _RenderField("show_scores")
     show_degrees = _RenderField("show_degrees")
     show_attributes = _RenderField("show_attributes")
-    show_linking = _RenderField("show_linking")
 
     cross_line_show = _RenderField("cross_line_show")
     cross_line_width = _RenderField("cross_line_width")
@@ -240,8 +237,6 @@ class CanvasRenderMixin:
         # labels are restored to full opacity before being painted.
         p.setOpacity(self.shape_opacity)
 
-        self._paint_linking(p)
-
         self._paint_masks(p)
 
         self._paint_degrees(p)
@@ -315,73 +310,6 @@ class CanvasRenderMixin:
             p.end()
             self.update()
             return
-
-    def _paint_linking(self, p):
-        # Draw KIE linking
-        if self.show_linking:
-            pen = QtGui.QPen(QtGui.QColor("#AAAAAA"), 2, Qt.PenStyle.SolidLine)
-            p.setPen(pen)
-            gid2point = {}
-            linking_pairs = []
-            group_color = (255, 128, 0)
-            for shape in self.shapes:
-                if not shape.visible:
-                    continue
-
-                try:
-                    linking_pairs += shape.kie_linking
-                except Exception as exc:  # noqa: BLE001
-                    # Debug level on purpose: this runs inside paintEvent, so
-                    # a warning would flood the log while the shape stays
-                    # broken. The linking line simply is not drawn.
-                    logger.debug(
-                        f"KIE linking skipped for label {shape.label!r}: {exc}"
-                    )
-
-                if shape.group_id is None or shape.shape_type not in [
-                    "rectangle",
-                    "polygon",
-                    "rotation",
-                    "quadrilateral",
-                    "cuboid",
-                ]:
-                    continue
-                rect = shape.bounding_rect()
-                cx = rect.x() + (rect.width() / 2.0)
-                cy = rect.y() + (rect.height() / 2.0)
-                gid2point[shape.group_id] = (cx, cy)
-
-            for linking in linking_pairs:
-                pen.setStyle(Qt.PenStyle.SolidLine)
-                pen.setWidth(max(1, int(round(4.0 / Shape.scale))))
-                pen.setColor(QtGui.QColor(*group_color))
-                p.setPen(pen)
-                key, value = linking
-                # Adapt to the 'ungroup_selected_shapes' operation
-                if key not in gid2point or value not in gid2point:
-                    continue
-                kp, vp = gid2point[key], gid2point[value]
-                # Draw a link from key point to value point
-                p.drawLine(QtCore.QPointF(*kp), QtCore.QPointF(*vp))
-                # Draw the triangle arrowhead
-                arrow_size = max(
-                    1, int(round(10.0 / Shape.scale))
-                )  # Size of the arrowhead
-                angle = math.atan2(
-                    vp[1] - kp[1], vp[0] - kp[0]
-                )  # Angle towards the value point
-                arrow_points = [
-                    QtCore.QPointF(vp[0], vp[1]),
-                    QtCore.QPointF(
-                        vp[0] - arrow_size * math.cos(angle - math.pi / 6),
-                        vp[1] - arrow_size * math.sin(angle - math.pi / 6),
-                    ),
-                    QtCore.QPointF(
-                        vp[0] - arrow_size * math.cos(angle + math.pi / 6),
-                        vp[1] - arrow_size * math.sin(angle + math.pi / 6),
-                    ),
-                ]
-                p.drawPolygon(arrow_points)
 
     def _paint_masks(self, p):  # noqa: C901
         # Draw shape masks
@@ -733,7 +661,6 @@ class CanvasRenderMixin:
         scratch.show_masks = show_masks
         scratch.show_degrees = self.show_degrees
         scratch.show_attributes = self.show_attributes
-        scratch.show_linking = self.show_linking
         scratch.mask_opacity = self.mask_opacity
         scratch.shape_opacity = self.shape_opacity
         scratch.attr_background_color = self.attr_background_color
