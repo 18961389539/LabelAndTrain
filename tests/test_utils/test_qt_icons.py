@@ -127,3 +127,97 @@ class TestQtIcons(unittest.TestCase):
     def test_mapped_icon_loads_into_qicon(self):
         icon = new_icon("open")
         self.assertFalse(icon.isNull())
+
+    @staticmethod
+    def _partial_alpha_pixels(pixmap):
+        image = pixmap.toImage().convertToFormat(
+            QtGui.QImage.Format.Format_ARGB32
+        )
+        data = bytes(
+            image.constBits().asarray(image.height() * image.bytesPerLine())
+        )
+        return sum(1 for i in range(0, len(data), 4) if 0 < data[i + 3] < 255)
+
+    def test_svg_is_rendered_at_the_raster_size_not_upscaled(self):
+        # QPixmap(svg) loads at the file's declared 24px; the old code then
+        # scaled that 5x, so the "128px" icon carried 24px of detail. A real
+        # render at 128 confines antialiasing to the outline, while an upscale
+        # smears it over an order of magnitude more pixels.
+        from jllabeling.views.labeling.utils.qt import (
+            _ICON_RASTER_SIZE,
+            _icon_source_pixmap,
+        )
+
+        init_theme("light")
+        path = new_icon_path("caret-down", "svg")
+        rendered = _icon_source_pixmap(path, _ICON_RASTER_SIZE)
+        self.assertEqual(
+            rendered.size(), QtCore.QSize(_ICON_RASTER_SIZE, _ICON_RASTER_SIZE)
+        )
+        upscaled = QtGui.QPixmap(path).scaled(
+            _ICON_RASTER_SIZE,
+            _ICON_RASTER_SIZE,
+            QtCore.Qt.AspectRatioMode.KeepAspectRatio,
+            QtCore.Qt.TransformationMode.SmoothTransformation,
+        )
+        self.assertLess(
+            self._partial_alpha_pixels(rendered),
+            self._partial_alpha_pixels(upscaled) / 3,
+        )
+
+    def test_icon_cache_is_namespaced_by_lucide_version(self):
+        # The write path never overwrites an existing file, so a version or
+        # revision change has to move the directory or old glyphs win forever.
+        from importlib.metadata import version
+
+        from jllabeling.views.labeling.utils.qt import _lucide_cache_root
+
+        init_theme("light")
+        self.assertIn(version("python-lucide"), _lucide_cache_root())
+        self.assertIn(
+            version("python-lucide"), new_icon_path("settings", "svg")
+        )
+
+    def test_stale_cache_file_is_rewritten(self):
+        # The filename is the app's name for the icon, so remapping
+        # `ultralytics` (scan-search -> graduation-cap) left the old glyph in
+        # place until the temp directory was wiped. The write path has to
+        # compare content, not just existence.
+        from jllabeling.views.labeling.utils import qt as qt_module
+
+        init_theme("light")
+        path = new_icon_path("caret-down", "svg")
+        with open(path, "w", encoding="utf-8") as handle:
+            handle.write("<svg>stale</svg>")
+        qt_module._lucide_icon_path.cache_clear()
+        again = new_icon_path("caret-down", "svg")
+        self.assertEqual(again, path)
+        with open(again, "r", encoding="utf-8") as handle:
+            self.assertIn("chevron-down", handle.read())
+
+    def test_brand_training_and_zoom_do_not_share_a_glyph(self):
+        # All three used to resolve to scan-search, so a magnifier-with-frame
+        # stood for the brand, the training entry and "Original Size" at once.
+        from jllabeling.views.labeling.utils.qt import _LUCIDE_ICON_MAP
+
+        names = {
+            key: _LUCIDE_ICON_MAP[key]["name"]
+            for key in ("icon", "ultralytics", "zoom")
+        }
+        self.assertEqual(len(set(names.values())), 3, names)
+
+    def test_desktop_entry_points_at_the_shipped_mark(self):
+        # The desktop entry used logo.png while the installer and the window
+        # used the scan-frame, so the Linux menu showed a second face.
+        desktop = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+            "jllabelingandtrain.desktop",
+        )
+        with open(desktop, encoding="utf-8") as handle:
+            icon_line = next(
+                line for line in handle if line.startswith("Icon=")
+            )
+        icon_path = os.path.join(
+            os.path.dirname(desktop), icon_line.split("=", 1)[1].strip()
+        )
+        self.assertTrue(os.path.exists(icon_path), icon_path)

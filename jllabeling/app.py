@@ -621,7 +621,13 @@ def _main():
 
     app.setApplicationName(__appname__)
     app.setApplicationVersion(__version__)
-    app.setWindowIcon(new_icon("icon"))
+    # The shipped icon.png is the mark the installer and desktop entry use.
+    # Resolving the Lucide glyph instead gave a 24px raster scaled up, so the
+    # taskbar icon and the shortcut icon did not read as the same artwork.
+    window_icon = QtGui.QIcon(":/images/images/icon.png")
+    if window_icon.isNull():
+        window_icon = new_icon("icon")
+    app.setWindowIcon(window_icon)
     if loaded_language:
         app.installTranslator(translator)
     else:

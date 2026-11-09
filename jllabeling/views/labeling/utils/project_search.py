@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import json
+import os
 import os.path as osp
 
 from jllabeling.views.labeling.logger import logger
@@ -71,6 +72,26 @@ def _state_and_labels(label_file):
     return _REVIEW_TO_STATE.get(review, STATE_UNCHECKED), labels
 
 
+def _cached_state_and_labels(index, label_file):
+    """Use cached metadata when it covers the file; otherwise read it."""
+    if index is None:
+        return _state_and_labels(label_file)
+    try:
+        stat = os.stat(label_file)
+    except OSError:
+        return STATE_UNLABELED, []
+    entry = index.lookup(label_file, stat)
+    if entry is None or entry.shape_count is None:
+        return _state_and_labels(label_file)
+    if entry.labels is None:
+        return _state_and_labels(label_file)
+    if entry.shape_count == 0:
+        state = STATE_UNLABELED
+    else:
+        state = _REVIEW_TO_STATE.get(entry.review[0], STATE_UNCHECKED)
+    return state, list(entry.labels)
+
+
 def search_project(
     root, output_dir=None, files=None, label_query="", state_query=""
 ):
@@ -92,14 +113,20 @@ def search_project(
         )
     label_query = (label_query or "").strip().lower()
     state_query = (state_query or "").strip()
+    from jllabeling.views.labeling.project_dashboard import (
+        label_path_for_image,
+    )
+    from jllabeling.views.labeling.utils.label_index import LabelIndex
+
+    try:
+        index = LabelIndex(root) if root else None
+    except Exception:  # noqa: BLE001 - 搜索不能因缓存而失败
+        index = None
     matches = []
     for image_file in files:
-        from jllabeling.views.labeling.project_dashboard import (
-            label_path_for_image,
-        )
-
-        state, labels = _state_and_labels(
-            label_path_for_image(image_file, output_dir)
+        state, labels = _cached_state_and_labels(
+            index,
+            label_path_for_image(image_file, output_dir),
         )
         if (
             state_query

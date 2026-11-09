@@ -921,7 +921,9 @@ class LabelingWidget(LabelDialog):
             return
 
         main = self.parent.parent
-        target = self.filename or self.last_open_dir
+        # An empty filename/last-dir must stay None: "" would be queued as a
+        # file to open and pop "No such file" right after the rebuild.
+        target = self.filename or self.last_open_dir or None
         close_event = QtGui.QCloseEvent()
         self.closeEvent(close_event)
         if not close_event.isAccepted():

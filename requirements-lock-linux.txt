@@ -231,7 +231,7 @@ pytest-cov==7.1.0
     # via jl-labeling-and-train (pyproject.toml)
 python-dateutil==2.9.0.post0
     # via matplotlib
-python-lucide==0.5.7
+python-lucide==0.5.11
     # via jl-labeling-and-train (pyproject.toml)
 pytokens==0.4.1
     # via black

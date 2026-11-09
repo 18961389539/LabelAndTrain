@@ -12,6 +12,7 @@
 
 from __future__ import annotations
 
+import os
 import os.path as osp
 
 
@@ -58,21 +59,34 @@ def collect_progress(root, output_dir=None):
     from jllabeling.views.labeling.utils.async_label_check import (
         label_file_review_info,
     )
+    from jllabeling.views.labeling.utils.label_index import LabelIndex
     from jllabeling.views.labeling.utils.qt import scan_all_images
 
     images = (
         scan_all_images(str(root)) if root and osp.isdir(str(root)) else []
     )
+    try:
+        # Read-only use: the file list populates this cache, the overview
+        # only consumes it.  A miss falls back to the old head read.
+        index = LabelIndex(root)
+    except Exception:  # noqa: BLE001 - 概览不能因缓存而打不开
+        index = None
     annotated = confirmed = rework = 0
     for image_file in images:
         label_file = label_path_for_image(image_file, output_dir)
-        if not osp.isfile(label_file):
+        try:
+            stat = os.stat(label_file)
+        except OSError:
             continue
         annotated += 1
-        try:
-            state = label_file_review_info(label_file)[0]
-        except Exception:  # noqa: BLE001 - 坏文件按未复核算
-            continue
+        cached = index.lookup(label_file, stat) if index else None
+        if cached is not None:
+            state = cached.review[0]
+        else:
+            try:
+                state = label_file_review_info(label_file)[0]
+            except Exception:  # noqa: BLE001 - 坏文件按未复核算
+                continue
         if state == REVIEW_CONFIRMED:
             confirmed += 1
         elif state == REVIEW_REJECTED:

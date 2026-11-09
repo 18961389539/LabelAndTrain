@@ -9,6 +9,7 @@ the file panel appears instantly and the dots fill in shortly after.
 """
 
 import json
+import os
 import os.path as osp
 import re
 from typing import List, Optional
@@ -23,6 +24,7 @@ from jllabeling.views.labeling.schema import (
     REVIEW_UNCHECKED,
 )
 from .active_learning import needs_review
+from .label_index import LabelIndex
 from .quality import shapes_have_low_confidence
 
 CHECKED_FIELD_PATTERN = re.compile(r'"checked"\s*:\s*(true|false)')
@@ -38,6 +40,14 @@ REVIEW_NOTE_PATTERN = re.compile(
 #: ``shapes``, so a bounded head read always holds all three.
 HEAD_SCAN_BYTES = 8192
 HEAD_SCAN_LIMIT = 65536
+
+
+def _label_stat(path):
+    """``os.stat`` result for a label, or ``None`` when it is missing."""
+    try:
+        return os.stat(path)
+    except OSError:
+        return None
 
 
 def label_file_review_info(label_file):
@@ -85,14 +95,16 @@ def label_file_review_info(label_file):
     return state, reviewed_at, note
 
 
-def label_file_low_conf(label_file, thresholds=None):
-    """Whether a label file holds a box the review band flags as uncertain.
+def label_file_low_conf_details(label_file, thresholds=None):
+    """``(low_conf, shape_count, labels)`` from one full read.
 
     This is the expensive half of the row metadata: it needs the shapes, not
     just the review header. The background checker runs it after the cheap
     review pass, so opening a folder no longer parses every JSON on the UI
     thread; an unreadable file is not low-confidence here (data_audit and
     export_check report it as corrupted separately).
+
+    The unique labels, in first-seen order, are cached for project search.
     """
     try:
         # Close the file before parsing: json.load() would keep it open for
@@ -102,13 +114,31 @@ def label_file_low_conf(label_file, thresholds=None):
             raw = handle.read()
         data = json.loads(raw)
     except (OSError, json.JSONDecodeError, UnicodeDecodeError):
-        return False
+        return False, None, []
     if not isinstance(data, dict):
-        return False
+        return False, None, []
     shapes = data.get("shapes")
+    if not isinstance(shapes, list):
+        shapes = []
     if thresholds:
-        return needs_review(shapes, thresholds=thresholds)
-    return shapes_have_low_confidence(shapes)
+        low_conf = needs_review(shapes, thresholds=thresholds)
+    else:
+        low_conf = shapes_have_low_confidence(shapes)
+    labels = []
+    seen = set()
+    for shape in shapes:
+        if not isinstance(shape, dict):
+            continue
+        label = str(shape.get("label") or "")
+        if label and label not in seen:
+            labels.append(label)
+            seen.add(label)
+    return low_conf, len(shapes), labels
+
+
+def label_file_low_conf(label_file, thresholds=None):
+    """Whether a label file holds a box the review band flags as uncertain."""
+    return label_file_low_conf_details(label_file, thresholds)[0]
 
 
 def _label_file_review_state(label_file: str) -> str:
@@ -134,6 +164,10 @@ class LabelCheckWorker(QObject):
     low-confidence roles. Both are off the UI thread; the low-confidence
     count in the progress label is allowed to stay ``…`` until the second
     pass finishes.
+
+    When ``index_root`` is given, unchanged label files are answered from
+    :class:`LabelIndex` instead of being read again.  The first open fills
+    the index; later opens only stat the files.
     """
 
     batch_ready = pyqtSignal(
@@ -148,22 +182,47 @@ class LabelCheckWorker(QObject):
         batch_size: int = 200,
         thresholds=None,
         parent=None,
+        index_root=None,
+        index_cache_path=None,
     ):
         super().__init__(parent)
         self.label_files = label_files
         self.batch_size = batch_size
         self.thresholds = thresholds
+        self.index_root = index_root
+        self.index_cache_path = index_cache_path
         self._should_stop = False
 
     def stop(self):
         self._should_stop = True
 
     def run(self):
+        index = None
+        if self.index_root:
+            index = LabelIndex(
+                self.index_root,
+                thresholds=self.thresholds,
+                cache_path=self.index_cache_path,
+            )
+
         results = []
         for i, label_file in enumerate(self.label_files):
             if self._should_stop:
                 break
-            results.append(label_file_review_info(label_file))
+            stat = _label_stat(label_file)
+            if stat is None:
+                if index is not None:
+                    index.remove(label_file)
+                info = (REVIEW_UNCHECKED, None, None)
+            else:
+                cached = index.lookup(label_file, stat) if index else None
+                if cached is not None and cached.review is not None:
+                    info = cached.review
+                else:
+                    info = label_file_review_info(label_file)
+                    if index is not None:
+                        index.update_review(label_file, stat, info)
+            results.append(info)
             if len(results) >= self.batch_size:
                 self.batch_ready.emit(i + 1 - len(results), results)
                 results = []
@@ -177,13 +236,34 @@ class LabelCheckWorker(QObject):
         for i, label_file in enumerate(self.label_files):
             if self._should_stop:
                 break
-            low_conf.append(label_file_low_conf(label_file, self.thresholds))
+            stat = _label_stat(label_file)
+            if stat is None:
+                value = False
+            else:
+                cached = index.lookup(label_file, stat) if index else None
+                if cached is not None and cached.low_conf is not None:
+                    value = cached.low_conf
+                else:
+                    value, shape_count, labels = label_file_low_conf_details(
+                        label_file, self.thresholds
+                    )
+                    if index is not None:
+                        index.update_low_conf(
+                            label_file,
+                            stat,
+                            value,
+                            shape_count,
+                            labels,
+                        )
+            low_conf.append(value)
             if len(low_conf) >= self.batch_size:
                 self.low_conf_ready.emit(batch_start, low_conf)
                 batch_start = i + 1
                 low_conf = []
         if low_conf and not self._should_stop:
             self.low_conf_ready.emit(batch_start, low_conf)
+        if index is not None:
+            index.save()
         self.finished.emit()
 
 
@@ -202,6 +282,8 @@ class AsyncLabelChecker(QObject):
         on_batch=None,
         on_low_conf=None,
         thresholds=None,
+        index_root=None,
+        index_cache_path=None,
     ):
         """Start a background pass.  Any previous pass is stopped first.
 
@@ -212,13 +294,20 @@ class AsyncLabelChecker(QObject):
             on_low_conf: Optional callable(start_index, flags) for the
                 shape-scoring pass.
             thresholds: Per-class calibration for the low-confidence pass.
+            index_root: Dataset root for the persistent label index.
+            index_cache_path: Override the default cache file (tests).
         """
         self.stop()
         self._on_batch = on_batch
         self._on_low_conf = on_low_conf
 
         self.thread = QtCore.QThread(self)
-        self.worker = LabelCheckWorker(label_files, thresholds=thresholds)
+        self.worker = LabelCheckWorker(
+            label_files,
+            thresholds=thresholds,
+            index_root=index_root,
+            index_cache_path=index_cache_path,
+        )
         self.worker.moveToThread(self.thread)
 
         self.thread.started.connect(self.worker.run)

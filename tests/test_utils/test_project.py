@@ -89,7 +89,7 @@ def test_unwritable_location_reports_failure(tmp_path):
 
 
 def test_split_seed_survives_a_save_failure(tmp_path, monkeypatch):
-    from jllabeling.views.labeling import project as project_module
+    from jllabeling.core.projects import project as project_module
 
     def _fail(_data, _path):
         raise OSError("read-only media")

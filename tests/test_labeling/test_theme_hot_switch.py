@@ -38,6 +38,11 @@ class TestThemeHotSwitch(unittest.TestCase):
         main = MainWindow(_APP)
         self.addCleanup(main.deleteLater)
         old_view = main.labeling_widget.view
+        # The rebuild reopens filename-or-last-dir. The latter comes from the
+        # real QSettings registry, which another test (or the developer's
+        # session) may point at a folder that no longer exists; opening it
+        # raises a modal and would hang an offscreen run.
+        old_view.last_open_dir = ""
         menu_count = len(main.menuBar().actions())
         _APP.processEvents()
         old_save_labels = main.statusBar().findChildren(

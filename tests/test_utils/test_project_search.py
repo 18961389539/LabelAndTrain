@@ -105,3 +105,44 @@ def test_empty_query_means_everything_in_order(tmp_path, monkeypatch):
     root, files = _project(tmp_path, monkeypatch)
     rows = project_search.search_project(root, files=files)
     assert [r["file"] for r in rows] == files
+
+
+def test_the_label_index_answers_without_reading_labels(tmp_path, monkeypatch):
+    root, files = _project(tmp_path, monkeypatch)
+    cache = tmp_path / "label_index.json"
+    from jllabeling.views.labeling.utils import label_index
+
+    monkeypatch.setattr(
+        label_index, "default_cache_path", lambda _root: str(cache)
+    )
+    index = label_index.LabelIndex(root, cache_path=str(cache))
+    for name, state, labels, count in (
+        ("a.json", "unchecked", ["划痕"], 1),
+        ("b.json", "confirmed", ["凹坑"], 1),
+        ("c.json", "unchecked", [], 0),
+    ):
+        path = root / name
+        stat = os.stat(path)
+        index.update_review(str(path), stat, (state, None, None))
+        index.update_low_conf(str(path), stat, False, count, labels)
+    index.save()
+
+    def _boom(_label_file):
+        raise AssertionError("label file was read")
+
+    monkeypatch.setattr(project_search, "_state_and_labels", _boom)
+
+    confirmed = project_search.search_project(
+        root, files=files, state_query="已检查"
+    )
+    assert [row["file"] for row in confirmed] == [str(root / "b.png")]
+
+    scratched = project_search.search_project(
+        root, files=files, label_query="划痕"
+    )
+    assert [row["file"] for row in scratched] == [str(root / "a.png")]
+
+    everything = project_search.search_project(root, files=files)
+    assert [row["file"] for row in everything] == files
+    states = {row["file"]: row["state"] for row in everything}
+    assert states[str(root / "c.png")] == "未标注"

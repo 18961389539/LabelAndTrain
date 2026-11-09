@@ -1,4 +1,5 @@
 import functools
+import importlib.metadata
 import natsort
 import os
 import os.path as osp
@@ -40,6 +41,20 @@ def app_settings():
 _LUCIDE_CACHE_DIR = osp.join(
     tempfile.gettempdir(), "jl_labeling_and_train", "lucide_icons"
 )
+#: Bumped when the cache *layout* changes. Glyph changes do not need a bump:
+#: the write path compares the rendered body and rewrites a stale file.
+_LUCIDE_CACHE_REVISION = "2"
+
+
+@functools.lru_cache(maxsize=1)
+def _lucide_cache_root():
+    try:
+        version = importlib.metadata.version("python-lucide")
+    except importlib.metadata.PackageNotFoundError:
+        version = "unpackaged"
+    return osp.join(_LUCIDE_CACHE_DIR, f"{version}-r{_LUCIDE_CACHE_REVISION}")
+
+
 _LUCIDE_ICON_MAP = {
     "auto-run": {"name": "play"},
     "arrow-right": {"name": "arrow-right"},
@@ -116,7 +131,7 @@ _LUCIDE_ICON_MAP = {
     "trash": {"name": "trash"},
     "undo": {"name": "undo-2"},
     "union": {"name": "combine"},
-    "ultralytics": {"name": "scan-search"},
+    "ultralytics": {"name": "graduation-cap"},
     "next": {"name": "arrow-right"},
     "save": {"name": "save"},
     "save-as": {"name": "save"},
@@ -124,7 +139,7 @@ _LUCIDE_ICON_MAP = {
         "name": "triangle-alert",
         "stroke": "#d97706",
     },
-    "zoom": {"name": "scan-search"},
+    "zoom": {"name": "scaling"},
     "zoom-in": {"name": "zoom-in"},
     "zoom-out": {"name": "zoom-out"},
 }
@@ -204,13 +219,21 @@ def _lucide_icon_path(icon, theme_signature, default_stroke, default_fill):
         return None
     svg = _decorate_lucide_svg(svg, spec)
 
-    themed_cache_dir = osp.join(_LUCIDE_CACHE_DIR, theme_signature)
+    themed_cache_dir = osp.join(_lucide_cache_root(), theme_signature)
     os.makedirs(themed_cache_dir, exist_ok=True)
     cache_name = f"{icon}.svg"
     cache_path = osp.join(themed_cache_dir, cache_name)
-    if not osp.exists(cache_path):
-        with open(cache_path, "w", encoding="utf-8") as f:
-            f.write(svg)
+    # Compare instead of trusting existence: remapping a name (or upgrading
+    # lucide) changes the body under an unchanged filename, and the old
+    # exists-check kept serving the previous glyph forever.
+    try:
+        with open(cache_path, "r", encoding="utf-8") as handle:
+            cached = handle.read()
+    except OSError:
+        cached = None
+    if cached != svg:
+        with open(cache_path, "w", encoding="utf-8") as handle:
+            handle.write(svg)
     return _normalize_icon_path(cache_path)
 
 
@@ -245,7 +268,7 @@ def scan_all_images(folder_path, on_progress=None):
     ``list``-only contract (an empty folder is ``[]``).
     """
     try:
-        extensions = get_supported_image_extensions()
+        extensions = tuple(get_supported_image_extensions())
 
         images = []
         folder_path = osp.normpath(osp.abspath(folder_path))
@@ -260,7 +283,7 @@ def scan_all_images(folder_path, on_progress=None):
                 and name not in LEGACY_EXIF_BACKUP_DIR_NAMES
             ]
             for file in files:
-                if file.lower().endswith(tuple(extensions)):
+                if file.lower().endswith(extensions):
                     relative_path = osp.normpath(osp.join(root, file))
                     relative_path = str(relative_path)
                     images.append(relative_path)
@@ -305,6 +328,43 @@ def _tinted_pixmap(source, color):
     return QtGui.QPixmap.fromImage(out)
 
 
+def _icon_source_pixmap(path, size):
+    """One raster of ``path`` at ``size``, rendered from the vector if it is SVG.
+
+    ``QPixmap(svg)`` renders at the file's declared 24px, and the old
+    ``scaled()`` call then blew that up five times — every "128px" icon
+    carried 24px of detail, which is what made 32px buttons and 200% displays
+    look soft. ``QImageReader.setScaledSize`` asks the SVG handler for a real
+    render at the target size. Raster resources keep the old scaling path.
+    """
+    if path.lower().endswith(".svg"):
+        reader = QtGui.QImageReader(path)
+        if reader.canRead():
+            declared = reader.size()
+            if declared.isEmpty():
+                target = QtCore.QSize(size, size)
+            else:
+                target = declared.scaled(
+                    QtCore.QSize(size, size),
+                    QtCore.Qt.AspectRatioMode.KeepAspectRatio,
+                )
+            if target != declared:
+                reader.setScaledSize(target)
+            image = reader.read()
+            if not image.isNull():
+                return QtGui.QPixmap.fromImage(image)
+
+    source = QtGui.QPixmap(path)
+    if source.isNull():
+        return None
+    return source.scaled(
+        size,
+        size,
+        QtCore.Qt.AspectRatioMode.KeepAspectRatio,
+        QtCore.Qt.TransformationMode.SmoothTransformation,
+    )
+
+
 def _icon_pixmaps(path):
     """Normal and disabled rasters for `path`, cached per (path, theme tint).
 
@@ -321,17 +381,11 @@ def _icon_pixmaps(path):
     if cached is not None:
         return cached
 
-    source = QtGui.QPixmap(path)
+    source = _icon_source_pixmap(path, _ICON_RASTER_SIZE)
     result = (None, None)
-    if not source.isNull():
-        normal = source.scaled(
-            _ICON_RASTER_SIZE,
-            _ICON_RASTER_SIZE,
-            QtCore.Qt.AspectRatioMode.KeepAspectRatio,
-            QtCore.Qt.TransformationMode.SmoothTransformation,
-        )
-        disabled = _tinted_pixmap(normal.toImage(), tint)
-        result = (normal, disabled)
+    if source is not None:
+        disabled = _tinted_pixmap(source.toImage(), tint)
+        result = (source, disabled)
 
     _ICON_PIXMAP_CACHE[key] = result
     return result

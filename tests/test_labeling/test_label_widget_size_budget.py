@@ -124,7 +124,10 @@ BUDGETS = {
     # selects every annotation. The method (with its text-editor guard), the
     # action, the Edit-menu entry and the shortcut registration are the delta;
     # auto-labeling keeps its panel behind Ctrl+Alt+L.
-    "jllabeling/views/labeling/label_widget.py": 6623,
+    # Raised 6623 -> 6625 the same day: the theme rebuild must pass None (not
+    # an empty string) when no image or last directory is open, otherwise the
+    # replacement queues a load for "" and shows a modal.
+    "jllabeling/views/labeling/label_widget.py": 6625,
     # Lowered 3772 -> 3760 on 2026-09-29: the undo/redo stacks moved out to
     # widgets/shape_history.py (which is also what made them survive a file
     # switch) and the canvas reaches them through the attribute names it has

@@ -13,10 +13,11 @@ from PyQt6.QtWidgets import (
     QButtonGroup,
 )
 from PyQt6.QtCore import Qt, QSize, pyqtSignal
-from PyQt6.QtGui import QIcon
+from PyQt6.QtGui import QColor, QIcon, QPainter, QPixmap
 
 from jllabeling.config import get_data_dir_name, get_work_directory
 from jllabeling.views.labeling.ai.config import *
+from jllabeling.views.labeling.logger import logger
 from jllabeling.views.labeling.utils._io import load_json, save_json
 from jllabeling.views.labeling.utils.model_task_groups import (
     TASK_FILTER_ORDER,
@@ -100,6 +101,49 @@ class SearchBar(QLineEdit):
         super().resizeEvent(event)
 
 
+def _initial_badge(name, size):
+    """A rounded square with the provider's initial, drawn without assets."""
+    pixmap = QPixmap(size)
+    pixmap.fill(Qt.GlobalColor.transparent)
+    painter = QPainter(pixmap)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+    theme = get_theme()
+    painter.setPen(Qt.PenStyle.NoPen)
+    painter.setBrush(QColor(theme.get("border", "#c9ced6")))
+    radius = size.width() / 4
+    painter.drawRoundedRect(pixmap.rect(), radius, radius)
+
+    font = painter.font()
+    font.setPixelSize(max(8, int(size.height() * 0.55)))
+    font.setBold(True)
+    painter.setFont(font)
+    painter.setPen(QColor(theme.get("text", "#1d1d1f")))
+    glyph = (name.strip()[:1] or "?").upper()
+    painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, glyph)
+    painter.end()
+    return pixmap
+
+
+def _provider_pixmap(provider_name, icon_name, ext, size):
+    """The provider's own logo, never a blank slot.
+
+    Logos are static PNG resources, so a provider added through a model config
+    that this build does not ship a logo for used to leave an empty label and
+    no trace anywhere. Fall back to a painted initial instead.
+    """
+    icon = QIcon(new_icon(icon_name, ext))
+    if icon.isNull():
+        logger.warning(
+            "No logo for provider %r (looked for %s.%s); "
+            "drawing an initial instead",
+            provider_name,
+            icon_name,
+            ext,
+        )
+        return _initial_badge(provider_name, size)
+    return icon.pixmap(size)
+
+
 class ProviderSection(QFrame):
     def __init__(self, provider_name, parent=None):
         super().__init__(parent)
@@ -108,7 +152,7 @@ class ProviderSection(QFrame):
 
         # Provider header
         header = QHBoxLayout()
-        icon = QLabel()
+        self.icon_label = QLabel()
         if provider_name in ("收藏", "推荐"):
             icon_name, ext = "star-black", "svg"
         elif provider_name == "Custom":
@@ -119,10 +163,12 @@ class ProviderSection(QFrame):
             icon_name, ext = "eth", "png"
         else:
             icon_name, ext = provider_name.lower(), "png"
-        icon.setPixmap(
-            QIcon(new_icon(icon_name, ext)).pixmap(QSize(*ICON_SIZE_SMALL))
+        self.icon_label.setPixmap(
+            _provider_pixmap(
+                provider_name, icon_name, ext, QSize(*ICON_SIZE_SMALL)
+            )
         )
-        header.addWidget(icon)
+        header.addWidget(self.icon_label)
 
         _t = get_theme()
         label = QLabel(provider_name)

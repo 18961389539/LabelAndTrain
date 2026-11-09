@@ -1,28 +1,66 @@
 # flake8: noqa
+"""Widget exports for the labeling views, resolved lazily.
 
-from .auto_labeling import AutoLabelingWidget
-from .brightness_contrast_dialog import BrightnessContrastDialog
-from .canvas import Canvas
-from .canvas_adjustment import CanvasAdjustmentWidget
-from .canvas_empty_state import CanvasEmptyStateWidget
-from .crosshair_settings_dialog import CrosshairSettingsDialog
-from .file_dialog_preview import FileDialogPreview
-from .filter_label_widget import GroupIDFilterComboBox, LabelFilterComboBox
-from .shape_dialog import ShapeModifyDialog
-from .label_dialog import (
-    DigitShortcutDialog,
-    GroupIDModifyDialog,
-    LabelDialog,
-    LabelModifyDialog,
-    LabelQLineEdit,
-)
-from .label_list_widget import LabelListWidget, LabelListWidgetItem
-from .searchable_model_dropdown import SearchBar
-from .navigator_widget import NavigatorDialog
-from .overview_dialog import OverviewDialog
-from .polygon_sides_dialog import PolygonSidesDialog
-from .popup import Popup, copy_text_to_system_clipboard
-from .toolbar import FloatingToolPanel, ToolBar
-from .unique_label_qlist_widget import UniqueLabelQListWidget
+Importing this package used to import every widget.  Several of those
+widgets import ``label_file`` or ``shape``, so a helper such as
+``utils.shape`` would pull the whole GUI graph back into itself.  Resolving
+names on first access keeps the old import surface while letting callers
+load only the widget they actually use.
+"""
 
-from .zoom_widget import ZoomWidget
+from importlib import import_module
+
+_EXPORTS = {
+    "AutoLabelingWidget": ".auto_labeling",
+    "BrightnessContrastDialog": ".brightness_contrast_dialog",
+    "Canvas": ".canvas",
+    "CanvasAdjustmentWidget": ".canvas_adjustment",
+    "CanvasEmptyStateWidget": ".canvas_empty_state",
+    "CrosshairSettingsDialog": ".crosshair_settings_dialog",
+    "FileDialogPreview": ".file_dialog_preview",
+    "GroupIDFilterComboBox": ".filter_label_widget",
+    "LabelFilterComboBox": ".filter_label_widget",
+    "ShapeModifyDialog": ".shape_dialog",
+    "DigitShortcutDialog": ".label_dialog",
+    "GroupIDModifyDialog": ".label_dialog",
+    "LabelDialog": ".label_dialog",
+    "LabelModifyDialog": ".label_dialog",
+    "LabelQLineEdit": ".label_dialog",
+    "LabelListWidget": ".label_list_widget",
+    "LabelListWidgetItem": ".label_list_widget",
+    "SearchBar": ".searchable_model_dropdown",
+    "NavigatorDialog": ".navigator_widget",
+    "OverviewDialog": ".overview_dialog",
+    "PolygonSidesDialog": ".polygon_sides_dialog",
+    "Popup": ".popup",
+    "copy_text_to_system_clipboard": ".popup",
+    "FloatingToolPanel": ".toolbar",
+    "ToolBar": ".toolbar",
+    "UniqueLabelQListWidget": ".unique_label_qlist_widget",
+    "ZoomWidget": ".zoom_widget",
+}
+
+
+def __getattr__(name):
+    module_name = _EXPORTS.get(name)
+    if module_name is not None:
+        value = getattr(import_module(module_name, __name__), name)
+        globals()[name] = value
+        return value
+    if name.startswith("_"):
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    qualified = f"{__name__}.{name}"
+    try:
+        module = import_module(qualified)
+    except ModuleNotFoundError as error:
+        if error.name != qualified:
+            raise
+        raise AttributeError(
+            f"module {__name__!r} has no attribute {name!r}"
+        ) from error
+    globals()[name] = module
+    return module
+
+
+def __dir__():
+    return sorted(set(globals()) | set(_EXPORTS))

@@ -92,7 +92,7 @@ dependencies = [
     "requests",
     "darkdetect>=0.8.0",
     "matplotlib",
-    "python-lucide>=0.5.4",
+    "python-lucide>=0.5.11",
 ]
 
 # Optional dependencies ------------------------------------------------------------------------------------------------

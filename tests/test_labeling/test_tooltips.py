@@ -132,21 +132,129 @@ class TestButtonTooltipCoverage(_WidgetCase):
 
     The audit that found the two section checkboxes was this walk: a
     checkbox without a label is a blue square, and an icon-only button
-    without a tooltip is a guess. ``qt_``-prefixed buttons are Qt's own
-    (dock close/float handles), and every title bar in this window is
-    replaced by an empty widget, so those are never on screen.
+    without a tooltip is a guess.
     """
 
     def test_no_textless_button_lacks_a_tooltip(self):
-        silent = []
-        for button in self.widget.findChildren(QtWidgets.QAbstractButton):
-            if button.text().strip():
-                continue
-            if button.objectName().startswith("qt_"):
-                continue
-            if not button.toolTip().strip():
-                silent.append((type(button).__name__, button.objectName()))
+        silent = [
+            (type(button).__name__, button.objectName())
+            for button in self.widget.findChildren(QtWidgets.QAbstractButton)
+            if not button.text().strip()
+            and not _is_qt_chrome(button)
+            and not button.toolTip().strip()
+        ]
         self.assertEqual(silent, [])
+
+
+#: Qt's own affordances. A tooltip from us here would fight the platform
+#: look (tab-bar scroll arrows) or duplicate what the widget already does
+#: (the line-edit clear button).
+_QT_CHROME_OBJECT_NAMES = {"ScrollLeftButton", "ScrollRightButton"}
+
+
+def _is_qt_chrome(button):
+    if button.objectName().startswith("qt_"):
+        return True
+    if button.objectName() in _QT_CHROME_OBJECT_NAMES:
+        return True
+    return isinstance(
+        button.parentWidget(), (QtWidgets.QTabBar, QtWidgets.QLineEdit)
+    )
+
+
+@unittest.skipUnless(PYQT_AVAILABLE, "PyQt6 is required")
+class TestDialogTooltipCoverage(_WidgetCase):
+    """The main-window walk stops at ``self.widget``; dialogs were never
+    scanned.
+
+    That blind spot is how an icon-only caret in the training form and a
+    bare checkbox in the crosshair dialog shipped without a tooltip. Only
+    dialogs that build without a real project or the user's run history
+    are listed here, so the gate stays hermetic.
+    """
+
+    def _dialogs(self):
+        from jllabeling.views.labeling.widgets.classes_filter_dialog import (
+            ClassesFilterDialog,
+        )
+        from jllabeling.views.labeling.widgets.crosshair_settings_dialog import (
+            CrosshairSettingsDialog,
+        )
+        from jllabeling.views.labeling.widgets.label_dialog import (
+            LabelDialog,
+        )
+        from jllabeling.views.labeling.widgets.polygon_sides_dialog import (
+            PolygonSidesDialog,
+        )
+        from jllabeling.views.labeling.widgets.project_dialog import (
+            ProjectPropertiesDialog,
+        )
+        from jllabeling.views.labeling.widgets.shape_converter_dialog import (
+            ShapeConverterDialog,
+        )
+        from jllabeling.views.labeling.widgets.shape_dialog import (
+            ShapeModifyDialog,
+        )
+        from jllabeling.views.training.image_preview_dialog import (
+            TrainingImagePreviewDialog,
+        )
+        from jllabeling.views.training.ultralytics_dialog import (
+            UltralyticsDialog,
+        )
+        from jllabeling.views.training.widgets.ultralytics_widgets.custom_dialogs import (
+            ExportFormatDialog,
+        )
+
+        return [
+            ("LabelDialog", lambda: LabelDialog(parent=self.widget)),
+            ("ShapeModifyDialog", lambda: ShapeModifyDialog(self.widget)),
+            (
+                "ProjectPropertiesDialog",
+                lambda: ProjectPropertiesDialog(self.widget),
+            ),
+            (
+                "PolygonSidesDialog",
+                lambda: PolygonSidesDialog(self.widget),
+            ),
+            (
+                "ShapeConverterDialog",
+                lambda: ShapeConverterDialog(self.widget),
+            ),
+            (
+                "ClassesFilterDialog",
+                lambda: ClassesFilterDialog(["cat", "dog"], [], self.widget),
+            ),
+            (
+                "CrosshairSettingsDialog",
+                lambda: CrosshairSettingsDialog(parent=self.widget),
+            ),
+            (
+                "TrainingImagePreviewDialog",
+                lambda: TrainingImagePreviewDialog([], 0, self.widget),
+            ),
+            ("ExportFormatDialog", lambda: ExportFormatDialog(self.widget)),
+            ("UltralyticsDialog", lambda: UltralyticsDialog(self.widget)),
+        ]
+
+    def test_no_textless_button_lacks_a_tooltip(self):
+        for name, factory in self._dialogs():
+            with self.subTest(dialog=name):
+                dialog = factory()
+                self.addCleanup(dialog.deleteLater)
+                # The training form is built on first visit to its tab; the
+                # caret lives there, so a plain constructor would miss it.
+                if hasattr(dialog, "ensure_config_tab_initialized"):
+                    dialog.ensure_config_tab_initialized()
+                silent = [
+                    (type(button).__name__, button.objectName())
+                    for button in dialog.findChildren(
+                        QtWidgets.QAbstractButton
+                    )
+                    if not button.text().strip()
+                    and not _is_qt_chrome(button)
+                    and not button.toolTip().strip()
+                ]
+                self.assertEqual(silent, [])
 
 
 @unittest.skipUnless(PYQT_AVAILABLE, "PyQt6 is required")

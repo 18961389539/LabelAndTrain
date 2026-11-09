@@ -213,6 +213,12 @@ def _add_advanced_container(widget, layout):
     widget.advanced_toggle_btn.setFixedSize(*ICON_SIZE_NORMAL)
     widget.advanced_toggle_btn.setStyleSheet(get_advanced_toggle_btn_style())
     widget.advanced_toggle_btn.setIcon(QIcon(new_icon("caret-down", "svg")))
+    # 图标按钮无文字，提示里要写清它作用在哪一组参数上。
+    widget.advanced_toggle_btn.setToolTip(
+        QCoreApplication.translate(
+            "UltralyticsDialog", "展开或收起高级训练参数"
+        )
+    )
     widget.advanced_toggle_btn.clicked.connect(widget.toggle_advanced_settings)
     header_layout.addWidget(widget.advanced_toggle_btn)
     header_layout.addStretch()

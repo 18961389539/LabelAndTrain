@@ -2,7 +2,7 @@
 Name=JLLabelingAndTrain
 Comment=Advanced Auto Labeling Solution with Added Features
 Exec=jllabelingandtrain
-Icon=jllabeling/resources/images/logo.png
+Icon=jllabeling/resources/images/icon.png
 Terminal=false
 Type=Application
 Categories=Graphics;RasterGraphics;MachineLearning

@@ -1,6 +1,7 @@
 """The training build is part of the release, not only a local target."""
 
 import os
+import re
 import tomllib
 import unittest
 
@@ -71,6 +72,20 @@ class TestReleaseMatrix(unittest.TestCase):
             "collect_submodules('ultralytics.utils.callbacks')", spec
         )
         self.assertIn("*ultralytics_callbacks", spec)
+
+    def test_icon_catalog_pin_matches_the_floor_everywhere(self):
+        # The locks froze 0.5.7 while CI and the venv ran 0.5.11. The icon set
+        # comes from that package, so a stale pin silently changes artwork.
+        floor = re.search(
+            r'"python-lucide>=([0-9][0-9.]*)"', _read("pyproject.toml")
+        ).group(1)
+        for lock in (
+            "requirements-lock-win.txt",
+            "requirements-lock-win-train.txt",
+            "requirements-lock-linux.txt",
+            "requirements-lock-macos.txt",
+        ):
+            self.assertIn(f"python-lucide=={floor}", _read(lock), lock)
 
 
 if __name__ == "__main__":

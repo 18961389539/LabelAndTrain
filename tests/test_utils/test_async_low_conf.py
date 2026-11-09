@@ -5,6 +5,7 @@ import os
 import os.path as osp
 import tempfile
 import unittest
+from unittest import mock
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
@@ -127,6 +128,54 @@ class TestLowConfidencePass(unittest.TestCase):
             assert len(review_batches) == 3
             assert low_batches == [True, False, False]
             assert finished == [True]
+
+    def test_the_worker_reuses_the_label_index(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            files = []
+            for index, score in enumerate((0.3, 0.9, None)):
+                path = osp.join(tmp, f"a{index}.json")
+                _write_label(path, score)
+                files.append(path)
+            cache = osp.join(tmp, "index.json")
+
+            first = LabelCheckWorker(
+                files,
+                batch_size=2,
+                index_root=tmp,
+                index_cache_path=cache,
+            )
+            first.run()
+
+            review_batches = []
+            low_batches = []
+            second = LabelCheckWorker(
+                files,
+                batch_size=2,
+                index_root=tmp,
+                index_cache_path=cache,
+            )
+            second.batch_ready.connect(
+                lambda _start, rows: review_batches.extend(rows)
+            )
+            second.low_conf_ready.connect(
+                lambda _start, flags: low_batches.extend(flags)
+            )
+            with (
+                mock.patch(
+                    "jllabeling.views.labeling.utils.async_label_check."
+                    "label_file_review_info",
+                    side_effect=AssertionError("cache miss"),
+                ),
+                mock.patch(
+                    "jllabeling.views.labeling.utils.async_label_check."
+                    "label_file_low_conf_details",
+                    side_effect=AssertionError("cache miss"),
+                ),
+            ):
+                second.run()
+
+            assert len(review_batches) == 3
+            assert low_batches == [True, False, False]
 
     def test_the_batch_controller_sets_the_row_role(self):
         class _List:

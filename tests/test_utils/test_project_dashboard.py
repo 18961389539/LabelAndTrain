@@ -79,6 +79,39 @@ def test_progress_counts_each_review_state(tmp_path):
     }
 
 
+def test_progress_uses_the_label_index(tmp_path, monkeypatch):
+    (tmp_path / "ok.png").write_bytes(b"x")
+    (tmp_path / "bad.png").write_bytes(b"x")
+    _write_label(tmp_path / "ok.json", state="confirmed")
+    _write_label(tmp_path / "bad.json", state="rejected")
+    cache = tmp_path / "label_index.json"
+    from jllabeling.views.labeling.utils import label_index
+
+    monkeypatch.setattr(
+        label_index, "default_cache_path", lambda _root: str(cache)
+    )
+    index = label_index.LabelIndex(tmp_path, cache_path=str(cache))
+    for name, state in (("ok.json", "confirmed"), ("bad.json", "rejected")):
+        path = tmp_path / name
+        index.update_review(str(path), os.stat(path), (state, None, None))
+    index.save()
+
+    def _boom(_label_file):
+        raise AssertionError("label file was read")
+
+    from jllabeling.views.labeling.utils import async_label_check
+
+    monkeypatch.setattr(async_label_check, "label_file_review_info", _boom)
+
+    progress = project_dashboard.collect_progress(str(tmp_path))
+    assert progress == {
+        "images": 2,
+        "annotated": 2,
+        "confirmed": 1,
+        "rework": 1,
+    }
+
+
 def test_progress_uses_the_output_dir(tmp_path):
     images = tmp_path / "images"
     images.mkdir()

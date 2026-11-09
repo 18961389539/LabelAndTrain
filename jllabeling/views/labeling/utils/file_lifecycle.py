@@ -965,6 +965,7 @@ def import_image_folder(widget, dirpath, pattern=None, load=True):
                 )
             ),
             thresholds=widget._load_active_thresholds(),
+            index_root=dirpath,
         )
 
 

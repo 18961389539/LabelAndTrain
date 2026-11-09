@@ -41,6 +41,9 @@ class CrosshairSettingsDialog(QtWidgets.QDialog):
         self.show_label.setMinimumWidth(100)
         self.show_checkbox = QtWidgets.QCheckBox()
         self.show_checkbox.setChecked(self._show)
+        # 无文字控件：没有提示时它只是一个蓝色方块，旁边的标签只说明了
+        # 名称，没说明线条会画在哪里。
+        self.show_checkbox.setToolTip(self.tr("在画布中心显示十字参考线"))
         show_layout.addWidget(self.show_label)
         show_layout.addWidget(self.show_checkbox)
         show_layout.addStretch()

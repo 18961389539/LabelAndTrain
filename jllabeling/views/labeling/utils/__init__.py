@@ -1,66 +1,97 @@
 # flake8: noqa
+"""Utility exports for the labeling views, resolved lazily.
 
-from .async_exif import AsyncExifScanner, ExifProcessingDialog
-from .async_label_check import AsyncLabelChecker
-from .batch import run_all_images
-from .colormap import label_colormap
-from .crop import save_crop
-from .export import (
-    export_yolo_annotation,
-    export_voc_annotation,
-    export_coco_annotation,
-)
-from .general import (
-    gradient_text,
-    hex_to_rgb,
-    is_chinese,
-    find_most_similar_label,
-)
-from .image import (
-    check_img_exif,
-    ensure_pillow_heif_registered,
-    get_pil_img_dim,
-    img_arr_to_b64,
-    img_b64_to_arr,
-    img_data_to_arr,
-    img_data_to_pil,
-    img_data_to_png_data,
-    img_data_to_qimage,
-    img_pil_to_data,
-    get_supported_image_extensions,
-    icc_profile_issue,
-    process_image_exif,
-)
-from ._io import io_open, load_json, save_json
-from .qt import (
-    Struct,
-    StayOpenMenuFilter,
-    add_actions,
-    scan_all_images,
-    distance,
-    distance_to_line,
-    fmt_shortcut,
-    label_validator,
-    new_action,
-    new_button,
-    new_icon,
-    on_thumbnail_click,
-)
-from .shape import (
-    masks_to_bboxes,
-    polygons_to_mask,
-    shape_to_mask,
-    shapes_to_label,
-    rectangle_from_diagonal,
-    open_shape_converter,
-)
-from .upload import (
-    upload_image_flags_file,
-    upload_label_flags_file,
-    upload_shape_attrs_file,
-    upload_label_classes_file,
-    upload_yolo_annotation,
-    upload_voc_annotation,
-    upload_coco_annotation,
-)
-from .visualization import save_visualization
+These modules depend on each other through the Qt widget layer.  Eager
+re-exports meant that importing one helper (for example
+``utils.shape.rectangle_from_diagonal``) also imported ``batch``, every
+widget, and eventually ``label_file`` again -- a circular import that only
+worked because ``jllabeling/__init__`` happened to load the GUI first.
+
+Names are now resolved on first access.  The public surface is unchanged:
+``from ...utils import get_pil_img_dim`` and ``utils.image`` both still work.
+"""
+
+from importlib import import_module
+
+_EXPORTS = {
+    "AsyncExifScanner": ".async_exif",
+    "ExifProcessingDialog": ".async_exif",
+    "AsyncLabelChecker": ".async_label_check",
+    "run_all_images": ".batch",
+    "label_colormap": ".colormap",
+    "save_crop": ".crop",
+    "export_yolo_annotation": ".export",
+    "export_voc_annotation": ".export",
+    "export_coco_annotation": ".export",
+    "gradient_text": ".general",
+    "hex_to_rgb": ".general",
+    "is_chinese": ".general",
+    "find_most_similar_label": ".general",
+    "check_img_exif": ".image",
+    "ensure_pillow_heif_registered": ".image",
+    "get_pil_img_dim": ".image",
+    "img_arr_to_b64": ".image",
+    "img_b64_to_arr": ".image",
+    "img_data_to_arr": ".image",
+    "img_data_to_pil": ".image",
+    "img_data_to_png_data": ".image",
+    "img_data_to_qimage": ".image",
+    "img_pil_to_data": ".image",
+    "get_supported_image_extensions": ".image",
+    "icc_profile_issue": ".image",
+    "process_image_exif": ".image",
+    "io_open": "._io",
+    "load_json": "._io",
+    "save_json": "._io",
+    "Struct": ".qt",
+    "StayOpenMenuFilter": ".qt",
+    "add_actions": ".qt",
+    "scan_all_images": ".qt",
+    "distance": ".qt",
+    "distance_to_line": ".qt",
+    "fmt_shortcut": ".qt",
+    "label_validator": ".qt",
+    "new_action": ".qt",
+    "new_button": ".qt",
+    "new_icon": ".qt",
+    "on_thumbnail_click": ".qt",
+    "masks_to_bboxes": ".shape",
+    "polygons_to_mask": ".shape",
+    "shape_to_mask": ".shape",
+    "shapes_to_label": ".shape",
+    "rectangle_from_diagonal": ".shape",
+    "open_shape_converter": ".shape",
+    "upload_image_flags_file": ".upload",
+    "upload_label_flags_file": ".upload",
+    "upload_shape_attrs_file": ".upload",
+    "upload_label_classes_file": ".upload",
+    "upload_yolo_annotation": ".upload",
+    "upload_voc_annotation": ".upload",
+    "upload_coco_annotation": ".upload",
+    "save_visualization": ".visualization",
+}
+
+
+def __getattr__(name):
+    module_name = _EXPORTS.get(name)
+    if module_name is not None:
+        value = getattr(import_module(module_name, __name__), name)
+        globals()[name] = value
+        return value
+    if name.startswith("_"):
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    qualified = f"{__name__}.{name}"
+    try:
+        module = import_module(qualified)
+    except ModuleNotFoundError as error:
+        if error.name != qualified:
+            raise
+        raise AttributeError(
+            f"module {__name__!r} has no attribute {name!r}"
+        ) from error
+    globals()[name] = module
+    return module
+
+
+def __dir__():
+    return sorted(set(globals()) | set(_EXPORTS))
