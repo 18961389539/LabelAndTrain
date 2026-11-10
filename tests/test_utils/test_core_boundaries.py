@@ -3,7 +3,9 @@ back into the UI layer.
 
 The first rule is checked in a fresh interpreter: the test process itself has
 already imported Qt through the GUI tests, so ``sys.modules`` there says
-nothing about what a CLI or a plain import would load.
+nothing about what a CLI or a plain import would load.  The same check covers
+the one consumer that has to run without a display today: the format
+converter the CLI drives.
 
 The second rule is checked statically, on every module under
 ``jllabeling/core``.  Importing alone cannot see it -- a core module that
@@ -154,6 +156,22 @@ def test_every_core_module_imports_without_pyqt():
         "import importlib, sys\n"
         f"for name in {names!r}:\n"
         "    importlib.import_module(name)\n"
+        "bad = [name for name in sys.modules if name.startswith('PyQt6')]\n"
+        "assert not bad, bad\n"
+    )
+
+
+def test_format_converter_imports_without_pyqt():
+    """``label_converter`` is how the CLI reads and writes label formats.
+
+    It used to reach Qt through ``utils.shape``, which imported the dialog
+    modules for a shape conversion it never called.  Nothing in the converter
+    needs a display, so the import chain is part of the contract.
+    """
+    _run(
+        "import sys\n"
+        "import jllabeling.views.labeling.label_converter as converter\n"
+        "assert hasattr(converter, 'LabelConverter')\n"
         "bad = [name for name in sys.modules if name.startswith('PyQt6')]\n"
         "assert not bad, bad\n"
     )

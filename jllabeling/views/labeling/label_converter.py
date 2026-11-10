@@ -108,8 +108,8 @@ def _rle_to_polygons(rle):
     return polygons
 
 
+from jllabeling.core.labels.geometry import rectangle_from_diagonal
 from jllabeling.views.labeling.schema import create_xlabel_template
-from jllabeling.views.labeling.utils.shape import rectangle_from_diagonal
 from jllabeling.views.labeling.utils.general import is_possible_rectangle
 
 
