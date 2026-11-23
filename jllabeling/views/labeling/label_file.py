@@ -37,6 +37,10 @@ class LabelFile:
         self.shapes = []
         self.image_path = None
         self.image_data = None
+        #: True when ``image_data`` was read from ``image_path`` rather than
+        #: decoded from the label's embedded base64.  The decoded-image cache
+        #: may only key on the file in the first case.
+        self.image_data_from_file = False
         self.image_dir = image_dir
         if filename is not None:
             self.load(filename)
@@ -98,6 +102,7 @@ class LabelFile:
                         )
 
             data["imagePath"] = osp.basename(data["imagePath"])
+            self.image_data_from_file = data["imageData"] is None
             if data["imageData"] is not None:
                 image_data = base64.b64decode(data["imageData"])
             else:

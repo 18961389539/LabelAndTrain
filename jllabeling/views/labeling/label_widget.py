@@ -42,6 +42,7 @@ from ...app_info import (
     __preferred_device__,
 )
 from . import utils
+from .utils import image_cache
 from .utils.action_builder import build_actions
 from . import project_settings
 from .utils.qt import app_settings, measure_text_width as _measure_text_width
@@ -3513,7 +3514,7 @@ class LabelingWidget(LabelDialog):
         """Delegates to file_navigation (wiring and tests stay)."""
         file_navigation.inform_next_files(self, filename)
 
-    def _decode_image_data(self, image_data, filename=None):
+    def _decode_image_data(self, image_data, filename=None, cache_key=None):
         """Decode image bytes into a QImage (and a loaded PIL copy for the
         adjustment dialog).
 
@@ -3523,12 +3524,22 @@ class LabelingWidget(LabelDialog):
         overlay instead of freezing the whole window into "Not Responding".
         User input events are excluded during the wait, which prevents a
         re-entrant ``load_file`` while decoding is in progress.
+
+        ``cache_key`` (from :func:`utils.image_cache.cache_key_for_file`)
+        lets a repeated open of the same unchanged file skip the decode.
         """
         LARGE_IMAGE_BYTES = 8 * 1024 * 1024  # 8 MB raw bytes threshold
 
+        if image_data is not None and cache_key is not None:
+            cached = image_cache.get_decoded_image(cache_key)
+            if cached is not None:
+                return cached, None
+
         if image_data is None or len(image_data) <= LARGE_IMAGE_BYTES:
             # Keep the historical fast path bit-for-bit identical.
-            return utils.img_data_to_qimage(image_data, filename), None
+            image = utils.img_data_to_qimage(image_data, filename)
+            image_cache.put_decoded_image(cache_key, image)
+            return image, None
 
         result = {}
         self.canvas.set_loading(
@@ -3560,7 +3571,9 @@ class LabelingWidget(LabelDialog):
             time.sleep(0.01)
         QtWidgets.QApplication.restoreOverrideCursor()
         self.canvas.set_loading(False)
-        return result.get("image"), result.get("pil")
+        image = result.get("image")
+        image_cache.put_decoded_image(cache_key, image)
+        return image, result.get("pil")
 
     def load_file(self, filename=None):
         """Delegates to file_lifecycle (wiring and tests stay)."""

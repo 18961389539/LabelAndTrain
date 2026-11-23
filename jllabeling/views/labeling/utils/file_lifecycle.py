@@ -35,6 +35,7 @@ from ..widgets import (
     NavigatorDialog,
 )
 from ..utils.qt import new_icon_path
+from . import image_cache
 from . import project_view
 from ..utils.session_snapshot import snapshot_before_label_write
 from ..filelist.controller import FileReviewController
@@ -429,6 +430,7 @@ def load_file(widget, filename=None):  # noqa: C901
     # assumes same name, but json extension
     label_file = osp.splitext(filename)[0] + ".json"
     image_dir = None
+    cache_key = None
     if widget.output_dir:
         image_dir = osp.dirname(filename)
         label_file_without_path = osp.basename(label_file)
@@ -461,6 +463,8 @@ def load_file(widget, filename=None):  # noqa: C901
             osp.dirname(label_file),
             widget.label_file.image_path,
         )
+        if widget.label_file.image_data_from_file:
+            cache_key = image_cache.cache_key_for_file(widget.image_path)
         widget.other_data = widget.label_file.other_data
         widget.other_data[CHECKED_FIELD] = widget._annotation_checked()
         # Negative-sample badge: an on-disk json with zero shapes is a
@@ -490,6 +494,7 @@ def load_file(widget, filename=None):  # noqa: C901
         widget.image_data = LabelFile.load_image_file(filename)
         if widget.image_data:
             widget.image_path = filename
+            cache_key = image_cache.cache_key_for_file(filename)
         widget.label_file = None
         widget.other_data = {CHECKED_FIELD: False}
         # A dataset labelled elsewhere is usually pure YOLO: no JSON beside
@@ -499,7 +504,9 @@ def load_file(widget, filename=None):  # noqa: C901
 
     # Decode large images off the UI thread so opening a big frame never
     # hard-freezes the whole window into a "Not Responding" state.
-    image, pil_cache = widget._decode_image_data(widget.image_data, filename)
+    image, pil_cache = widget._decode_image_data(
+        widget.image_data, filename, cache_key=cache_key
+    )
 
     if image is None or image.isNull():
         formats = [f"*{ext}" for ext in utils.get_supported_image_extensions()]
