@@ -110,6 +110,41 @@ class TestWidgetWiring(unittest.TestCase):
             cls.app = QtWidgets.QApplication([])
         cls.widget, cls.parent = build_labeling_widget()
 
+    def test_every_action_the_runtime_applier_reaches_exists(self):
+        """The live namespace, not the AST, is what a settings change hits.
+
+        A missing attribute here only fails at runtime, inside a settings
+        callback -- exactly how the packaged build caught ``AttributeError``
+        on ``widget.actions.X`` while the unit suite stayed green.  The
+        static test in ``test_shortcut_bindings`` parses the same names; this
+        one proves the real widget built them.
+        """
+        path = os.path.join(
+            REPO_ROOT,
+            "jllabeling",
+            "views",
+            "labeling",
+            "settings",
+            "runtime_applier.py",
+        )
+        with open(path, encoding="utf-8") as handle:
+            text = handle.read()
+        names = sorted(
+            set(re.findall(r"self\._widget\.actions\.([a-z_0-9]+)", text))
+        )
+        self.assertGreater(len(names), 60, names)
+        missing = [
+            name
+            for name in names
+            if getattr(self.widget.actions, name, None) is None
+        ]
+        self.assertEqual(
+            missing,
+            [],
+            "the runtime applier reaches for actions the widget did not "
+            "build; a settings change would raise AttributeError",
+        )
+
     def test_review_shortcut_is_bound_to_a_qaction(self):
         action = self.widget.actions.mark_rejected_and_next
         shortcuts = [s.toString() for s in action.shortcuts()]
