@@ -472,6 +472,18 @@ class UltralyticsDialog(DatasetPreparationMixin, QDialog):
         if self.handle_preparation_close(event):
             return
 
+        if self.export_manager.is_exporting:
+            QMessageBox.warning(
+                self,
+                self.tr("Export in Progress"),
+                self.tr(
+                    "Cannot close window while the model is being exported. "
+                    "Please wait for it to finish."
+                ),
+            )
+            event.ignore()
+            return
+
         if self.training_status == "training":
             QMessageBox.warning(
                 self,

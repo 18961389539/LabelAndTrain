@@ -9006,6 +9006,14 @@ Choosing No cancels the export. Nothing is installed without asking.</source>
             <source>展开或收起高级训练参数</source>
             <translation>展开或收起高级训练参数</translation>
         </message>
+        <message>
+            <source>Export in Progress</source>
+            <translation>正在导出模型</translation>
+        </message>
+        <message>
+            <source>Cannot close window while the model is being exported. Please wait for it to finish.</source>
+            <translation>模型正在导出，暂时无法关闭窗口，请等待导出完成。</translation>
+        </message>
     </context>
     <context>
         <name>ZoomWidget</name>

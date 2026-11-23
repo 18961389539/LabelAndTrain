@@ -7,6 +7,8 @@ X-AnyLabeling's own history, kept for provenance.
 
 ### Bug Fixes
 
+- **Closing the training window during a model export is refused instead of orphaning the worker.** `model.export()` is one blocking Ultralytics call with no cancellation hook, so the previous close path detached the callbacks and cleared the cache while the daemon thread still held the model and the log redirector. `closeEvent` now checks `export_manager.is_exporting` before anything is torn down and answers 「模型正在导出，暂时无法关闭窗口，请等待导出完成。」 with the project-log note; the window stays open, the worker finishes, and its completion event still reaches a live dialog. A regression test drives the real dialog offscreen and asserts both the refusal and that `clear_cache` was not reached.
+
 - **The model-check timeout is read when a check runs, not when the module is imported.** `safe_check_model` declared `timeout=net_defaults.model_check_timeout()`, so the default froze whatever the rc held at first import: changing the setting and downloading a `.pth`/`.pt` model in the same session still used the old limit. The default is `None` now and resolves inside the call, and the flake8 B008 finding that pointed at it is gone.
 
 - **Loading training weights into auto-labeling no longer leaves Auto Run disabled.** The hand-off called `show()` on the panel directly, while the parent's Auto Run action was only enabled by the toolbar's toggle path; declining the immediate feedback prompt therefore left the batch action greyed out until the panel was hidden and reopened. Panel show/hide events now synchronize that action, so the one-click batch path is available immediately. A panel-level regression test covers both directions.

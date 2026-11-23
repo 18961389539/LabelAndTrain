@@ -88,6 +88,24 @@ def test_declining_the_close_keeps_preparation_running(tmp_path, monkeypatch):
     assert dialog._close_after_prepare is False
 
 
+def test_close_during_export_is_refused(tmp_path, monkeypatch):
+    """model.export() has no cancellation hook, so the window must stay."""
+    _parent, dialog = _dialog(tmp_path, monkeypatch)
+    dialog.training_status = "idle"
+    monkeypatch.setattr(dialog.export_manager, "is_exporting", True)
+    stub = dialog_module.QMessageBox
+    stub.last_question = None
+    cleared = []
+    monkeypatch.setattr(dialog, "clear_cache", lambda: cleared.append(True))
+
+    event = QCloseEvent()
+    dialog.closeEvent(event)
+
+    assert not event.isAccepted()
+    assert "Cannot close window" in stub.last_question
+    assert cleared == [], "a refused close must not tear the session down"
+
+
 def test_worker_forwards_progress_and_reports_cancellation(
     tmp_path, monkeypatch
 ):
