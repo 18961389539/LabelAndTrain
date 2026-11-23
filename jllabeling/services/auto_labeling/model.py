@@ -59,9 +59,7 @@ def _check_model_worker(model_path):
         sys.exit(1)
 
 
-def safe_check_model(
-    model_path, timeout=net_defaults.model_check_timeout(), on_stage=None
-):
+def safe_check_model(model_path, timeout=None, on_stage=None):
     """Check model integrity without crashing the application.
 
     The check is deliberately *lightweight*:
@@ -83,6 +81,12 @@ def safe_check_model(
     Returns:
         True if the file passed validation, False otherwise.
     """
+    # Resolve the default per call, not at import time: the timeout is a
+    # user setting, and a definition-time default would freeze whatever the
+    # config held when this module was first imported.
+    if timeout is None:
+        timeout = net_defaults.model_check_timeout()
+
     file_extension = os.path.splitext(model_path)[1].lower()
 
     # --- .onnx: lightweight file-level check (safe in any packaging) -------

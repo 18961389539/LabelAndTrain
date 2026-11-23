@@ -261,45 +261,19 @@ class SettingsRuntimeApplier:
         )
 
     def apply_change(self, key: str, value: Any) -> None:
+        """Route one settings key to the code that makes it live.
+
+        The dispatcher stays flat on purpose: each family owns a helper that
+        answers "did I handle this key?", so adding a new canvas knob does not
+        lengthen this method (and does not raise its cyclomatic complexity).
+        """
         if key == "font_family":
             apply_application_font(value)
             return
-        if key in {
-            "canvas.epsilon",
-            "canvas.double_click",
-            "canvas.double_click_edit_label",
-            "canvas.num_backups",
-        }:
-            self.apply_canvas_basic()
-            return
-        if key.startswith("canvas.wheel_rectangle_editing."):
-            self.apply_canvas_wheel_edit()
-            return
-        if key.startswith("canvas.crosshair."):
-            self.apply_canvas_crosshair()
-            return
-        if key.startswith("canvas.attributes."):
-            self.apply_canvas_attributes()
-            return
-        if key.startswith("canvas.brush."):
-            self.apply_canvas_brush()
-            return
-        if key.startswith("canvas.rotation."):
-            self.apply_canvas_rotation()
-            return
-        if key.startswith("canvas.cuboid."):
-            self.apply_canvas_cuboid()
-            return
-        if key == "canvas.mask.opacity":
-            self.apply_canvas_mask()
-            return
-        if key in {"canvas.pixelated_zoom", "canvas.pixel_grid_threshold"}:
-            self.apply_canvas_pixel_view()
+        if self._apply_canvas_change(key):
             return
         if key == "shift_auto_shape_color":
-            self._widget._runtime_shape_color_shift = int(
-                self._widget._config.get("shift_auto_shape_color", 0)
-            )
+            self._apply_shape_color_shift()
             return
         if key.startswith("shape.") or key in {
             "shape_color",
@@ -307,17 +281,64 @@ class SettingsRuntimeApplier:
         }:
             self.apply_shape_style(key)
             return
-        if (
-            key.startswith("flag_dock.")
-            or key.startswith("label_dock.")
-            or key.startswith("shape_dock.")
-            or key.startswith("file_dock.")
-        ):
-            self.apply_dock_features()
-            if key.endswith(".show"):
-                self.apply_dock_visibility(key.split(".", 1)[0])
+        if self._apply_dock_change(key):
             return
+        if self._apply_behavior_change(key):
+            return
+        if self._apply_label_dialog_change(key):
+            return
+        if self._apply_advanced_change(key, value):
+            return
+        logger.debug("No runtime handler for settings key: %s", key)
+
+    def _apply_canvas_change(self, key: str) -> bool:
+        """Apply a ``canvas.*`` knob; True when the key was handled."""
         if key in {
+            "canvas.epsilon",
+            "canvas.double_click",
+            "canvas.double_click_edit_label",
+            "canvas.num_backups",
+        }:
+            self.apply_canvas_basic()
+            return True
+        prefix_handlers = (
+            ("canvas.wheel_rectangle_editing.", self.apply_canvas_wheel_edit),
+            ("canvas.crosshair.", self.apply_canvas_crosshair),
+            ("canvas.attributes.", self.apply_canvas_attributes),
+            ("canvas.brush.", self.apply_canvas_brush),
+            ("canvas.rotation.", self.apply_canvas_rotation),
+            ("canvas.cuboid.", self.apply_canvas_cuboid),
+        )
+        for prefix, handler in prefix_handlers:
+            if key.startswith(prefix):
+                handler()
+                return True
+        if key == "canvas.mask.opacity":
+            self.apply_canvas_mask()
+            return True
+        if key in {"canvas.pixelated_zoom", "canvas.pixel_grid_threshold"}:
+            self.apply_canvas_pixel_view()
+            return True
+        return False
+
+    def _apply_shape_color_shift(self) -> None:
+        self._widget._runtime_shape_color_shift = int(
+            self._widget._config.get("shift_auto_shape_color", 0)
+        )
+
+    def _apply_dock_change(self, key: str) -> bool:
+        """Dock feature flags and visibility; True when handled."""
+        if not key.startswith(
+            ("flag_dock.", "label_dock.", "shape_dock.", "file_dock.")
+        ):
+            return False
+        self.apply_dock_features()
+        if key.endswith(".show"):
+            self.apply_dock_visibility(key.split(".", 1)[0])
+        return True
+
+    def _apply_behavior_change(self, key: str) -> bool:
+        if key not in {
             "display_label_popup",
             "auto_highlight_shape",
             "auto_switch_to_edit_mode",
@@ -325,9 +346,12 @@ class SettingsRuntimeApplier:
             "file_list_checkbox_editable",
             "system_clipboard",
         }:
-            self.apply_behavior_flags(key)
-            return
-        if key in {
+            return False
+        self.apply_behavior_flags(key)
+        return True
+
+    def _apply_label_dialog_change(self, key: str) -> bool:
+        if key not in {
             "show_label_text_field",
             "label_completion",
             "fit_to_content.column",
@@ -336,20 +360,18 @@ class SettingsRuntimeApplier:
             "validate_label",
             "move_mode",
         }:
-            self.apply_label_dialog_runtime(key)
-            return
-        if key in {
-            "model_hub",
-            "device",
-            "logger_level",
-            "file_search",
-        }:
+            return False
+        self.apply_label_dialog_runtime(key)
+        return True
+
+    def _apply_advanced_change(self, key: str, value: Any) -> bool:
+        if key in {"model_hub", "device", "logger_level", "file_search"}:
             self.apply_runtime_advanced(key, value)
-            return
+            return True
         if key.startswith("shortcuts."):
             self.apply_shortcuts(key, value)
-            return
-        logger.debug("No runtime handler for settings key: %s", key)
+            return True
+        return False
 
     def apply_canvas_basic(self) -> None:
         self._widget.canvas.epsilon = float(

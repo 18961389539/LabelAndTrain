@@ -37,7 +37,6 @@ jllabeling/views/labeling/settings/controller.py                        B907 2
 jllabeling/views/labeling/settings/controller.py                        C901 1
 jllabeling/views/labeling/settings/dialog.py                            F541 1
 jllabeling/views/labeling/shortcuts/digit_controller.py                 B907 1
-jllabeling/views/labeling/utils/_io.py                                  B014 1
 jllabeling/views/labeling/utils/batch.py                                B907 2
 jllabeling/views/labeling/utils/batch.py                                C901 1
 jllabeling/views/labeling/utils/batch.py                                F841 3
@@ -75,10 +74,7 @@ jllabeling/views/training/ultralytics_dialog.py                         C901 1
 jllabeling/views/training/widgets/ultralytics_widgets/custom_widgets.py F405 1
 tests/test_auto_labeling/test_batch_skip.py                             E731 1
 tests/test_auto_training/test_dataset_overview.py                       B907 1
-tests/test_config/test_normalization.py                                 E305 1
 tests/test_models/test_model_download.py                                F841 1
-tests/test_utils/test_archiver.py                                       E201 1
-tests/test_utils/test_archiver.py                                       E202 1
 tests/test_utils/test_atomic_save.py                                    B042 1
 tests/test_utils/test_atomic_save.py                                    F841 1
 tests/test_utils/test_readme_claims.py                                  F841 1
