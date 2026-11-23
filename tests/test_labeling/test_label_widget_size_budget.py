@@ -133,7 +133,11 @@ BUDGETS = {
     # toolbar lists) moved verbatim to utils/action_builder.py.  The widget
     # now calls build_actions(self) once, so the remaining file is the class
     # plus the layout half.  The moved block got its own budget below.
-    "jllabeling/views/labeling/label_widget.py": 4867,
+    # Raised 4867 -> 4880 the same day, documented feature: the decode cache
+    # hook (cache_key parameter, one lookup and two put calls) so reopening a
+    # frame skips QImage.fromData.  The cache itself lives in image_cache.py;
+    # these lines are only the wiring.
+    "jllabeling/views/labeling/label_widget.py": 4880,
     # The extracted action builder: same ratchet, because a 1757-line move
     # must not become a second dumping ground.  Split the next cluster out
     # (the menu tuples are the obvious candidate) before raising this.
@@ -194,7 +198,11 @@ BUDGETS = {
     # (determinate progress, cancel, close-after-cancel) moved to
     # views/training/dataset_preparation.py, where the rules are testable
     # without constructing the dialog.
-    "jllabeling/views/training/ultralytics_dialog.py": 3285,
+    # Raised 3285 -> 3297 on 2026-11-23, documented feature: closeEvent
+    # refuses to close while export_manager.is_exporting, because
+    # model.export() has no cancellation hook.  The guard is twelve lines
+    # (check, warning, ignore, return) and keeps the live callbacks intact.
+    "jllabeling/views/training/ultralytics_dialog.py": 3297,
 }
 
 
