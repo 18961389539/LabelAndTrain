@@ -60,7 +60,100 @@ def _source_text():
     return "\n".join(chunks)
 
 
+def _literal_string(node):
+    """The value of a plain string literal, or ``None`` for anything else."""
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return node.value
+    return None
+
+
+def _translatable_literals():
+    """Every ``(context, source)`` a self.tr/translate call names literally.
+
+    ``self.tr`` inside a class is attributed to that class by pylupdate6;
+    ``translate`` carries its context explicitly.  Calls whose arguments are
+    not literals are skipped -- there is nothing to pin and the extractor
+    cannot see them either.
+    """
+    pairs = set()
+
+    class Visitor(ast.NodeVisitor):
+        def __init__(self):
+            self.classes = []
+
+        def visit_ClassDef(self, node):
+            self.classes.append(node.name)
+            self.generic_visit(node)
+            self.classes.pop()
+
+        def visit_Call(self, node):
+            func = node.func
+            if (
+                isinstance(func, ast.Attribute)
+                and func.attr == "tr"
+                and isinstance(func.value, ast.Name)
+                and func.value.id in ("self", "cls")
+                and self.classes
+                and node.args
+            ):
+                source = _literal_string(node.args[0])
+                if source is not None:
+                    pairs.add((self.classes[-1], source))
+            elif (
+                isinstance(func, ast.Attribute)
+                and func.attr == "translate"
+                and len(node.args) >= 2
+            ):
+                context = _literal_string(node.args[0])
+                source = _literal_string(node.args[1])
+                if context is not None and source is not None:
+                    pairs.add((context, source))
+            self.generic_visit(node)
+
+    for base, dirs, files in os.walk(APP_DIR):
+        dirs[:] = [name for name in dirs if name != "__pycache__"]
+        for name in files:
+            if not name.endswith(".py") or name == "resources.py":
+                continue
+            path = os.path.join(base, name)
+            try:
+                tree = ast.parse(open(path, encoding="utf-8").read(), path)
+            except SyntaxError:  # pragma: no cover - source is parsed
+                continue
+            Visitor().visit(tree)
+    return pairs
+
+
 class TestCatalogMatchesSources(unittest.TestCase):
+
+    def test_every_translatable_literal_is_in_the_catalog(self):
+        """A literal the extractor sees must exist under its own context.
+
+        The compiled-catalog test below can only compare entries the
+        catalogue already has; a string that never reached ``zh_CN.ts`` is
+        invisible to it.  Chinese sources hide that completely, because
+        their translation is the source text and a missing entry renders
+        correctly by accident.  This walk is the other direction: every
+        ``self.tr("...")`` / ``translate("ctx", "...")`` literal in the
+        package must have a matching ``(context, source)`` pair.
+        """
+        catalog = set()
+        for context in _load_catalog().findall("context"):
+            name = context.findtext("name")
+            for message in context.findall("message"):
+                source = message.findtext("source")
+                if source is not None:
+                    catalog.add((name, source))
+
+        missing = sorted(_translatable_literals() - catalog)
+        self.assertEqual(
+            missing,
+            [],
+            f"{len(missing)} translatable literal(s) never reached the "
+            "catalog, so a Chinese build renders the source text: "
+            f"{missing[:8]}. Run scripts/generate_languages.py zh_CN and "
+            "fill the new entries.",
+        )
 
     def test_no_location_points_at_a_missing_file(self):
         """The bug: 772 locations referenced files that were deleted."""

@@ -244,6 +244,34 @@ Only the registry entry is removed. The config/weight files on disk are kept:
             <source>Cancelling...</source>
             <translation>正在取消……</translation>
         </message>
+        <message>
+            <source>Clear (B)</source>
+            <translation>清除（B）</translation>
+        </message>
+        <message>
+            <source>Finish (F)</source>
+            <translation>完成（F）</translation>
+        </message>
+        <message>
+            <source>Run</source>
+            <translation>运行</translation>
+        </message>
+        <message>
+            <source>完成当前对象（快捷键 F）</source>
+            <translation>完成当前对象（快捷键 F）</translation>
+        </message>
+        <message>
+            <source>添加前景点（在目标上左键，快捷键 Q）</source>
+            <translation>添加前景点（在目标上左键，快捷键 Q）</translation>
+        </message>
+        <message>
+            <source>清除所有提示（快捷键 B）</source>
+            <translation>清除所有提示（快捷键 B）</translation>
+        </message>
+        <message>
+            <source>移除背景点（左键，快捷键 E）</source>
+            <translation>移除背景点（左键，快捷键 E）</translation>
+        </message>
     </context>
     <context>
         <name>BatchRunOptionsDialog</name>
@@ -278,6 +306,10 @@ Only the registry entry is removed. The config/weight files on disk are kept:
             <location filename="..\..\views\labeling\utils\batch.py" line="81" />
             <source>处理过程中可点「暂停」随时停下。失败的图片结束后可点回去检查。</source>
             <translation>处理过程中可点「暂停」随时停下。失败的图片结束后可点回去检查。</translation>
+        </message>
+        <message>
+            <source>处理过程中可点「停止」随时停下（停止后不能续跑）。失败的图片结束后可点回去检查。</source>
+            <translation>处理过程中可点「停止」随时停下（停止后不能续跑）。失败的图片结束后可点回去检查。</translation>
         </message>
     </context>
     <context>
@@ -406,6 +438,10 @@ Only the registry entry is removed. The config/weight files on disk are kept:
             <location filename="..\..\views\labeling\widgets\canvas_rotation.py" line="188" />
             <source>Click &amp; drag to rotate shape '%s'</source>
             <translation>点击并拖动以旋转形状“%s”</translation>
+        </message>
+        <message>
+            <source>标注画布</source>
+            <translation>标注画布</translation>
         </message>
     </context>
     <context>
@@ -571,6 +607,10 @@ Only the registry entry is removed. The config/weight files on disk are kept:
             <source>Cancel</source>
             <translation>取消</translation>
         </message>
+        <message>
+            <source>在画布中心显示十字参考线</source>
+            <translation>在画布中心显示十字参考线</translation>
+        </message>
     </context>
     <context>
         <name>DigitShortcutDialog</name>
@@ -700,6 +740,14 @@ Only the registry entry is removed. The config/weight files on disk are kept:
             <source>关闭</source>
             <translation>关闭</translation>
         </message>
+        <message>
+            <source>图片</source>
+            <translation>图片</translation>
+        </message>
+        <message>
+            <source>失败原因</source>
+            <translation>失败原因</translation>
+        </message>
     </context>
     <context>
         <name>FloatingToolPanel</name>
@@ -776,6 +824,42 @@ Only the registry entry is removed. The config/weight files on disk are kept:
             <source>An error occurred while updating the Group IDs.</source>
             <translation>更新群组编号时发生错误。</translation>
         </message>
+        <message>
+            <source>删除该分组</source>
+            <translation>删除该分组</translation>
+        </message>
+        <message>
+            <source>原分组号</source>
+            <translation>原分组号</translation>
+        </message>
+        <message>
+            <source>将对第 %1–%2 张图应用修改：重命名 %3 个分组，删除 %4 个分组。
+
+此操作会直接改写范围内的标注文件，原文件会先备份到 .label_backups。继续吗？</source>
+            <translation>将对第 %1–%2 张图应用修改：重命名 %3 个分组，删除 %4 个分组。
+
+此操作会直接改写范围内的标注文件，原文件会先备份到 .label_backups。继续吗？</translation>
+        </message>
+        <message>
+            <source>应用范围</source>
+            <translation>应用范围</translation>
+        </message>
+        <message>
+            <source>新分组号</source>
+            <translation>新分组号</translation>
+        </message>
+        <message>
+            <source>没有修改</source>
+            <translation>没有修改</translation>
+        </message>
+        <message>
+            <source>没有需要应用的分组号修改。</source>
+            <translation>没有需要应用的分组号修改。</translation>
+        </message>
+        <message>
+            <source>确认批量修改分组号</source>
+            <translation>确认批量修改分组号</translation>
+        </message>
     </context>
     <context>
         <name>LabelDialog</name>
@@ -798,6 +882,14 @@ Only the registry entry is removed. The config/weight files on disk are kept:
             <location filename="..\..\views\labeling\widgets\label_dialog.py" line="1537" />
             <source>Label description</source>
             <translation>标签描述</translation>
+        </message>
+        <message>
+            <source>标签不能为空</source>
+            <translation>标签不能为空</translation>
+        </message>
+        <message>
+            <source>输入标签</source>
+            <translation>输入标签</translation>
         </message>
     </context>
     <context>
@@ -895,6 +987,30 @@ Only the registry entry is removed. The config/weight files on disk are kept:
             <location filename="..\..\views\labeling\widgets\label_dialog.py" line="1368" />
             <source>Please enter a valid range.</source>
             <translation>请输入有效范围。</translation>
+        </message>
+        <message>
+            <source>删除</source>
+            <translation>删除</translation>
+        </message>
+        <message>
+            <source>可见</source>
+            <translation>可见</translation>
+        </message>
+        <message>
+            <source>应用范围</source>
+            <translation>应用范围</translation>
+        </message>
+        <message>
+            <source>新值</source>
+            <translation>新值</translation>
+        </message>
+        <message>
+            <source>类别</source>
+            <translation>类别</translation>
+        </message>
+        <message>
+            <source>颜色</source>
+            <translation>颜色</translation>
         </message>
     </context>
     <context>
@@ -5247,6 +5363,156 @@ Start now?</source>
             <source>Check the next-step suggestions in the Iteration Gains Board later.</source>
             <translation>稍后可在迭代收益看板查看下一步建议。</translation>
         </message>
+        <message>
+            <source>Only export confirmed images / 仅导出已检查的图片
+
+默认关闭：导出当前文件夹里的全部图片，含未检查与「需返工」的。
+
+勾选后：只导出在文件列表里标记为「已检查」的图片，未检查与需返工的一律跳过（数量会在导出结果里报出来）。
+训练侧本来就有同样的过滤（只用已检查的图片），勾上它可以让导出与训练集合保持一致。</source>
+            <translation>Only export confirmed images / 仅导出已检查的图片
+
+默认关闭：导出当前文件夹里的全部图片，含未检查与「需返工」的。
+
+勾选后：只导出在文件列表里标记为「已检查」的图片，未检查与需返工的一律跳过（数量会在导出结果里报出来）。
+训练侧本来就有同样的过滤（只用已检查的图片），勾上它可以让导出与训练集合保持一致。</translation>
+        </message>
+        <message>
+            <source>Select All Shapes</source>
+            <translation>全选标注</translation>
+        </message>
+        <message>
+            <source>Select every annotation on this image</source>
+            <translation>选中这张图上的所有标注</translation>
+        </message>
+        <message>
+            <source>YOLO 标注中有 %d 行无法解析，已跳过</source>
+            <translation>YOLO 标注中有 %d 行无法解析，已跳过</translation>
+        </message>
+        <message>
+            <source>主题会立即应用，界面将重新加载；当前标注会先保存。继续吗？</source>
+            <translation>主题会立即应用，界面将重新加载；当前标注会先保存。继续吗？</translation>
+        </message>
+        <message>
+            <source>仅导出「已检查」的图片</source>
+            <translation>仅导出「已检查」的图片</translation>
+        </message>
+        <message>
+            <source>停止</source>
+            <translation>停止</translation>
+        </message>
+        <message>
+            <source>写入导出记录 export_manifest.json / export record
+
+勾选后会在导出目录生成一份 JSON，记下本次导出的类别列表及其来源、筛选条件（仅已检查 / 跳过空标注 / 复制图片）、导出与跳过的数量，以及源数据的检查结果（无标注 / 空标注 / 读不出的文件 / 不在类别表里的标签）。
+
+训练不读这个文件，删掉也不影响；它是为了几个月后还能回答「这批标签是怎么导出来的」。</source>
+            <translation>写入导出记录 export_manifest.json / export record
+
+勾选后会在导出目录生成一份 JSON，记下本次导出的类别列表及其来源、筛选条件（仅已检查 / 跳过空标注 / 复制图片）、导出与跳过的数量，以及源数据的检查结果（无标注 / 空标注 / 读不出的文件 / 不在类别表里的标签）。
+
+训练不读这个文件，删掉也不影响；它是为了几个月后还能回答「这批标签是怎么导出来的」。</translation>
+        </message>
+        <message>
+            <source>复制安装命令</source>
+            <translation>复制安装命令</translation>
+        </message>
+        <message>
+            <source>安装命令已复制</source>
+            <translation>安装命令已复制</translation>
+        </message>
+        <message>
+            <source>导入图片</source>
+            <translation>导入图片</translation>
+        </message>
+        <message>
+            <source>将把这张图片移到同级 _delete_ 文件夹（可从那里找回），其标注文件会先备份再删除。继续吗？</source>
+            <translation>将把这张图片移到同级 _delete_ 文件夹（可从那里找回），其标注文件会先备份再删除。继续吗？</translation>
+        </message>
+        <message>
+            <source>已停止：完成 %1 张（共 %2 张）</source>
+            <translation>已停止：完成 %1 张（共 %2 张）</translation>
+        </message>
+        <message>
+            <source>已停止：完成 %1 张，失败 %2 张（共 %3 张）</source>
+            <translation>已停止：完成 %1 张，失败 %2 张（共 %3 张）</translation>
+        </message>
+        <message>
+            <source>已停止：没有处理任何图片</source>
+            <translation>已停止：没有处理任何图片</translation>
+        </message>
+        <message>
+            <source>已标 {annotated}/{images} · 已检查 {confirmed} · 需返工 {rework}</source>
+            <translation>已标 {annotated}/{images} · 已检查 {confirmed} · 需返工 {rework}</translation>
+        </message>
+        <message>
+            <source>已清理 %1 个旧数据集副本，释放 %2。</source>
+            <translation>已清理 %1 个旧数据集副本，释放 %2。</translation>
+        </message>
+        <message>
+            <source>帮助</source>
+            <translation>帮助</translation>
+        </message>
+        <message>
+            <source>按「仅导出已检查图片」跳过 %d 张（未检查或需返工）</source>
+            <translation>按「仅导出已检查图片」跳过 %d 张（未检查或需返工）</translation>
+        </message>
+        <message>
+            <source>无法启动训练面板</source>
+            <translation>无法启动训练面板</translation>
+        </message>
+        <message>
+            <source>无法打开目录：%1</source>
+            <translation>无法打开目录：%1</translation>
+        </message>
+        <message>
+            <source>无法读取 YOLO 标注：%s</source>
+            <translation>无法读取 YOLO 标注：%s</translation>
+        </message>
+        <message>
+            <source>未安装 ultralytics，无法打开训练面板。
+请在当前项目环境中安装训练组件后重试：</source>
+            <translation>未安装 ultralytics，无法打开训练面板。
+请在当前项目环境中安装训练组件后重试：</translation>
+        </message>
+        <message>
+            <source>未返回结果或保存失败</source>
+            <translation>未返回结果或保存失败</translation>
+        </message>
+        <message>
+            <source>正在扫描图片…</source>
+            <translation>正在扫描图片…</translation>
+        </message>
+        <message>
+            <source>正在扫描图片… 已找到 %1 张</source>
+            <translation>正在扫描图片… 已找到 %1 张</translation>
+        </message>
+        <message>
+            <source>正在载入图片列表…</source>
+            <translation>正在载入图片列表…</translation>
+        </message>
+        <message>
+            <source>没有「已检查」的图片可导出（共 %d 张未检查）。
+先在文件列表里把要看过的图标成「已检查」，或取消勾选「仅导出已检查的图片」。</source>
+            <translation>没有「已检查」的图片可导出（共 %d 张未检查）。
+先在文件列表里把要看过的图标成「已检查」，或取消勾选「仅导出已检查的图片」。</translation>
+        </message>
+        <message>
+            <source>没有匹配的图片，请调整筛选条件</source>
+            <translation>没有匹配的图片，请调整筛选条件</translation>
+        </message>
+        <message>
+            <source>缺少训练组件</source>
+            <translation>缺少训练组件</translation>
+        </message>
+        <message>
+            <source>该目录没有找到支持的图片</source>
+            <translation>该目录没有找到支持的图片</translation>
+        </message>
+        <message>
+            <source>请先关闭「沿用上一张标注」再删除图片。</source>
+            <translation>请先关闭「沿用上一张标注」再删除图片。</translation>
+        </message>
     </context>
     <context>
         <name>Model</name>
@@ -6048,6 +6314,10 @@ Results have been saved to:
 请手动处理：
 %s</translation>
         </message>
+        <message>
+            <source>已检查</source>
+            <translation>已检查</translation>
+        </message>
     </context>
     <context>
         <name>RunHistoryDialog</name>
@@ -6138,6 +6408,10 @@ Results have been saved to:
             <location filename="..\..\views\training\run_history_dialog.py" line="209" />
             <source>Run history exported to: %1</source>
             <translation>训练历史已导出到：%1</translation>
+        </message>
+        <message>
+            <source>去训练</source>
+            <translation>去训练</translation>
         </message>
     </context>
     <context>
@@ -6923,6 +7197,10 @@ Changes will not be saved until you click Save.</source>
             <source>Set the minimum log level shown in the application.</source>
             <translation>设置应用程序显示的最低日志级别。</translation>
         </message>
+        <message>
+            <source>界面缩放将在重启应用后生效。</source>
+            <translation>界面缩放将在重启应用后生效。</translation>
+        </message>
     </context>
     <context>
         <name>ShapeConverterDialog</name>
@@ -7129,6 +7407,14 @@ Changes will not be saved until you click Save.</source>
             <location filename="..\..\views\labeling\widgets\shape_dialog.py" line="705" />
             <source> and skipped %s out-of-bounds shapes</source>
             <translation>并跳过了 %s 个超出边界的对象</translation>
+        </message>
+        <message>
+            <source>取消</source>
+            <translation>取消</translation>
+        </message>
+        <message>
+            <source>应用</source>
+            <translation>应用</translation>
         </message>
     </context>
     <context>
@@ -8704,6 +8990,22 @@ Choosing No cancels the export. Nothing is installed without asking.</source>
             <source>Current iteration suggestion: %1</source>
             <translation>当前迭代建议：%1</translation>
         </message>
+        <message>
+            <source>停止数据集准备，并清理本次生成的临时文件</source>
+            <translation>停止数据集准备，并清理本次生成的临时文件</translation>
+        </message>
+        <message>
+            <source>关闭</source>
+            <translation>关闭</translation>
+        </message>
+        <message>
+            <source>取消准备</source>
+            <translation>取消准备</translation>
+        </message>
+        <message>
+            <source>展开或收起高级训练参数</source>
+            <translation>展开或收起高级训练参数</translation>
+        </message>
     </context>
     <context>
         <name>ZoomWidget</name>
@@ -8713,6 +9015,75 @@ Choosing No cancels the export. Nothing is installed without asking.</source>
 Ctrl+F 适应窗口 · Ctrl+Shift+F 适应宽度 · Ctrl+= 原始大小</source>
             <translation>画布缩放比例，点击可选择档位
 Ctrl+F 适应窗口 · Ctrl+Shift+F 适应宽度 · Ctrl+= 原始大小</translation>
+        </message>
+    </context>
+    <context>
+        <name>DatasetPreparationMixin</name>
+        <message>
+            <source>Dataset Error</source>
+            <translation>数据集错误</translation>
+        </message>
+        <message>
+            <source>Dataset Preparation in Progress</source>
+            <translation>正在准备数据集</translation>
+        </message>
+        <message>
+            <source>Dataset preparation returned no output directory.</source>
+            <translation>数据集准备未返回输出目录。</translation>
+        </message>
+        <message>
+            <source>Failed to prepare dataset:
+%s</source>
+            <translation>数据集准备失败：
+%s</translation>
+        </message>
+        <message>
+            <source>Preparing dataset in the background...</source>
+            <translation>正在后台准备数据集…</translation>
+        </message>
+        <message>
+            <source>Preparing dataset...</source>
+            <translation>正在准备数据集…</translation>
+        </message>
+        <message>
+            <source>Start Training</source>
+            <translation>开始训练</translation>
+        </message>
+        <message>
+            <source>Training Error</source>
+            <translation>训练错误</translation>
+        </message>
+        <message>
+            <source>Training cancelled: fix the listed label files first.</source>
+            <translation>训练已取消：请先修好列出的标注文件。</translation>
+        </message>
+        <message>
+            <source>取消准备</source>
+            <translation>取消准备</translation>
+        </message>
+        <message>
+            <source>数据集仍在准备中。取消准备并关闭窗口吗？已复制的临时文件会被清理。</source>
+            <translation>数据集仍在准备中。取消准备并关闭窗口吗？已复制的临时文件会被清理。</translation>
+        </message>
+        <message>
+            <source>数据集准备已取消。</source>
+            <translation>数据集准备已取消。</translation>
+        </message>
+        <message>
+            <source>正在写入数据集：%1/%2</source>
+            <translation>正在写入数据集：%1/%2</translation>
+        </message>
+        <message>
+            <source>正在取消…</source>
+            <translation>正在取消…</translation>
+        </message>
+        <message>
+            <source>正在取消数据集准备…</source>
+            <translation>正在取消数据集准备…</translation>
+        </message>
+        <message>
+            <source>正在检查标注：%1/%2</source>
+            <translation>正在检查标注：%1/%2</translation>
         </message>
     </context>
 </TS>
