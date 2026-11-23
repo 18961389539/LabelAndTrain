@@ -38,6 +38,22 @@ EXTRACTED_MODULES = [
     )
 ]
 
+#: Modules that assign UI state onto ``widget`` but are not part of the
+#: contract face: their ``widget.X`` reads would drag every action handle
+#: into CONTRACT_MEMBERS.  They still have to be scanned for assignments
+#: (``widget.actions`` / ``widget.menus`` / ``widget.tools`` are owned here
+#: since the action builder moved out of ``label_widget.py``).
+ASSEMBLY_MODULES = [
+    os.path.join(
+        REPO_ROOT,
+        "jllabeling",
+        "views",
+        "labeling",
+        "utils",
+        "action_builder.py",
+    )
+]
+
 
 def _widget_reference_face():
     """Every ``widget.X`` the extracted modules touch, as a set."""
@@ -105,6 +121,15 @@ def _widget_class_members():  # noqa: C901 -- collects every binding form
             if not args:
                 continue
             collect_assigns(node, receiver=args[0].arg)
+
+    # the action builder keeps owning widget.actions / .menus / .tools
+    for path in ASSEMBLY_MODULES:
+        assembly_tree = ast.parse(open(path, encoding="utf-8").read())
+        for node in assembly_tree.body:
+            if isinstance(node, ast.FunctionDef):
+                args = node.args.args
+                if args and args[0].arg == "widget":
+                    collect_assigns(node, receiver="widget")
 
     # extracted modules may own scratch state on the widget
     # (file_list_ops sets widget._file_sort_mode / ._syncing_file_item)

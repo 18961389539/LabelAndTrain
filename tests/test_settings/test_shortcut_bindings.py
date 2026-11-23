@@ -39,9 +39,14 @@ except Exception:  # pragma: no cover - import guard, mirrors test_schema
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 LABEL_WIDGET = ROOT / "jllabeling/views/labeling/label_widget.py"
+ACTION_BUILDER = ROOT / "jllabeling/views/labeling/utils/action_builder.py"
 DIALOG = ROOT / "jllabeling/views/labeling/settings/dialog.py"
 APPLIER = ROOT / "jllabeling/views/labeling/settings/runtime_applier.py"
 PACKAGE = ROOT / "jllabeling"
+
+#: Files that create QActions and build the ``widget.actions`` namespace.
+#: The assembly moved out of ``label_widget.py``, so both ends are scanned.
+ACTION_SOURCES = (LABEL_WIDGET, ACTION_BUILDER)
 
 #: Actions that deliberately carry no keyboard entry.
 #:
@@ -109,18 +114,21 @@ def _classify(call):
 
 def _action_shortcuts():
     """Map every ``action()`` variable name to its shortcut classification."""
-    tree = ast.parse(LABEL_WIDGET.read_text(encoding="utf-8"))
     found = {}
-    for node in ast.walk(tree):
-        if not isinstance(node, ast.Assign) or len(node.targets) != 1:
-            continue
-        target = node.targets[0]
-        call = node.value
-        if not isinstance(target, ast.Name) or not isinstance(call, ast.Call):
-            continue
-        if not isinstance(call.func, ast.Name) or call.func.id != "action":
-            continue
-        found[target.id] = _classify(call)
+    for path in ACTION_SOURCES:
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Assign) or len(node.targets) != 1:
+                continue
+            target = node.targets[0]
+            call = node.value
+            if not isinstance(target, ast.Name) or not isinstance(
+                call, ast.Call
+            ):
+                continue
+            if not isinstance(call.func, ast.Name) or call.func.id != "action":
+                continue
+            found[target.id] = _classify(call)
     return found
 
 
@@ -168,23 +176,24 @@ def _hidden_shortcut_keys():
 
 def _action_namespace_keys():
     """Keyword names of the ``widget.actions = Struct(...)`` namespace."""
-    tree = ast.parse(LABEL_WIDGET.read_text(encoding="utf-8"))
-    for node in ast.walk(tree):
-        if not isinstance(node, ast.Assign):
-            continue
-        if not any(
-            isinstance(target, ast.Attribute) and target.attr == "actions"
-            for target in node.targets
-        ):
-            continue
-        call = node.value
-        func_name = (
-            getattr(call.func, "attr", "")
-            if isinstance(call, ast.Call)
-            else ""
-        )
-        if func_name == "Struct":
-            return {keyword.arg for keyword in call.keywords}
+    for path in ACTION_SOURCES:
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Assign):
+                continue
+            if not any(
+                isinstance(target, ast.Attribute) and target.attr == "actions"
+                for target in node.targets
+            ):
+                continue
+            call = node.value
+            func_name = (
+                getattr(call.func, "attr", "")
+                if isinstance(call, ast.Call)
+                else ""
+            )
+            if func_name == "Struct":
+                return {keyword.arg for keyword in call.keywords}
     return set()
 
 

@@ -127,7 +127,17 @@ BUDGETS = {
     # Raised 6623 -> 6625 the same day: the theme rebuild must pass None (not
     # an empty string) when no image or last directory is open, otherwise the
     # replacement queues a load for "" and shows a modal.
-    "jllabeling/views/labeling/label_widget.py": 6625,
+    #
+    # Lowered 6625 -> 4867 on 2026-11-23: the action/menu/toolbar assembly
+    # (1757 lines: every QAction, the namespace, the menu tuples and the
+    # toolbar lists) moved verbatim to utils/action_builder.py.  The widget
+    # now calls build_actions(self) once, so the remaining file is the class
+    # plus the layout half.  The moved block got its own budget below.
+    "jllabeling/views/labeling/label_widget.py": 4867,
+    # The extracted action builder: same ratchet, because a 1757-line move
+    # must not become a second dumping ground.  Split the next cluster out
+    # (the menu tuples are the obvious candidate) before raising this.
+    "jllabeling/views/labeling/utils/action_builder.py": 1790,
     # Lowered 3772 -> 3760 on 2026-09-29: the undo/redo stacks moved out to
     # widgets/shape_history.py (which is also what made them survive a file
     # switch) and the canvas reaches them through the attribute names it has
