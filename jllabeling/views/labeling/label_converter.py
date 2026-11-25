@@ -1048,8 +1048,40 @@ class LabelConverter:
         external COCO exports routinely contain a few. Returns a report
         with ``images`` / ``written`` / ``skipped`` / ``failed`` /
         ``cancelled``; ``cancel`` is polled between annotations and images.
+
+        The stages live in their own methods below (sections, label table,
+        image index, annotation loop, write loop) because each one has its
+        own malformed-input rule, and keeping them in one body is what made
+        this method exceed the complexity limit.
         """
         data = self.read_json(input_file)
+        categories, images, annotations = self._coco_sections(data)
+
+        skipped = []
+        label_info, pose_names = self._coco_label_info(categories, skipped)
+        self._coco_adopt_classes(mode, label_info, pose_names)
+
+        total_info = self._coco_image_index(images, skipped)
+        cancelled = self._coco_collect_annotations(
+            annotations, label_info, mode, total_info, skipped, cancel
+        )
+
+        report = {
+            "images": len(total_info),
+            "written": 0,
+            "skipped": skipped,
+            "failed": [],
+            "cancelled": cancelled,
+        }
+        if not cancelled:
+            self._coco_write_images(
+                total_info, output_dir_path, report, cancel
+            )
+        return report
+
+    @staticmethod
+    def _coco_sections(data):
+        """The three lists a COCO file must carry, or ``ValueError``."""
         if not isinstance(data, dict):
             raise ValueError("COCO file must contain a JSON object")
         categories = data.get("categories")
@@ -1064,8 +1096,11 @@ class LabelConverter:
                 "COCO file must contain categories, images and "
                 "annotations lists"
             )
+        return categories, images, annotations
 
-        skipped = []
+    @staticmethod
+    def _coco_label_info(categories, skipped):
+        """``{category_id: name}`` plus ``{name: keypoints}`` for pose."""
         label_info = {}
         pose_names = {}
         for cat in categories:
@@ -1079,7 +1114,10 @@ class LabelConverter:
                     pose_names[name] = cat["keypoints"]
             except (KeyError, TypeError) as exc:
                 skipped.append((None, f"invalid category: {exc}"))
+        return label_info, pose_names
 
+    def _coco_adopt_classes(self, mode, label_info, pose_names):
+        """Seed ``classes`` / ``pose_classes`` when the caller left them empty."""
         if mode in ("rectangle", "polygon"):
             if not self.classes:
                 self.classes = list(label_info.values())
@@ -1090,6 +1128,9 @@ class LabelConverter:
         else:
             raise ValueError(f"Unsupported COCO mode: {mode}")
 
+    @staticmethod
+    def _coco_image_index(images, skipped):
+        """``{image_id: label skeleton}``, one entry per usable image."""
         total_info = {}
         for image in images:
             if not isinstance(image, dict):
@@ -1104,13 +1145,16 @@ class LabelConverter:
                 }
             except (KeyError, TypeError) as exc:
                 skipped.append((image.get("id"), f"invalid image: {exc}"))
+        return total_info
 
+    def _coco_collect_annotations(
+        self, annotations, label_info, mode, total_info, skipped, cancel
+    ):
+        """Turn every annotation into shapes; returns whether it cancelled."""
         image_info, image_ids = {}, {}
-        cancelled = False
         for dic_info in annotations:
             if cancel is not None and cancel():
-                cancelled = True
-                break
+                return True
             try:
                 image_id, shapes = self._coco_annotation_shapes(
                     dic_info, label_info, mode, image_info, image_ids
@@ -1132,17 +1176,10 @@ class LabelConverter:
                 skipped.append((image_id, "annotation for an unknown image"))
                 continue
             total_info[image_id]["shapes"].extend(shapes)
+        return False
 
-        report = {
-            "images": len(total_info),
-            "written": 0,
-            "skipped": skipped,
-            "failed": [],
-            "cancelled": cancelled,
-        }
-        if cancelled:
-            return report
-
+    def _coco_write_images(self, total_info, output_dir_path, report, cancel):
+        """Write one XLABEL json per image, counting failures into ``report``."""
         for dic_info in total_info.values():
             if cancel is not None and cancel():
                 report["cancelled"] = True
@@ -1163,7 +1200,6 @@ class LabelConverter:
                 report["failed"].append((output_file, str(exc)))
             else:
                 report["written"] += 1
-        return report
 
     @staticmethod
     def _bump_skip(stats, reason):
