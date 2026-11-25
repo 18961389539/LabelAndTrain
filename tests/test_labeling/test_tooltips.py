@@ -157,6 +157,15 @@ def _is_qt_chrome(button):
         return True
     if button.objectName() in _QT_CHROME_OBJECT_NAMES:
         return True
+    # Linux's Qt exposes QTabBar's private scroll buttons as a bare
+    # QAbstractButton: no public subclass, no object name, and no parent
+    # widget at scan time, so the parentWidget check below cannot see it.
+    # Our own controls are always concrete subclasses (QPushButton,
+    # QToolButton, QCheckBox), and QAbstractButton itself cannot be
+    # instantiated, so a nameless instance of the abstract class is
+    # platform chrome rather than a control missing its tooltip.
+    if type(button) is QtWidgets.QAbstractButton and not button.objectName():
+        return True
     return isinstance(
         button.parentWidget(), (QtWidgets.QTabBar, QtWidgets.QLineEdit)
     )
