@@ -366,6 +366,13 @@ def _report_conversion_skips(stats, images_without_labels=0):
         lines.append(
             f"  images without a label file (skipped): {images_without_labels}"
         )
+    # ``custom_to_yolo``/``custom_to_coco`` count the same situation when the
+    # caller asked to keep going: the image is written with an empty label.
+    missing = stats.get("missing_label_file", 0)
+    if missing:
+        lines.append(
+            f"  images without a label file (kept as empty): {missing}"
+        )
     skipped = stats.get("skipped") or {}
     if skipped:
         lines.append(f"  skipped shapes: {sum(skipped.values())}")
@@ -374,8 +381,8 @@ def _report_conversion_skips(stats, images_without_labels=0):
         ):
             lines.append(f"    - {number} × {reason}")
         lines.append(
-            "  If that is unexpected, check the class list and the shape "
-            "types (hbb only writes rectangles, seg only polygons)."
+            "  If that is unexpected, check the class list and whether the "
+            "chosen export mode supports these shape types."
         )
     if lines:
         print(colored("\n".join(lines), "yellow"))
@@ -715,6 +722,8 @@ def run_conversion(
                 voc_mode = "rectangle" if mode == "detect" else "polygon"
 
                 count = 0
+                stats = {}
+                images_without_labels = 0
                 image_files = get_image_files(images)
                 for image_file in tqdm(
                     image_files, desc=f"Converting XLABEL to VOC {mode}"
@@ -724,6 +733,7 @@ def run_conversion(
                     )
                     if label_file is None:
                         if skip_empty_files:
+                            images_without_labels += 1
                             continue
 
                         base_name = osp.splitext(osp.basename(image_file))[0]
@@ -741,6 +751,7 @@ def run_conversion(
                         output_file,
                         voc_mode,
                         skip_empty_files,
+                        stats=stats,
                     )
                     if (
                         skip_empty_files
@@ -757,6 +768,7 @@ def run_conversion(
                         "green",
                     )
                 )
+                _report_conversion_skips(stats, images_without_labels)
 
             elif task == "xlabel2coco":
                 if not images:
@@ -807,9 +819,10 @@ def run_conversion(
                         f"Converting XLABEL to COCO {mode} format...", "cyan"
                     )
                 )
+                stats = {}
                 image_files = get_image_files(images)
                 converter.custom_to_coco(
-                    image_files, labels, output, coco_mode
+                    image_files, labels, output, coco_mode, stats=stats
                 )
 
                 print(
@@ -818,6 +831,7 @@ def run_conversion(
                         "green",
                     )
                 )
+                _report_conversion_skips(stats)
 
     except Exception as e:
         print(colored(f"✗ Error: {e}", "red"), file=sys.stderr)

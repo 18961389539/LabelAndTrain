@@ -1453,8 +1453,21 @@ class LabelConverter:
         return object_elem
 
     def custom_to_voc(
-        self, image_file, input_file, output_dir, mode, skip_empty_files=False
+        self,
+        image_file,
+        input_file,
+        output_dir,
+        mode,
+        skip_empty_files=False,
+        stats=None,
     ):
+        """Convert one XLABEL json into a Pascal VOC file.
+
+        ``stats`` is the same optional out-parameter ``custom_to_yolo`` takes:
+        shapes this mode cannot represent (a point in a rectangle export, a
+        polygon with two points, any shape whose type the branch below does
+        not name) used to vanish without a trace.
+        """
         is_emtpy_file = True
         image = self.imread_unicode(image_file, 1)[0]
         image_height, image_width, image_depth = image.shape
@@ -1465,6 +1478,10 @@ class LabelConverter:
             if not skip_empty_files:
                 shapes = []
             else:
+                if stats is not None:
+                    stats["missing_label_file"] = (
+                        stats.get("missing_label_file", 0) + 1
+                    )
                 return is_emtpy_file
 
         image_path = osp.basename(image_file)
@@ -1503,8 +1520,10 @@ class LabelConverter:
                 ET.SubElement(bndbox, "ymin").text = str(int(ymin))
                 ET.SubElement(bndbox, "xmax").text = str(int(xmax))
                 ET.SubElement(bndbox, "ymax").text = str(int(ymax))
+                self._bump_exported(stats)
             elif shape["shape_type"] == "polygon" and mode == "polygon":
                 if len(points) < 3:
+                    self._bump_skip(stats, "polygon with < 3 points")
                     continue
                 is_emtpy_file = False
                 object_elem = self._append_voc_object(root, label, difficult)
@@ -1520,6 +1539,15 @@ class LabelConverter:
                     y_tag = ET.SubElement(polygon, f"y{i+1}")
                     x_tag.text = str(point[0])
                     y_tag.text = str(point[1])
+                self._bump_exported(stats)
+            else:
+                # This mode cannot express the shape at all: a point, a
+                # rotation box or a cuboid in a VOC export.  It used to fall
+                # through both branches and disappear from the file.
+                self._bump_skip(
+                    stats,
+                    f"{shape['shape_type']} is not part of a voc export",
+                )
 
         xml_string = ET.tostring(root, encoding="utf-8")
         dom = minidom.parseString(xml_string)
@@ -1530,7 +1558,16 @@ class LabelConverter:
 
         return is_emtpy_file
 
-    def custom_to_coco(self, image_list, input_path, output_path, mode):
+    def custom_to_coco(
+        self, image_list, input_path, output_path, mode, stats=None
+    ):
+        """Convert XLABEL jsons into one COCO file.
+
+        ``stats`` is the same optional out-parameter ``custom_to_yolo``
+        takes: an image with no label file, a shape type the mode cannot
+        express and a label outside the class list all used to vanish
+        from the output without a word.
+        """
         coco_data = self.get_coco_data(mode)
 
         if mode == "rectangle":
@@ -1577,6 +1614,10 @@ class LabelConverter:
             if not osp.exists(label_file):
                 label_file = osp.join(osp.dirname(image_file), label_name)
                 if not osp.exists(label_file):
+                    if stats is not None:
+                        stats["missing_label_file"] = (
+                            stats.get("missing_label_file", 0) + 1
+                        )
                     continue
 
             data = self.read_json(label_file)
@@ -1635,6 +1676,11 @@ class LabelConverter:
 
                 elif mode == "rectangle":
                     if shape_type != "rectangle":
+                        self._bump_skip(
+                            stats,
+                            f"{shape_type} is not part of a coco "
+                            f"rectangle export",
+                        )
                         continue
 
                     if len(points) == 2:
@@ -1654,6 +1700,9 @@ class LabelConverter:
                     bbox = [x_min, y_min, width, height]
                     area = width * height
                     if label not in self.classes:
+                        self._bump_skip(
+                            stats, f"label not in classes: {label}"
+                        )
                         continue
                     class_id = self.classes.index(label)
 
@@ -1668,13 +1717,22 @@ class LabelConverter:
                         "segmentation": [],
                     }
                     coco_data["annotations"].append(annotation)
+                    self._bump_exported(stats)
                     annotation_id += 1
 
                 elif mode == "polygon":
                     if shape_type != "polygon":
+                        self._bump_skip(
+                            stats,
+                            f"{shape_type} is not part of a coco "
+                            f"polygon export",
+                        )
                         continue
 
                     if label == "__ignore__" or label not in class_name_to_id:
+                        self._bump_skip(
+                            stats, f"label not in classes: {label}"
+                        )
                         continue
 
                     instance = (label, group_id)
@@ -1697,6 +1755,9 @@ class LabelConverter:
                     points = data["rectangle"]
                     box_label = data["box_label"]
                     if box_label not in self.classes:
+                        self._bump_skip(
+                            stats, f"label not in classes: {box_label}"
+                        )
                         continue
                     class_id = self.classes.index(box_label)
                     if len(points) == 2:
@@ -1747,6 +1808,7 @@ class LabelConverter:
                         "segmentation": [],
                     }
                     coco_data["annotations"].append(annotation)
+                    self._bump_exported(stats)
                     annotation_id += 1
 
             elif mode == "polygon":
@@ -1765,6 +1827,7 @@ class LabelConverter:
                         "ignore": int(data["difficult"]),
                     }
                     coco_data["annotations"].append(annotation)
+                    self._bump_exported(stats)
 
                     annotation_id += 1
 
