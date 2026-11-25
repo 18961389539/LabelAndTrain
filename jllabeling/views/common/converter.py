@@ -80,11 +80,23 @@ SUPPORTED_TASKS = {
 
 
 def get_image_files(image_dir):
+    """Every image in ``image_dir``, each exactly once.
+
+    The uppercase patterns are there for case-sensitive filesystems, where
+    ``*.png`` misses ``A.PNG``.  On Windows and macOS the same pattern
+    matches every file a second time, so one ``a.png`` was listed twice and
+    the conversion count (and the shape statistics) doubled.  ``normcase``
+    folds the duplicate spellings on those platforms and is a no-op on
+    Linux, which keeps the uppercase pass meaningful there.
+    """
     image_files = []
     for ext in IMAGE_EXTENSIONS:
         image_files.extend(glob(osp.join(image_dir, f"*{ext}")))
         image_files.extend(glob(osp.join(image_dir, f"*{ext.upper()}")))
-    return sorted(image_files)
+    unique = {}
+    for path in image_files:
+        unique.setdefault(osp.normcase(path), path)
+    return sorted(unique.values())
 
 
 def get_label_files(label_dir, label_ext):
@@ -335,6 +347,38 @@ def handle_convert_command(args):
         mapping_file=args.mapping,
         skip_empty_files=args.skip_empty_files,
     )
+
+
+def _report_conversion_skips(stats, images_without_labels=0):
+    """Say what an XLABEL->YOLO conversion dropped, if anything.
+
+    The CLI used to print only the file count, so a run that discarded every
+    polygon in an ``hbb`` export looked exactly like a clean one -- the same
+    silent-drop failure the GUI export dialog reports on. The reasons come
+    from ``LabelConverter._bump_skip``; nothing prints when nothing was
+    dropped, so a clean run keeps its one-line summary.
+    """
+    lines = []
+    exported = stats.get("exported", 0)
+    if exported:
+        lines.append(f"  shapes written: {exported}")
+    if images_without_labels:
+        lines.append(
+            f"  images without a label file (skipped): {images_without_labels}"
+        )
+    skipped = stats.get("skipped") or {}
+    if skipped:
+        lines.append(f"  skipped shapes: {sum(skipped.values())}")
+        for reason, number in sorted(
+            skipped.items(), key=lambda item: (-item[1], item[0])
+        ):
+            lines.append(f"    - {number} × {reason}")
+        lines.append(
+            "  If that is unexpected, check the class list and the shape "
+            "types (hbb only writes rectangles, seg only polygons)."
+        )
+    if lines:
+        print(colored("\n".join(lines), "yellow"))
 
 
 def run_conversion(
@@ -594,6 +638,8 @@ def run_conversion(
                 yolo_mode = mode_map[mode]
 
                 count = 0
+                stats = {}
+                images_without_labels = 0
                 image_files = get_image_files(images)
                 for image_file in tqdm(
                     image_files, desc=f"Converting XLABEL to YOLO {mode}"
@@ -603,6 +649,7 @@ def run_conversion(
                     )
                     if label_file is None:
                         if skip_empty_files:
+                            images_without_labels += 1
                             continue
 
                         base_name = osp.splitext(osp.basename(image_file))[0]
@@ -615,7 +662,11 @@ def run_conversion(
                         osp.splitext(osp.basename(image_file))[0] + yolo_ext,
                     )
                     is_empty = converter.custom_to_yolo(
-                        label_file, output_file, yolo_mode, skip_empty_files
+                        label_file,
+                        output_file,
+                        yolo_mode,
+                        skip_empty_files,
+                        stats=stats,
                     )
                     if (
                         skip_empty_files
@@ -632,6 +683,7 @@ def run_conversion(
                         "green",
                     )
                 )
+                _report_conversion_skips(stats, images_without_labels)
 
             elif task == "xlabel2voc":
                 if not images:
