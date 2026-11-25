@@ -45,8 +45,13 @@ APPLIER = ROOT / "jllabeling/views/labeling/settings/runtime_applier.py"
 PACKAGE = ROOT / "jllabeling"
 
 #: Files that create QActions and build the ``widget.actions`` namespace.
-#: The assembly moved out of ``label_widget.py``, so both ends are scanned.
-ACTION_SOURCES = (LABEL_WIDGET, ACTION_BUILDER)
+#: The assembly moved out of ``label_widget.py``, then the four action
+#: families moved out of ``action_builder.py``, so every end is scanned.
+ACTION_SOURCES = (
+    LABEL_WIDGET,
+    ACTION_BUILDER,
+    *(ROOT / "jllabeling/views/labeling/utils").glob("*_actions.py"),
+)
 
 #: Actions that deliberately carry no keyboard entry.
 #:
@@ -174,8 +179,49 @@ def _hidden_shortcut_keys():
     )
 
 
+def _string_dict_keys(node):
+    """String keys of a dict literal, ignoring ``**`` spreads."""
+    if not isinstance(node, ast.Dict):
+        return set()
+    return {
+        key.value
+        for key in node.keys
+        if isinstance(key, ast.Constant) and isinstance(key.value, str)
+    }
+
+
+def _module_dict_keys(tree, name):
+    """Keys of a module-level ``name = {...}`` literal."""
+    for node in tree.body:
+        if not isinstance(node, ast.Assign):
+            continue
+        if any(isinstance(t, ast.Name) and t.id == name for t in node.targets):
+            return _string_dict_keys(node.value)
+    return set()
+
+
+def _grouped_keys(tree):
+    """Fields ``_grouped_actions`` rebuilds from the flat namespace."""
+    for node in ast.walk(tree):
+        if (
+            isinstance(node, ast.FunctionDef)
+            and node.name == "_grouped_actions"
+        ):
+            for sub in ast.walk(node):
+                if isinstance(sub, ast.Return):
+                    return _string_dict_keys(sub.value)
+    return set()
+
+
 def _action_namespace_keys():
-    """Keyword names of the ``widget.actions = Struct(...)`` namespace."""
+    """Keyword names of the ``widget.actions = Struct(...)`` namespace.
+
+    The builder used to spell all 130 fields out as keywords; split batch
+    25 moved the per-family definitions out and publishes the namespace as
+    ``Struct(**namespace)``. The names then live in ``_FIELD_TO_VAR`` (the
+    123 plain fields) plus the seven tuples ``_grouped_actions`` rebuilds,
+    so both are read instead of only the call's keywords.
+    """
     for path in ACTION_SOURCES:
         tree = ast.parse(path.read_text(encoding="utf-8"))
         for node in ast.walk(tree):
@@ -192,8 +238,14 @@ def _action_namespace_keys():
                 if isinstance(call, ast.Call)
                 else ""
             )
-            if func_name == "Struct":
-                return {keyword.arg for keyword in call.keywords}
+            if func_name != "Struct":
+                continue
+            explicit = {k.arg for k in call.keywords if k.arg}
+            if explicit:
+                return explicit
+            return _module_dict_keys(tree, "_FIELD_TO_VAR") | _grouped_keys(
+                tree
+            )
     return set()
 
 

@@ -141,7 +141,23 @@ BUDGETS = {
     # The extracted action builder: same ratchet, because a 1757-line move
     # must not become a second dumping ground.  Split the next cluster out
     # (the menu tuples are the obvious candidate) before raising this.
-    "jllabeling/views/labeling/utils/action_builder.py": 1790,
+    #
+    # Lowered 1790 -> 522 on 2026-11-25 (split batch 25): the four action
+    # families left for file/draw/edit/view actions, each verbatim -- the
+    # only line added inside a family is the `shortcuts` lookup it needs.
+    # What remains here is the part that cannot be local to one family:
+    # the 130-field namespace, the seven tuples rebuilt from it, the
+    # addAction registrations and the menu/toolbar assembly.
+    "jllabeling/views/labeling/utils/action_builder.py": 525,
+    # Split batch 25: the four families, each frozen at what the verbatim
+    # move produced so none of them can quietly become the next dumping
+    # ground.  Largest is file_actions (file, project, audit and
+    # annotation-state actions); view_actions carries the theme/upload/
+    # export/AI cluster.
+    "jllabeling/views/labeling/utils/file_actions.py": 466,
+    "jllabeling/views/labeling/utils/draw_actions.py": 184,
+    "jllabeling/views/labeling/utils/edit_actions.py": 277,
+    "jllabeling/views/labeling/utils/view_actions.py": 432,
     # Lowered 3772 -> 3760 on 2026-09-29: the undo/redo stacks moved out to
     # widgets/shape_history.py (which is also what made them survive a file
     # switch) and the canvas reaches them through the attribute names it has
