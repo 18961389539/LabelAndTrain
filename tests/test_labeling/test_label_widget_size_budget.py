@@ -195,6 +195,13 @@ BUDGETS = {
     # Raised 795 -> 796 on 2026-11-09: the canvas carries an accessible name
     # for screen readers; the audit found this surface had almost none.
     "jllabeling/views/labeling/widgets/canvas.py": 796,
+    # Newly budgeted on 2026-11-25, after ``_setup_ui`` (328 lines) split
+    # into three region builders: a 23-line setup plus ``_build_nav_panel``
+    # (88), ``_build_right_panel`` (90) and ``_build_content_area`` (140).
+    # The split itself adds the three signatures and their returns (+16),
+    # so the file is frozen at its post-split size; the next batch should
+    # lower it, and it may only go up for a documented feature.
+    "jllabeling/views/labeling/settings/dialog.py": 2207,
     # Lowered 4406 -> 4002 -> 3335 on 2026-10-26: first the
     # export/autolabel cluster moved to views/training/export_autolabel.py
     # (nine delegating stubs, is_fresh_export included), then

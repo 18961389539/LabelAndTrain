@@ -181,7 +181,17 @@ class SettingsDialog(QtWidgets.QDialog):
         shell_layout.setContentsMargins(0, 0, 0, 0)
         shell_layout.setSpacing(0)
 
-        left_panel = QtWidgets.QWidget(shell)
+        left_panel = self._build_nav_panel(shell)
+        right_panel = self._build_right_panel(shell)
+
+        shell_layout.addWidget(left_panel)
+        shell_layout.addWidget(right_panel, 1)
+
+        root_layout.addWidget(shell)
+
+    def _build_nav_panel(self, parent):
+        """Left rail: the brand row and the navigation list."""
+        left_panel = QtWidgets.QWidget(parent)
         left_panel.setObjectName("settingsLeftPanel")
         left_panel.setFixedWidth(160)
         left_panel.setStyleSheet(f"""
@@ -266,7 +276,11 @@ class SettingsDialog(QtWidgets.QDialog):
         left_layout.addWidget(self.nav_list)
         left_layout.addStretch(1)
 
-        right_panel = QtWidgets.QWidget(shell)
+        return left_panel
+
+    def _build_right_panel(self, parent):
+        """Right panel: header row, separator and the content column."""
+        right_panel = QtWidgets.QWidget(parent)
         right_panel.setObjectName("settingsRightPanel")
         right_panel.setStyleSheet(f"""
             QWidget#settingsRightPanel {{
@@ -348,7 +362,16 @@ class SettingsDialog(QtWidgets.QDialog):
             f"background: {self._rgb('line')}; max-height: 1px; min-height: 1px; border: none;"
         )
 
-        content_area = QtWidgets.QWidget(right_panel)
+        content_area = self._build_content_area(right_panel)
+        right_layout.addWidget(self.header)
+        right_layout.addWidget(self.header_line)
+        right_layout.addWidget(content_area, 1)
+
+        return right_panel
+
+    def _build_content_area(self, parent):
+        """Scrollable settings card, status line and shortcut footer."""
+        content_area = QtWidgets.QWidget(parent)
         content_area_layout = QtWidgets.QVBoxLayout(content_area)
         content_area_layout.setContentsMargins(16, 16, 16, 12)
         content_area_layout.setSpacing(8)
@@ -485,14 +508,7 @@ class SettingsDialog(QtWidgets.QDialog):
         content_area_layout.addWidget(self.shortcuts_split_line, 0)
         content_area_layout.addWidget(self.shortcuts_bottom_panel, 0)
 
-        right_layout.addWidget(self.header)
-        right_layout.addWidget(self.header_line)
-        right_layout.addWidget(content_area, 1)
-
-        shell_layout.addWidget(left_panel)
-        shell_layout.addWidget(right_panel, 1)
-
-        root_layout.addWidget(shell)
+        return content_area
 
     def _connect_signals(self) -> None:
         self.header.installEventFilter(self)
