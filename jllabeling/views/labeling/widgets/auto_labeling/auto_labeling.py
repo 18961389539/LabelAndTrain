@@ -194,6 +194,34 @@ class AutoLabelingWidget(QWidget):
         )
         self._update_model_selection_scroll_area_height()
 
+        self._setup_model_manager()
+        self._setup_prediction_guards()
+
+        # Init value
+        self.initial_conf_value = 0
+        self.initial_iou_value = 0
+        self.initial_preserve_annotations_state = False
+        self._amg_warning_confirmed = False
+
+        self._configure_model_controls()
+        self._configure_prompt_buttons()
+
+        # Hide labeling widgets by default
+        self.hide_labeling_widgets()
+
+        # Handle close button
+        self.button_close.clicked.connect(self.unload_and_hide)
+
+        self.auto_labeling_mode_changed.connect(self.update_button_colors)
+        self.auto_labeling_mode = AutoLabelingMode.NONE
+        self.auto_labeling_mode_changed.emit(self.auto_labeling_mode)
+
+        # Populate select combobox with modes
+        self.update_shortcut_button_texts()
+        self._queue_model_selection_scroll_area_height_update()
+
+    def _setup_model_manager(self):
+        """Create the model manager and connect its signals."""
         self.skip_auto_prediction = False
         self._last_model_selection = None
         self.model_manager = ModelManager()
@@ -245,6 +273,9 @@ class AutoLabelingWidget(QWidget):
             self._on_model_load_failed
         )
 
+    def _setup_prediction_guards(self):
+        """Disable the prompt tools while inference is running."""
+
         # Disable tools when inference is running
         def set_enable_tools(enable):
             self.model_selection_button.setEnabled(enable)
@@ -278,12 +309,8 @@ class AutoLabelingWidget(QWidget):
             lambda: set_enable_tools(True)
         )
 
-        # Init value
-        self.initial_conf_value = 0
-        self.initial_iou_value = 0
-        self.initial_preserve_annotations_state = False
-        self._amg_warning_confirmed = False
-
+    def _configure_model_controls(self):
+        """Model picker, output mode, Run and the conf/IoU editor."""
         # ===================================
         #  Auto labeling buttons
         # ===================================
@@ -396,6 +423,8 @@ class AutoLabelingWidget(QWidget):
         if container is not None:
             container.setMinimumWidth(max(container.minimumWidth(), 880))
 
+    def _configure_prompt_buttons(self):
+        """Point/rect/clear/finish, mask fineness and AMG."""
         # --- Configuration for: button_add_point ---
         self.button_add_point.setToolTip(
             self.tr("添加前景点（在目标上左键，快捷键 Q）")
@@ -488,20 +517,6 @@ class AutoLabelingWidget(QWidget):
         # ===================================
         #  End of Auto labeling buttons
         # ===================================
-
-        # Hide labeling widgets by default
-        self.hide_labeling_widgets()
-
-        # Handle close button
-        self.button_close.clicked.connect(self.unload_and_hide)
-
-        self.auto_labeling_mode_changed.connect(self.update_button_colors)
-        self.auto_labeling_mode = AutoLabelingMode.NONE
-        self.auto_labeling_mode_changed.emit(self.auto_labeling_mode)
-
-        # Populate select combobox with modes
-        self.update_shortcut_button_texts()
-        self._queue_model_selection_scroll_area_height_update()
 
     def _split_label_and_shortcut(self, text):
         normalized = str(text).strip()

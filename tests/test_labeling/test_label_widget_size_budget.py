@@ -202,6 +202,13 @@ BUDGETS = {
     # so the file is frozen at its post-split size; the next batch should
     # lower it, and it may only go up for a documented feature.
     "jllabeling/views/labeling/settings/dialog.py": 2207,
+    # Newly budgeted on 2026-11-25, after ``AutoLabelingWidget.__init__``
+    # (331 lines) split into four setup methods: ``__init__`` keeps the ui
+    # load, the initial values and the teardown; the model manager (52),
+    # the inference guards (35), the model controls (113) and the prompt
+    # buttons (90) each have their own method.  The split adds the four
+    # signatures and docstrings (+14), so the file is frozen here.
+    "jllabeling/views/labeling/widgets/auto_labeling/auto_labeling.py": 2057,
     # Lowered 4406 -> 4002 -> 3335 on 2026-10-26: first the
     # export/autolabel cluster moved to views/training/export_autolabel.py
     # (nine delegating stubs, is_fresh_export included), then
