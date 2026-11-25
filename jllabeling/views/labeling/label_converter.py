@@ -1184,7 +1184,7 @@ class LabelConverter:
             return
         stats["exported"] = stats.get("exported", 0) + 1
 
-    def custom_to_yolo(  # noqa: C901
+    def custom_to_yolo(
         self,
         input_file,
         output_file,
@@ -1196,249 +1196,289 @@ class LabelConverter:
         """Convert one XLABEL json into a YOLO label file.
 
         ``stats`` is an optional dict used as an out-parameter: it accumulates
-        ``exported`` plus ``skipped_shape_type`` / ``skipped_unknown_label``
-        counters. Shapes that this mode cannot represent used to vanish without
-        a trace, so callers can now tell the annotator what was dropped.
+        ``exported`` plus a ``skipped`` map keyed by reason. Shapes that this
+        mode cannot represent used to vanish without a trace, so callers can
+        now tell the annotator what was dropped.
+
+        Each mode owns one exporter below: they share the loop shape but not
+        the geometry (a box normalises two corners, a polygon divides every
+        vertex, an OBB clamps four points and then flattens them, a pose run
+        emits one line per group after collecting its keypoints).
         """
-        is_empty_file = True
-        if osp.exists(input_file):
-            data = self.read_json(input_file)
-        else:
+        if not osp.exists(input_file):
             if not skip_empty_files:
                 pathlib.Path(output_file).touch()
             if stats is not None:
                 stats["missing_label_file"] = (
                     stats.get("missing_label_file", 0) + 1
                 )
-            return is_empty_file
+            return True
 
+        data = self.read_json(input_file)
+        if mode == "hbb":
+            return self._yolo_export_hbb(data, output_file, stats)
+        if mode == "seg":
+            return self._yolo_export_seg(data, output_file, stats)
+        if mode == "obb":
+            return self._yolo_export_obb(
+                data, output_file, obb_boundary_policy, stats
+            )
+        if mode == "pose":
+            return self._yolo_export_pose(data, output_file, stats, input_file)
+
+        # No exporter for this mode: every shape is a skip, and the empty
+        # file still lands so callers keep one file per image.
+        with _atomic_text_writer(output_file):
+            for shape in data["shapes"]:
+                self._bump_skip(
+                    stats,
+                    f"{shape['shape_type']} is not part of a {mode} export",
+                )
+        return True
+
+    def _yolo_export_hbb(self, data, output_file, stats):
+        """``mode="hbb"``: one normalised centre/size line per rectangle."""
         image_width = data["imageWidth"]
         image_height = data["imageHeight"]
-        image_size = np.array([[image_width, image_height]])
-        if mode == "pose":
-            pose_data = {}
+        is_empty_file = True
         with _atomic_text_writer(output_file) as f:
             for shape in data["shapes"]:
                 shape_type = shape["shape_type"]
-                if mode == "hbb" and shape_type == "rectangle":
-                    label = shape["label"]
-                    points = self.clamp_points(
-                        shape["points"], image_width, image_height
-                    )
-                    if len(points) == 2:
-                        logger.warning(
-                            "UserWarning: Diagonal vertex mode is deprecated since v2.2.0.\n"
-                            "Please update your code to accommodate the new four-point mode."
-                        )
-                        points = rectangle_from_diagonal(points)
-
-                    if label not in self.classes:
-                        self._bump_skip(
-                            stats, f"label not in classes: {label}"
-                        )
-                        continue
-                    class_index = self.classes.index(label)
-
-                    x_center = (points[0][0] + points[2][0]) / (
-                        2 * image_width
-                    )
-                    y_center = (points[0][1] + points[2][1]) / (
-                        2 * image_height
-                    )
-                    width = abs(points[2][0] - points[0][0]) / image_width
-                    height = abs(points[2][1] - points[0][1]) / image_height
-
-                    f.write(
-                        f"{class_index} {x_center:.6f} {y_center:.6f} {width:.6f} {height:.6f}\n"
-                    )
-
-                    is_empty_file = False
-                    self._bump_exported(stats)
-                elif mode == "seg" and shape_type == "polygon":
-                    label = shape["label"]
-                    points = np.array(
-                        self.clamp_points(
-                            shape["points"], image_width, image_height
-                        )
-                    )
-                    if len(points) < 3:
-                        self._bump_skip(stats, "polygon with < 3 points")
-                        continue
-                    if label not in self.classes:
-                        self._bump_skip(
-                            stats, f"label not in classes: {label}"
-                        )
-                        continue
-                    class_index = self.classes.index(label)
-                    norm_points = points / image_size
-                    f.write(
-                        f"{class_index} "
-                        + " ".join(
-                            [
-                                " ".join([str(cell[0]), str(cell[1])])
-                                for cell in norm_points.tolist()
-                            ]
-                        )
-                        + "\n"
-                    )
-                    is_empty_file = False
-                    self._bump_exported(stats)
-                elif mode == "obb" and shape_type == "rotation":
-                    label = shape["label"]
-                    points = shape["points"]
-                    if len(points) != 4:
-                        self._bump_skip(
-                            stats, f"rotation with {len(points)} points"
-                        )
-                        continue
-                    if obb_boundary_policy == "clamp":
-                        # Per-vertex, because YOLO OBB takes exactly four
-                        # points: a true polygon clip would change that count.
-                        points = [
-                            [
-                                min(max(point[0], 0), image_width),
-                                min(max(point[1], 0), image_height),
-                            ]
-                            for point in points
-                        ]
-                        if self.rotation_area(points) == 0:
-                            self._bump_skip(
-                                stats, "rotation collapsed after clamping"
-                            )
-                            continue
-                    elif any(
-                        point[0] < 0
-                        or point[0] > image_width
-                        or point[1] < 0
-                        or point[1] > image_height
-                        for point in points
-                    ):
-                        # Anything that is not an explicit clamp skips: a
-                        # typo must not silently export coordinates outside
-                        # [0, 1].
-                        self._bump_skip(
-                            stats, "rotation reaching outside the image"
-                        )
-                        continue
-                    points = list(chain.from_iterable(points))
-                    normalized_coords = [
-                        (
-                            points[i] / image_width
-                            if i % 2 == 0
-                            else points[i] / image_height
-                        )
-                        for i in range(8)
-                    ]
-                    x0, y0, x1, y1, x2, y2, x3, y3 = normalized_coords
-                    if label not in self.classes:
-                        self._bump_skip(
-                            stats, f"label not in classes: {label}"
-                        )
-                        continue
-                    class_index = self.classes.index(label)
-                    f.write(
-                        f"{class_index} {x0} {y0} {x1} {y1} {x2} {y2} {x3} {y3}\n"
-                    )
-                    is_empty_file = False
-                    self._bump_exported(stats)
-                elif mode == "pose":
-                    if shape_type not in ["rectangle", "point"]:
-                        self._bump_skip(
-                            stats,
-                            f"{shape_type} cannot be a pose keypoint",
-                        )
-                        continue
-                    if shape["group_id"] is None:
-                        logger.error(
-                            f"group_id is None for {shape} in {input_file}."
-                        )
-                        raise ValueError(
-                            f"group_id is None for {shape} in {input_file}."
-                        )
-                    label = shape["label"]
-                    points = self.clamp_points(
-                        shape["points"], image_width, image_height
-                    )
-                    group_id = int(shape["group_id"])
-                    if group_id not in pose_data:
-                        pose_data[group_id] = {
-                            "rectangle": [],
-                            "keypoints": {},
-                        }
-                    if shape_type == "rectangle":
-                        if len(points) == 2:
-                            points = rectangle_from_diagonal(points)
-                        pose_data[group_id]["rectangle"] = points
-                        pose_data[group_id]["box_label"] = label
-                    else:
-                        x, y = points[0]
-                        difficult = shape.get("difficult", False)
-                        visible = 1 if difficult is True else 2
-                        pose_data[group_id]["keypoints"][label] = [
-                            x,
-                            y,
-                            visible,
-                        ]
-                    is_empty_file = False
-                    self._bump_exported(stats)
-                else:
-                    # This mode cannot express the shape at all (a polygon in
-                    # an hbb export, a box in a segmentation export, ...).
+                if shape_type != "rectangle":
                     self._bump_skip(
-                        stats, f"{shape_type} is not part of a {mode} export"
+                        stats, f"{shape_type} is not part of a hbb export"
                     )
-            if mode == "pose":
-                classes = list(self.pose_classes.keys())
-                max_keypoints = max(
-                    [len(kpts) for kpts in self.pose_classes.values()]
+                    continue
+                label = shape["label"]
+                points = self.clamp_points(
+                    shape["points"], image_width, image_height
                 )
-                for data in pose_data.values():
-                    box_label = data["box_label"]
-                    box_index = classes.index(box_label)
-                    kpt_names = self.pose_classes[box_label]
-                    rectangle = data["rectangle"]
-                    x_center = (rectangle[0][0] + rectangle[2][0]) / (
-                        2 * image_width
+                if len(points) == 2:
+                    logger.warning(
+                        "UserWarning: Diagonal vertex mode is deprecated since v2.2.0.\n"
+                        "Please update your code to accommodate the new four-point mode."
                     )
-                    y_center = (rectangle[0][1] + rectangle[2][1]) / (
-                        2 * image_height
-                    )
-                    width = (
-                        abs(rectangle[2][0] - rectangle[0][0]) / image_width
-                    )
-                    height = (
-                        abs(rectangle[2][1] - rectangle[0][1]) / image_height
-                    )
-                    x = round(x_center, 6)
-                    y = round(y_center, 6)
-                    w = round(width, 6)
-                    h = round(height, 6)
-                    label = f"{box_index} {x} {y} {w} {h}"
-                    keypoints = data["keypoints"]
-                    for name in kpt_names:
-                        # 0: Invisible, 1: Occluded, 2: Visible
-                        if name not in keypoints:
-                            if self.has_visible:
-                                label += " 0 0 0"
-                            else:
-                                label += " 0 0"
-                        else:
-                            x, y, visible = keypoints[name]
-                            x = round((int(x) / image_width), 6)
-                            y = round((int(y) / image_height), 6)
-                            if self.has_visible:
-                                label += f" {x} {y} {visible}"
-                            else:
-                                label += f" {x} {y}"
+                    points = rectangle_from_diagonal(points)
+                if label not in self.classes:
+                    self._bump_skip(stats, f"label not in classes: {label}")
+                    continue
+                class_index = self.classes.index(label)
+                x_center = (points[0][0] + points[2][0]) / (2 * image_width)
+                y_center = (points[0][1] + points[2][1]) / (2 * image_height)
+                width = abs(points[2][0] - points[0][0]) / image_width
+                height = abs(points[2][1] - points[0][1]) / image_height
+                f.write(
+                    f"{class_index} {x_center:.6f} {y_center:.6f} "
+                    f"{width:.6f} {height:.6f}\n"
+                )
+                is_empty_file = False
+                self._bump_exported(stats)
+        return is_empty_file
 
-                    # Pad the label with zeros to meet
-                    # the yolov8-pose model's training data format requirements
-                    for _ in range(max_keypoints - len(kpt_names)):
+    def _yolo_export_seg(self, data, output_file, stats):
+        """``mode="seg"``: one line per polygon, every vertex normalised."""
+        image_width = data["imageWidth"]
+        image_height = data["imageHeight"]
+        image_size = np.array([[image_width, image_height]])
+        is_empty_file = True
+        with _atomic_text_writer(output_file) as f:
+            for shape in data["shapes"]:
+                shape_type = shape["shape_type"]
+                if shape_type != "polygon":
+                    self._bump_skip(
+                        stats, f"{shape_type} is not part of a seg export"
+                    )
+                    continue
+                label = shape["label"]
+                points = np.array(
+                    self.clamp_points(
+                        shape["points"], image_width, image_height
+                    )
+                )
+                if len(points) < 3:
+                    self._bump_skip(stats, "polygon with < 3 points")
+                    continue
+                if label not in self.classes:
+                    self._bump_skip(stats, f"label not in classes: {label}")
+                    continue
+                class_index = self.classes.index(label)
+                norm_points = points / image_size
+                f.write(
+                    f"{class_index} "
+                    + " ".join(
+                        [
+                            " ".join([str(cell[0]), str(cell[1])])
+                            for cell in norm_points.tolist()
+                        ]
+                    )
+                    + "\n"
+                )
+                is_empty_file = False
+                self._bump_exported(stats)
+        return is_empty_file
+
+    def _yolo_export_obb(self, data, output_file, obb_boundary_policy, stats):
+        """``mode="obb"``: four clamped points, flattened and normalised."""
+        image_width = data["imageWidth"]
+        image_height = data["imageHeight"]
+        is_empty_file = True
+        with _atomic_text_writer(output_file) as f:
+            for shape in data["shapes"]:
+                shape_type = shape["shape_type"]
+                if shape_type != "rotation":
+                    self._bump_skip(
+                        stats, f"{shape_type} is not part of a obb export"
+                    )
+                    continue
+                label = shape["label"]
+                points = shape["points"]
+                if len(points) != 4:
+                    self._bump_skip(
+                        stats, f"rotation with {len(points)} points"
+                    )
+                    continue
+                if obb_boundary_policy == "clamp":
+                    # Per-vertex, because YOLO OBB takes exactly four
+                    # points: a true polygon clip would change that count.
+                    points = [
+                        [
+                            min(max(point[0], 0), image_width),
+                            min(max(point[1], 0), image_height),
+                        ]
+                        for point in points
+                    ]
+                    if self.rotation_area(points) == 0:
+                        self._bump_skip(
+                            stats, "rotation collapsed after clamping"
+                        )
+                        continue
+                elif any(
+                    point[0] < 0
+                    or point[0] > image_width
+                    or point[1] < 0
+                    or point[1] > image_height
+                    for point in points
+                ):
+                    # Anything that is not an explicit clamp skips: a typo
+                    # must not silently export coordinates outside [0, 1].
+                    self._bump_skip(
+                        stats, "rotation reaching outside the image"
+                    )
+                    continue
+                points = list(chain.from_iterable(points))
+                normalized_coords = [
+                    (
+                        points[i] / image_width
+                        if i % 2 == 0
+                        else points[i] / image_height
+                    )
+                    for i in range(8)
+                ]
+                if label not in self.classes:
+                    self._bump_skip(stats, f"label not in classes: {label}")
+                    continue
+                class_index = self.classes.index(label)
+                x0, y0, x1, y1, x2, y2, x3, y3 = normalized_coords
+                f.write(
+                    f"{class_index} {x0} {y0} {x1} {y1} {x2} {y2} {x3} {y3}\n"
+                )
+                is_empty_file = False
+                self._bump_exported(stats)
+        return is_empty_file
+
+    def _yolo_export_pose(self, data, output_file, stats, source=""):
+        """``mode="pose"``: one line per group, padded to the longest skeleton."""
+        image_width = data["imageWidth"]
+        image_height = data["imageHeight"]
+        pose_data = {}
+        is_empty_file = True
+        with _atomic_text_writer(output_file) as f:
+            for shape in data["shapes"]:
+                shape_type = shape["shape_type"]
+                if shape_type not in ["rectangle", "point"]:
+                    self._bump_skip(
+                        stats,
+                        f"{shape_type} cannot be a pose keypoint",
+                    )
+                    continue
+                if shape["group_id"] is None:
+                    message = f"group_id is None for {shape} in {source}."
+                    logger.error(message)
+                    raise ValueError(message)
+                label = shape["label"]
+                points = self.clamp_points(
+                    shape["points"], image_width, image_height
+                )
+                group_id = int(shape["group_id"])
+                if group_id not in pose_data:
+                    pose_data[group_id] = {
+                        "rectangle": [],
+                        "keypoints": {},
+                    }
+                if shape_type == "rectangle":
+                    if len(points) == 2:
+                        points = rectangle_from_diagonal(points)
+                    pose_data[group_id]["rectangle"] = points
+                    pose_data[group_id]["box_label"] = label
+                else:
+                    x, y = points[0]
+                    difficult = shape.get("difficult", False)
+                    visible = 1 if difficult is True else 2
+                    pose_data[group_id]["keypoints"][label] = [
+                        x,
+                        y,
+                        visible,
+                    ]
+                is_empty_file = False
+                self._bump_exported(stats)
+
+            classes = list(self.pose_classes.keys())
+            max_keypoints = max(
+                [len(kpts) for kpts in self.pose_classes.values()]
+            )
+            for group in pose_data.values():
+                box_label = group["box_label"]
+                box_index = classes.index(box_label)
+                kpt_names = self.pose_classes[box_label]
+                rectangle = group["rectangle"]
+                x_center = (rectangle[0][0] + rectangle[2][0]) / (
+                    2 * image_width
+                )
+                y_center = (rectangle[0][1] + rectangle[2][1]) / (
+                    2 * image_height
+                )
+                width = abs(rectangle[2][0] - rectangle[0][0]) / image_width
+                height = abs(rectangle[2][1] - rectangle[0][1]) / image_height
+                x = round(x_center, 6)
+                y = round(y_center, 6)
+                w = round(width, 6)
+                h = round(height, 6)
+                label = f"{box_index} {x} {y} {w} {h}"
+                keypoints = group["keypoints"]
+                for name in kpt_names:
+                    # 0: Invisible, 1: Occluded, 2: Visible
+                    if name not in keypoints:
                         if self.has_visible:
                             label += " 0 0 0"
                         else:
                             label += " 0 0"
-                    f.write(f"{label}\n")
+                    else:
+                        x, y, visible = keypoints[name]
+                        x = round((int(x) / image_width), 6)
+                        y = round((int(y) / image_height), 6)
+                        if self.has_visible:
+                            label += f" {x} {y} {visible}"
+                        else:
+                            label += f" {x} {y}"
+
+                # Pad the label with zeros to meet the yolov8-pose model's
+                # training data format requirements.
+                for _ in range(max_keypoints - len(kpt_names)):
+                    if self.has_visible:
+                        label += " 0 0 0"
+                    else:
+                        label += " 0 0"
+                f.write(f"{label}\n")
         return is_empty_file
 
     @staticmethod
