@@ -70,7 +70,7 @@ jllabeling/views/labeling/widgets/searchable_model_dropdown.py          B006 1
 jllabeling/views/labeling/widgets/searchable_model_dropdown.py          C901 1
 jllabeling/views/labeling/widgets/searchable_model_dropdown.py          F405 12
 jllabeling/views/labeling/widgets/shape_dialog.py                       C901 1
-jllabeling/views/training/ultralytics_dialog.py                         C901 1
+jllabeling/views/training/train_config_io.py                            C901 1
 jllabeling/views/training/widgets/ultralytics_widgets/custom_widgets.py F405 1
 tests/test_auto_labeling/test_batch_skip.py                             E731 1
 tests/test_auto_training/test_dataset_overview.py                       B907 1

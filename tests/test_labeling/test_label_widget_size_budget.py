@@ -232,7 +232,14 @@ BUDGETS = {
     # refuses to close while export_manager.is_exporting, because
     # model.export() has no cancellation hook.  The guard is twelve lines
     # (check, warning, ignore, return) and keeps the live callbacks intact.
-    "jllabeling/views/training/ultralytics_dialog.py": 3297,
+    # Lowered 3297 -> 3133 on 2026-11-25: the config<->widgets bridge
+    # (get_current_config and _write_config_into_widgets, 164 lines) moved
+    # to views/training/train_config_io.py, where it is testable without a
+    # dialog; the two methods here are one-line delegations now.
+    "jllabeling/views/training/ultralytics_dialog.py": 3133,
+    # The extracted config bridge: 200 lines of pure widget<->dict mapping.
+    # Budgeted on arrival so it cannot grow into a second config god object.
+    "jllabeling/views/training/train_config_io.py": 200,
 }
 
 
