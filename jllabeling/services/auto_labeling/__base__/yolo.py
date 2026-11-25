@@ -109,8 +109,12 @@ class YOLO(Model):
         self.agnostic = self.config.get("agnostic", False)
         self.show_boxes = self.config.get("show_boxes", False)
         self.epsilon_factor = self.config.get("epsilon_factor", 0.005)
-        self.iou_thres = self.config.get("iou_threshold", DEFAULT_IOU_THRESHOLD)
-        self.conf_thres = self.config.get("conf_threshold", DEFAULT_CONF_THRESHOLD)
+        self.iou_thres = self.config.get(
+            "iou_threshold", DEFAULT_IOU_THRESHOLD
+        )
+        self.conf_thres = self.config.get(
+            "conf_threshold", DEFAULT_CONF_THRESHOLD
+        )
         self.max_det = self.config.get("max_det", 300)
         self.filter_classes = self.config.get("filter_classes", None)
         self.nc = len(self.classes)
