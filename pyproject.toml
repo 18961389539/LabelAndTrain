@@ -104,12 +104,15 @@ dev = [
     # moving formatter would reformat the tree on every upgrade.  Keep in
     # step with the black hook rev in .pre-commit-config.yaml.
     "black==26.5.1",
-    "flake8",
-    # .flake8 selects "B" and "C4", which only exist with these two installed.
-    # They must match the flake8 hook in .pre-commit-config.yaml and whatever
-    # CI installs, or scripts/flake8_baseline.txt counts different rules.
-    "flake8-bugbear",
-    "flake8-comprehensions",
+    # Pinned exactly, for the same reason as black: these two supply the
+    # "B" and "C4" codes .flake8 selects, and a newer release can add rules.
+    # The baseline freezes counts, so a floating install would turn a CI
+    # run red the day the plugin ships a new check -- which is exactly what
+    # happened on 2026-11-25.  Keep these three pins identical in
+    # .pre-commit-config.yaml and .github/workflows/ci.yml.
+    "flake8==7.3.0",
+    "flake8-bugbear==26.9.9",
+    "flake8-comprehensions==3.17.0",
     "pyinstaller",
     "pytest",
     "pytest-cov",

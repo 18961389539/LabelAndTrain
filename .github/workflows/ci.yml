@@ -24,10 +24,18 @@ jobs:
       # "C4", which only exist with these plugins installed, so a run without
       # them would silently check a smaller rule set and always pass.
       # tests/test_utils/test_lint_config_consistency.py is the guard.
+      #
+      # Pinned, not floating: the baseline freezes (path, code, count), so a
+      # plugin release that adds a rule would fail this job without anyone
+      # editing the tree (2026-11-25: flake8-bugbear gained checks and the
+      # lint job went red while every local gate stayed green).
       - name: Install flake8 and the plugins .flake8 selects
         run: |
           python -m pip install --upgrade pip
-          python -m pip install flake8 flake8-bugbear flake8-comprehensions
+          python -m pip install \
+            flake8==7.3.0 \
+            flake8-bugbear==26.9.9 \
+            flake8-comprehensions==3.17.0
 
       - name: Compare against scripts/flake8_baseline.txt
         run: python scripts/check_flake8_baseline.py

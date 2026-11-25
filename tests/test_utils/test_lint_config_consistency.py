@@ -136,6 +136,64 @@ def test_ci_lint_job_runs_the_same_command_as_precommit():
     assert "scripts/check_flake8_baseline.py" in lint_steps
 
 
+def _plugin_pins(entries):
+    """``name -> version`` for every plugin entry pinned with ``==``."""
+    pins = {}
+    for entry in entries:
+        name = re.split(r"[<>=!~;\[]", entry, maxsplit=1)[0].strip()
+        if name != "flake8" and name not in _required_plugins():
+            continue
+        assert "==" in entry, (
+            f"{name} must be pinned: the baseline freezes (path, code, "
+            f"count), so a floating release adds findings nobody edited"
+        )
+        pins[name] = entry.split("==", 1)[1].strip().strip("\"'")
+    return pins
+
+
+def test_flake8_plugins_are_pinned_to_one_version_everywhere():
+    """Same reasoning as black's pin, one layer down.
+
+    ``scripts/flake8_baseline.txt`` freezes counts per ``(path, code)``, so
+    the rule set has to be the same on every machine.  On 2026-11-25 a newer
+    ``flake8-bugbear`` on the CI runner added checks and turned the lint job
+    red while the local baseline passed -- the three declarations named the
+    plugins but let pip choose the version.
+    """
+    with open(PYPROJECT, "rb") as handle:
+        pyproject = tomllib.load(handle)
+    dev_pins = _plugin_pins(
+        pyproject["project"]["optional-dependencies"]["dev"]
+    )
+
+    with open(PRECOMMIT, encoding="utf-8") as handle:
+        precommit = yaml.safe_load(handle)
+    hooks = {
+        hook["id"]: hook
+        for repo in precommit["repos"]
+        for hook in repo.get("hooks", [])
+    }
+    hook_pins = _plugin_pins(
+        hooks["flake8-baseline"]["additional_dependencies"]
+    )
+
+    workflow = yaml.safe_load(_read(CI_WORKFLOW))
+    lint_runs = " ".join(
+        step.get("run", "") for step in workflow["jobs"]["lint"]["steps"]
+    )
+    ci_pins = _plugin_pins(
+        re.findall(r"flake8(?:-[a-z-]+)?==[0-9][^\s\\]*", lint_runs)
+    )
+
+    assert set(_required_plugins()) <= set(dev_pins)
+    assert (
+        dev_pins == hook_pins
+    ), f"pre-commit pins {hook_pins} while the dev extra pins {dev_pins}"
+    assert (
+        dev_pins == ci_pins
+    ), f"CI installs {ci_pins} while the dev extra pins {dev_pins}"
+
+
 def test_black_is_pinned_to_one_version_everywhere():
     """black's style moves between releases; one version must win in all three.
 

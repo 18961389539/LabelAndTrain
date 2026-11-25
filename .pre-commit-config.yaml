@@ -56,12 +56,14 @@ repos:
         name: flake8 baseline (no new findings)
         entry: python scripts/check_flake8_baseline.py --quiet
         language: python
-        # Same rule set as CI and the `dev` extra: .flake8 selects "B" and
-        # "C4", which only exist with these plugins present.
+        # Same rule set and the same versions as CI and the `dev` extra:
+        # .flake8 selects "B" and "C4", which only exist with these plugins
+        # present, and the baseline freezes counts, so a floating plugin
+        # release would change the rule set under it.
         additional_dependencies:
-            - flake8
-            - flake8-bugbear
-            - flake8-comprehensions
+            - flake8==7.3.0
+            - flake8-bugbear==26.9.9
+            - flake8-comprehensions==3.17.0
         pass_filenames: false
         always_run: true
 
