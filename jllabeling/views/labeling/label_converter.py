@@ -1567,279 +1567,318 @@ class LabelConverter:
         takes: an image with no label file, a shape type the mode cannot
         express and a label outside the class list all used to vanish
         from the output without a word.
-        """
-        coco_data = self.get_coco_data(mode)
 
+        Each mode owns one exporter below, because they collect different
+        things (a rectangle writes straight through, a polygon merges by
+        instance, a pose run gathers keypoints per group first) and
+        threading that state through one loop is what made this method 285
+        lines.
+        """
         if mode == "rectangle":
-            for i, class_name in enumerate(self.classes):
-                coco_data["categories"].append(
-                    {"id": i + 1, "name": class_name, "supercategory": ""}
-                )
+            coco_data = self._coco_export_rectangles(
+                image_list, input_path, stats
+            )
+            output_file = osp.join(output_path, "coco_detection.json")
         elif mode == "polygon":
-            class_name_to_id = {}
-            if self.classes[0] == "__ignore__":
-                self.classes = self.classes[1:]
-            if self.classes[0] != "_background_":
-                self.classes = ["_background_"] + self.classes
-            for i, class_name in enumerate(self.classes):
-                class_name_to_id[class_name] = i
-                coco_data["categories"].append(
-                    {"id": i, "name": class_name, "supercategory": None}
-                )
+            coco_data = self._coco_export_polygons(
+                image_list, input_path, stats
+            )
+            output_file = osp.join(
+                output_path, "coco_instance_segmentation.json"
+            )
         elif mode == "pose":
-            for i, (name, keypoints) in enumerate(self.pose_classes.items()):
-                coco_data["categories"].append(
-                    {
-                        "id": i + 1,
-                        "name": name,
-                        "supercategory": "",
-                        "keypoints": keypoints,
-                        "skeleton": [],
-                    }
-                )
+            coco_data = self._coco_export_pose(image_list, input_path, stats)
+            output_file = osp.join(output_path, "coco_keypoints.json")
+        else:
+            raise ValueError(f"unsupported COCO export mode: {mode}")
+
+        self.save_json(coco_data, output_file, indent=4)
+
+    def _coco_label_for(self, image_file, input_path, stats):
+        """The label dict for one image, or ``None`` when no file is found."""
+        image_name = osp.basename(image_file)
+        label_name = osp.splitext(image_name)[0] + ".json"
+        label_file = osp.join(input_path, label_name)
+        if not osp.exists(label_file):
+            label_file = osp.join(osp.dirname(image_file), label_name)
+            if not osp.exists(label_file):
+                if stats is not None:
+                    stats["missing_label_file"] = (
+                        stats.get("missing_label_file", 0) + 1
+                    )
+                return None
+        return self.read_json(label_file)
+
+    @staticmethod
+    def _coco_add_image(coco_data, image_file, data, image_id):
+        """Append one entry to the COCO ``images`` array."""
+        coco_data["images"].append(
+            {
+                "license": 0,
+                "url": None,
+                "file_name": osp.basename(image_file),
+                "height": data["imageHeight"],
+                "width": data["imageWidth"],
+                "date_captured": None,
+                "id": image_id,
+            }
+        )
+
+    def _coco_export_rectangles(self, image_list, input_path, stats):
+        """``mode="rectangle"``: one annotation per rectangle shape."""
+        coco_data = self.get_coco_data("rectangle")
+        for i, class_name in enumerate(self.classes):
+            coco_data["categories"].append(
+                {"id": i + 1, "name": class_name, "supercategory": ""}
+            )
 
         image_id = 0
         annotation_id = 0
-
         for image_file in image_list:
-            # Reset pose_data for each new image when in pose mode
-            if mode == "pose":
-                pose_data = {}
-            elif mode == "polygon":
-                polygon_data = {}
-
-            image_name = osp.basename(image_file)
-            label_name = osp.splitext(image_name)[0] + ".json"
-            label_file = osp.join(input_path, label_name)
-            if not osp.exists(label_file):
-                label_file = osp.join(osp.dirname(image_file), label_name)
-                if not osp.exists(label_file):
-                    if stats is not None:
-                        stats["missing_label_file"] = (
-                            stats.get("missing_label_file", 0) + 1
-                        )
-                    continue
-
-            data = self.read_json(label_file)
+            data = self._coco_label_for(image_file, input_path, stats)
+            if data is None:
+                continue
+            self._coco_add_image(coco_data, image_file, data, image_id)
             image_width = data["imageWidth"]
             image_height = data["imageHeight"]
-            coco_data["images"].append(
-                {
-                    "license": 0,
-                    "url": None,
-                    "file_name": image_name,
-                    "height": image_height,
-                    "width": image_width,
-                    "date_captured": None,
-                    "id": image_id,
-                }
-            )
             for shape in data["shapes"]:
                 label = shape["label"]
                 points = self.clamp_points(
                     shape["points"], image_width, image_height
                 )
+                difficult = shape.get("difficult", False)
+                shape_type = shape["shape_type"]
+                if shape_type != "rectangle":
+                    self._bump_skip(
+                        stats,
+                        f"{shape_type} is not part of a coco "
+                        f"rectangle export",
+                    )
+                    continue
+                if len(points) == 2:
+                    logger.warning(
+                        "UserWarning: Diagonal vertex mode is deprecated since v2.2.0.\n"
+                        "Please update your code to accommodate the new four-point mode."
+                    )
+                    points = rectangle_from_diagonal(points)
+                x_min = min(points[0][0], points[2][0])
+                y_min = min(points[0][1], points[2][1])
+                x_max = max(points[0][0], points[2][0])
+                y_max = max(points[0][1], points[2][1])
+                width = x_max - x_min
+                height = y_max - y_min
+                if label not in self.classes:
+                    self._bump_skip(stats, f"label not in classes: {label}")
+                    continue
+                class_id = self.classes.index(label)
+                annotation = {
+                    "id": annotation_id,
+                    "image_id": image_id,
+                    "category_id": class_id + 1,
+                    "bbox": [x_min, y_min, width, height],
+                    "area": width * height,
+                    "iscrowd": 0,
+                    "ignore": int(difficult),
+                    "segmentation": [],
+                }
+                coco_data["annotations"].append(annotation)
+                self._bump_exported(stats)
+                annotation_id += 1
+            image_id += 1
+        return coco_data
 
+    def _coco_export_polygons(self, image_list, input_path, stats):
+        """``mode="polygon"``: one annotation per polygon instance."""
+        coco_data = self.get_coco_data("polygon")
+        class_name_to_id = {}
+        if self.classes[0] == "__ignore__":
+            self.classes = self.classes[1:]
+        if self.classes[0] != "_background_":
+            self.classes = ["_background_"] + self.classes
+        for i, class_name in enumerate(self.classes):
+            class_name_to_id[class_name] = i
+            coco_data["categories"].append(
+                {"id": i, "name": class_name, "supercategory": None}
+            )
+
+        image_id = 0
+        annotation_id = 0
+        for image_file in image_list:
+            polygon_data = {}
+            data = self._coco_label_for(image_file, input_path, stats)
+            if data is None:
+                continue
+            self._coco_add_image(coco_data, image_file, data, image_id)
+            image_width = data["imageWidth"]
+            image_height = data["imageHeight"]
+            for shape in data["shapes"]:
+                label = shape["label"]
+                points = self.clamp_points(
+                    shape["points"], image_width, image_height
+                )
                 group_id = shape.get("group_id", None)
                 if group_id is not None:
                     group_id = int(group_id)
                 else:
                     group_id = hash(uuid.uuid1())
-
                 difficult = shape.get("difficult", False)
-                bbox, area = [], 0
                 shape_type = shape["shape_type"]
-
-                if mode == "pose":
-                    if shape_type in ["point", "rectangle"]:
-                        group_id = int(shape["group_id"])
-                        if group_id not in pose_data:
-                            pose_data[group_id] = {
-                                "rectangle": [],
-                                "keypoints": {},
-                            }
-                        if shape_type == "rectangle":
-                            if len(points) == 2:
-                                points = rectangle_from_diagonal(points)
-                            pose_data[group_id]["rectangle"] = points
-                            pose_data[group_id]["box_label"] = label
-                            pose_data[group_id]["difficult"] = difficult
-                        else:
-                            x, y = points[0]
-                            difficult = shape.get("difficult", False)
-                            visible = 1 if difficult is True else 2
-                            pose_data[group_id]["keypoints"][label] = [
-                                x,
-                                y,
-                                visible,
-                            ]
-
-                elif mode == "rectangle":
-                    if shape_type != "rectangle":
-                        self._bump_skip(
-                            stats,
-                            f"{shape_type} is not part of a coco "
-                            f"rectangle export",
-                        )
-                        continue
-
-                    if len(points) == 2:
-                        logger.warning(
-                            "UserWarning: Diagonal vertex mode is deprecated since v2.2.0.\n"
-                            "Please update your code to accommodate the new four-point mode."
-                        )
-                        points = rectangle_from_diagonal(points)
-
-                    x_min = min(points[0][0], points[2][0])
-                    y_min = min(points[0][1], points[2][1])
-                    x_max = max(points[0][0], points[2][0])
-                    y_max = max(points[0][1], points[2][1])
-
-                    width = x_max - x_min
-                    height = y_max - y_min
-                    bbox = [x_min, y_min, width, height]
-                    area = width * height
-                    if label not in self.classes:
-                        self._bump_skip(
-                            stats, f"label not in classes: {label}"
-                        )
-                        continue
-                    class_id = self.classes.index(label)
-
-                    annotation = {
-                        "id": annotation_id,
-                        "image_id": image_id,
-                        "category_id": class_id + 1,
-                        "bbox": bbox,
-                        "area": area,
-                        "iscrowd": 0,
-                        "ignore": int(difficult),
-                        "segmentation": [],
-                    }
-                    coco_data["annotations"].append(annotation)
-                    self._bump_exported(stats)
-                    annotation_id += 1
-
-                elif mode == "polygon":
-                    if shape_type != "polygon":
-                        self._bump_skip(
-                            stats,
-                            f"{shape_type} is not part of a coco "
-                            f"polygon export",
-                        )
-                        continue
-
-                    if label == "__ignore__" or label not in class_name_to_id:
-                        self._bump_skip(
-                            stats, f"label not in classes: {label}"
-                        )
-                        continue
-
-                    instance = (label, group_id)
-
-                    if instance not in polygon_data:
-                        polygon_data[instance] = {
-                            "label": label,
-                            "difficult": difficult,
-                            "segmentation": [],
-                        }
-                    flattened_points = [
-                        coord for point in points for coord in point
-                    ]
-                    polygon_data[instance]["segmentation"].append(
-                        flattened_points
+                if shape_type != "polygon":
+                    self._bump_skip(
+                        stats,
+                        f"{shape_type} is not part of a coco polygon export",
                     )
-
-            if mode == "pose":
-                for data in pose_data.values():
-                    points = data["rectangle"]
-                    box_label = data["box_label"]
-                    if box_label not in self.classes:
-                        self._bump_skip(
-                            stats, f"label not in classes: {box_label}"
-                        )
-                        continue
-                    class_id = self.classes.index(box_label)
-                    if len(points) == 2:
-                        logger.warning(
-                            "UserWarning: Diagonal vertex mode is deprecated since v2.2.0.\n"
-                            "Please update your code to accommodate the new four-point mode."
-                        )
-                        points = rectangle_from_diagonal(points)
-                    x_min = min(points[0][0], points[2][0])
-                    y_min = min(points[0][1], points[2][1])
-                    x_max = max(points[0][0], points[2][0])
-                    y_max = max(points[0][1], points[2][1])
-                    width = x_max - x_min
-                    height = y_max - y_min
-                    bbox = [x_min, y_min, width, height]
-                    area = width * height
-
-                    keypoints = []
-                    kpt_names = self.pose_classes[box_label]
-                    num_keypoints = 0
-                    for name in kpt_names:
-                        # 0: Invisible, 1: Occluded, 2: Visible
-                        if name not in data["keypoints"]:
-                            if self.has_visible:
-                                keypoints += [0, 0, 0]
-                            else:
-                                keypoints += [0, 0]
-                        else:
-                            num_keypoints += 1
-                            x, y, visible = data["keypoints"][name]
-                            x = int(x)
-                            y = int(y)
-                            if self.has_visible:
-                                keypoints += [x, y, visible]
-                            else:
-                                keypoints += [x, y]
-
-                    annotation = {
-                        "id": annotation_id,
-                        "image_id": image_id,
-                        "category_id": class_id + 1,
-                        "bbox": bbox,
-                        "area": area,
-                        "iscrowd": 0,
-                        "keypoints": keypoints,
-                        "num_keypoints": num_keypoints,
-                        "ignore": int(data.get("difficult", False)),
+                    continue
+                if label == "__ignore__" or label not in class_name_to_id:
+                    self._bump_skip(stats, f"label not in classes: {label}")
+                    continue
+                instance = (label, group_id)
+                if instance not in polygon_data:
+                    polygon_data[instance] = {
+                        "label": label,
+                        "difficult": difficult,
                         "segmentation": [],
                     }
-                    coco_data["annotations"].append(annotation)
-                    self._bump_exported(stats)
-                    annotation_id += 1
+                flattened_points = [
+                    coord for point in points for coord in point
+                ]
+                polygon_data[instance]["segmentation"].append(flattened_points)
 
-            elif mode == "polygon":
-                for _, data in polygon_data.items():
-                    area = self.calculate_polygon_area(data["segmentation"])
-                    bbox = self.get_min_enclosing_bbox(data["segmentation"])
-
-                    annotation = {
-                        "id": annotation_id,
-                        "image_id": image_id,
-                        "category_id": class_name_to_id[data["label"]],
-                        "segmentation": data["segmentation"],
-                        "area": area,
-                        "bbox": bbox,
-                        "iscrowd": 0,
-                        "ignore": int(data["difficult"]),
-                    }
-                    coco_data["annotations"].append(annotation)
-                    self._bump_exported(stats)
-
-                    annotation_id += 1
-
+            for _, instance_data in polygon_data.items():
+                area = self.calculate_polygon_area(
+                    instance_data["segmentation"]
+                )
+                bbox = self.get_min_enclosing_bbox(
+                    instance_data["segmentation"]
+                )
+                annotation = {
+                    "id": annotation_id,
+                    "image_id": image_id,
+                    "category_id": class_name_to_id[instance_data["label"]],
+                    "segmentation": instance_data["segmentation"],
+                    "area": area,
+                    "bbox": bbox,
+                    "iscrowd": 0,
+                    "ignore": int(instance_data["difficult"]),
+                }
+                coco_data["annotations"].append(annotation)
+                self._bump_exported(stats)
+                annotation_id += 1
             image_id += 1
+        return coco_data
 
-        if mode == "rectangle":
-            output_file = osp.join(output_path, "coco_detection.json")
-        elif mode == "polygon":
-            output_file = osp.join(
-                output_path, "coco_instance_segmentation.json"
+    def _coco_export_pose(self, image_list, input_path, stats):
+        """``mode="pose"``: one annotation per box, keypoints by group."""
+        coco_data = self.get_coco_data("pose")
+        for i, (name, keypoints) in enumerate(self.pose_classes.items()):
+            coco_data["categories"].append(
+                {
+                    "id": i + 1,
+                    "name": name,
+                    "supercategory": "",
+                    "keypoints": list(keypoints),
+                    "skeleton": [],
+                }
             )
-        elif mode == "pose":
-            output_file = osp.join(output_path, "coco_keypoints.json")
 
-        self.save_json(coco_data, output_file, indent=4)
+        image_id = 0
+        annotation_id = 0
+        for image_file in image_list:
+            pose_data = {}
+            data = self._coco_label_for(image_file, input_path, stats)
+            if data is None:
+                continue
+            self._coco_add_image(coco_data, image_file, data, image_id)
+            image_width = data["imageWidth"]
+            image_height = data["imageHeight"]
+            for shape in data["shapes"]:
+                label = shape["label"]
+                points = self.clamp_points(
+                    shape["points"], image_width, image_height
+                )
+                difficult = shape.get("difficult", False)
+                shape_type = shape["shape_type"]
+                if shape_type not in ("point", "rectangle"):
+                    # A polygon in a keypoint export has no representation;
+                    # the old branch simply fell through both arms.
+                    self._bump_skip(
+                        stats,
+                        f"{shape_type} is not part of a coco pose export",
+                    )
+                    continue
+                group_id = int(shape["group_id"])
+                if group_id not in pose_data:
+                    pose_data[group_id] = {
+                        "rectangle": [],
+                        "keypoints": {},
+                    }
+                if shape_type == "rectangle":
+                    if len(points) == 2:
+                        points = rectangle_from_diagonal(points)
+                    pose_data[group_id]["rectangle"] = points
+                    pose_data[group_id]["box_label"] = label
+                    pose_data[group_id]["difficult"] = difficult
+                else:
+                    x, y = points[0]
+                    visible = 1 if difficult is True else 2
+                    pose_data[group_id]["keypoints"][label] = [x, y, visible]
+
+            for _, group in pose_data.items():
+                points = group["rectangle"]
+                box_label = group["box_label"]
+                if box_label not in self.classes:
+                    self._bump_skip(
+                        stats, f"label not in classes: {box_label}"
+                    )
+                    continue
+                class_id = self.classes.index(box_label)
+                if len(points) == 2:
+                    logger.warning(
+                        "UserWarning: Diagonal vertex mode is deprecated since v2.2.0.\n"
+                        "Please update your code to accommodate the new four-point mode."
+                    )
+                    points = rectangle_from_diagonal(points)
+                x_min = min(points[0][0], points[2][0])
+                y_min = min(points[0][1], points[2][1])
+                x_max = max(points[0][0], points[2][0])
+                y_max = max(points[0][1], points[2][1])
+                width = x_max - x_min
+                height = y_max - y_min
+
+                keypoints = []
+                kpt_names = self.pose_classes[box_label]
+                num_keypoints = 0
+                for name in kpt_names:
+                    # 0: Invisible, 1: Occluded, 2: Visible
+                    if name not in group["keypoints"]:
+                        if self.has_visible:
+                            keypoints += [0, 0, 0]
+                        else:
+                            keypoints += [0, 0]
+                    else:
+                        num_keypoints += 1
+                        x, y, visible = group["keypoints"][name]
+                        x = int(x)
+                        y = int(y)
+                        if self.has_visible:
+                            keypoints += [x, y, visible]
+                        else:
+                            keypoints += [x, y]
+
+                annotation = {
+                    "id": annotation_id,
+                    "image_id": image_id,
+                    "category_id": class_id + 1,
+                    "bbox": [x_min, y_min, width, height],
+                    "area": width * height,
+                    "iscrowd": 0,
+                    "keypoints": keypoints,
+                    "num_keypoints": num_keypoints,
+                    "ignore": int(group.get("difficult", False)),
+                    "segmentation": [],
+                }
+                coco_data["annotations"].append(annotation)
+                self._bump_exported(stats)
+                annotation_id += 1
+            image_id += 1
+        return coco_data
