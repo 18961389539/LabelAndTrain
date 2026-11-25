@@ -1499,8 +1499,29 @@ class SettingsDialog(QtWidgets.QDialog):
         container_layout = QtWidgets.QHBoxLayout(container)
         container_layout.setContentsMargins(0, 0, 0, 0)
         container_layout.setSpacing(0)
+        middle_panel = self._build_shortcut_group_list(container)
+        center_line = QtWidgets.QFrame(container)
+        center_line.setFrameShape(QtWidgets.QFrame.Shape.VLine)
+        center_line.setFrameShadow(QtWidgets.QFrame.Shadow.Plain)
+        center_line.setStyleSheet(
+            f"background: {self._rgb('line')}; min-width: 1px; max-width: 1px; border: none;"
+        )
+        right_panel = self._build_shortcut_rows_panel(container)
+        container_layout.addWidget(middle_panel, 0)
+        container_layout.addWidget(center_line, 0)
+        container_layout.addWidget(right_panel, 1)
+        self.content_body_layout.addWidget(container, 1)
 
-        middle_panel = QtWidgets.QWidget(container)
+        self._shortcut_group_list.currentRowChanged.connect(
+            self._on_shortcut_group_changed
+        )
+        if self._shortcut_group_list.count() > 0:
+            self._shortcut_group_list.setCurrentRow(0)
+        self._refresh_shortcut_rows()
+
+    def _build_shortcut_group_list(self, parent):
+        """Middle column: one entry per shortcut group, with its count."""
+        middle_panel = QtWidgets.QWidget(parent)
         middle_panel.setFixedWidth(208)
         middle_panel.setStyleSheet(f"""
             background: {self._rgb('shortcut_middle_bg')};
@@ -1543,14 +1564,11 @@ class SettingsDialog(QtWidgets.QDialog):
 
         middle_layout.addWidget(self._shortcut_group_list, 1)
 
-        center_line = QtWidgets.QFrame(container)
-        center_line.setFrameShape(QtWidgets.QFrame.Shape.VLine)
-        center_line.setFrameShadow(QtWidgets.QFrame.Shadow.Plain)
-        center_line.setStyleSheet(
-            f"background: {self._rgb('line')}; min-width: 1px; max-width: 1px; border: none;"
-        )
+        return middle_panel
 
-        right_panel = QtWidgets.QWidget(container)
+    def _build_shortcut_rows_panel(self, parent):
+        """Right column: the scroll area the editor rows are rebuilt into."""
+        right_panel = QtWidgets.QWidget(parent)
         right_panel_layout = QtWidgets.QVBoxLayout(right_panel)
         right_panel_layout.setContentsMargins(0, 0, 0, 0)
         right_panel_layout.setSpacing(0)
@@ -1585,19 +1603,9 @@ class SettingsDialog(QtWidgets.QDialog):
         self._shortcut_rows_layout.setSpacing(0)
         self._shortcut_rows_scroll.setWidget(self._shortcut_rows_parent)
         top_panel_layout.addWidget(self._shortcut_rows_scroll, 1)
-
-        container_layout.addWidget(middle_panel, 0)
-        container_layout.addWidget(center_line, 0)
-        container_layout.addWidget(right_panel, 1)
-        self.content_body_layout.addWidget(container, 1)
         right_panel_layout.addWidget(top_panel, 1)
 
-        self._shortcut_group_list.currentRowChanged.connect(
-            self._on_shortcut_group_changed
-        )
-        if self._shortcut_group_list.count() > 0:
-            self._shortcut_group_list.setCurrentRow(0)
-        self._refresh_shortcut_rows()
+        return right_panel
 
     def _on_shortcut_group_changed(self, _row: int) -> None:
         self._refresh_shortcut_rows()

@@ -201,7 +201,11 @@ BUDGETS = {
     # The split itself adds the three signatures and their returns (+16),
     # so the file is frozen at its post-split size; the next batch should
     # lower it, and it may only go up for a documented feature.
-    "jllabeling/views/labeling/settings/dialog.py": 2207,
+    # Raised 2207 -> 2217 on 2026-11-25: the shortcut editor render split
+    # into two column builders (the same day's earlier 328-line _setup_ui
+    # split froze the file at 2207). Two signatures and their returns are
+    # the delta; the 110-line method is now 30 + 46 + 40.
+    "jllabeling/views/labeling/settings/dialog.py": 2217,
     # Newly budgeted on 2026-11-25, after ``AutoLabelingWidget.__init__``
     # (331 lines) split into four setup methods: ``__init__`` keeps the ui
     # load, the initial values and the teardown; the model manager (52),
