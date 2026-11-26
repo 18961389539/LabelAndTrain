@@ -15,6 +15,7 @@ name the module does not define fails here instead of on a user's machine.
 from types import SimpleNamespace
 
 from jllabeling.views.training import ultralytics_dialog as dialog_module
+from jllabeling.views.training.training_run_state import TrainingRunState
 from jllabeling.views.training.ultralytics_dialog import UltralyticsDialog
 
 CRASH_CODE = "Training process exited with code -1073741819"
@@ -118,7 +119,7 @@ class _Combo:
 def _stub_dialog(logs, tab_jumps, config_widgets=None):
     """A dialog stub carrying only what the error branch touches."""
     stub = SimpleNamespace(
-        training_status="training",
+        run_state=TrainingRunState(status="training"),
         start_training_button=_Button(),
         previous_button=_Button(),
         stop_training_button=_Button(),
@@ -172,7 +173,7 @@ def test_the_error_branch_can_build_its_message_box(monkeypatch):
     """The handler must not reach for a name the module does not define."""
     stub, _, tab_jumps = _run_error_event(monkeypatch)
 
-    assert stub.training_status == "error"
+    assert stub.run_state.status == "error"
     assert stub.start_training_button.visible is False
     assert stub.previous_button.visible is True
     assert stub.stop_training_button.visible is False

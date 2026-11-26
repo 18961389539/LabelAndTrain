@@ -53,6 +53,7 @@ from jllabeling.views.training.dataset_preparation import (
 from jllabeling.views.training.eta_format import format_remaining
 from jllabeling.views.training import export_autolabel
 from jllabeling.views.training import train_config_io
+from jllabeling.views.training.training_run_state import TrainingRunState
 from jllabeling.views.training import train_settings_form
 from jllabeling.views.training.widgets.ultralytics_widgets import (
     CustomCheckBox,
@@ -348,15 +349,11 @@ class UltralyticsDialog(DatasetPreparationMixin, QDialog):
         self.progress_timer.timeout.connect(self.update_training_progress)
         self.image_timer = QTimer()
         self.image_timer.timeout.connect(self.update_training_images)
-        self.current_project_path = None
-        self.training_status = "idle"  # idle, training, completed, error
-        self.current_epochs = 0
+        # Everything one run carries (status, epochs, checkpoint, args)
+        # lives in this object; see the properties below for the names the
+        # rest of the app still reads on the dialog.
+        self.run_state = TrainingRunState()
         self._pending_autolabel_after_export = False
-        # Set when the user picks "resume": the run continues from its own
-        # last.pt, so the dataset is rebuilt but the tuning comes from the
-        # checkpoint instead of the config form.
-        self._resume_from = None
-        self._resume_info = None
         # AMP is forced off while the device is CPU; this remembers whether it
         # was on, so switching back to a GPU device does not silently lose it.
         self._amp_before_cpu = False
@@ -392,6 +389,35 @@ class UltralyticsDialog(DatasetPreparationMixin, QDialog):
         self.refresh_dataset_summary()
         self.update_labeled_images_hint()
         self.refresh_wizard_state()
+
+    # -- Run state ---------------------------------------------------------
+    # TrainingRunState holds everything one run carries. These three names
+    # are the ones other modules still read on the dialog: the export
+    # helpers ask for ``current_project_path``, and the dataset-preparation
+    # mixin reads/writes ``training_status`` and ``_dataset_report``.
+    @property
+    def current_project_path(self):
+        return self.run_state.project_path
+
+    @current_project_path.setter
+    def current_project_path(self, value):
+        self.run_state.project_path = value
+
+    @property
+    def training_status(self):
+        return self.run_state.status
+
+    @training_status.setter
+    def training_status(self, value):
+        self.run_state.status = value
+
+    @property
+    def _dataset_report(self):
+        return self.run_state.dataset_report
+
+    @_dataset_report.setter
+    def _dataset_report(self, value):
+        self.run_state.dataset_report = value
 
     def init_ui(self):
         self.data_tab = QWidget()
@@ -436,18 +462,18 @@ class UltralyticsDialog(DatasetPreparationMixin, QDialog):
         text = self.log_display.toPlainText()
         if not text.strip():
             return None
-        if not self.current_project_path or not os.path.exists(
-            self.current_project_path
+        if not self.run_state.project_path or not os.path.exists(
+            self.run_state.project_path
         ):
             return None
         if not force and text == self._last_saved_log_text:
             return None
 
         try:
-            log_dir_path = os.path.join(self.current_project_path, "logs")
+            log_dir_path = os.path.join(self.run_state.project_path, "logs")
             os.makedirs(log_dir_path, exist_ok=True)
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-            stem = f"training_log_{self.training_status}_{timestamp}"
+            stem = f"training_log_{self.run_state.status}_{timestamp}"
             log_file_path = os.path.join(log_dir_path, f"{stem}.txt")
             # Second-granularity names collide when two terminal states land
             # together; the earlier snapshot is worth keeping.
@@ -485,7 +511,7 @@ class UltralyticsDialog(DatasetPreparationMixin, QDialog):
             event.ignore()
             return
 
-        if self.training_status == "training":
+        if self.run_state.status == "training":
             QMessageBox.warning(
                 self,
                 self.tr("Training in Progress"),
@@ -496,7 +522,7 @@ class UltralyticsDialog(DatasetPreparationMixin, QDialog):
             event.ignore()
             return
 
-        if self.training_status in ["completed", "error", "stop"]:
+        if self.run_state.status in ["completed", "error", "stop"]:
             self.save_training_logs_to_file()
 
         # Detach callbacks held by the module-level singletons so they do not
@@ -700,7 +726,7 @@ class UltralyticsDialog(DatasetPreparationMixin, QDialog):
             "completed": self.tr("Training completed"),
             "error": self.tr("Training Failed"),
         }.get(
-            self.training_status, self.tr("Start training and watch the log")
+            self.run_state.status, self.tr("Start training and watch the log")
         )
         self.step_bar.set_state(current, [data_hint, config_hint, train_hint])
 
@@ -1625,8 +1651,8 @@ class UltralyticsDialog(DatasetPreparationMixin, QDialog):
 
     def _adopt_existing_model(self, project_dir, best_pt, config):
         """Show the finished run's weights on the Train tab for export."""
-        self.current_project_path = project_dir
-        self.training_status = "completed"
+        self.run_state.project_path = project_dir
+        self.run_state.status = "completed"
         save_config(config)
         self.go_to_specific_tab(2)
         self.update_training_status_display()
@@ -1725,7 +1751,7 @@ class UltralyticsDialog(DatasetPreparationMixin, QDialog):
         True. False means a dialog said to stop (cancel, export-only,
         validation failure).
         """
-        if self.training_status in ("training", "preparing"):
+        if self.run_state.status in ("training", "preparing"):
             QMessageBox.warning(
                 self,
                 self.tr("Training in Progress"),
@@ -1735,8 +1761,8 @@ class UltralyticsDialog(DatasetPreparationMixin, QDialog):
             )
             return False
 
-        self._resume_from = None
-        self._resume_info = None
+        self.run_state.resume_from = None
+        self.run_state.resume_info = None
 
         config = self.get_current_config()
         is_valid, error_message = validate_basic_config(
@@ -1762,8 +1788,8 @@ class UltralyticsDialog(DatasetPreparationMixin, QDialog):
             if action == "resume":
                 # Continuing the run: the dataset is rebuilt below, but the
                 # tuning comes from the checkpoint, not the form.
-                self._resume_from = last_pt
-                self._resume_info = resume_info
+                self.run_state.resume_from = last_pt
+                self.run_state.resume_info = resume_info
             elif not self._confirm_overwrite(
                 project_dir, config["basic"]["project"]
             ):
@@ -1795,7 +1821,7 @@ class UltralyticsDialog(DatasetPreparationMixin, QDialog):
                 )
                 return False
 
-        if self.training_status in ["completed", "error"]:
+        if self.run_state.status in ["completed", "error"]:
             reply = QMessageBox.question(
                 self,
                 self.tr("Reset Training"),
@@ -1807,14 +1833,14 @@ class UltralyticsDialog(DatasetPreparationMixin, QDialog):
             )
             if reply == QMessageBox.StandardButton.Yes:
                 self.reset_train_tab()
-        elif self.training_status == "stop":
+        elif self.run_state.status == "stop":
             self.start_training_button.setVisible(True)
-            self.training_status = "idle"
+            self.run_state.status = "idle"
 
-        if self._resume_from:
+        if self.run_state.resume_from:
             self.append_training_log(
                 self.tr("Continuing from checkpoint: %1").replace(
-                    "%1", self._resume_from
+                    "%1", self.run_state.resume_from
                 )
             )
             self.append_training_log(
@@ -1833,9 +1859,11 @@ class UltralyticsDialog(DatasetPreparationMixin, QDialog):
 
     def _on_resume_training_clicked(self):
         """Train tab: continue a stopped run straight from its last.pt."""
-        if not self.current_project_path:
+        if not self.run_state.project_path:
             return
-        last_pt = os.path.join(self.current_project_path, "weights", "last.pt")
+        last_pt = os.path.join(
+            self.run_state.project_path, "weights", "last.pt"
+        )
         info = self._read_resume_checkpoint(last_pt)
         if info is None:
             QMessageBox.information(
@@ -1846,9 +1874,9 @@ class UltralyticsDialog(DatasetPreparationMixin, QDialog):
                 ),
             )
             return
-        self._resume_from = last_pt
-        self._resume_info = info
-        self.training_status = "idle"
+        self.run_state.resume_from = last_pt
+        self.run_state.resume_info = info
+        self.run_state.status = "idle"
         if hasattr(self, "resume_training_button"):
             self.resume_training_button.setVisible(False)
         self.start_training_button.setVisible(True)
@@ -1979,18 +2007,18 @@ class UltralyticsDialog(DatasetPreparationMixin, QDialog):
 
     # Train tab
     def update_training_status_display(self):
-        color = TRAINING_STATUS_COLORS.get(self.training_status, "#6c757d")
+        color = TRAINING_STATUS_COLORS.get(self.run_state.status, "#6c757d")
         text = self.tr(
-            TRAINING_STATUS_TEXTS.get(self.training_status, "Unknown status")
+            TRAINING_STATUS_TEXTS.get(self.run_state.status, "Unknown status")
         )
         self.status_label.setText(text)
         self.status_label.setStyleSheet(get_status_label_style(color))
 
     def update_training_progress(self):
-        if not self.current_project_path:
+        if not self.run_state.project_path:
             return
 
-        results_file = os.path.join(self.current_project_path, "results.csv")
+        results_file = os.path.join(self.run_state.project_path, "results.csv")
         # Read the ``epoch`` column, not the row count: a resumed run repeats
         # one row, and this number has to agree with run_meta.json and with the
         # metrics label sitting right beside the progress bar.
@@ -1998,14 +2026,20 @@ class UltralyticsDialog(DatasetPreparationMixin, QDialog):
         epoch_rows = metrics[2] if metrics else 0
 
         if epoch_rows > 0:
-            self.current_epochs = epoch_rows
+            self.run_state.current_epochs = epoch_rows
             progress = min(
                 100,
-                int((self.current_epochs / self.total_epochs) * 100),
+                int(
+                    (
+                        self.run_state.current_epochs
+                        / self.run_state.total_epochs
+                    )
+                    * 100
+                ),
             )
             self.progress_bar.setValue(progress)
             self.progress_bar.setFormat(
-                f"{self.current_epochs}/{self.total_epochs}"
+                f"{self.run_state.current_epochs}/{self.run_state.total_epochs}"
             )
         else:
             # Before the first epoch row is written, ultralytics is still
@@ -2026,13 +2060,13 @@ class UltralyticsDialog(DatasetPreparationMixin, QDialog):
     def _update_metrics_label(self):
         if not hasattr(self, "metrics_label"):
             return
-        if not self.current_project_path:
+        if not self.run_state.project_path:
             self.metrics_label.setText("")
             return
-        results_file = os.path.join(self.current_project_path, "results.csv")
+        results_file = os.path.join(self.run_state.project_path, "results.csv")
         parsed = parse_training_metrics(results_file)
         if not parsed:
-            if self.training_status == "training":
+            if self.run_state.status == "training":
                 self.metrics_label.setText(
                     self.tr("Training; waiting for the first epoch metrics…")
                 )
@@ -2058,9 +2092,11 @@ class UltralyticsDialog(DatasetPreparationMixin, QDialog):
         Deliberately silent once the run is over (nothing is left) and before
         two epochs are known (nothing to average yet).
         """
-        if self.training_status != "training":
+        if self.run_state.status != "training":
             return ""
-        remaining = estimate_remaining_seconds(results_file, self.total_epochs)
+        remaining = estimate_remaining_seconds(
+            results_file, self.run_state.total_epochs
+        )
         if remaining is None:
             return ""
         return format_remaining(remaining, self.tr)
@@ -2072,10 +2108,10 @@ class UltralyticsDialog(DatasetPreparationMixin, QDialog):
         ultralytics read, and the datasets this tool builds keep their
         training split in ``<dataset>/images/train``.
         """
-        if not self.current_project_path:
+        if not self.run_state.project_path:
             return []
 
-        args_file = os.path.join(self.current_project_path, "args.yaml")
+        args_file = os.path.join(self.run_state.project_path, "args.yaml")
         try:
             import yaml
 
@@ -2103,14 +2139,14 @@ class UltralyticsDialog(DatasetPreparationMixin, QDialog):
         return images[:limit]
 
     def update_training_images(self):
-        if not self.current_project_path:
+        if not self.run_state.project_path:
             return
 
         def find_images_by_pattern(patterns, max_count=3):
             found_files = []
             for pattern in patterns:
                 matches = glob.glob(
-                    os.path.join(self.current_project_path, pattern)
+                    os.path.join(self.run_state.project_path, pattern)
                 )
                 matches.sort()
                 found_files.extend(matches)
@@ -2203,15 +2239,15 @@ class UltralyticsDialog(DatasetPreparationMixin, QDialog):
 
     def on_training_event(self, event_type, data):
         if event_type == "training_started":
-            self.training_status = "training"
-            self.total_epochs = data["total_epochs"]
-            self.current_epochs = 0
+            self.run_state.status = "training"
+            self.run_state.total_epochs = data["total_epochs"]
+            self.run_state.current_epochs = 0
             self._training_started_at = time.time()
             self.dataset_progress_timer.stop()
             self._set_preparation_controls(False)
             self.progress_bar.setRange(0, 100)
             self.progress_bar.setValue(0)
-            self.progress_bar.setFormat(f"0/{self.total_epochs}")
+            self.progress_bar.setFormat(f"0/{self.run_state.total_epochs}")
             self.update_training_status_display()
             self.start_training_button.setVisible(False)
             self.stop_training_button.setVisible(True)
@@ -2226,7 +2262,7 @@ class UltralyticsDialog(DatasetPreparationMixin, QDialog):
             self.image_timer.start(5000)
             self.append_training_log(self.tr("Training is about to start..."))
         elif event_type == "training_completed":
-            self.training_status = "completed"
+            self.run_state.status = "completed"
             self.write_run_metadata()
             self._offer_dataset_cleanup()
             self.update_training_status_display()
@@ -2250,7 +2286,7 @@ class UltralyticsDialog(DatasetPreparationMixin, QDialog):
         elif event_type == "training_error":
             self._handle_training_error(data)
         elif event_type == "training_stopped":
-            self.training_status = "stop"
+            self.run_state.status = "stop"
             # A stopped run is a real run: it has a results.csv, a resumable
             # last.pt and arguments worth keeping. Writing the record here is
             # what lets the history tell it apart from a finished one instead
@@ -2268,7 +2304,7 @@ class UltralyticsDialog(DatasetPreparationMixin, QDialog):
             # (The click validates the checkpoint; a plain stat keeps this
             # event handler free of a torch checkpoint load.)
             last_pt = os.path.join(
-                self.current_project_path or "", "weights", "last.pt"
+                self.run_state.project_path or "", "weights", "last.pt"
             )
             if hasattr(self, "resume_training_button"):
                 self.resume_training_button.setVisible(os.path.isfile(last_pt))
@@ -2288,7 +2324,7 @@ class UltralyticsDialog(DatasetPreparationMixin, QDialog):
         Kept out of ``on_training_event`` so that dispatcher stays a readable
         switch over the event types.
         """
-        self.training_status = "error"
+        self.run_state.status = "error"
         self.update_training_status_display()
         self.start_training_button.setVisible(False)
         self.previous_button.setVisible(True)
@@ -2583,7 +2619,7 @@ class UltralyticsDialog(DatasetPreparationMixin, QDialog):
 
     def _collect_preview_images(self):
         """Every training image this run has written, in reading order."""
-        if not self.current_project_path:
+        if not self.run_state.project_path:
             return []
         patterns = [
             "train_batch*.jpg",
@@ -2597,7 +2633,7 @@ class UltralyticsDialog(DatasetPreparationMixin, QDialog):
         found = []
         for pattern in patterns:
             matches = glob.glob(
-                os.path.join(self.current_project_path, pattern)
+                os.path.join(self.run_state.project_path, pattern)
             )
             found.extend(sorted(matches))
         return found
@@ -2606,16 +2642,16 @@ class UltralyticsDialog(DatasetPreparationMixin, QDialog):
         open_path(image_path)
 
     def open_training_directory(self):
-        if self.current_project_path and os.path.exists(
-            self.current_project_path
+        if self.run_state.project_path and os.path.exists(
+            self.run_state.project_path
         ):
-            if open_path(self.current_project_path):
+            if open_path(self.run_state.project_path):
                 return
             QMessageBox.information(
                 self,
                 self.tr("Info"),
                 self.tr("Could not open this directory:\n%1").replace(
-                    "%1", self.current_project_path
+                    "%1", self.run_state.project_path
                 ),
             )
         else:
@@ -2689,7 +2725,7 @@ class UltralyticsDialog(DatasetPreparationMixin, QDialog):
                         seed_source=seed_source,
                         report=report,
                     )
-                    self._dataset_report = report
+                    self.run_state.dataset_report = report
                     logger.info(
                         f"Successfully created YOLO dataset at {temp_dir}"
                     )
@@ -2720,26 +2756,26 @@ class UltralyticsDialog(DatasetPreparationMixin, QDialog):
             # the manifest instead of re-randomising on every other axis.
             manifest = load_dataset_manifest(data_path)
 
-            if self._resume_from:
+            if self.run_state.resume_from:
                 # Resume: ultralytics restores project/name/epochs and every
                 # hyperparameter from the checkpoint, then allows only a few
                 # overrides through (device, imgsz, batch, ...). Passing just
                 # those keeps the log free of "Resume ignores [...]" warnings.
                 train_args = {
-                    "model": self._resume_from,
+                    "model": self.run_state.resume_from,
                     "resume": True,
                     "data": data_path,
                     "device": device_value,
                 }
-                info = self._resume_info or {}
+                info = self.run_state.resume_info or {}
                 if info.get("epochs"):
                     # Same value the checkpoint records, so it is not reported
                     # as an ignored override; it also keeps the progress bar
                     # honest about the total.
                     train_args["epochs"] = info["epochs"]
-                self.total_epochs = train_args.get("epochs", 100)
-                self._last_train_args = dict(train_args)
-                self._last_dataset_manifest = manifest
+                self.run_state.total_epochs = train_args.get("epochs", 100)
+                self.run_state.last_train_args = dict(train_args)
+                self.run_state.last_dataset_manifest = manifest
                 cmd_parts = ["yolo", self.selected_task_type.lower(), "train"]
                 for key, value in train_args.items():
                     cmd_parts.append(f"{key}={value}")
@@ -2776,12 +2812,12 @@ class UltralyticsDialog(DatasetPreparationMixin, QDialog):
                     train_args[key] = value
             if manifest and manifest.get("seed") is not None:
                 train_args.setdefault("seed", manifest["seed"])
-            self.total_epochs = train_args.get("epochs", 100)
+            self.run_state.total_epochs = train_args.get("epochs", 100)
             # Kept for run_meta.json: the payload file the worker reads is
             # deleted when the process ends, so this is the only record of the
             # arguments this run was launched with.
-            self._last_train_args = dict(train_args)
-            self._last_dataset_manifest = manifest
+            self.run_state.last_train_args = dict(train_args)
+            self.run_state.last_dataset_manifest = manifest
 
             # Log the training command
             cmd_parts = ["yolo", self.selected_task_type.lower(), "train"]
@@ -2835,7 +2871,7 @@ class UltralyticsDialog(DatasetPreparationMixin, QDialog):
         config = self.get_current_config()
         project_path = config["basic"]["project"]
         name = config["basic"]["name"]
-        self.current_project_path = os.path.join(project_path, name)
+        self.run_state.project_path = os.path.join(project_path, name)
 
         # Both entry points land here (the Config tab commits first and calls
         # this, the Train tab calls it directly), so the filter check sits
@@ -3098,9 +3134,9 @@ class UltralyticsDialog(DatasetPreparationMixin, QDialog):
         )
 
     def reset_train_tab(self):
-        self.training_status = "idle"
-        self.current_project_path = None
-        self.current_epochs = 0
+        self.run_state.status = "idle"
+        self.run_state.project_path = None
+        self.run_state.current_epochs = 0
         self._training_started_at = None
         self.dataset_progress_timer.stop()
         self.progress_bar.setRange(0, 100)

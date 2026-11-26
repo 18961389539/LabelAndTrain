@@ -23,6 +23,9 @@ from jllabeling.views.training.image_preview_dialog import (  # noqa: E402
 from jllabeling.views.training.ultralytics_dialog import (  # noqa: E402
     UltralyticsDialog,
 )
+from jllabeling.views.training.training_run_state import (  # noqa: E402
+    TrainingRunState,
+)
 
 
 class _FakeLogDisplay:
@@ -43,8 +46,9 @@ def _log_stub(tmp_path, text="epoch 1 done"):
     run_dir.mkdir(parents=True)
     stub = SimpleNamespace(
         log_display=_FakeLogDisplay(text),
-        current_project_path=str(run_dir),
-        training_status="completed",
+        run_state=TrainingRunState(
+            project_path=str(run_dir), status="completed"
+        ),
         _last_saved_log_text=None,
     )
     stub.save_training_logs_to_file = (
@@ -101,7 +105,7 @@ def test_an_empty_or_missing_run_writes_nothing(tmp_path):
     assert _saved_logs(run_dir) == []
 
     stub.log_display.set_text("something")
-    stub.current_project_path = str(tmp_path / "gone")
+    stub.run_state.project_path = str(tmp_path / "gone")
     assert stub.save_training_logs_to_file() is None
 
 

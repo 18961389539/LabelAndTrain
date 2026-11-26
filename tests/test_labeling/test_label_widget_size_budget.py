@@ -240,7 +240,20 @@ BUDGETS = {
     # (get_current_config and _write_config_into_widgets, 164 lines) moved
     # to views/training/train_config_io.py, where it is testable without a
     # dialog; the two methods here are one-line delegations now.
-    "jllabeling/views/training/ultralytics_dialog.py": 3133,
+    # Raised 3133 -> 3169 on 2026-11-26: the run state (status, epochs,
+    # checkpoint, last args, dataset report) moved into TrainingRunState and
+    # the nine fields became one object.  The 36 lines are the three
+    # compatibility properties the export helpers and the dataset mixin
+    # still read, plus their setters -- the state itself left the file.
+    "jllabeling/views/training/ultralytics_dialog.py": 3169,
+    # The run state object: one dataclass, no Qt.  Budgeted on arrival so a
+    # second state bag cannot grow here.
+    "jllabeling/views/training/training_run_state.py": 56,
+    # Newly budgeted on 2026-11-26 (repo audit): the last file above 1900
+    # lines without a ratchet.  It just lost its two big exports and its
+    # import dispatcher to the per-mode splits, and it no longer carries a
+    # C901 at all, so this is the size it should stay at or below.
+    "jllabeling/views/labeling/label_converter.py": 1960,
     # The extracted config bridge: 200 lines of pure widget<->dict mapping.
     # Budgeted on arrival so it cannot grow into a second config god object.
     "jllabeling/views/training/train_config_io.py": 200,
