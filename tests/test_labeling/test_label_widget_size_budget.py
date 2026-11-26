@@ -249,7 +249,11 @@ BUDGETS = {
     # 30-line flow over five decision helpers (_can_start_training,
     # _resolve_target_directory, _validate_task_inputs, _reset_finished_run,
     # _log_resume_intent). The delta is their signatures and docstrings.
-    "jllabeling/views/training/ultralytics_dialog.py": 3200,
+    # Raised 3200 -> 3212 on 2026-11-26: get_training_args (137 lines) split
+    # into a 31-line flow over _prepare_dataset (32), _resolve_device (18),
+    # _resume_train_args (23), _fresh_train_args (34) and
+    # _log_train_command (6); the delta is those signatures.
+    "jllabeling/views/training/ultralytics_dialog.py": 3212,
     # The run state object: one dataclass, no Qt.  Budgeted on arrival so a
     # second state bag cannot grow here.
     "jllabeling/views/training/training_run_state.py": 56,

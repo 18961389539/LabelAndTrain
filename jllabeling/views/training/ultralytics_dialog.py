@@ -2729,142 +2729,154 @@ class UltralyticsDialog(DatasetPreparationMixin, QDialog):
         return seed, "project" if created else "pinned"
 
     def get_training_args(self, config, data_path=None):
+        """The kwargs this run hands to Ultralytics, plus its dataset path.
+
+        Four stages with very different failure modes live below: building
+        the dataset (slow, writes files), resolving the device string (reads
+        the GPU checkboxes), and the two argument shapes -- a resume passes
+        almost nothing because the checkpoint carries the tuning, a fresh run
+        merges eight config sections. Keeping them in one body is what made
+        this method 137 lines.
+        """
         try:
             if data_path is None:
-                if self.selected_task_type == "Classify" and os.path.isdir(
-                    config["basic"]["data"]
-                ):
-                    data_path = config["basic"]["data"]
-                    self.append_training_log(
-                        f"Using existing dataset: {data_path}"
-                    )
-                else:
-                    # Synchronous fallback (the train-tab entry point runs
-                    # this step on a background thread and passes data_path).
-                    seed, seed_source = self._project_split_seed()
-                    report = {}
-                    temp_dir = create_yolo_dataset(
-                        self.image_list,
-                        self.selected_task_type,
-                        config["basic"]["dataset_ratio"],
-                        config["basic"]["data"],
-                        self.output_dir,
-                        config["basic"].get("pose_config"),
-                        config["checkpoint"].get("skip_empty_files", False),
-                        config["checkpoint"].get("only_checked_files", False),
-                        seed=seed,
-                        seed_source=seed_source,
-                        report=report,
-                    )
-                    self.run_state.dataset_report = report
-                    logger.info(
-                        f"Successfully created YOLO dataset at {temp_dir}"
-                    )
-                    self.append_training_log(f"Created dataset: {temp_dir}")
-                    if self.selected_task_type == "Classify":
-                        data_path = temp_dir
-                    else:
-                        data_path = os.path.join(temp_dir, "data.yaml")
-
-            device_value = config["basic"]["device"]
-            if device_value == "cuda" and hasattr(self, "device_checkboxes"):
-                selected_gpus = []
-                if hasattr(self, "_cuda_layout") and self._cuda_layout:
-                    for i in range(self._cuda_layout.count()):
-                        widget = self._cuda_layout.itemAt(i).widget()
-                        if (
-                            widget
-                            and hasattr(widget, "isChecked")
-                            and widget.isChecked()
-                        ):
-                            gpu_text = widget.text()
-                            gpu_id = gpu_text.split()[-1]
-                            selected_gpus.append(int(gpu_id))
-                device_value = selected_gpus if selected_gpus else "cpu"
-
+                data_path = self._prepare_dataset(config)
+            device_value = self._resolve_device(config)
             # The split was already drawn with this seed while building the
             # dataset; handing it to Ultralytics keeps the whole run tied to
             # the manifest instead of re-randomising on every other axis.
             manifest = load_dataset_manifest(data_path)
 
             if self.run_state.resume_from:
-                # Resume: ultralytics restores project/name/epochs and every
-                # hyperparameter from the checkpoint, then allows only a few
-                # overrides through (device, imgsz, batch, ...). Passing just
-                # those keeps the log free of "Resume ignores [...]" warnings.
-                train_args = {
-                    "model": self.run_state.resume_from,
-                    "resume": True,
-                    "data": data_path,
-                    "device": device_value,
-                }
-                info = self.run_state.resume_info or {}
-                if info.get("epochs"):
-                    # Same value the checkpoint records, so it is not reported
-                    # as an ignored override; it also keeps the progress bar
-                    # honest about the total.
-                    train_args["epochs"] = info["epochs"]
-                self.run_state.total_epochs = train_args.get("epochs", 100)
-                self.run_state.last_train_args = dict(train_args)
-                self.run_state.last_dataset_manifest = manifest
-                cmd_parts = ["yolo", self.selected_task_type.lower(), "train"]
-                for key, value in train_args.items():
-                    cmd_parts.append(f"{key}={value}")
-                self.append_training_log(
-                    f"Training command: {' '.join(cmd_parts)}"
+                return self._resume_train_args(
+                    data_path, device_value, manifest
                 )
-                return train_args
-
-            train_args = {
-                "data": data_path,
-                "model": config["basic"]["model"],
-                "project": config["basic"]["project"],
-                "name": config["basic"]["name"],
-                "device": device_value,
-            }
-
-            # Add advanced parameters
-            advanced_params = {}
-            for section in [
-                "train",
-                "strategy",
-                "learning_rate",
-                "warmup",
-                "augment",
-                "regularization",
-                "loss_weights",
-                "checkpoint",
-            ]:
-                advanced_params.update(config.get(section, {}))
-            # Exclude JLLabelingAndTrain-specific parameters not recognized by ultralytics
-            fork_params_to_exclude = {"skip_empty_files", "only_checked_files"}
-            for key, value in advanced_params.items():
-                if key not in fork_params_to_exclude:
-                    train_args[key] = value
-            if manifest and manifest.get("seed") is not None:
-                train_args.setdefault("seed", manifest["seed"])
-            self.run_state.total_epochs = train_args.get("epochs", 100)
-            # Kept for run_meta.json: the payload file the worker reads is
-            # deleted when the process ends, so this is the only record of the
-            # arguments this run was launched with.
-            self.run_state.last_train_args = dict(train_args)
-            self.run_state.last_dataset_manifest = manifest
-
-            # Log the training command
-            cmd_parts = ["yolo", self.selected_task_type.lower(), "train"]
-            for key, value in train_args.items():
-                cmd_parts.append(f"{key}={value}")
-            self.append_training_log(
-                f"Training command: {' '.join(cmd_parts)}"
+            return self._fresh_train_args(
+                config, data_path, device_value, manifest
             )
-
-            return train_args
-
         except Exception as e:
             self.append_training_log(
                 f"Error preparing training args: {str(e)}"
             )
             raise
+
+    def _prepare_dataset(self, config):
+        """Where this run's labels come from: an existing dir or a fresh build."""
+        if self.selected_task_type == "Classify" and os.path.isdir(
+            config["basic"]["data"]
+        ):
+            data_path = config["basic"]["data"]
+            self.append_training_log(f"Using existing dataset: {data_path}")
+            return data_path
+
+        # Synchronous fallback (the train-tab entry point runs this step on a
+        # background thread and passes data_path).
+        seed, seed_source = self._project_split_seed()
+        report = {}
+        temp_dir = create_yolo_dataset(
+            self.image_list,
+            self.selected_task_type,
+            config["basic"]["dataset_ratio"],
+            config["basic"]["data"],
+            self.output_dir,
+            config["basic"].get("pose_config"),
+            config["checkpoint"].get("skip_empty_files", False),
+            config["checkpoint"].get("only_checked_files", False),
+            seed=seed,
+            seed_source=seed_source,
+            report=report,
+        )
+        self.run_state.dataset_report = report
+        logger.info(f"Successfully created YOLO dataset at {temp_dir}")
+        self.append_training_log(f"Created dataset: {temp_dir}")
+        if self.selected_task_type == "Classify":
+            return temp_dir
+        return os.path.join(temp_dir, "data.yaml")
+
+    def _resolve_device(self, config):
+        """``device`` as Ultralytics wants it: a GPU list, or ``cpu``."""
+        device_value = config["basic"]["device"]
+        if device_value == "cuda" and hasattr(self, "device_checkboxes"):
+            selected_gpus = []
+            if hasattr(self, "_cuda_layout") and self._cuda_layout:
+                for i in range(self._cuda_layout.count()):
+                    widget = self._cuda_layout.itemAt(i).widget()
+                    if (
+                        widget
+                        and hasattr(widget, "isChecked")
+                        and widget.isChecked()
+                    ):
+                        gpu_text = widget.text()
+                        gpu_id = gpu_text.split()[-1]
+                        selected_gpus.append(int(gpu_id))
+            device_value = selected_gpus if selected_gpus else "cpu"
+        return device_value
+
+    def _resume_train_args(self, data_path, device_value, manifest):
+        """Resume: ultralytics restores everything but a few overrides.
+
+        Passing only those keeps the log free of "Resume ignores [...]"
+        warnings -- the checkpoint carries project/name/epochs and every
+        hyperparameter.
+        """
+        train_args = {
+            "model": self.run_state.resume_from,
+            "resume": True,
+            "data": data_path,
+            "device": device_value,
+        }
+        info = self.run_state.resume_info or {}
+        if info.get("epochs"):
+            # Same value the checkpoint records, so it is not reported as an
+            # ignored override; it also keeps the progress bar honest.
+            train_args["epochs"] = info["epochs"]
+        self.run_state.begin_run(
+            train_args, manifest, train_args.get("epochs", 100)
+        )
+        self._log_train_command(train_args)
+        return train_args
+
+    def _fresh_train_args(self, config, data_path, device_value, manifest):
+        """A new run: the form's values plus every advanced section."""
+        train_args = {
+            "data": data_path,
+            "model": config["basic"]["model"],
+            "project": config["basic"]["project"],
+            "name": config["basic"]["name"],
+            "device": device_value,
+        }
+
+        advanced_params = {}
+        for section in [
+            "train",
+            "strategy",
+            "learning_rate",
+            "warmup",
+            "augment",
+            "regularization",
+            "loss_weights",
+            "checkpoint",
+        ]:
+            advanced_params.update(config.get(section, {}))
+        # Fork-only switches ultralytics would reject as unknown arguments.
+        fork_params_to_exclude = {"skip_empty_files", "only_checked_files"}
+        for key, value in advanced_params.items():
+            if key not in fork_params_to_exclude:
+                train_args[key] = value
+        if manifest and manifest.get("seed") is not None:
+            train_args.setdefault("seed", manifest["seed"])
+        self.run_state.begin_run(
+            train_args, manifest, train_args.get("epochs", 100)
+        )
+        self._log_train_command(train_args)
+        return train_args
+
+    def _log_train_command(self, train_args):
+        """One line the user can copy into a shell, in both arg shapes."""
+        cmd_parts = ["yolo", self.selected_task_type.lower(), "train"]
+        for key, value in train_args.items():
+            cmd_parts.append(f"{key}={value}")
+        self.append_training_log(f"Training command: {' '.join(cmd_parts)}")
 
     def _resolve_filter_names(self, config):
         """Class names the ``classes`` filter is checked against.
