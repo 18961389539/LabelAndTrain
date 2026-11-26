@@ -1750,7 +1750,32 @@ class UltralyticsDialog(DatasetPreparationMixin, QDialog):
         second click there; the caller now starts the run when this returns
         True. False means a dialog said to stop (cancel, export-only,
         validation failure).
+
+        The decisions that can say "no" live in the four helpers below, so
+        the happy path here reads as one line per step.
         """
+        if not self._can_start_training():
+            return False
+        self.run_state.forget_previous_run()
+
+        config = self.get_current_config()
+        if not self._resolve_target_directory(config):
+            return False
+        if not self._validate_task_inputs(config):
+            return False
+        self._reset_finished_run()
+        self._log_resume_intent()
+
+        save_config(config)
+        # The run is committed: remember its tuning for this dataset so the
+        # next session on the same images restores it instead of inheriting
+        # whatever the previous dataset used.
+        self._save_project_train_prefs(config)
+        self.go_to_specific_tab(2)
+        return True
+
+    def _can_start_training(self):
+        """False (with a warning) when a run is already in flight."""
         if self.run_state.status in ("training", "preparing"):
             QMessageBox.warning(
                 self,
@@ -1760,11 +1785,16 @@ class UltralyticsDialog(DatasetPreparationMixin, QDialog):
                 ),
             )
             return False
+        return True
 
-        self.run_state.resume_from = None
-        self.run_state.resume_info = None
+    def _resolve_target_directory(self, config):
+        """Handle a target directory that already holds a run.
 
-        config = self.get_current_config()
+        Returns False when the user cancelled, chose "export existing
+        model", or the config is invalid. On True the run may proceed: a
+        resume has filled ``run_state.resume_from``, and a retrain has
+        already confirmed the delete.
+        """
         is_valid, error_message = validate_basic_config(
             config, self.selected_task_type
         )
@@ -1800,7 +1830,10 @@ class UltralyticsDialog(DatasetPreparationMixin, QDialog):
             )
             self.append_training_log(f"Validation Error: {error_message}")
             return False
+        return True
 
+    def _validate_task_inputs(self, config):
+        """False (with a warning) when the task type or pose config is missing."""
         if not self.selected_task_type:
             QMessageBox.warning(
                 self,
@@ -1820,7 +1853,10 @@ class UltralyticsDialog(DatasetPreparationMixin, QDialog):
                     ),
                 )
                 return False
+        return True
 
+    def _reset_finished_run(self):
+        """Clear the traces of a finished run before starting a new one."""
         if self.run_state.status in ["completed", "error"]:
             reply = QMessageBox.question(
                 self,
@@ -1837,25 +1873,20 @@ class UltralyticsDialog(DatasetPreparationMixin, QDialog):
             self.start_training_button.setVisible(True)
             self.run_state.status = "idle"
 
-        if self.run_state.resume_from:
-            self.append_training_log(
-                self.tr("Continuing from checkpoint: %1").replace(
-                    "%1", self.run_state.resume_from
-                )
+    def _log_resume_intent(self):
+        """Say what a resume ignores, before the worker starts."""
+        if not self.run_state.resume_from:
+            return
+        self.append_training_log(
+            self.tr("Continuing from checkpoint: %1").replace(
+                "%1", self.run_state.resume_from
             )
-            self.append_training_log(
-                self.tr(
-                    "Resume keeps the checkpoint's own epochs/batch/imgsz; the other Config values are ignored."
-                )
+        )
+        self.append_training_log(
+            self.tr(
+                "Resume keeps the checkpoint's own epochs/batch/imgsz; the other Config values are ignored."
             )
-
-        save_config(config)
-        # The run is committed: remember its tuning for this dataset so the
-        # next session on the same images restores it instead of inheriting
-        # whatever the previous dataset used.
-        self._save_project_train_prefs(config)
-        self.go_to_specific_tab(2)
-        return True
+        )
 
     def _on_resume_training_clicked(self):
         """Train tab: continue a stopped run straight from its last.pt."""

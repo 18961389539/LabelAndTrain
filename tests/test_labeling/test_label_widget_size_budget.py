@@ -245,7 +245,11 @@ BUDGETS = {
     # the nine fields became one object.  The 36 lines are the three
     # compatibility properties the export helpers and the dataset mixin
     # still read, plus their setters -- the state itself left the file.
-    "jllabeling/views/training/ultralytics_dialog.py": 3169,
+    # Raised 3169 -> 3200 on 2026-11-26: start_training (113 lines) became a
+    # 30-line flow over five decision helpers (_can_start_training,
+    # _resolve_target_directory, _validate_task_inputs, _reset_finished_run,
+    # _log_resume_intent). The delta is their signatures and docstrings.
+    "jllabeling/views/training/ultralytics_dialog.py": 3200,
     # The run state object: one dataclass, no Qt.  Budgeted on arrival so a
     # second state bag cannot grow here.
     "jllabeling/views/training/training_run_state.py": 56,
@@ -254,6 +258,19 @@ BUDGETS = {
     # import dispatcher to the per-mode splits, and it no longer carries a
     # C901 at all, so this is the size it should stay at or below.
     "jllabeling/views/labeling/label_converter.py": 1960,
+    # -- Frozen by the 2026-11-26 audit ---------------------------------
+    # Seven files sat above 1200 lines with no ratchet at all. They are
+    # frozen at their current size: the next edit either fits or lowers
+    # the number, and a batch that genuinely needs one of them to grow has
+    # to split it first. None of these is a target for a rewrite today --
+    # the budget exists so "it crept up a little" stops being invisible.
+    "jllabeling/views/labeling/widgets/canvas_interaction.py": 2033,
+    "jllabeling/views/labeling/widgets/label_dialog.py": 1844,
+    "jllabeling/views/labeling/utils/export.py": 1385,
+    "jllabeling/views/labeling/settings/schema.py": 1344,
+    "jllabeling/views/labeling/utils/file_lifecycle.py": 1335,
+    "jllabeling/views/labeling/utils/upload.py": 1234,
+    "jllabeling/views/labeling/utils/style.py": 1213,
     # The extracted config bridge: 200 lines of pure widget<->dict mapping.
     # Budgeted on arrival so it cannot grow into a second config god object.
     "jllabeling/views/training/train_config_io.py": 200,
